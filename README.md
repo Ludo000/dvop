@@ -5,7 +5,7 @@ Basado Text Editor is a simple text editor built using GTK4 and Rust. It provide
 
 ## Prerequisites
 
-### For Linux (Ubuntu):
+### For Linux (Ubuntu 25.04):
   #### Install dev dependencies:
    Run the following commands to install the necessary dependencies:
 
