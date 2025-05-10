@@ -69,21 +69,26 @@ fn build_ui(app: &Application) {
     // Terminal
     let terminal = VteTerminal::new();
     if let Some(shell) = env::var("SHELL").ok() {
-        terminal.spawn_async(
-            vte4::PtyFlags::DEFAULT,
-            None,
-            &[&shell],
-            &[],                 // empty env
-            glib::SpawnFlags::DEFAULT,
-            || {},               // empty child_setup closure
-            -1,
-            None::<&Cancellable>,
-            move |res| {
-                if let Err(err) = res {
-                    eprintln!("Failed to spawn shell: {}", err);
-                }
-            },
-        );
+        let home_dir = home::home_dir().expect("Could not find home directory");
+        if let Some(home_dir_str) = home_dir.to_str() {
+            terminal.spawn_async(
+                vte4::PtyFlags::DEFAULT,
+                Some(home_dir_str), // Set the working directory to the home directory
+                &[&shell],
+                &[],                 // empty env
+                glib::SpawnFlags::DEFAULT,
+                || {},               // empty child_setup closure
+                -1,
+                None::<&Cancellable>,
+                move |res| {
+                    if let Err(err) = res {
+                        eprintln!("Failed to spawn shell: {}", err);
+                    }
+                },
+            );
+        } else {
+            eprintln!("Failed to convert home directory path to string");
+        }
     }
 
     let terminal_box = ScrolledWindow::builder()
