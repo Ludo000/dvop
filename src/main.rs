@@ -1,7 +1,7 @@
 use gtk4::prelude::*;
 use gtk4::{
     Application, ApplicationWindow, Button, Box as GtkBox, FileChooserAction, FileChooserDialog,
-    HeaderBar, Orientation, ResponseType, ScrolledWindow, TextView, ListBox, ListBoxRow, Label,
+    HeaderBar, Orientation, ResponseType, ScrolledWindow, TextView, ListBox, ListBoxRow, Label, Align,
 };
 use std::cell::RefCell;
 use std::fs::{self, File};
@@ -307,6 +307,8 @@ fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf) {
 
                 let row = ListBoxRow::new();
                 let label = Label::new(Some(&file_name_str));
+                label.set_halign(Align::Start);
+                label.set_margin_start(5); 
                 row.set_child(Some(&label));
                 file_list_box.append(&row);
             }
