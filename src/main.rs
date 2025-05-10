@@ -288,11 +288,15 @@ fn build_ui(app: &Application) {
     window.show();
 }
 
+
 fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf) {
     // Clear the current list
     while let Some(child) = file_list_box.first_child() {
         file_list_box.remove(&child);
     }
+
+    let mut folders = Vec::new();
+    let mut files = Vec::new();
 
     if let Ok(entries) = fs::read_dir(current_dir) {
         for entry in entries {
@@ -305,13 +309,37 @@ fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf) {
                     continue;
                 }
 
-                let row = ListBoxRow::new();
-                let label = Label::new(Some(&file_name_str));
-                label.set_halign(Align::Start);
-                label.set_margin_start(5); 
-                row.set_child(Some(&label));
-                file_list_box.append(&row);
+                if entry.file_type().map_or(false, |ft| ft.is_dir()) {
+                    folders.push((file_name_str.to_string(), entry));
+                } else {
+                    files.push((file_name_str.to_string(), entry));
+                }
             }
         }
+    }
+
+    // Sort folders and files
+    folders.sort_by(|a, b| a.0.cmp(&b.0));
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // Add folders to the list
+    for (file_name_str, _entry) in folders {
+        let row = ListBoxRow::new();
+        let label = Label::new(Some(&file_name_str));
+        label.set_halign(Align::Start);
+        label.set_margin_start(5);
+        label.set_markup(&format!("<b>{}</b>", file_name_str));
+        row.set_child(Some(&label));
+        file_list_box.append(&row);
+    }
+
+    // Add files to the list
+    for (file_name_str, _entry) in files {
+        let row = ListBoxRow::new();
+        let label = Label::new(Some(&file_name_str));
+        label.set_halign(Align::Start);
+        label.set_margin_start(5);
+        row.set_child(Some(&label));
+        file_list_box.append(&row);
     }
 }
