@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use gtk4::gio::Cancellable;
 use vte4::Terminal as VteTerminal;
 use vte4::TerminalExtManual;
+use home;
 
 fn main() {
     let app = Application::builder()
@@ -49,7 +50,10 @@ fn build_ui(app: &Application) {
     let text_view = TextView::new();
     let text_buffer = text_view.buffer().clone();
     let file_path = Rc::new(RefCell::new(None));
-    let current_dir = Rc::new(RefCell::new(env::current_dir().unwrap()));
+
+    // Set the initial current_dir to the home directory
+    let home_dir = home::home_dir().expect("Could not find home directory");
+    let current_dir = Rc::new(RefCell::new(home_dir));
 
     let scrolled_window = ScrolledWindow::builder()
         .child(&text_view)
