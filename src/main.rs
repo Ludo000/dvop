@@ -1,7 +1,7 @@
 use gtk4::prelude::*;
 use gtk4::{
     Application, ApplicationWindow, Button, FileChooserAction, FileChooserDialog,
-    HeaderBar, ResponseType, ScrolledWindow, TextView, Box as GtkBox, Orientation,
+    HeaderBar, ResponseType, ScrolledWindow, TextView, Orientation,
 };
 use std::cell::RefCell;
 use std::fs::File;
@@ -82,10 +82,19 @@ fn build_ui(app: &Application) {
         .min_content_height(150)
         .build();
 
-    let vbox = GtkBox::new(Orientation::Vertical, 5);
-    vbox.append(&scrolled_window);
-    vbox.append(&terminal_box);
-    window.set_child(Some(&vbox));
+    let paned = gtk4::Paned::new(Orientation::Vertical);
+    paned.set_wide_handle(true); // Optional: easier to grab
+
+    // Top: Text Editor
+    paned.set_start_child(Some(&scrolled_window));
+    // Bottom: Terminal
+    paned.set_end_child(Some(&terminal_box));
+
+    // Set initial position (optional)
+    paned.set_position(400);
+
+    window.set_child(Some(&paned));
+
 
     // New
     {
