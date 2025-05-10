@@ -13,6 +13,7 @@ use gtk4::gio::{self, Cancellable};
 use vte4::Terminal as VteTerminal;
 use vte4::TerminalExtManual;
 use home;
+use mime_guess;
 
 fn main() {
     let app = Application::builder()
@@ -51,12 +52,16 @@ fn build_ui(app: &Application) {
     let text_buffer = text_view.buffer().clone();
     let file_path = Rc::new(RefCell::new(None));
 
+    // Label for error message
+    let error_label = Label::new(Some("Cannot open this file type."));
+    error_label.set_halign(Align::Center);
+    error_label.set_valign(Align::Center);
+
     // Set the initial current_dir to the home directory
     let home_dir = home::home_dir().expect("Could not find home directory");
     let current_dir = Rc::new(RefCell::new(home_dir));
 
     let scrolled_window = ScrolledWindow::builder()
-        .child(&text_view)
         .vexpand(true)
         .hexpand(true)
         .build();
@@ -141,9 +146,12 @@ fn build_ui(app: &Application) {
         let file_path = file_path.clone();
         let file_list_box = file_list_box.clone();
         let current_dir = current_dir.clone();
+        let scrolled_window = scrolled_window.clone();
+        let text_view = text_view.clone();
         new_button.connect_clicked(move |_| {
             text_buffer.set_text("");
             *file_path.borrow_mut() = None;
+            scrolled_window.set_child(Some(&text_view));
             update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
         });
     }
@@ -155,6 +163,9 @@ fn build_ui(app: &Application) {
         let window = window.clone();
         let current_dir = current_dir.clone();
         let file_list_box = file_list_box.clone();
+        let scrolled_window = scrolled_window.clone();
+        let text_view = text_view.clone();
+        let error_label = error_label.clone();
         open_button.connect_clicked(move |_| {
             let dialog = FileChooserDialog::new(
                 Some("Open File"),
@@ -171,18 +182,28 @@ fn build_ui(app: &Application) {
             let file_path = file_path.clone();
             let current_dir = current_dir.clone();
             let file_list_box = file_list_box.clone();
+            let scrolled_window = scrolled_window.clone();
+            let text_view = text_view.clone();
+            let error_label = error_label.clone();
             dialog.connect_response(move |dialog, response| {
                 if response == ResponseType::Accept {
                     if let Some(file) = dialog.file().and_then(|f| f.path()) {
-                        if let Ok(content) = std::fs::read_to_string(&file) {
-                            text_buffer.set_text(&content);
-                            *file_path.borrow_mut() = Some(file.clone());
+                        let mime_type = mime_guess::from_path(&file).first_or_octet_stream();
+                        println!("Debug: MIME type of the file is: {:?}", mime_type); // Print MIME type for debugging
+                        if mime_type.type_() == "text" || mime_type == mime_guess::mime::APPLICATION_OCTET_STREAM {
+                            if let Ok(content) = std::fs::read_to_string(&file) {
+                                text_buffer.set_text(&content);
+                                *file_path.borrow_mut() = Some(file.clone());
+                                scrolled_window.set_child(Some(&text_view));
 
-                            // Update the current directory to the directory of the opened file
-                            if let Some(parent) = file.parent() {
-                                *current_dir.borrow_mut() = parent.to_path_buf();
-                                update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
+                                // Update the current directory to the directory of the opened file
+                                if let Some(parent) = file.parent() {
+                                    *current_dir.borrow_mut() = parent.to_path_buf();
+                                    update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
+                                }
                             }
+                        } else {
+                            scrolled_window.set_child(Some(&error_label));
                         }
                     }
                 }
@@ -200,6 +221,8 @@ fn build_ui(app: &Application) {
         let window = window.clone();
         let file_list_box = file_list_box.clone();
         let current_dir = current_dir.clone();
+        let scrolled_window = scrolled_window.clone();
+        let text_view = text_view.clone();
         save_button.connect_clicked(move |_| {
             if let Some(ref path) = *file_path.borrow() {
                 if let Ok(mut file) = File::create(path) {
@@ -218,6 +241,8 @@ fn build_ui(app: &Application) {
                 let file_path = file_path.clone();
                 let file_list_box = file_list_box.clone();
                 let current_dir = current_dir.clone();
+                let scrolled_window = scrolled_window.clone();
+                let text_view = text_view.clone();
                 dialog.connect_response(move |dialog, response| {
                     if response == ResponseType::Accept {
                         if let Some(file) = dialog.file().and_then(|f| f.path()) {
@@ -225,6 +250,7 @@ fn build_ui(app: &Application) {
                                 let text = text_buffer.text(&text_buffer.start_iter(), &text_buffer.end_iter(), false);
                                 let _ = f.write_all(text.as_bytes());
                                 *file_path.borrow_mut() = Some(file.clone());
+                                scrolled_window.set_child(Some(&text_view));
                                 update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
                             }
                         }
@@ -244,6 +270,8 @@ fn build_ui(app: &Application) {
         let window = window.clone();
         let current_dir = current_dir.clone();
         let file_list_box = file_list_box.clone();
+        let scrolled_window = scrolled_window.clone();
+        let text_view = text_view.clone();
         save_as_button.connect_clicked(move |_| {
             let dialog = FileChooserDialog::new(
                 Some("Save File As"),
@@ -260,6 +288,8 @@ fn build_ui(app: &Application) {
             let file_path = file_path.clone();
             let current_dir = current_dir.clone();
             let file_list_box = file_list_box.clone();
+            let scrolled_window = scrolled_window.clone();
+            let text_view = text_view.clone();
             dialog.connect_response(move |dialog, response| {
                 if response == ResponseType::Accept {
                     if let Some(file) = dialog.file().and_then(|f| f.path()) {
@@ -267,6 +297,7 @@ fn build_ui(app: &Application) {
                             let text = text_buffer.text(&text_buffer.start_iter(), &text_buffer.end_iter(), false);
                             let _ = f.write_all(text.as_bytes());
                             *file_path.borrow_mut() = Some(file.clone());
+                            scrolled_window.set_child(Some(&text_view));
 
                             // Update the current directory to the directory of the saved file
                             if let Some(parent) = file.parent() {
@@ -289,6 +320,9 @@ fn build_ui(app: &Application) {
         let file_path = file_path.clone();
         let current_dir = current_dir.clone();
         let file_list_box_clone = file_list_box.clone();
+        let scrolled_window = scrolled_window.clone();
+        let text_view = text_view.clone();
+        let error_label = error_label.clone();
         file_list_box_clone.clone().connect_row_activated(move |_, row| {
             if let Some(label) = row.child().and_then(|c| c.downcast::<Label>().ok()) {
                 let file_name = label.text();
@@ -299,10 +333,17 @@ fn build_ui(app: &Application) {
                     *current_dir.borrow_mut() = path;
                     update_file_list(&file_list_box_clone, &current_dir.borrow(), &file_path.borrow());
                 } else if path.is_file() {
-                    if let Ok(content) = fs::read_to_string(&path) {
-                        text_buffer.set_text(&content);
-                        *file_path.borrow_mut() = Some(path);
-                        update_file_list(&file_list_box_clone, &current_dir.borrow(), &file_path.borrow());
+                    let mime_type = mime_guess::from_path(&path).first_or_octet_stream();
+                    println!("Debug: MIME type of the file is: {:?}", mime_type); // Print MIME type for debugging
+                    if mime_type.type_() == "text" || mime_type == mime_guess::mime::APPLICATION_OCTET_STREAM {
+                        if let Ok(content) = fs::read_to_string(&path) {
+                            text_buffer.set_text(&content);
+                            *file_path.borrow_mut() = Some(path);
+                            scrolled_window.set_child(Some(&text_view));
+                            update_file_list(&file_list_box_clone, &current_dir.borrow(), &file_path.borrow());
+                        }
+                    } else {
+                        scrolled_window.set_child(Some(&error_label));
                     }
                 }
             }
@@ -331,6 +372,9 @@ fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_path: &
     while let Some(child) = file_list_box.first_child() {
         file_list_box.remove(&child);
     }
+
+    // Unselect all rows to ensure no initial selection
+    file_list_box.unselect_all();
 
     let mut folders = Vec::new();
     let mut files = Vec::new();
@@ -393,7 +437,7 @@ fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_path: &
         file_list_box.append(&row);
     }
 
-    // Set the selected row
+    // Set the selected row only if there is a currently opened file
     if let Some(row) = selected_row {
         file_list_box.select_row(Some(&row));
     }
