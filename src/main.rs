@@ -1,13 +1,14 @@
 use gtk4::prelude::*;
 use gtk4::{
-    Application, ApplicationWindow, Button, FileChooserAction, FileChooserDialog,
-    HeaderBar, ResponseType, ScrolledWindow, TextView, Orientation,
+    Application, ApplicationWindow, Button, Box as GtkBox, FileChooserAction, FileChooserDialog,
+    HeaderBar, Orientation, ResponseType, ScrolledWindow, TextView, ListBox, ListBoxRow, Label,
 };
 use std::cell::RefCell;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Write;
 use std::rc::Rc;
 use std::env;
+use std::path::PathBuf;
 use gtk4::gio::Cancellable;
 use vte4::Terminal as VteTerminal;
 use vte4::TerminalExtManual;
@@ -48,6 +49,7 @@ fn build_ui(app: &Application) {
     let text_view = TextView::new();
     let text_buffer = text_view.buffer().clone();
     let file_path = Rc::new(RefCell::new(None));
+    let current_dir = Rc::new(RefCell::new(env::current_dir().unwrap()));
 
     let scrolled_window = ScrolledWindow::builder()
         .child(&text_view)
@@ -82,19 +84,52 @@ fn build_ui(app: &Application) {
         .min_content_height(150)
         .build();
 
-    let paned = gtk4::Paned::new(Orientation::Vertical);
+    // File Manager Panel
+    let file_list_box = ListBox::new();
+    let file_list_scrolled_window = ScrolledWindow::builder()
+        .child(&file_list_box)
+        .vexpand(true)
+        .hexpand(false)
+        .min_content_width(200)
+        .build();
+
+    // Navigation buttons
+    let nav_box = GtkBox::new(Orientation::Horizontal, 5);
+
+    // Create a box to add margin around the button
+    let up_button_box = GtkBox::new(Orientation::Horizontal, 0);
+    up_button_box.set_margin_top(5);
+    up_button_box.set_margin_bottom(5);
+    up_button_box.set_margin_start(5);
+    up_button_box.set_margin_end(5);
+
+    let up_button = Button::with_label("../");
+    up_button_box.append(&up_button);
+    nav_box.append(&up_button_box);
+
+    let file_manager_panel = GtkBox::new(Orientation::Vertical, 5);
+    file_manager_panel.append(&nav_box);
+    file_manager_panel.append(&file_list_scrolled_window);
+
+    update_file_list(&file_list_box, &current_dir.borrow());
+
+    let paned = gtk4::Paned::new(Orientation::Horizontal);
     paned.set_wide_handle(true); // Optional: easier to grab
 
-    // Top: Text Editor
-    paned.set_start_child(Some(&scrolled_window));
-    // Bottom: Terminal
-    paned.set_end_child(Some(&terminal_box));
+    // Left: File Manager Panel
+    paned.set_start_child(Some(&file_manager_panel));
+    // Right: Text Editor and Terminal
+    let editor_paned = gtk4::Paned::new(Orientation::Vertical);
+    editor_paned.set_wide_handle(true); // Optional: easier to grab
+    editor_paned.set_start_child(Some(&scrolled_window));
+    editor_paned.set_end_child(Some(&terminal_box));
+    paned.set_end_child(Some(&editor_paned));
 
     // Set initial position (optional)
-    paned.set_position(400);
+    paned.set_position(200);
+    editor_paned.set_position(400);
 
     window.set_child(Some(&paned));
-
 
     // New
     {
@@ -208,5 +243,69 @@ fn build_ui(app: &Application) {
         });
     }
 
+    // File selection in the file manager panel
+    {
+        let text_buffer = text_buffer.clone();
+        let file_path = file_path.clone();
+        let current_dir = current_dir.clone();
+        let file_list_box_clone = file_list_box.clone(); // Clone the file_list_box
+        file_list_box_clone.clone().connect_row_activated(move |_, row| { // Clone again before moving into the closure
+            if let Some(label) = row.child().and_then(|c| c.downcast::<Label>().ok()) {
+                let file_name = label.text();
+                let mut path = current_dir.borrow().clone();
+                path.push(&file_name);
+
+                if path.is_dir() {
+                    *current_dir.borrow_mut() = path;
+                    update_file_list(&file_list_box_clone, &current_dir.borrow()); // Use the cloned file_list_box
+                } else if path.is_file() {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        text_buffer.set_text(&content);
+                        *file_path.borrow_mut() = Some(path);
+                    }
+                }
+            }
+        });
+    }
+
+    // Navigation to parent directory
+    {
+        let current_dir = current_dir.clone();
+        let file_list_box_clone = file_list_box.clone(); // Clone the file_list_box
+        up_button.connect_clicked(move |_| {
+            let mut path = current_dir.borrow().clone();
+            if path.pop() {
+                *current_dir.borrow_mut() = path;
+                update_file_list(&file_list_box_clone, &current_dir.borrow()); // Use the cloned file_list_box
+            }
+        });
+    }
+
     window.show();
+}
+
+fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf) {
+    // Clear the current list
+    while let Some(child) = file_list_box.first_child() {
+        file_list_box.remove(&child);
+    }
+
+    if let Ok(entries) = fs::read_dir(current_dir) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let file_name = entry.file_name();
+                let file_name_str = file_name.to_string_lossy();
+
+                // Skip dot files
+                if file_name_str.starts_with('.') {
+                    continue;
+                }
+
+                let row = ListBoxRow::new();
+                let label = Label::new(Some(&file_name_str));
+                row.set_child(Some(&label));
+                file_list_box.append(&row);
+            }
+        }
+    }
 }
