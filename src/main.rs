@@ -1,7 +1,7 @@
 use gtk4::prelude::*;
 use gtk4::{
     Application, ApplicationWindow, Button, Box as GtkBox, FileChooserAction, FileChooserDialog,
-    HeaderBar, Orientation, ResponseType, ScrolledWindow, TextView, ListBox, ListBoxRow, Label, Align,
+    HeaderBar, Image, Orientation, ResponseType, ScrolledWindow, TextView, ListBox, ListBoxRow, Label, Align,
 };
 use std::cell::RefCell;
 use std::fs::{self, File};
@@ -120,6 +120,24 @@ fn build_ui(app: &Application) {
     let up_button = Button::with_label("../");
     up_button_box.append(&up_button);
     nav_box.append(&up_button_box);
+
+    // Add a spacer to push the refresh button to the right
+    let spacer = GtkBox::new(Orientation::Horizontal, 0);
+    spacer.set_hexpand(true);
+    nav_box.append(&spacer);
+
+    // Add the refresh button with a monochrome icon and tooltip
+    let refresh_button = Button::new();
+    let refresh_icon = Image::from_icon_name("view-refresh-symbolic");
+    refresh_button.set_child(Some(&refresh_icon));
+    refresh_button.set_tooltip_text(Some("Refresh the current folder view"));
+    let refresh_button_box = GtkBox::new(Orientation::Horizontal, 0);
+    refresh_button_box.set_margin_top(5);
+    refresh_button_box.set_margin_bottom(5);
+    refresh_button_box.set_margin_start(5);
+    refresh_button_box.set_margin_end(5);
+    refresh_button_box.append(&refresh_button);
+    nav_box.append(&refresh_button_box);
 
     let file_manager_panel = GtkBox::new(Orientation::Vertical, 5);
     file_manager_panel.append(&nav_box);
@@ -365,6 +383,16 @@ fn build_ui(app: &Application) {
                 *current_dir.borrow_mut() = path;
                 update_file_list(&file_list_box_clone, &current_dir.borrow(), &file_path.borrow());
             }
+        });
+    }
+
+    // Refresh
+    {
+        let file_list_box = file_list_box.clone();
+        let current_dir = current_dir.clone();
+        let file_path = file_path.clone();
+        refresh_button.connect_clicked(move |_| {
+            update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
         });
     }
 
