@@ -194,7 +194,6 @@ fn build_ui(app: &Application) {
                 if response == ResponseType::Accept {
                     if let Some(file) = dialog.file().and_then(|f| f.path()) {
                         let mime_type = mime_guess::from_path(&file).first_or_octet_stream();
-                        println!("Debug: MIME type of the file is: {:?}", mime_type); // Print MIME type for debugging
                         if mime_type.type_() == "text" || mime_type == mime_guess::mime::APPLICATION_OCTET_STREAM {
                             if let Ok(content) = std::fs::read_to_string(&file) {
                                 text_buffer.set_text(&content);
