@@ -1,5 +1,5 @@
 use gtk4::prelude::*;
-use gtk4::{Button, TextBuffer, ApplicationWindow, ListBox, ScrolledWindow, TextView, Label, Picture, Notebook};
+use gtk4::{Button, TextBuffer, ApplicationWindow, ListBox, ScrolledWindow, TextView, Label, Picture, Notebook, MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -8,44 +8,494 @@ use crate::utils;
 use std::fs::File;
 use std::io::Write;
 
+// Helper to get current TextView and TextBuffer from active Notebook tab
+fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView, TextBuffer)> {
+    notebook.current_page().and_then(|page_num| {
+        notebook.nth_page(Some(page_num)).and_then(|page_widget| {
+            if let Some(scrolled_window) = page_widget.downcast_ref::<ScrolledWindow>() {
+                scrolled_window.child().and_then(|child| {
+                    if let Some(text_view) = child.downcast_ref::<TextView>() {
+                        Some((text_view.clone(), text_view.buffer()))
+                    } else {
+                        None // Child is not a TextView
+                    }
+                })
+            } else {
+                None // Page widget is not a ScrolledWindow (e.g., could be an image directly)
+            }
+        })
+    })
+}
+
+// Helper to get TextView and TextBuffer for a specific page number
+pub fn get_text_view_and_buffer_for_page(notebook: &Notebook, page_num: u32) -> Option<(TextView, TextBuffer)> {
+    notebook.nth_page(Some(page_num)).and_then(|page_widget| {
+        if let Some(scrolled_window) = page_widget.downcast_ref::<ScrolledWindow>() {
+            scrolled_window.child().and_then(|child| {
+                if let Some(text_view) = child.downcast_ref::<TextView>() {
+                    Some((text_view.clone(), text_view.buffer()))
+                } else {
+                    None
+                }
+            })
+        } else {
+            None
+        }
+    })
+}
+
+
+// Struct to hold dependencies for creating a new tab
+#[derive(Clone)]
+pub struct NewTabDependencies {
+    pub editor_notebook: Notebook,
+    pub active_tab_path: Rc<RefCell<Option<PathBuf>>>,
+    pub file_path_manager: Rc<RefCell<HashMap<u32, PathBuf>>>,
+    pub window: ApplicationWindow, // For dialog parent
+    pub file_list_box: ListBox,
+    pub current_dir: Rc<RefCell<PathBuf>>,
+    pub save_button: Button,
+    pub save_as_button: Button,
+    // Add other dependencies like error_label, picture if needed for new tab setup
+}
+
+// Helper to create a new empty tab
+fn create_new_empty_tab(deps: &NewTabDependencies) {
+    let new_text_view = TextView::new();
+    let new_text_buffer = new_text_view.buffer();
+    new_text_buffer.set_text("");
+
+    let new_scrolled_window = ScrolledWindow::builder()
+        .vexpand(true)
+        .hexpand(true)
+        .child(&new_text_view)
+        .build();
+
+    let (tab_widget, tab_actual_label, tab_close_button) = crate::ui::create_tab_widget("Untitled");
+
+    let new_page_num = deps.editor_notebook.append_page(&new_scrolled_window, Some(&tab_widget));
+    // Calling set_current_page after append_page ensures switch_page signal is reliably emitted for the new tab.
+    deps.editor_notebook.set_current_page(Some(new_page_num));
+
+    // Update active_tab_path for the new "Untitled" tab.
+    // This mutable borrow is short-lived and dropped here.
+    *deps.active_tab_path.borrow_mut() = None;
+    
+    // file_path_manager is not updated for "Untitled" until it's saved.
+
+    // Clone data to release borrows before calling update_file_list, 
+    // which might trigger signals that could cause re-borrowing issues.
+    let current_dir_path_clone = deps.current_dir.borrow().clone();
+    let active_path_for_update = deps.active_tab_path.borrow().clone(); // Will be None here
+
+    utils::update_file_list(&deps.file_list_box, &current_dir_path_clone, &active_path_for_update);
+    utils::update_save_buttons_visibility(&deps.save_button, &deps.save_as_button, Some(mime_guess::mime::TEXT_PLAIN_UTF_8)); // Enable save for new text tab
+
+    // Connect dirty tracking for the new "Untitled" tab's label
+    let tab_actual_label_clone = tab_actual_label.clone();
+    new_text_buffer.connect_changed(move |buffer| {
+        let label_text = tab_actual_label_clone.text();
+        if label_text == "Untitled" && !buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).is_empty() {
+            tab_actual_label_clone.set_text("Untitled*");
+        } else if label_text == "Untitled*" && buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).is_empty() {
+            tab_actual_label_clone.set_text("Untitled");
+        }
+    });
+
+    // Connect close button for this new tab
+    let deps_clone_for_close = deps.clone();
+    tab_close_button.connect_clicked(move |_| {
+        // Find the current page number of this tab, as it might have shifted
+        if let Some(page_widget_of_tab) = new_scrolled_window.parent() { // This gets the GtkBox (tab_widget)
+             if let Some(parent_notebook) = page_widget_of_tab.parent().and_then(|p| p.downcast::<Notebook>().ok()) { // This should be editor_notebook
+                if let Some(current_idx_for_this_tab) = parent_notebook.page_num(&page_widget_of_tab.parent().unwrap()) { // page_num needs the child of notebook
+                     handle_close_tab_request(
+                        &deps_clone_for_close.editor_notebook,
+                        current_idx_for_this_tab,
+                        &deps_clone_for_close.window,
+                        &deps_clone_for_close.file_path_manager,
+                        &deps_clone_for_close.active_tab_path,
+                        &deps_clone_for_close.current_dir, // New
+                        &deps_clone_for_close.file_list_box, // New
+                        Some(deps_clone_for_close.clone())
+                    );
+                }
+             }
+        }
+    });
+}
+
+// Helper function to update tab label after save or name change
+fn update_tab_label_after_save(notebook: &Notebook, page_num: u32, new_name_opt: Option<&str>, is_now_dirty: bool) {
+    if let Some(page_widget) = notebook.nth_page(Some(page_num)) {
+        if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
+            if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                    let base_name = new_name_opt.map(String::from)
+                        .unwrap_or_else(|| label.text().trim_end_matches('*').to_string());
+                    
+                    let mut final_text = base_name;
+                    if is_now_dirty {
+                        if !final_text.ends_with('*') {
+                            final_text.push('*');
+                        }
+                    }
+                    // Ensure no double asterisks if base_name somehow had one and is_now_dirty is true
+                    if final_text.ends_with("**") {
+                        final_text.pop();
+                    }
+                    label.set_text(&final_text);
+                }
+            }
+        }
+    }
+}
+
+
+pub fn handle_close_tab_request(
+    notebook: &Notebook,
+    page_num_to_close: u32,
+    window: &ApplicationWindow,
+    file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+    current_dir: &Rc<RefCell<PathBuf>>, // New
+    file_list_box: &ListBox,            // New
+    new_tab_deps: Option<NewTabDependencies>, // Dependencies to create a new tab if the last one is closed
+) {
+    if let Some(page_widget) = notebook.nth_page(Some(page_num_to_close)) {
+        if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
+            let mut is_dirty = false;
+            if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                    if label.text().ends_with('*') {
+                        is_dirty = true;
+                    }
+                }
+            }
+
+            if !is_dirty {
+                // Not dirty, close directly
+                actually_close_tab(notebook, page_num_to_close, file_path_manager, active_tab_path, new_tab_deps.as_ref());
+                return;
+            }
+
+            // Is dirty, show confirmation dialog
+            let filename_str = file_path_manager.borrow().get(&page_num_to_close)
+                .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
+                .unwrap_or_else(|| "Untitled".to_string());
+            let dialog = MessageDialog::new(
+                Some(window),
+                DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
+                MessageType::Question,
+                ButtonsType::None,
+                &format!("Save changes to {} before closing?", filename_str) // Corrected format string: removed quotes around {}
+            );
+            dialog.add_buttons(&[
+                ("Save", ResponseType::Yes),
+                ("Don't Save", ResponseType::No),
+                ("Cancel", ResponseType::Cancel),
+            ]);
+
+            let notebook_clone = notebook.clone();
+            let file_path_manager_clone = file_path_manager.clone();
+            let active_tab_path_clone = active_tab_path.clone();
+            let new_tab_deps_clone = new_tab_deps.clone();
+            let window_clone = window.clone();
+            let current_dir_clone = current_dir.clone();
+            let file_list_box_clone = file_list_box.clone();
+
+            dialog.connect_response(move |d, response| {
+                match response {
+                    ResponseType::Yes => {
+                        // User chose "Save"
+                        if let Some((_tv, buffer)) = get_text_view_and_buffer_for_page(&notebook_clone, page_num_to_close) {
+                            let path_opt = file_path_manager_clone.borrow().get(&page_num_to_close).cloned();
+                            if let Some(path) = path_opt { // Existing file
+                                let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+                                match File::create(&path) {
+                                    Ok(mut file) => {
+                                        if file.write_all(text.as_bytes()).is_ok() {
+                                            update_tab_label_after_save(&notebook_clone, page_num_to_close, Some(&path.file_name().unwrap_or_default().to_string_lossy()), false);
+                                            actually_close_tab(&notebook_clone, page_num_to_close, &file_path_manager_clone, &active_tab_path_clone, new_tab_deps_clone.as_ref());
+                                        } else {
+                                            eprintln!("Error writing to file: {:?}", path);
+                                            // Optionally show error dialog to user
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("Error creating file for writing: {:?}, error: {}", path, e);
+                                        // Optionally show error dialog
+                                    }
+                                }
+                            } else { // Untitled file, need to "Save As"
+                                let save_as_dialog = gtk4::FileChooserDialog::new(
+                                    Some("Save File As"), Some(&window_clone), gtk4::FileChooserAction::Save,
+                                    &[("Save", gtk4::ResponseType::Accept), ("Cancel", gtk4::ResponseType::Cancel)]);
+                                
+                                let current_dialog_dir_path = current_dir_clone.borrow().clone();
+                                
+                                // Explicitly type annotation for gio_file_result and wrap the call in Ok()
+                                let gio_file_result: Result<gtk4::gio::File, glib::Error> = Ok(gtk4::gio::File::for_path(&current_dialog_dir_path));
+                                match gio_file_result {
+                                    Ok(gfile) => {
+                                        if current_dialog_dir_path.is_dir() {
+                                            let _ = save_as_dialog.set_current_folder(Some(&gfile));
+                                        } else if let Some(parent_gfile) = gfile.parent() {
+                                            let _ = save_as_dialog.set_current_folder(Some(&parent_gfile));
+                                        }
+                                    }
+                                    Err(e) => { 
+                                        eprintln!("Failed to create GFile for path {:?}: {}", current_dialog_dir_path, e);
+                                    }
+                                }
+
+                                save_as_dialog.set_current_name("Untitled.txt");
+
+                                let buffer_clone_for_save_as = buffer.clone();
+                                let nc_save_as = notebook_clone.clone();
+                                let fpm_save_as = file_path_manager_clone.clone();
+                                let atp_save_as = active_tab_path_clone.clone();
+                                let ntd_save_as = new_tab_deps_clone.clone(); // For actually_close_tab
+                                let cd_save_as = current_dir_clone.clone();
+                                let flb_save_as = file_list_box_clone.clone();
+
+                                save_as_dialog.connect_response(move |d_sa, resp_sa| {
+                                    if resp_sa == gtk4::ResponseType::Accept {
+                                        if let Some(file_to_save) = d_sa.file().and_then(|f| f.path()) {
+                                            let text_to_save = buffer_clone_for_save_as.text(&buffer_clone_for_save_as.start_iter(), &buffer_clone_for_save_as.end_iter(), false);
+                                            match File::create(&file_to_save) {
+                                                Ok(mut f_obj) => {
+                                                    if f_obj.write_all(text_to_save.as_bytes()).is_ok() {
+                                                        fpm_save_as.borrow_mut().insert(page_num_to_close, file_to_save.clone());
+                                                        if nc_save_as.current_page() == Some(page_num_to_close) {
+                                                            *atp_save_as.borrow_mut() = Some(file_to_save.clone());
+                                                        }
+                                                        update_tab_label_after_save(&nc_save_as, page_num_to_close, Some(&file_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
+                                                        if let Some(parent) = file_to_save.parent() {
+                                                            *cd_save_as.borrow_mut() = parent.to_path_buf();
+                                                        }
+                                                        utils::update_file_list(&flb_save_as, &cd_save_as.borrow(), &atp_save_as.borrow());
+                                                        actually_close_tab(&nc_save_as, page_num_to_close, &fpm_save_as, &atp_save_as, ntd_save_as.as_ref());
+                                                    } else { eprintln!("Error writing to new file: {:?}", file_to_save); }
+                                                }
+                                                Err(e) => { eprintln!("Error creating new file: {:?}, error: {}", file_to_save, e); }
+                                            }
+                                        }
+                                    }
+                                    d_sa.close(); // Close the "Save As" dialog
+                                });
+                                save_as_dialog.show();
+                            }
+                        }
+                        d.close(); // Close the "Save changes?" dialog
+                    }
+                    ResponseType::No => {
+                        d.close(); // Close the "Save changes?" dialog
+                        actually_close_tab(&notebook_clone, page_num_to_close, &file_path_manager_clone, &active_tab_path_clone, new_tab_deps_clone.as_ref());
+                    }
+                    ResponseType::Cancel | _ => {
+                        d.close(); // Close the "Save changes?" dialog
+                        // Do nothing else, tab remains open
+                    }
+                }
+            });
+            dialog.show();
+            // No direct close action here; dialog responses handle it.
+        }
+    }
+}
+
+// Helper function to perform the actual tab closing and state update
+fn actually_close_tab(
+    notebook: &Notebook,
+    page_num_to_close: u32,
+    file_path_manager_rc: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    active_tab_path_rc: &Rc<RefCell<Option<PathBuf>>>,
+    new_tab_deps: Option<&NewTabDependencies>,
+) {
+    notebook.remove_page(Some(page_num_to_close));
+    
+    { // Scope for mutable borrow of file_path_manager
+        let mut manager = file_path_manager_rc.borrow_mut();
+        manager.remove(&page_num_to_close); // Remove the closed tab's path
+
+        // Collect paths from higher indices that need to be shifted
+        let mut paths_to_shift = Vec::new();
+        // Determine the range of indices to check for shifting.
+        // Need to be careful if manager is empty or only had one element.
+        let current_max_idx = manager.keys().max().cloned();
+
+        if let Some(max_idx) = current_max_idx {
+            for i in (page_num_to_close + 1)..=(max_idx + 1) { // Iterate up to one beyond max existing index to catch all
+                                                              // This loop structure might be problematic if page_num_to_close was the max_idx
+                if let Some(path) = manager.remove(&i) {
+                    paths_to_shift.push(path); // Store path to be re-inserted at i-1
+                }
+            }
+        }
+        
+        // Re-insert paths at their new, shifted indices
+        for (idx_offset, path) in paths_to_shift.into_iter().enumerate() {
+            manager.insert(page_num_to_close + idx_offset as u32, path);
+        }
+    } // Mutable borrow of file_path_manager_rc is dropped here
+
+    if notebook.n_pages() == 0 {
+        // No pages left, active_tab_path should be None.
+        *active_tab_path_rc.borrow_mut() = None;
+        if let Some(deps) = new_tab_deps {
+            // It's now safe to call create_new_empty_tab as the mutable borrow 
+            // on file_path_manager_rc has been released.
+            create_new_empty_tab(deps);
+        }
+    } else {
+        // If other tabs remain, GTK will automatically switch to a new page (e.g., the one at page_num_to_close, or page 0).
+        // The connect_switch_page handler in main.rs is responsible for updating active_tab_path.
+        // We need to ensure that file_path_manager contains the correct path for the new current page.
+        // The re-indexing above should have handled this.
+        // If the active tab was closed, switch_page will fire. If a different tab was closed, 
+        // the current page might not change, but its index in file_path_manager might be wrong if it was after the closed tab.
+        // However, the switch_page handler uses the *new* page_num provided by the signal, which should be correct.
+    }
+}
+
+
+// Helper function to open a file in a new tab or focus if already open
+fn open_or_focus_tab(
+    notebook: &Notebook,
+    file_to_open: &PathBuf,
+    content: &str,
+    active_tab_path_ref: &Rc<RefCell<Option<PathBuf>>>,
+    file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    save_button: &Button,
+    save_as_button: &Button, 
+    _mime_type: &mime_guess::Mime, // Prefixed with underscore as it's not directly used now
+    window: &ApplicationWindow, // Added for dialogs and NewTabDependencies
+    file_list_box: &ListBox,
+    current_dir: &Rc<RefCell<PathBuf>>,
+) {
+    // Check if file is already open
+    let mut page_to_focus = None;
+    let num_pages = notebook.n_pages();
+    for i in 0..num_pages {
+        if let Some(path) = file_path_manager.borrow().get(&i) {
+            if path == file_to_open {
+                page_to_focus = Some(i);
+                break;
+            }
+        }
+    }
+
+    if let Some(page_num) = page_to_focus {
+        notebook.set_current_page(Some(page_num));
+        *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+    } else {
+        // Create new tab
+        let new_text_view = TextView::new();
+        let new_text_buffer = new_text_view.buffer();
+        new_text_buffer.set_text(content);
+
+        let new_scrolled_window = ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true) // Ensure this line has a comma if followed by more builder methods, or a semicolon if it's the last.
+            .child(&new_text_view)
+            .build(); // Added semicolon here, assuming it was missing or misplaced.
+
+        let file_name = file_to_open.file_name().unwrap_or_default().to_string_lossy().to_string();
+        
+        // Use ui::create_tab_widget
+        let (tab_widget, tab_actual_label, tab_close_button) = crate::ui::create_tab_widget(&file_name);
+
+        let new_page_num = notebook.append_page(&new_scrolled_window, Some(&tab_widget));
+        notebook.set_current_page(Some(new_page_num));
+
+        file_path_manager.borrow_mut().insert(new_page_num, file_to_open.clone());
+        *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+        
+        // Dirty tracking
+        let tab_actual_label_clone = tab_actual_label.clone(); // Use the label from create_tab_widget
+        let file_name_clone = file_name.clone();
+        new_text_buffer.connect_changed(move |_buffer| { 
+            if !tab_actual_label_clone.text().ends_with("*") {
+                 tab_actual_label_clone.set_text(&format!("{}*", file_name_clone));
+            }
+        });
+
+        // Connect close button
+        let notebook_clone = notebook.clone();
+        let window_clone = window.clone();
+        let file_path_manager_clone = file_path_manager.clone();
+        let active_tab_path_ref_clone = active_tab_path_ref.clone();
+        
+        let deps_for_new_tab_creation = NewTabDependencies {
+            editor_notebook: notebook.clone(),
+            active_tab_path: active_tab_path_ref_clone.clone(),
+            file_path_manager: file_path_manager_clone.clone(),
+            window: window_clone.clone(),
+            file_list_box: file_list_box.clone(),
+            current_dir: current_dir.clone(),
+            save_button: save_button.clone(),
+            save_as_button: save_as_button.clone(),
+        };
+
+        tab_close_button.connect_clicked(move |_| {
+            // Need to find the current page number of this tab when button is clicked
+            // The new_page_num captured at creation might be stale if other tabs were manipulated.
+            // Find the page by its child (new_scrolled_window)
+            if let Some(current_idx_for_this_tab) = notebook_clone.page_num(&new_scrolled_window) {
+                handle_close_tab_request(
+                    &notebook_clone,
+                    current_idx_for_this_tab,
+                    &window_clone,
+                    &file_path_manager_clone,
+                    &active_tab_path_ref_clone,
+                    &deps_for_new_tab_creation.current_dir, // New
+                    &deps_for_new_tab_creation.file_list_box, // New
+                    Some(deps_for_new_tab_creation.clone())
+                );
+            }
+        });
+    }
+}
+
 pub fn setup_button_handlers(
     new_button: &Button,
     open_button: &Button,
     save_button: &Button,
     save_as_button: &Button,
-    _initial_text_buffer: &TextBuffer, // Prefixed with underscore as it's not directly used here
+    _initial_text_buffer: &TextBuffer, 
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
-    window: &ApplicationWindow,
+    window: &ApplicationWindow, // Already present, good.
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &ListBox,
-    editor_notebook: &Notebook, // Changed from scrolled_window
-    // text_view is no longer passed directly, it\'s fetched from notebook
+    editor_notebook: &Notebook, 
     error_label: &Label,
-    picture: &Picture, // Picture handling might need to be per-tab or removed from main editor
+    picture: &Picture, 
     up_button: &Button,
     refresh_button: &Button,
-    file_list_box_clone: &ListBox,
+    file_list_box_clone: &ListBox, // This is likely the same as file_list_box, ensure it's used consistently
 ) {
     setup_new_button_handler(
         new_button,
         editor_notebook,
         active_tab_path,
         file_path_manager,
-        file_list_box,
+        file_list_box, // Pass the main file_list_box
         current_dir,
         save_button,
         save_as_button,
+        window, // Pass window
     );
 
     setup_open_button_handler(
         open_button,
         editor_notebook,
-        window,
+        window, // Already passed
         current_dir,
-        file_list_box,
+        file_list_box, // Pass the main file_list_box
         error_label,
-        picture, // Picture handling needs review for tabs
+        picture, 
         save_button,
         save_as_button,
         active_tab_path,
@@ -73,107 +523,23 @@ pub fn setup_button_handlers(
     );
 
     setup_file_selection_handler(
-        file_list_box_clone, // Assuming this is the correct ListBox instance
+        file_list_box_clone, // Ensure this is the intended ListBox instance
         editor_notebook,
         active_tab_path,
         file_path_manager,
         current_dir,
         error_label,
-        picture, // Picture handling needs review
+        picture, 
         save_button,
         save_as_button,
+        window, // Pass window
     );
 
-    // These handlers likely don\'t need direct access to the editor_notebook content itself
+    // These handlers likely don't need direct access to the editor_notebook content itself
     // but might influence which file is considered "active" if that logic is centralized.
     setup_up_button_handler(up_button, current_dir, file_list_box, active_tab_path); // Pass active_tab_path
     setup_refresh_button_handler(refresh_button, file_list_box, current_dir, active_tab_path); // Pass active_tab_path
 }
-
-// Helper to get current TextView and TextBuffer from active Notebook tab
-fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView, TextBuffer)> {
-    notebook.current_page().and_then(|page_num| {
-        notebook.nth_page(Some(page_num)).and_then(|page_widget| {
-            if let Some(scrolled_window) = page_widget.downcast_ref::<ScrolledWindow>() {
-                scrolled_window.child().and_then(|child| {
-                    if let Some(text_view) = child.downcast_ref::<TextView>() {
-                        Some((text_view.clone(), text_view.buffer()))
-                    } else {
-                        None
-                    }
-                })
-            } else {
-                None
-            }
-        })
-    })
-}
-
-// Helper function to open a file in a new tab or focus if already open
-fn open_or_focus_tab(
-    notebook: &Notebook,
-    file_to_open: &PathBuf,
-    content: &str,
-    active_tab_path_ref: &Rc<RefCell<Option<PathBuf>>>,
-    file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
-    save_button: &Button, // To update visibility
-    save_as_button: &Button, // To update visibility
-    mime_type: &mime_guess::Mime, // To update save buttons
-) {
-    // Check if file is already open
-    let mut page_to_focus = None;
-    let num_pages = notebook.n_pages();
-    for i in 0..num_pages {
-        if let Some(path) = file_path_manager.borrow().get(&i) {
-            if path == file_to_open {
-                page_to_focus = Some(i);
-                break;
-            }
-        }
-    }
-
-    if let Some(page_num) = page_to_focus {
-        notebook.set_current_page(Some(page_num));
-        *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
-    } else {
-        // Create new tab
-        let new_text_view = TextView::new();
-        let new_text_buffer = new_text_view.buffer();
-        new_text_buffer.set_text(content);
-
-        let new_scrolled_window = ScrolledWindow::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .child(&new_text_view)
-            .build();
-
-        let file_name = file_to_open.file_name().unwrap_or_default().to_string_lossy().to_string();
-        let tab_label = Label::new(Some(&file_name));
-
-        let new_page_num = notebook.append_page(&new_scrolled_window, Some(&tab_label));
-        notebook.set_current_page(Some(new_page_num));
-
-        file_path_manager.borrow_mut().insert(new_page_num, file_to_open.clone());
-        *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
-
-        // Mark the TextView with its path for future reference (optional, if file_path_manager is robust)
-        // new_text_view.set_data("file-path", file_to_open.clone());
-
-        // TODO: Connect buffer changed signal to update tab_label with "*"
-        let tab_label_clone = tab_label.clone();
-        let file_name_clone = file_name.clone();
-        new_text_buffer.connect_changed(move |_buffer| { // Prefixed buffer with underscore
-            // Basic dirty tracking:
-            // We need a more robust way to track if it's truly "dirty" vs just changed from initial load
-            // For now, just add/remove asterisk
-            if !tab_label_clone.text().ends_with("*") {
-                 tab_label_clone.set_text(&format!("{}*", file_name_clone));
-            }
-        });
-    }
-    utils::update_save_buttons_visibility(save_button, save_as_button, Some(mime_type.clone()));
-}
-
 
 fn setup_new_button_handler(
     new_button: &Button,
@@ -184,14 +550,17 @@ fn setup_new_button_handler(
     current_dir: &Rc<RefCell<PathBuf>>, // To update file list
     save_button: &Button,
     save_as_button: &Button,
+    window: &ApplicationWindow, // Added for NewTabDependencies
 ) {
-    let editor_notebook = editor_notebook.clone();
-    let active_tab_path_ref = active_tab_path_ref.clone(); // Clone Rc for the closure
-    let _file_path_manager = file_path_manager.clone(); // Clone Rc, mark unused for now
-    let file_list_box = file_list_box.clone();
-    let current_dir = current_dir.clone();
-    let save_button = save_button.clone();
-    let save_as_button = save_as_button.clone();
+    let editor_notebook_clone = editor_notebook.clone(); // Clone for the main closure
+    let active_tab_path_ref_clone = active_tab_path_ref.clone();
+    let file_path_manager_clone = file_path_manager.clone();
+    let file_list_box_clone = file_list_box.clone();
+    let current_dir_clone = current_dir.clone();
+    let save_button_clone = save_button.clone();
+    let save_as_button_clone = save_as_button.clone();
+    let window_clone = window.clone();
+
 
     new_button.connect_clicked(move |_| {
         let new_text_view = TextView::new();
@@ -204,24 +573,60 @@ fn setup_new_button_handler(
             .child(&new_text_view)
             .build();
 
-        let tab_label_text = "Untitled";
-        let tab_label = Label::new(Some(tab_label_text));
+        // Use ui::create_tab_widget
+        let (tab_widget, tab_actual_label, tab_close_button) = crate::ui::create_tab_widget("Untitled");
 
-        let new_page_num = editor_notebook.append_page(&new_scrolled_window, Some(&tab_label));
-        editor_notebook.set_current_page(Some(new_page_num));
+        let new_page_num = editor_notebook_clone.append_page(&new_scrolled_window, Some(&tab_widget));
+        editor_notebook_clone.set_current_page(Some(new_page_num));
 
-        *active_tab_path_ref.borrow_mut() = None; // No path for new, unsaved file
+        *active_tab_path_ref_clone.borrow_mut() = None; // No path for new, unsaved file
         // file_path_manager.borrow_mut().insert(new_page_num, PathBuf::new()); // Or some placeholder for untitled
 
         // Update file list (optional, as no file is selected)
-        utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path_ref.borrow());
-        utils::update_save_buttons_visibility(&save_button, &save_as_button, None); // New file is not text/image initially
+        utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow());
+        utils::update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, Some(mime_guess::mime::TEXT_PLAIN_UTF_8));
 
         // Connect changed signal for dirty tracking
-        let tab_label_clone = tab_label.clone();
+        let tab_actual_label_clone = tab_actual_label.clone();
+        let new_text_buffer_clone_for_dirty = new_text_buffer.clone();
         new_text_buffer.connect_changed(move |_buffer| {
-            if !tab_label_clone.text().ends_with("*") && tab_label_clone.text() == tab_label_text {
-                 tab_label_clone.set_text(&format!("{}*", tab_label_text));
+            let label_text = tab_actual_label_clone.text();
+            if label_text == "Untitled" && !new_text_buffer_clone_for_dirty.text(&new_text_buffer_clone_for_dirty.start_iter(), &new_text_buffer_clone_for_dirty.end_iter(), false).is_empty() {
+                 tab_actual_label_clone.set_text("Untitled*");
+            } else if label_text == "Untitled*" && new_text_buffer_clone_for_dirty.text(&new_text_buffer_clone_for_dirty.start_iter(), &new_text_buffer_clone_for_dirty.end_iter(), false).is_empty() {
+                tab_actual_label_clone.set_text("Untitled");
+            }
+        });
+
+        // Connect close button
+        let notebook_for_close = editor_notebook_clone.clone();
+        let window_for_close = window_clone.clone(); // window_clone is from the outer scope
+        let file_path_manager_for_close = file_path_manager_clone.clone();
+        let active_tab_path_for_close = active_tab_path_ref_clone.clone();
+        
+        let deps_for_new_tab_creation = NewTabDependencies {
+            editor_notebook: editor_notebook_clone.clone(), // Use the notebook_clone from this scope
+            active_tab_path: active_tab_path_ref_clone.clone(),
+            file_path_manager: file_path_manager_clone.clone(),
+            window: window_clone.clone(), // Pass the window for dialogs
+            file_list_box: file_list_box_clone.clone(),
+            current_dir: current_dir_clone.clone(),
+            save_button: save_button_clone.clone(),
+            save_as_button: save_as_button_clone.clone(),
+        };
+        let new_scrolled_window_clone_for_close = new_scrolled_window.clone();
+        tab_close_button.connect_clicked(move |_| {
+            if let Some(current_idx_for_this_tab) = notebook_for_close.page_num(&new_scrolled_window_clone_for_close) {
+                handle_close_tab_request(
+                    &notebook_for_close,
+                    current_idx_for_this_tab,
+                    &window_for_close,
+                    &file_path_manager_for_close,
+                    &active_tab_path_for_close,
+                    &deps_for_new_tab_creation.current_dir, // New
+                    &deps_for_new_tab_creation.file_list_box, // New
+                    Some(deps_for_new_tab_creation.clone())
+                );
             }
         });
     });
@@ -275,6 +680,11 @@ fn setup_open_button_handler(
         // Use the owned Rcs for the nested closure
         let active_tab_path_ref_for_response = active_tab_path_ref_owned.clone();
         let file_path_manager_for_response = file_path_manager_owned.clone();
+        // Need window, file_list_box, current_dir for open_or_focus_tab's NewTabDependencies
+        let window_for_response = window.clone();
+        let file_list_box_for_response = file_list_box.clone();
+        let current_dir_for_response = current_dir.clone();
+
 
         dialog.connect_response(move |dialog, response| {
             if response == gtk4::ResponseType::Accept {
@@ -286,11 +696,14 @@ fn setup_open_button_handler(
                                 &editor_notebook_clone,
                                 &file_to_open,
                                 &content,
-                                &active_tab_path_ref_for_response, // Use owned Rc
-                                &file_path_manager_for_response,   // Use owned Rc
+                                &active_tab_path_ref_for_response, 
+                                &file_path_manager_for_response,   
                                 &save_button_clone,
                                 &save_as_button_clone,
                                 &mime_type,
+                                &window_for_response, // Pass window
+                                &file_list_box_for_response, // Pass file_list_box
+                                &current_dir_for_response, // Pass current_dir
                             );
 
                             if let Some(parent) = file_to_open.parent() {
@@ -308,8 +721,9 @@ fn setup_open_button_handler(
                              if let Some(page_widget) = editor_notebook_clone.nth_page(Some(0)){
                                 if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
                                     if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file_to_open) {
-                                        picture_clone.set_pixbuf(Some(&pixbuf));
-                                        sw.set_child(Some(&picture_clone)); // This replaces the textview in the first tab
+                                        let picture_to_set = picture_clone.clone(); // Clone picture for setting
+                                        picture_to_set.set_pixbuf(Some(&pixbuf));
+                                        sw.set_child(Some(&picture_to_set)); // Use cloned picture
                                         *active_tab_path_ref_for_response.borrow_mut() = Some(file_to_open.clone());
                                          file_path_manager_for_response.borrow_mut().insert(0, file_to_open.clone());
 
@@ -376,16 +790,7 @@ fn setup_save_button_handler(
                         let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
                         if file.write_all(text.as_bytes()).is_ok() {
                             // Update tab label (remove *)
-                            if let Some(page) = editor_notebook.nth_page(Some(current_page_num)) {
-                                if let Some(tab_label_widget) = editor_notebook.tab_label(&page) {
-                                    if let Some(label) = tab_label_widget.downcast_ref::<Label>() {
-                                        let current_text = label.text();
-                                        if current_text.ends_with("*") {
-                                            label.set_text(&current_text[..current_text.len()-1]);
-                                        }
-                                    }
-                                }
-                            }
+                            update_tab_label_after_save(&editor_notebook, current_page_num, Some(&path_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
                         }
                     }
                 }
@@ -413,14 +818,8 @@ fn setup_save_button_handler(
                                     file_path_manager_clone.borrow_mut().insert(current_page_num, file.clone());
                                     *active_tab_path_ref_clone.borrow_mut() = Some(file.clone());
                                      // Update tab label
-                                    if let Some(page) = editor_notebook_clone.nth_page(Some(current_page_num)) {
-                                        if let Some(tab_label_widget) = editor_notebook_clone.tab_label(&page) {
-                                            if let Some(label) = tab_label_widget.downcast_ref::<Label>() {
-                                                label.set_text(&file.file_name().unwrap_or_default().to_string_lossy());
-                                            }
-                                        }
-                                        // Update main window title potentially
-                                    }
+                                    update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&file.file_name().unwrap_or_default().to_string_lossy()), false);
+                                    // Update main window title potentially
                                     if let Some(parent) = file.parent() {
                                         *current_dir_clone.borrow_mut() = parent.to_path_buf();
                                     }
@@ -496,13 +895,7 @@ fn setup_save_as_button_handler(
                                     *active_tab_path_ref_clone.borrow_mut() = Some(file_to_save.clone());
 
                                     // Update tab label
-                                    if let Some(page) = editor_notebook_clone.nth_page(Some(current_page_num)) {
-                                        if let Some(tab_label_widget) = editor_notebook_clone.tab_label(&page) {
-                                            if let Some(label) = tab_label_widget.downcast_ref::<Label>() {
-                                                label.set_text(&file_to_save.file_name().unwrap_or_default().to_string_lossy());
-                                            }
-                                        }
-                                    }
+                                    update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&file_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
                                     if let Some(parent) = file_to_save.parent() {
                                         *current_dir_clone.borrow_mut() = parent.to_path_buf();
                                     }
@@ -530,70 +923,87 @@ fn setup_file_selection_handler(
     picture: &Picture, // Needs tab-specific handling
     save_button: &Button,
     save_as_button: &Button,
+    window: &ApplicationWindow, // Added for NewTabDependencies
 ) {
-    let editor_notebook = editor_notebook.clone();
-    let active_tab_path_ref = active_tab_path_ref.clone();
-    let file_path_manager = file_path_manager.clone();
-    let current_dir = current_dir.clone();
-    let file_list_box_clone = file_list_box.clone(); // Used for updating list after dir change
-    let error_label = error_label.clone();
-    let picture = picture.clone();
-    let save_button = save_button.clone();
-    let save_as_button = save_as_button.clone();
+    let editor_notebook_clone = editor_notebook.clone(); // Renamed for clarity
+    let active_tab_path_ref_clone = active_tab_path_ref.clone();
+    let file_path_manager_clone = file_path_manager.clone();
+    let current_dir_clone = current_dir.clone();
+    let file_list_box_for_update = file_list_box.clone(); 
+    let error_label_clone = error_label.clone();
+    let picture_clone = picture.clone(); // picture is now cloned
+    let save_button_clone = save_button.clone();
+    let save_as_button_clone = save_as_button.clone();
+    let window_clone = window.clone(); // For NewTabDependencies
 
 
     file_list_box.connect_row_activated(move |_, row| {
+        // Clone necessary items again for the inner part of the closure if they are used across awaits or complex logic
+        // For simple moves like this, the outer clones are usually sufficient.
+        let editor_notebook_for_handler = editor_notebook_clone.clone();
+        let active_tab_path_for_handler = active_tab_path_ref_clone.clone();
+        let file_path_manager_for_handler = file_path_manager_clone.clone();
+        let current_dir_for_handler = current_dir_clone.clone();
+        let file_list_box_for_handler_update = file_list_box_for_update.clone();
+        let error_label_for_handler = error_label_clone.clone();
+        let picture_for_handler = picture_clone.clone();
+        let save_button_for_handler = save_button_clone.clone();
+        let save_as_button_for_handler = save_as_button_clone.clone();
+        let window_for_handler = window_clone.clone();
+
+
         if let Some(label) = row.child().and_then(|c| c.downcast::<Label>().ok()) {
             let file_name = label.text();
-            let mut path_from_list = current_dir.borrow().clone();
+            let mut path_from_list = current_dir_for_handler.borrow().clone(); // Use cloned current_dir
             path_from_list.push(&file_name.as_str());
 
             if path_from_list.is_dir() {
-                *current_dir.borrow_mut() = path_from_list;
-                // Pass the active_tab_path_ref correctly for selection update
-                utils::update_file_list(&file_list_box_clone, &current_dir.borrow(), &active_tab_path_ref.borrow());
+                *current_dir_for_handler.borrow_mut() = path_from_list;
+                utils::update_file_list(&file_list_box_for_handler_update, &current_dir_for_handler.borrow(), &active_tab_path_for_handler.borrow());
             } else if path_from_list.is_file() {
                 let mime_type = mime_guess::from_path(&path_from_list).first_or_octet_stream();
                 if utils::is_allowed_mime_type(&mime_type) {
                     if let Ok(content) = std::fs::read_to_string(&path_from_list) {
                         open_or_focus_tab(
-                            &editor_notebook,
+                            &editor_notebook_for_handler, 
                             &path_from_list,
                             &content,
-                            &active_tab_path_ref,
-                            &file_path_manager,
-                            &save_button,
-                            &save_as_button,
+                            &active_tab_path_for_handler, 
+                            &file_path_manager_for_handler,   
+                            &save_button_for_handler,
+                            &save_as_button_for_handler,
                             &mime_type,
+                            &window_for_handler, 
+                            &file_list_box_for_handler_update, 
+                            &current_dir_for_handler, 
                         );
-                        // update_file_list might not be needed here unless current_dir changed
-                        // utils::update_file_list(&file_list_box_clone, &current_dir.borrow(), &Some(path_from_list));
                     }
                 } else if mime_type.type_() == "image" {
                     // Simplified image handling (same as open_button)
-                     if editor_notebook.n_pages() == 1 {
-                         if let Some(page_widget) = editor_notebook.nth_page(Some(0)){
+                     if editor_notebook_for_handler.n_pages() == 1 { // Use cloned notebook
+                         if let Some(page_widget) = editor_notebook_for_handler.nth_page(Some(0)){
                             if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
                                 if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&path_from_list) {
-                                    picture.set_pixbuf(Some(&pixbuf));
-                                    sw.set_child(Some(&picture));
-                                    *active_tab_path_ref.borrow_mut() = Some(path_from_list.clone());
-                                    file_path_manager.borrow_mut().insert(0, path_from_list.clone());
-                                    utils::update_save_buttons_visibility(&save_button, &save_as_button, Some(mime_type));
+                                    let picture_to_set = picture_for_handler.clone(); 
+                                    picture_to_set.set_pixbuf(Some(&pixbuf));
+                                    sw.set_child(Some(&picture_to_set)); 
+                                    *active_tab_path_for_handler.borrow_mut() = Some(path_from_list.clone());
+                                    file_path_manager_for_handler.borrow_mut().insert(0, path_from_list.clone());
+                                    utils::update_save_buttons_visibility(&save_button_for_handler, &save_as_button_for_handler, Some(mime_type));
                                 }
                             }
                          }
                     } else {
-                        if let Some(page_widget) = editor_notebook.current_page().and_then(|p| editor_notebook.nth_page(Some(p))) {
+                        if let Some(page_widget) = editor_notebook_for_handler.current_page().and_then(|p| editor_notebook_for_handler.nth_page(Some(p))) {
                             if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
-                                sw.set_child(Some(&error_label));
+                                sw.set_child(Some(&error_label_for_handler));
                             }
                         }
                     }
                 } else {
-                     if let Some(page_widget) = editor_notebook.current_page().and_then(|p| editor_notebook.nth_page(Some(p))) {
+                     if let Some(page_widget) = editor_notebook_for_handler.current_page().and_then(|p| editor_notebook_for_handler.nth_page(Some(p))) {
                         if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
-                            sw.set_child(Some(&error_label));
+                            sw.set_child(Some(&error_label_for_handler));
                         }
                     }
                 }
