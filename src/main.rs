@@ -36,10 +36,43 @@ fn build_ui(app: &Application) {
         .show_title_buttons(true)
         .build();
 
-    let new_button = Button::with_label("New");
-    let open_button = Button::with_label("Open");
-    let save_as_button = Button::with_label("Save As");
-    let save_button = Button::with_label("Save");
+    let new_button = Button::new();
+    let open_button = Button::new();
+    let save_as_button = Button::new();
+    let save_button = Button::new();
+
+    // Create a horizontal box for each button to hold both the icon and the label
+    let new_button_box = GtkBox::new(Orientation::Horizontal, 5);
+    let new_icon = Image::from_icon_name("document-new-symbolic");
+    let new_label = Label::new(Some("New"));
+    new_button_box.append(&new_icon);
+    new_button_box.append(&new_label);
+    new_button.set_child(Some(&new_button_box));
+    new_button.set_tooltip_text(Some("Create a new file"));
+
+    let open_button_box = GtkBox::new(Orientation::Horizontal, 5);
+    let open_icon = Image::from_icon_name("document-open-symbolic");
+    let open_label = Label::new(Some("Open"));
+    open_button_box.append(&open_icon);
+    open_button_box.append(&open_label);
+    open_button.set_child(Some(&open_button_box));
+    open_button.set_tooltip_text(Some("Open an existing file"));
+
+    let save_button_box = GtkBox::new(Orientation::Horizontal, 5);
+    let save_icon = Image::from_icon_name("document-save-symbolic");
+    let save_label = Label::new(Some("Save"));
+    save_button_box.append(&save_icon);
+    save_button_box.append(&save_label);
+    save_button.set_child(Some(&save_button_box));
+    save_button.set_tooltip_text(Some("Save the current file"));
+
+    let save_as_button_box = GtkBox::new(Orientation::Horizontal, 5);
+    let save_as_icon = Image::from_icon_name("document-save-as-symbolic");
+    let save_as_label = Label::new(Some("Save As"));
+    save_as_button_box.append(&save_as_icon);
+    save_as_button_box.append(&save_as_label);
+    save_as_button.set_child(Some(&save_as_button_box));
+    save_as_button.set_tooltip_text(Some("Save the current file as a new file"));
 
     header.pack_start(&new_button);
     header.pack_start(&open_button);
@@ -117,7 +150,12 @@ fn build_ui(app: &Application) {
     up_button_box.set_margin_start(5);
     up_button_box.set_margin_end(5);
 
-    let up_button = Button::with_label("../");
+    let up_button = Button::new();
+    let up_button_content = GtkBox::new(Orientation::Horizontal, 5);
+    let up_label = Label::new(Some("../"));
+    up_button_content.append(&up_label);
+    up_button.set_child(Some(&up_button_content));
+    up_button.set_tooltip_text(Some("Go to the parent directory"));
     up_button_box.append(&up_button);
     nav_box.append(&up_button_box);
 
@@ -128,8 +166,10 @@ fn build_ui(app: &Application) {
 
     // Add the refresh button with a monochrome icon and tooltip
     let refresh_button = Button::new();
+    let refresh_button_content = GtkBox::new(Orientation::Horizontal, 5);
     let refresh_icon = Image::from_icon_name("view-refresh-symbolic");
-    refresh_button.set_child(Some(&refresh_icon));
+    refresh_button_content.append(&refresh_icon);
+    refresh_button.set_child(Some(&refresh_button_content));
     refresh_button.set_tooltip_text(Some("Refresh the current folder view"));
     let refresh_button_box = GtkBox::new(Orientation::Horizontal, 0);
     refresh_button_box.set_margin_top(5);
