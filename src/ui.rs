@@ -2,6 +2,7 @@ use gtk4::prelude::*;
 use gtk4::{
     Application, ApplicationWindow, Button, Box as GtkBox,
     HeaderBar, Image, Orientation, ScrolledWindow, TextView, ListBox, Label, Align, Picture,
+    Notebook, // Added Notebook
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -61,23 +62,47 @@ pub fn create_button_box(icon_name: &str, label_text: &str, tooltip_text: &str) 
     button_box
 }
 
-pub fn create_text_view() -> (TextView, gtk4::TextBuffer, Rc<RefCell<Option<PathBuf>>>, Label, Picture, Rc<RefCell<PathBuf>>, ScrolledWindow) {
-    let text_view = TextView::new();
-    let text_buffer = text_view.buffer().clone();
-    let file_path = Rc::new(RefCell::new(None));
+pub fn create_text_view() -> (
+    Notebook, // Changed from TextView
+    gtk4::TextBuffer, // This will be for the initial/active tab or managed per tab
+    Rc<RefCell<Option<PathBuf>>>,
+    Label,
+    Picture,
+    Rc<RefCell<PathBuf>>,
+    // ScrolledWindow, // This will be created per tab now
+) {
+    let notebook = Notebook::new();
+    notebook.set_scrollable(true);
+
+    // Create an initial empty tab or leave it empty until a file is opened
+    let initial_text_view = TextView::new();
+    let initial_text_buffer = initial_text_view.buffer().clone();
+    let initial_scrolled_window = ScrolledWindow::builder()
+        .vexpand(true)
+        .hexpand(true)
+        .child(&initial_text_view)
+        .build();
+    let initial_tab_label = Label::new(Some("Untitled"));
+    notebook.append_page(&initial_scrolled_window, Some(&initial_tab_label));
+
+
+    let file_path = Rc::new(RefCell::new(None)); // This might need to be a collection for multiple tabs
     let error_label = Label::new(Some("Cannot open this file type."));
     error_label.set_halign(Align::Center);
     error_label.set_valign(Align::Center);
-    let picture = Picture::new();
+    let picture = Picture::new(); // This might also need to be per-tab if images are opened in tabs
     let home_dir = home::home_dir().expect("Could not find home directory");
     let current_dir = Rc::new(RefCell::new(home_dir));
-    let scrolled_window = ScrolledWindow::builder()
-        .vexpand(true)
-        .hexpand(true)
-        .child(&text_view)
-        .build();
 
-    (text_view, text_buffer, file_path, error_label, picture, current_dir, scrolled_window)
+    (
+        notebook,
+        initial_text_buffer, // Return buffer of the first tab for now
+        file_path,
+        error_label,
+        picture,
+        current_dir,
+        // scrolled_window is no longer returned directly, it's part of the notebook
+    )
 }
 
 pub fn create_terminal() -> VteTerminal {
@@ -172,7 +197,7 @@ pub fn create_file_manager_panel_container(nav_box: GtkBox, file_list_scrolled_w
 
 pub fn create_paned(
     file_manager_panel: &GtkBox,
-    scrolled_window: &ScrolledWindow,
+    editor_notebook: &Notebook, // Changed from scrolled_window
     terminal_box: &ScrolledWindow
 ) -> gtk4::Paned {
     let paned = gtk4::Paned::new(Orientation::Horizontal);
@@ -180,7 +205,7 @@ pub fn create_paned(
 
     let editor_paned = gtk4::Paned::new(Orientation::Vertical);
     editor_paned.set_wide_handle(true);
-    editor_paned.set_start_child(Some(scrolled_window));
+    editor_paned.set_start_child(Some(editor_notebook)); // Use Notebook here
     editor_paned.set_end_child(Some(terminal_box));
 
     paned.set_start_child(Some(file_manager_panel));
