@@ -4,9 +4,6 @@ mod utils;
 
 use gtk4::prelude::*;
 use gtk4::Application;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::path::PathBuf;
 
 fn main() {
     let app = Application::builder()

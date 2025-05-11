@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use crate::utils;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::Write;
 
 pub fn setup_button_handlers(

@@ -1,20 +1,16 @@
 use gtk4::prelude::*;
 use gtk4::{
-    Application, ApplicationWindow, Button, Box as GtkBox, FileChooserAction, FileChooserDialog,
-    HeaderBar, Image, Orientation, ResponseType, ScrolledWindow, TextView, ListBox, ListBoxRow, Label, Align, Picture,
+    Application, ApplicationWindow, Button, Box as GtkBox,
+    HeaderBar, Image, Orientation, ScrolledWindow, TextView, ListBox, Label, Align, Picture,
 };
 use std::cell::RefCell;
-use std::fs::{self, File};
-use std::io::Write;
 use std::rc::Rc;
 use std::env;
 use std::path::PathBuf;
-use gtk4::gio::{self, Cancellable};
+use gtk4::gio::Cancellable;
 use vte4::Terminal as VteTerminal;
 use vte4::TerminalExtManual;
 use home;
-use mime_guess;
-use mime_guess::Mime;
 
 pub fn create_window(app: &Application) -> ApplicationWindow {
     ApplicationWindow::builder()

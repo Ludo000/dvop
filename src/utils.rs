@@ -1,7 +1,5 @@
 use gtk4::prelude::*;
-use gtk4::{Button, ListBox, ScrolledWindow};
-use std::rc::Rc;
-use std::cell::RefCell;
+use gtk4::{Button, ListBox};
 use std::path::PathBuf;
 use mime_guess;
 use mime_guess::Mime;
