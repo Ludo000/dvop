@@ -1,7 +1,7 @@
 use gtk4::prelude::*;
 use gtk4::{
     Application, ApplicationWindow, Button, Box as GtkBox, FileChooserAction, FileChooserDialog,
-    HeaderBar, Image, Orientation, ResponseType, ScrolledWindow, TextView, ListBox, ListBoxRow, Label, Align,
+    HeaderBar, Image, Orientation, ResponseType, ScrolledWindow, TextView, ListBox, ListBoxRow, Label, Align, Picture,
 };
 use std::cell::RefCell;
 use std::fs::{self, File};
@@ -90,6 +90,9 @@ fn build_ui(app: &Application) {
     error_label.set_halign(Align::Center);
     error_label.set_valign(Align::Center);
 
+    // Picture widget for displaying images
+    let picture = Picture::new();
+
     // Set the initial current_dir to the home directory
     let home_dir = home::home_dir().expect("Could not find home directory");
     let current_dir = Rc::new(RefCell::new(home_dir));
@@ -98,6 +101,9 @@ fn build_ui(app: &Application) {
         .vexpand(true)
         .hexpand(true)
         .build();
+
+    // Set the initial child of the scrolled window to the text view
+    scrolled_window.set_child(Some(&text_view));
 
     // Terminal
     let terminal = VteTerminal::new();
@@ -211,11 +217,14 @@ fn build_ui(app: &Application) {
         let current_dir = current_dir.clone();
         let scrolled_window = scrolled_window.clone();
         let text_view = text_view.clone();
+        let save_button_clone = save_button.clone(); // Clone the button before moving into the closure
+        let save_as_button_clone = save_as_button.clone(); // Clone the button before moving into the closure
         new_button.connect_clicked(move |_| {
             text_buffer.set_text("");
             *file_path.borrow_mut() = None;
             scrolled_window.set_child(Some(&text_view));
             update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
+            update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, None);
         });
     }
 
@@ -229,6 +238,9 @@ fn build_ui(app: &Application) {
         let scrolled_window = scrolled_window.clone();
         let text_view = text_view.clone();
         let error_label = error_label.clone();
+        let picture = picture.clone();
+        let save_button_clone = save_button.clone(); // Clone the button before moving into the closure
+        let save_as_button_clone = save_as_button.clone(); // Clone the button before moving into the closure
         open_button.connect_clicked(move |_| {
             let dialog = FileChooserDialog::new(
                 Some("Open File"),
@@ -248,6 +260,9 @@ fn build_ui(app: &Application) {
             let scrolled_window = scrolled_window.clone();
             let text_view = text_view.clone();
             let error_label = error_label.clone();
+            let picture = picture.clone();
+            let save_button_clone = save_button_clone.clone(); // Clone the button before moving into the closure
+            let save_as_button_clone = save_as_button_clone.clone(); // Clone the button before moving into the closure
             dialog.connect_response(move |dialog, response| {
                 if response == ResponseType::Accept {
                     if let Some(file) = dialog.file().and_then(|f| f.path()) {
@@ -263,6 +278,19 @@ fn build_ui(app: &Application) {
                                     *current_dir.borrow_mut() = parent.to_path_buf();
                                     update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
                                 }
+                                update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, Some(mime_type));
+                            }
+                        } else if mime_type.type_() == "image" {
+                            if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file) {
+                                picture.set_pixbuf(Some(&pixbuf));
+                                scrolled_window.set_child(Some(&picture));
+
+                                // Update the current directory to the directory of the opened file
+                                if let Some(parent) = file.parent() {
+                                    *current_dir.borrow_mut() = parent.to_path_buf();
+                                    update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
+                                }
+                                update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, Some(mime_type));
                             }
                         } else {
                             scrolled_window.set_child(Some(&error_label));
@@ -287,9 +315,12 @@ fn build_ui(app: &Application) {
         let text_view = text_view.clone();
         save_button.connect_clicked(move |_| {
             if let Some(ref path) = *file_path.borrow() {
-                if let Ok(mut file) = File::create(path) {
-                    let text = text_buffer.text(&text_buffer.start_iter(), &text_buffer.end_iter(), false);
-                    let _ = file.write_all(text.as_bytes());
+                let mime_type = mime_guess::from_path(path).first_or_octet_stream();
+                if mime_type.type_() == "text" || mime_type == mime_guess::mime::APPLICATION_OCTET_STREAM {
+                    if let Ok(mut file) = File::create(path) {
+                        let text = text_buffer.text(&text_buffer.start_iter(), &text_buffer.end_iter(), false);
+                        let _ = file.write_all(text.as_bytes());
+                    }
                 }
             } else {
                 let dialog = FileChooserDialog::new(
@@ -355,16 +386,19 @@ fn build_ui(app: &Application) {
             dialog.connect_response(move |dialog, response| {
                 if response == ResponseType::Accept {
                     if let Some(file) = dialog.file().and_then(|f| f.path()) {
-                        if let Ok(mut f) = File::create(&file) {
-                            let text = text_buffer.text(&text_buffer.start_iter(), &text_buffer.end_iter(), false);
-                            let _ = f.write_all(text.as_bytes());
-                            *file_path.borrow_mut() = Some(file.clone());
-                            scrolled_window.set_child(Some(&text_view));
+                        let mime_type = mime_guess::from_path(&file).first_or_octet_stream();
+                        if mime_type.type_() == "text" || mime_type == mime_guess::mime::APPLICATION_OCTET_STREAM {
+                            if let Ok(mut f) = File::create(&file) {
+                                let text = text_buffer.text(&text_buffer.start_iter(), &text_buffer.end_iter(), false);
+                                let _ = f.write_all(text.as_bytes());
+                                *file_path.borrow_mut() = Some(file.clone());
+                                scrolled_window.set_child(Some(&text_view));
 
-                            // Update the current directory to the directory of the saved file
-                            if let Some(parent) = file.parent() {
-                                *current_dir.borrow_mut() = parent.to_path_buf();
-                                update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
+                                // Update the current directory to the directory of the saved file
+                                if let Some(parent) = file.parent() {
+                                    *current_dir.borrow_mut() = parent.to_path_buf();
+                                    update_file_list(&file_list_box, &current_dir.borrow(), &file_path.borrow());
+                                }
                             }
                         }
                     }
@@ -385,6 +419,9 @@ fn build_ui(app: &Application) {
         let scrolled_window = scrolled_window.clone();
         let text_view = text_view.clone();
         let error_label = error_label.clone();
+        let picture = picture.clone();
+        let save_button_clone = save_button.clone(); // Clone the button before moving into the closure
+        let save_as_button_clone = save_as_button.clone(); // Clone the button before moving into the closure
         file_list_box_clone.clone().connect_row_activated(move |_, row| {
             if let Some(label) = row.child().and_then(|c| c.downcast::<Label>().ok()) {
                 let file_name = label.text();
@@ -403,6 +440,15 @@ fn build_ui(app: &Application) {
                             *file_path.borrow_mut() = Some(path);
                             scrolled_window.set_child(Some(&text_view));
                             update_file_list(&file_list_box_clone, &current_dir.borrow(), &file_path.borrow());
+                            update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, Some(mime_type));
+                        }
+                    } else if mime_type.type_() == "image" {
+                        if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&path) {
+                            picture.set_pixbuf(Some(&pixbuf));
+                            scrolled_window.set_child(Some(&picture));
+                            *file_path.borrow_mut() = Some(path);
+                            update_file_list(&file_list_box_clone, &current_dir.borrow(), &file_path.borrow());
+                            update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, Some(mime_type));
                         }
                     } else {
                         scrolled_window.set_child(Some(&error_label));
@@ -512,5 +558,18 @@ fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_path: &
     // Set the selected row only if there is a currently opened file
     if let Some(row) = selected_row {
         file_list_box.select_row(Some(&row));
+    }
+}
+
+fn update_save_buttons_visibility(save_button: &Button, save_as_button: &Button, mime_type: Option<mime_guess::Mime>) {
+    match mime_type {
+        Some(mime) if mime.type_() == "image" => {
+            save_button.set_visible(false);
+            save_as_button.set_visible(false);
+        },
+        _ => {
+            save_button.set_visible(true);
+            save_as_button.set_visible(true);
+        }
     }
 }
