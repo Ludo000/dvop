@@ -14,6 +14,8 @@ use vte4::Terminal as VteTerminal;
 use vte4::TerminalExtManual;
 use home;
 use mime_guess;
+use mime_guess::Mime; 
+
 
 fn main() {
     let app = Application::builder()
@@ -22,6 +24,21 @@ fn main() {
 
     app.connect_activate(build_ui);
     app.run();
+}
+
+fn is_allowed_mime_type(mime_type: &Mime) -> bool {
+    // Allow all text types
+    mime_type.type_() == "text" ||
+    // Allow specific application types
+    mime_type == &mime_guess::mime::APPLICATION_OCTET_STREAM ||
+    mime_type == &mime_guess::mime::APPLICATION_JSON ||
+    mime_type == &mime_guess::mime::APPLICATION_JAVASCRIPT ||
+    // Allow any text-based MIME types
+    mime_type.type_().as_str().starts_with("text/") ||
+    // Manually check for other MIME types using essence_str
+    mime_type.essence_str() == "application/xml" ||
+    mime_type.essence_str() == "application/x-httpd-php" ||
+    mime_type.essence_str() == "application/x-mspublisher"
 }
 
 fn build_ui(app: &Application) {
@@ -267,7 +284,7 @@ fn build_ui(app: &Application) {
                 if response == ResponseType::Accept {
                     if let Some(file) = dialog.file().and_then(|f| f.path()) {
                         let mime_type = mime_guess::from_path(&file).first_or_octet_stream();
-                        if mime_type.type_() == "text" || mime_type == mime_guess::mime::APPLICATION_OCTET_STREAM {
+                        if is_allowed_mime_type(&mime_type) {
                             if let Ok(content) = std::fs::read_to_string(&file) {
                                 text_buffer.set_text(&content);
                                 *file_path.borrow_mut() = Some(file.clone());
@@ -316,7 +333,7 @@ fn build_ui(app: &Application) {
         save_button.connect_clicked(move |_| {
             if let Some(ref path) = *file_path.borrow() {
                 let mime_type = mime_guess::from_path(path).first_or_octet_stream();
-                if mime_type.type_() == "text" || mime_type == mime_guess::mime::APPLICATION_OCTET_STREAM {
+                if is_allowed_mime_type(&mime_type) {
                     if let Ok(mut file) = File::create(path) {
                         let text = text_buffer.text(&text_buffer.start_iter(), &text_buffer.end_iter(), false);
                         let _ = file.write_all(text.as_bytes());
@@ -387,7 +404,7 @@ fn build_ui(app: &Application) {
                 if response == ResponseType::Accept {
                     if let Some(file) = dialog.file().and_then(|f| f.path()) {
                         let mime_type = mime_guess::from_path(&file).first_or_octet_stream();
-                        if mime_type.type_() == "text" || mime_type == mime_guess::mime::APPLICATION_OCTET_STREAM {
+                        if is_allowed_mime_type(&mime_type) {
                             if let Ok(mut f) = File::create(&file) {
                                 let text = text_buffer.text(&text_buffer.start_iter(), &text_buffer.end_iter(), false);
                                 let _ = f.write_all(text.as_bytes());
@@ -434,7 +451,7 @@ fn build_ui(app: &Application) {
                 } else if path.is_file() {
                     let mime_type = mime_guess::from_path(&path).first_or_octet_stream();
                     println!("Debug: MIME type of the file is: {:?}", mime_type); // Print MIME type for debugging
-                    if mime_type.type_() == "text" || mime_type == mime_guess::mime::APPLICATION_OCTET_STREAM {
+                    if is_allowed_mime_type(&mime_type) {
                         if let Ok(content) = fs::read_to_string(&path) {
                             text_buffer.set_text(&content);
                             *file_path.borrow_mut() = Some(path);
