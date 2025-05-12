@@ -231,6 +231,7 @@ pub fn create_paned(
 // Add a new public function to create a tab widget (Box with Label and Close Button)
 pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     let tab_box = GtkBox::new(Orientation::Horizontal, 5);
+    tab_box.set_margin_bottom(2);
     let label = Label::new(Some(tab_title));
     let close_button = Button::from_icon_name("window-close-symbolic");
 
