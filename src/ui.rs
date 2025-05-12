@@ -176,6 +176,7 @@ pub fn create_file_manager_panel() -> (ListBox, ScrolledWindow, GtkBox, Button, 
         .build();
 
     let nav_box = GtkBox::new(Orientation::Horizontal, 0); 
+    nav_box.set_margin_top(5); // Apply top margin to the nav_box
 
     let up_button_icon = Image::from_icon_name("go-up-symbolic");
     let up_button = Button::new();
