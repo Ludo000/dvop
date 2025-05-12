@@ -665,9 +665,20 @@ fn setup_open_button_handler(
             &[("Open", gtk4::ResponseType::Accept), ("Cancel", gtk4::ResponseType::Cancel)],
         );
 
-        let current_dialog_dir = current_dir.borrow().clone();
-        if let Some(gio_file) = gtk4::gio::File::for_path(&current_dialog_dir).parent() {
-             let _ = dialog.set_current_folder(Some(&gio_file)); // Handle Result
+        let current_dialog_dir_path = current_dir.borrow().clone();
+        // Explicitly type annotation for gio_file_result and wrap the call in Ok()
+        let gio_file_result: Result<gtk4::gio::File, glib::Error> = Ok(gtk4::gio::File::for_path(&current_dialog_dir_path));
+        match gio_file_result {
+            Ok(gfile) => {
+                if current_dialog_dir_path.is_dir() {
+                    let _ = dialog.set_current_folder(Some(&gfile));
+                } else if let Some(parent_gfile) = gfile.parent() {
+                    let _ = dialog.set_current_folder(Some(&parent_gfile));
+                }
+            }
+            Err(e) => { 
+                eprintln!("Failed to create GFile for path {:?}: {}", current_dialog_dir_path, e);
+            }
         }
 
         let editor_notebook_clone = editor_notebook.clone();
@@ -865,9 +876,20 @@ fn setup_save_as_button_handler(
                 &[("Save As", gtk4::ResponseType::Accept), ("Cancel", gtk4::ResponseType::Cancel)],
             );
 
-            let current_dialog_dir = current_dir.borrow().clone();
-             if let Some(gio_file) = gtk4::gio::File::for_path(&current_dialog_dir).parent() {
-                let _ = dialog.set_current_folder(Some(&gio_file)); // Handle Result
+            let current_dialog_dir_path = current_dir.borrow().clone();
+            // Explicitly type annotation for gio_file_result and wrap the call in Ok()
+            let gio_file_result: Result<gtk4::gio::File, glib::Error> = Ok(gtk4::gio::File::for_path(&current_dialog_dir_path));
+            match gio_file_result {
+                Ok(gfile) => {
+                    if current_dialog_dir_path.is_dir() {
+                        let _ = dialog.set_current_folder(Some(&gfile));
+                    } else if let Some(parent_gfile) = gfile.parent() {
+                        let _ = dialog.set_current_folder(Some(&parent_gfile));
+                    }
+                }
+                Err(e) => { 
+                    eprintln!("Failed to create GFile for path {:?}: {}", current_dialog_dir_path, e);
+                }
             }
             // Suggest current file name if available
             if let Some(p) = file_path_manager.borrow().get(&current_page_num) {
