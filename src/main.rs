@@ -4,10 +4,12 @@ mod utils;
 
 use gtk4::prelude::*;
 use gtk4::Application;
+use gtk4::gio;  // Added for menu actions
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap; // Added for HashMap
 use std::path::PathBuf; // Added for PathBuf
+use std::io::Write;     // For file writing
 
 fn main() {
     let app = Application::builder()
@@ -20,8 +22,12 @@ fn main() {
 
 fn build_ui(app: &Application) {
     let window = ui::create_window(app);
-    let (header, new_button, open_button, save_button, save_as_button) = ui::create_header();
+    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button) = ui::create_header();
 
+    // Create a separate hidden button to act as the target for handlers
+    // This prevents stack overflow from circular references
+    let save_button = gtk4::Button::new();
+    
     let (
         _initial_scrolled_window, // ScrolledWindow content of the first tab
         _initial_text_view,       // TextView in the first tab
@@ -44,6 +50,69 @@ fn build_ui(app: &Application) {
         ui::create_file_manager_panel();
     let file_manager_panel =
         ui::create_file_manager_panel_container(nav_box, file_list_scrolled_window);
+
+    // Setup actions for the save menu
+    let save_action = gio::SimpleAction::new("save", None);
+    let save_as_action = gio::SimpleAction::new("save-as", None);
+    
+    // Clone necessary variables for the action closures
+    let save_button_clone = save_button.clone();
+    let save_as_button_clone = save_as_button.clone();
+    
+    // Connect save action to be triggered from the menu
+    let save_button_clone_for_action = save_button_clone.clone();
+    save_action.connect_activate(move |_, _| {
+        save_button_clone_for_action.emit_clicked();
+    });
+    
+    // Connect save-as action to be triggered from the menu
+    let save_as_button_clone_for_action = save_as_button_clone.clone();
+    save_as_action.connect_activate(move |_, _| {
+        save_as_button_clone_for_action.emit_clicked();
+    });
+    
+    // Add the actions to the window
+    window.add_action(&save_action);
+    window.add_action(&save_as_action);
+    
+    // Instead of connecting the buttons to each other which causes recursion,
+    // we'll connect them both to the same handler
+    
+    // Connect the save_main_button directly to the same handler that the hidden save_button uses
+    let editor_notebook_clone = editor_notebook.clone();
+    let _active_tab_path_clone = active_tab_path.clone();
+    let file_path_manager_clone = file_path_manager.clone();
+    let _window_clone = window.clone();
+    let _file_list_box_clone = file_list_box.clone();
+    let _current_dir_clone = current_dir.clone();
+    let save_as_button_clone = save_as_button.clone();
+    
+    save_main_button.connect_clicked(move |_| {
+        // Call save functionality directly
+        if let Some((_active_text_view, active_buffer)) = handlers::get_active_text_view_and_buffer(&editor_notebook_clone) {
+            let current_page_num_opt = editor_notebook_clone.current_page();
+            if current_page_num_opt.is_none() { return; }
+            let current_page_num = current_page_num_opt.unwrap();
+
+            let path_to_save_opt = file_path_manager_clone.borrow().get(&current_page_num).cloned();
+
+            if let Some(path_to_save) = path_to_save_opt {
+                let mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
+                if utils::is_allowed_mime_type(&mime_type) {
+                    if let Ok(mut file) = std::fs::File::create(&path_to_save) {
+                        let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
+                        if file.write_all(text.as_bytes()).is_ok() {
+                            // Update tab label (remove *)
+                            handlers::update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&path_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
+                        }
+                    }
+                }
+            } else {
+                // No path associated, trigger Save As
+                save_as_button_clone.emit_clicked();
+            }
+        }
+    });
 
     // Dirty tracking for the initial "Untitled" tab
     let initial_tab_actual_label_clone = initial_tab_actual_label.clone();
@@ -72,6 +141,7 @@ fn build_ui(app: &Application) {
         current_dir: current_dir.clone(),
         save_button: save_button.clone(),
         save_as_button: save_as_button.clone(),
+        _save_menu_button: Some(save_menu_button.clone()), // Added underscore to acknowledge it's unused
     };
 
     let initial_tab_close_button_clone = initial_tab_close_button.clone();
@@ -113,7 +183,10 @@ fn build_ui(app: &Application) {
 
     // Update file list initially, possibly with no active file selection
     utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow());
-
+    
+    // Initialize save menu button visibility
+    utils::update_save_menu_button_visibility(&save_menu_button, Some(mime_guess::mime::TEXT_PLAIN_UTF_8));
+    
     window.set_child(Some(&paned));
 
     // Connect notebook's switch-page signal
@@ -123,6 +196,7 @@ fn build_ui(app: &Application) {
     let current_dir_clone_for_switch = current_dir.clone();
     let save_button_clone_for_switch = save_button.clone();
     let save_as_button_clone_for_switch = save_as_button.clone();
+    let save_menu_button_clone_for_switch = save_menu_button.clone(); // Added for menu button
 
     editor_notebook.connect_switch_page(move |notebook, _page, page_num| {
         let new_active_path = { // New scope to drop borrow on file_path_manager_clone_for_switch
@@ -135,18 +209,19 @@ fn build_ui(app: &Application) {
         utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_path_clone, &new_active_path);
 
         // Update save buttons based on the new active tab's content type (if any)
-        if let Some((_, _buffer)) = handlers::get_text_view_and_buffer_for_page(notebook, page_num) { // Prefixed buffer with _
-            // For text views, determine mime type (assume text for now if path is None)
-            let mime_type = new_active_path.as_ref()
-                .map(|p| mime_guess::from_path(p).first_or_octet_stream())
-                .unwrap_or(mime_guess::mime::TEXT_PLAIN_UTF_8); // Default to text for "Untitled"
-            utils::update_save_buttons_visibility(&save_button_clone_for_switch, &save_as_button_clone_for_switch, Some(mime_type));
+        if let Some((_, _buffer)) = handlers::get_text_view_and_buffer_for_page(notebook, page_num) { // Prefixed buffer with _        // For text views, determine mime type (assume text for now if path is None)
+        let mime_type = new_active_path.as_ref()
+            .map(|p| mime_guess::from_path(p).first_or_octet_stream())
+            .unwrap_or(mime_guess::mime::TEXT_PLAIN_UTF_8); // Default to text for "Untitled"
+        utils::update_save_buttons_visibility(&save_button_clone_for_switch, &save_as_button_clone_for_switch, Some(mime_type.clone()));
+        utils::update_save_menu_button_visibility(&save_menu_button_clone_for_switch, Some(mime_type)); // Update menu button
             
             // Also, re-evaluate dirty status for save button if needed, though dirty flag on tab label is primary
             // For simplicity, save button visibility is mostly based on type, actual save action checks dirty state.
         } else {
             // If not a text view (e.g. placeholder for image), disable save buttons or handle appropriately
             utils::update_save_buttons_visibility(&save_button_clone_for_switch, &save_as_button_clone_for_switch, None);
+            utils::update_save_menu_button_visibility(&save_menu_button_clone_for_switch, None); // Update menu button
         }
     });
 
@@ -167,6 +242,7 @@ fn build_ui(app: &Application) {
         &up_button,
         &refresh_button,
         &file_list_box, // file_list_box_clone is the same as file_list_box here
+        Some(&save_menu_button), // Pass the save menu button with the renamed parameter
     );
 
     window.show();

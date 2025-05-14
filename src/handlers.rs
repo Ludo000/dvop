@@ -1,5 +1,5 @@
 use gtk4::prelude::*;
-use gtk4::{Button, TextBuffer, ApplicationWindow, ListBox, ScrolledWindow, TextView, Label, Picture, Notebook, MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType};
+use gtk4::{Button, TextBuffer, ApplicationWindow, ListBox, ScrolledWindow, TextView, Label, Picture, Notebook, MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType, MenuButton};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::Write;
 
 // Helper to get current TextView and TextBuffer from active Notebook tab
-fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView, TextBuffer)> {
+pub fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView, TextBuffer)> {
     notebook.current_page().and_then(|page_num| {
         notebook.nth_page(Some(page_num)).and_then(|page_widget| {
             if let Some(scrolled_window) = page_widget.downcast_ref::<ScrolledWindow>() {
@@ -56,6 +56,7 @@ pub struct NewTabDependencies {
     pub current_dir: Rc<RefCell<PathBuf>>,
     pub save_button: Button,
     pub save_as_button: Button,
+    pub _save_menu_button: Option<MenuButton>, // Added underscore to acknowledge it's unused
     // Add other dependencies like error_label, picture if needed for new tab setup
 }
 
@@ -90,6 +91,11 @@ fn create_new_empty_tab(deps: &NewTabDependencies) {
 
     utils::update_file_list(&deps.file_list_box, &current_dir_path_clone, &active_path_for_update);
     utils::update_save_buttons_visibility(&deps.save_button, &deps.save_as_button, Some(mime_guess::mime::TEXT_PLAIN_UTF_8)); // Enable save for new text tab
+    
+    // Update save menu button visibility if it exists
+    if let Some(ref save_menu_button) = deps._save_menu_button {
+        utils::update_save_menu_button_visibility(save_menu_button, Some(mime_guess::mime::TEXT_PLAIN_UTF_8));
+    }
 
     // Connect dirty tracking for the new "Untitled" tab's label
     let tab_actual_label_clone = tab_actual_label.clone();
@@ -126,7 +132,7 @@ fn create_new_empty_tab(deps: &NewTabDependencies) {
 }
 
 // Helper function to update tab label after save or name change
-fn update_tab_label_after_save(notebook: &Notebook, page_num: u32, new_name_opt: Option<&str>, is_now_dirty: bool) {
+pub fn update_tab_label_after_save(notebook: &Notebook, page_num: u32, new_name_opt: Option<&str>, is_now_dirty: bool) {
     if let Some(page_widget) = notebook.nth_page(Some(page_num)) {
         if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
             if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
@@ -369,10 +375,11 @@ fn open_or_focus_tab(
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
     save_button: &Button,
     save_as_button: &Button, 
-    _mime_type: &mime_guess::Mime, // Prefixed with underscore as it's not directly used now
+    _mime_type: &mime_guess::Mime, // Used now for save menu button visibility
     window: &ApplicationWindow, // Added for dialogs and NewTabDependencies
     file_list_box: &ListBox,
     current_dir: &Rc<RefCell<PathBuf>>,
+    _save_menu_button: Option<&MenuButton>, // Added save_menu_button parameter
 ) {
     // Check if file is already open
     let mut page_to_focus = None;
@@ -436,6 +443,7 @@ fn open_or_focus_tab(
             current_dir: current_dir.clone(),
             save_button: save_button.clone(),
             save_as_button: save_as_button.clone(),
+            _save_menu_button: None, // We don't have a menu button in this scope
         };
 
         tab_close_button.connect_clicked(move |_| {
@@ -475,6 +483,7 @@ pub fn setup_button_handlers(
     up_button: &Button,
     refresh_button: &Button,
     file_list_box_clone: &ListBox, // This is likely the same as file_list_box, ensure it's used consistently
+    _save_menu_button: Option<&MenuButton> // Prefix with underscore to acknowledge it's unused
 ) {
     setup_new_button_handler(
         new_button,
@@ -500,6 +509,7 @@ pub fn setup_button_handlers(
         save_as_button,
         active_tab_path,
         file_path_manager,
+        _save_menu_button,
     );
 
     setup_save_button_handler(
@@ -533,6 +543,7 @@ pub fn setup_button_handlers(
         save_button,
         save_as_button,
         window, // Pass window
+        _save_menu_button, // Pass save_menu_button with the renamed parameter
     );
 
     // These handlers likely don't need direct access to the editor_notebook content itself
@@ -613,6 +624,7 @@ fn setup_new_button_handler(
             current_dir: current_dir_clone.clone(),
             save_button: save_button_clone.clone(),
             save_as_button: save_as_button_clone.clone(),
+            _save_menu_button: None, // We don't have a menu button in this scope
         };
         let new_scrolled_window_clone_for_close = new_scrolled_window.clone();
         tab_close_button.connect_clicked(move |_| {
@@ -644,6 +656,7 @@ fn setup_open_button_handler(
     save_as_button: &Button,
     active_tab_path_ref: &Rc<RefCell<Option<PathBuf>>>,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    _save_menu_button: Option<&MenuButton>, // Renamed with underscore to acknowledge it's unused
 ) {
     let editor_notebook = editor_notebook.clone();
     let window = window.clone();
@@ -656,6 +669,8 @@ fn setup_open_button_handler(
     // Clone the Rc itself, not the reference, to move ownership into the closure
     let active_tab_path_ref_owned = active_tab_path_ref.clone();
     let file_path_manager_owned = file_path_manager.clone();
+    // Clone the save_menu_button (renamed to match the parameter name)
+    let __save_menu_button = _save_menu_button.cloned(); // Double underscore to avoid confusion with parameter name
 
     open_button.connect_clicked(move |_| {
         let dialog = gtk4::FileChooserDialog::new(
@@ -715,6 +730,7 @@ fn setup_open_button_handler(
                                 &window_for_response, // Pass window
                                 &file_list_box_for_response, // Pass file_list_box
                                 &current_dir_for_response, // Pass current_dir
+                                None, // We don't have the save_menu_button here
                             );
 
                             if let Some(parent) = file_to_open.parent() {
@@ -946,6 +962,7 @@ fn setup_file_selection_handler(
     save_button: &Button,
     save_as_button: &Button,
     window: &ApplicationWindow, // Added for NewTabDependencies
+    _save_menu_button: Option<&MenuButton> // Prefix with _ to acknowledge it's unused currently
 ) {
     let editor_notebook_clone = editor_notebook.clone(); // Renamed for clarity
     let active_tab_path_ref_clone = active_tab_path_ref.clone();
@@ -997,7 +1014,8 @@ fn setup_file_selection_handler(
                             &mime_type,
                             &window_for_handler, 
                             &file_list_box_for_handler_update, 
-                            &current_dir_for_handler, 
+                            &current_dir_for_handler,
+                            None, // We don't have save_menu_button here
                         );
                     }
                 } else if mime_type.type_() == "image" {

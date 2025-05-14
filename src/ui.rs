@@ -2,6 +2,7 @@ use gtk4::prelude::*;
 use gtk4::{
     Application, ApplicationWindow, Box as GtkBox, Button, HeaderBar, Label, ListBox, Notebook,
     Orientation, Picture, ScrolledWindow, TextView, Image, PolicyType, // Added PolicyType
+    MenuButton, PopoverMenu, gio,  // Added these imports for the menu functionality
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -21,7 +22,7 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
         .build()
 }
 
-pub fn create_header() -> (HeaderBar, Button, Button, Button, Button) {
+pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button) {
     let header = HeaderBar::new();
 
     // New Button
@@ -46,7 +47,48 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, Button) {
     open_button.set_tooltip_text(Some("Open a file"));
     header.pack_start(&open_button);
 
-    // Save As Button
+    // Create a split button for Save functionality
+    
+    // Create the main container box for our split button
+    let save_split_box = GtkBox::new(Orientation::Horizontal, 0);
+    save_split_box.add_css_class("linked"); // Makes the buttons appear connected
+    
+    // Create the main Save button (left side)
+    let save_main_button = Button::new();
+    let save_button_icon = Image::from_icon_name("document-save-symbolic");
+    let save_button_label = Label::new(Some("Save"));
+    let save_main_button_box = GtkBox::new(Orientation::Horizontal, 5);
+    save_main_button_box.append(&save_button_icon);
+    save_main_button_box.append(&save_button_label);
+    save_main_button.set_child(Some(&save_main_button_box));
+    save_main_button.set_tooltip_text(Some("Save the current file"));
+    
+    // Create the dropdown button (right side)
+    let save_menu_button = MenuButton::builder()
+        .icon_name("pan-down-symbolic")
+        .tooltip_text("Additional save options")
+        .build();
+    
+    // Set minimum width for the dropdown button to make it look like an arrow-only button
+    save_menu_button.set_size_request(20, -1);
+    
+    // Create the menu model for the dropdown
+    let menu = gio::Menu::new();
+    let save_as_item = gio::MenuItem::new(Some("Save As..."), Some("win.save-as"));
+    menu.append_item(&save_as_item);
+    
+    // Create a popover from the menu model
+    let popover = PopoverMenu::from_model(Some(&menu));
+    save_menu_button.set_popover(Some(&popover));
+    
+    // Add both buttons to the container box
+    save_split_box.append(&save_main_button);
+    save_split_box.append(&save_menu_button);
+    
+    // Add the split button to the header
+    header.pack_end(&save_split_box);
+
+    // We'll still need a Save As button, but it will be hidden and triggered by the menu
     let save_as_button = Button::new();
     let save_as_button_icon = Image::from_icon_name("document-save-as-symbolic");
     let save_as_button_label = Label::new(Some("Save As"));
@@ -55,21 +97,13 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, Button) {
     save_as_button_box.append(&save_as_button_label);
     save_as_button.set_child(Some(&save_as_button_box));
     save_as_button.set_tooltip_text(Some("Save the current file with a new name"));
-    header.pack_end(&save_as_button);
+    save_as_button.set_visible(false); // Hide this button since it will be triggered by the menu
 
-    // Save Button
+    // Regular save button - will be hidden and used to programmatically trigger save action
     let save_button = Button::new();
-    let save_button_icon = Image::from_icon_name("document-save-symbolic");
-    let save_button_label = Label::new(Some("Save"));
-    let save_button_box = GtkBox::new(Orientation::Horizontal, 5);
-    save_button_box.append(&save_button_icon);
-    save_button_box.append(&save_button_label);
-    save_button.set_child(Some(&save_button_box));
-    save_button.set_tooltip_text(Some("Save the current file"));
-    header.pack_end(&save_button);
+    save_button.set_visible(false); // Hide this button since it will be triggered by the menu
 
-
-    (header, new_button, open_button, save_button, save_as_button)
+    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button)
 }
 
 pub fn create_text_view() -> (

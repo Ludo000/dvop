@@ -1,5 +1,5 @@
 use gtk4::prelude::*;
-use gtk4::{Button, ListBox};
+use gtk4::{Button, ListBox, MenuButton};
 use std::path::PathBuf;
 use mime_guess;
 use mime_guess::Mime;
@@ -92,6 +92,17 @@ pub fn update_save_buttons_visibility(save_button: &Button, save_as_button: &But
         _ => {
             save_button.set_visible(true);
             save_as_button.set_visible(true);
+        }
+    }
+}
+
+pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_type: Option<mime_guess::Mime>) {
+    match mime_type {
+        Some(mime) if mime.type_() == "image" => {
+            save_menu_button.set_visible(false);
+        },
+        _ => {
+            save_menu_button.set_visible(true);
         }
     }
 }
