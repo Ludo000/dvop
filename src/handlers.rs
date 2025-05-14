@@ -1,100 +1,161 @@
-use gtk4::prelude::*;
-use gtk4::{Button, TextBuffer, ApplicationWindow, ListBox, ScrolledWindow, TextView, Label, Picture, Notebook, MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType, MenuButton};
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::path::PathBuf;
-use crate::utils;
-use std::fs::File;
-use std::io::Write;
+// Event handlers and business logic for the Basado Text Editor
+// This module contains all the event handlers and core functionality for the editor
 
-// Helper to get current TextView and TextBuffer from active Notebook tab
+// GTK imports
+use gtk4::prelude::*;
+use gtk4::{
+    // Widgets
+    Button, TextBuffer, ApplicationWindow, ListBox, ScrolledWindow, 
+    TextView, Label, Picture, Notebook, MenuButton,
+    
+    // Dialog components
+    MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType
+};
+
+// Standard library imports
+use std::collections::HashMap;  // For mapping tab indices to file paths
+use std::rc::Rc;                // Reference counting for shared ownership
+use std::cell::RefCell;         // Interior mutability pattern
+use std::path::PathBuf;         // File system path representation
+use std::fs::File;              // File operations
+use std::io::Write;             // File writing capabilities
+
+// Internal imports
+use crate::utils;               // Utility functions
+
+/// Gets the TextView and TextBuffer from the currently active notebook tab
+///
+/// This function navigates the widget hierarchy to find the text view in the current tab.
+/// Returns None if there is no active tab or if the tab doesn't contain a text view
+/// (e.g., if it's showing an image instead).
 pub fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView, TextBuffer)> {
+    // Get the current page number, then use it to find the page widget
     notebook.current_page().and_then(|page_num| {
         notebook.nth_page(Some(page_num)).and_then(|page_widget| {
+            // Check if the page contains a ScrolledWindow (typical for text content)
             if let Some(scrolled_window) = page_widget.downcast_ref::<ScrolledWindow>() {
+                // Get the child of the ScrolledWindow
                 scrolled_window.child().and_then(|child| {
+                    // Try to cast the child to a TextView
                     if let Some(text_view) = child.downcast_ref::<TextView>() {
+                        // Return the TextView and its associated TextBuffer
                         Some((text_view.clone(), text_view.buffer()))
                     } else {
-                        None // Child is not a TextView
+                        // Child exists but is not a TextView
+                        None
                     }
                 })
             } else {
-                None // Page widget is not a ScrolledWindow (e.g., could be an image directly)
+                // Page widget is not a ScrolledWindow
+                // This happens for non-text content like images
+                None
             }
         })
     })
 }
 
-// Helper to get TextView and TextBuffer for a specific page number
+/// Gets the TextView and TextBuffer for a specific notebook tab by index
+///
+/// Similar to get_active_text_view_and_buffer, but works with an explicit page number
+/// instead of the currently active tab.
 pub fn get_text_view_and_buffer_for_page(notebook: &Notebook, page_num: u32) -> Option<(TextView, TextBuffer)> {
+    // Get the page widget for the specified page number
     notebook.nth_page(Some(page_num)).and_then(|page_widget| {
+        // Check if the page contains a ScrolledWindow
         if let Some(scrolled_window) = page_widget.downcast_ref::<ScrolledWindow>() {
+            // Get the child of the ScrolledWindow
             scrolled_window.child().and_then(|child| {
+                // Try to cast the child to a TextView
                 if let Some(text_view) = child.downcast_ref::<TextView>() {
+                    // Return the TextView and its associated TextBuffer
                     Some((text_view.clone(), text_view.buffer()))
                 } else {
+                    // Child exists but is not a TextView
                     None
                 }
             })
         } else {
+            // Page widget is not a ScrolledWindow
             None
         }
     })
 }
 
 
-// Struct to hold dependencies for creating a new tab
+/// Structure containing all dependencies needed for tab creation and management
+///
+/// This structure holds references to all the components and state that need
+/// to be modified when creating, switching, or closing tabs. It makes it easier
+/// to pass these references to various tab-related functions.
 #[derive(Clone)]
 pub struct NewTabDependencies {
-    pub editor_notebook: Notebook,
-    pub active_tab_path: Rc<RefCell<Option<PathBuf>>>,
-    pub file_path_manager: Rc<RefCell<HashMap<u32, PathBuf>>>,
-    pub window: ApplicationWindow, // For dialog parent
-    pub file_list_box: ListBox,
-    pub current_dir: Rc<RefCell<PathBuf>>,
-    pub save_button: Button,
-    pub save_as_button: Button,
-    pub _save_menu_button: Option<MenuButton>, // Added underscore to acknowledge it's unused
-    // Add other dependencies like error_label, picture if needed for new tab setup
+    // Core UI components
+    pub editor_notebook: Notebook,              // The tabbed container
+    pub window: ApplicationWindow,              // Main window (for dialog parents)
+    pub file_list_box: ListBox,                 // File browser list
+    
+    // State tracking
+    pub active_tab_path: Rc<RefCell<Option<PathBuf>>>,       // Currently active file path
+    pub file_path_manager: Rc<RefCell<HashMap<u32, PathBuf>>>, // Maps tab indices to file paths
+    pub current_dir: Rc<RefCell<PathBuf>>,                   // Current working directory
+    
+    // Action buttons
+    pub save_button: Button,                    // Save button
+    pub save_as_button: Button,                 // Save As button
+    pub _save_menu_button: Option<MenuButton>,  // Split button menu component (unused but kept for future)
 }
 
-// Helper to create a new empty tab
+/// Creates a new empty tab with the title "Untitled"
+///
+/// This function is used to create a new tab for a new document,
+/// setting up all the necessary UI components and state tracking.
 fn create_new_empty_tab(deps: &NewTabDependencies) {
+    // Create a new text view and its associated buffer
     let new_text_view = TextView::new();
     let new_text_buffer = new_text_view.buffer();
-    new_text_buffer.set_text("");
-
+    new_text_buffer.set_text(""); // Start with empty content
+    
+    // Place the text view in a scrollable container
     let new_scrolled_window = ScrolledWindow::builder()
-        .vexpand(true)
-        .hexpand(true)
+        .vexpand(true)  // Expand to fill available vertical space
+        .hexpand(true)  // Expand to fill available horizontal space
         .child(&new_text_view)
         .build();
-
+    
+    // Create a custom tab widget with label and close button
     let (tab_widget, tab_actual_label, tab_close_button) = crate::ui::create_tab_widget("Untitled");
-
+    
+    // Add the new tab to the notebook and switch to it
     let new_page_num = deps.editor_notebook.append_page(&new_scrolled_window, Some(&tab_widget));
-    // Calling set_current_page after append_page ensures switch_page signal is reliably emitted for the new tab.
+    // Setting current page after append ensures the switch_page signal is emitted properly
     deps.editor_notebook.set_current_page(Some(new_page_num));
-
-    // Update active_tab_path for the new "Untitled" tab.
-    // This mutable borrow is short-lived and dropped here.
+    
+    // Update the active tab path to None (unsaved document)
     *deps.active_tab_path.borrow_mut() = None;
     
-    // file_path_manager is not updated for "Untitled" until it's saved.
-
-    // Clone data to release borrows before calling update_file_list, 
-    // which might trigger signals that could cause re-borrowing issues.
+    // Note: We don't update file_path_manager for "Untitled" tabs until they're saved
+    
+    // Clone the data to release borrows before updating the UI
+    // This prevents potential borrow conflicts in signal handlers
     let current_dir_path_clone = deps.current_dir.borrow().clone();
     let active_path_for_update = deps.active_tab_path.borrow().clone(); // Will be None here
-
-    utils::update_file_list(&deps.file_list_box, &current_dir_path_clone, &active_path_for_update);
-    utils::update_save_buttons_visibility(&deps.save_button, &deps.save_as_button, Some(mime_guess::mime::TEXT_PLAIN_UTF_8)); // Enable save for new text tab
     
-    // Update save menu button visibility if it exists
+    // Update the file browser to reflect the current state
+    utils::update_file_list(&deps.file_list_box, &current_dir_path_clone, &active_path_for_update);
+    
+    // Enable save buttons appropriate for plain text content
+    utils::update_save_buttons_visibility(
+        &deps.save_button, 
+        &deps.save_as_button, 
+        Some(mime_guess::mime::TEXT_PLAIN_UTF_8)
+    );
+    
+    // Also update the split button menu visibility if present
     if let Some(ref save_menu_button) = deps._save_menu_button {
-        utils::update_save_menu_button_visibility(save_menu_button, Some(mime_guess::mime::TEXT_PLAIN_UTF_8));
+        utils::update_save_menu_button_visibility(
+            save_menu_button, 
+            Some(mime_guess::mime::TEXT_PLAIN_UTF_8)
+        );
     }
 
     // Connect dirty tracking for the new "Untitled" tab's label
