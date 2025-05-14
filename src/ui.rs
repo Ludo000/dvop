@@ -10,7 +10,7 @@ use gtk4::{
     Box as GtkBox, Notebook, ScrolledWindow,
     
     // Common UI elements
-    Button, HeaderBar, Label, ListBox, Picture, TextView, Image,
+    Button, HeaderBar, Label, ListBox, Picture, TextView, Image, TextBuffer,
     
     // Scroll policy configuration
     PolicyType,
@@ -21,6 +21,12 @@ use gtk4::{
     // Layout orientation for containers
     Orientation
 };
+
+// Source view for syntax highlighting
+use sourceview5::{View as SourceView, Buffer as SourceBuffer};
+
+// Import our syntax highlighting module
+use crate::syntax;
 
 // Standard library imports
 use std::cell::RefCell;  // For interior mutability pattern
@@ -47,9 +53,11 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
 }
 
 /// Creates the application header bar with action buttons
-/// Returns a tuple containing the header bar and all its important buttons
-pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button) {
-    // Create the main header bar container
+///
+/// This function creates the application's header bar with buttons for core functionality.
+/// Returns the header bar and the action buttons for connecting event handlers.
+pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button) {
+    // Create the main header bar
     let header = HeaderBar::new();
 
     // Create the New File button with icon and label
@@ -135,16 +143,32 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     let save_button = Button::new();
     save_button.set_visible(false); 
 
-    // Return all buttons to be connected to event handlers in main.rs
-    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button)
+    // Create a dark mode toggle button
+    let is_dark = crate::syntax::is_dark_mode_enabled();
+    println!("Creating dark mode button with initial state: {}", if is_dark { "dark" } else { "light" });
+    
+    let dark_mode_button = Button::builder()
+        .icon_name(if is_dark {
+            "weather-clear-night-symbolic" 
+        } else {
+            "weather-clear-symbolic"
+        })
+        .tooltip_text("Toggle Dark Mode")
+        .build();
+    
+    // Add the dark mode toggle button to the left side of the header
+    header.pack_end(&dark_mode_button);
+
+    // Return the header and all action buttons
+    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, dark_mode_button)
 }
 
 /// Creates the main text editor view components
 /// 
 /// Returns a tuple containing:
 /// - ScrolledWindow: Container for the text view with scrolling capabilities
-/// - TextView: The main text editing widget
-/// - TextBuffer: The buffer holding the text content
+/// - TextView: The main text editing widget (actually a SourceView for syntax highlighting)
+/// - TextBuffer: The buffer holding the text content (actually a SourceBuffer)
 /// - Rc<RefCell<Option<PathBuf>>>: Optional file path for the current document
 /// - Label: Error message display label
 /// - Picture: Widget for displaying images when opening image files
@@ -173,22 +197,15 @@ pub fn create_text_view() -> (
     // Create the first "Untitled" tab
     let (tab_widget, tab_label, tab_close_button) = create_tab_widget("Untitled");
     
-    // Create the text view with monospace font and editing enabled
-    let text_view = TextView::builder()
-        .monospace(true)          // Use monospace font for code editing
-        .editable(true)           // Allow text editing
-        .cursor_visible(true)     // Show cursor
-        .build();
+    // Create a source view with syntax highlighting instead of a standard text view
+    let (source_view, source_buffer) = syntax::create_source_view();
+    
+    // Clone source_view before upcast to avoid ownership move
+    let text_view = source_view.clone().upcast::<TextView>();
+    let buffer = source_buffer.upcast::<TextBuffer>();
 
-    // Get the text buffer associated with the text view
-    let buffer = text_view.buffer();
-
-    // Place the text view in a scrolled window
-    let scrolled_window = gtk4::ScrolledWindow::builder()
-        .hscrollbar_policy(PolicyType::Automatic)  // Show horizontal scrollbar when needed
-        .vscrollbar_policy(PolicyType::Automatic)  // Show vertical scrollbar when needed
-        .child(&text_view)
-        .build();
+    // Place the source view in a scrolled window
+    let scrolled_window = syntax::create_source_view_scrolled(&source_view);
 
     // Add the scrolled window as a page in the notebook with our custom tab widget
     editor_notebook.append_page(&scrolled_window, Some(&tab_widget));

@@ -2,6 +2,7 @@
 mod ui;        // User interface components and layout
 mod handlers;  // Event handlers and business logic
 mod utils;     // Utility functions used across the application
+mod syntax;    // Syntax highlighting functionality
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
@@ -19,7 +20,45 @@ fn main() {
     let app = Application::builder()
         .application_id("com.example.BasadoTextEditor")
         .build();
-
+    
+    // Force GTK to respect system dark mode settings
+    app.connect_startup(|_| {
+        if let Some(settings) = gtk4::Settings::default() {
+            // Use our comprehensive dark mode detection function
+            // This is more reliable than ad-hoc checks
+            let prefer_dark = syntax::is_dark_mode_enabled();
+            
+            // Set dark mode preference
+            settings.set_gtk_application_prefer_dark_theme(prefer_dark);
+            
+            // Try more aggressively to set dark mode by using environment variables too
+            if prefer_dark {
+                std::env::set_var("GTK_THEME_PREFER_DARK", "1");
+                std::env::set_var("GTK_APPLICATION_PREFER_DARK_THEME", "1");
+                
+                // Force an immediate settings update to ensure dark mode is applied
+                settings.notify("gtk-application-prefer-dark-theme");
+                
+                // If using adwaita-qt or other QT themes that can follow GTK, set QT env vars too
+                std::env::set_var("QT_STYLE_OVERRIDE", "adwaita-dark"); 
+            } else {
+                // Clear dark mode environment variables to make sure they don't override our decision
+                std::env::remove_var("GTK_THEME_PREFER_DARK");
+                std::env::remove_var("GTK_APPLICATION_PREFER_DARK_THEME");
+                std::env::remove_var("QT_STYLE_OVERRIDE");
+            }
+            
+            println!("Setting initial dark mode to: {}", if prefer_dark { "enabled" } else { "disabled" });
+            
+            // Double check that the setting took effect
+            if settings.is_gtk_application_prefer_dark_theme() != prefer_dark {
+                println!("Warning: GTK dark mode setting didn't match our preference! Trying again...");
+                settings.set_gtk_application_prefer_dark_theme(prefer_dark);
+                settings.notify("gtk-application-prefer-dark-theme");
+            }
+        }
+    });
+    
     // Connect the activate signal to the build_ui function
     app.connect_activate(build_ui);
     
@@ -27,13 +66,200 @@ fn main() {
     app.run();
 }
 
+/// Updates the style scheme of all editor buffers when the system theme changes
+fn update_all_buffer_themes(window: &gtk4::ApplicationWindow) {
+    println!("Beginning comprehensive theme update for all buffers...");
+
+    // Get the notebook from our application structure
+    // We know the structure has a window with a box, and the notebook is in that box
+    if let Some(root_box) = window.child().and_then(|w| w.downcast::<gtk4::Box>().ok()) {
+        // Find editor notebook in the box
+        let mut current = root_box.first_child();
+        while let Some(child) = current {
+            if let Some(notebook) = child.downcast_ref::<gtk4::Notebook>() {
+                let n_pages = notebook.n_pages();
+                println!("Theme changed! Updating {} notebook pages...", n_pages);
+                
+                // Iterate through all notebook pages
+                for page_num in 0..n_pages {
+                    if let Some(page) = notebook.nth_page(Some(page_num)) {
+                        // Try to find ScrolledWindow which contains our SourceView
+                        if let Some(scrolled_window) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                            if let Some(child) = scrolled_window.child() {
+                                println!("Processing page {}: found child widget", page_num);
+                                
+                                // For our editor, we use SourceView but cast it to TextView
+                                // We need to try both approaches
+                                if let Some(source_view) = child.downcast_ref::<sourceview5::View>() {
+                                    // Direct SourceView access
+                                    println!("Page {}: Found SourceView", page_num);
+                                    let buffer = source_view.buffer();
+                                    
+                                    // Make sure we're working with the right buffer type
+                                    if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
+                                        syntax::update_buffer_style_scheme(source_buffer);
+                                        println!("Updated source view buffer on page {}", page_num);
+                                        
+                                        // Force the view to redraw
+                                        source_view.queue_draw();
+                                    } else {
+                                        println!("Could not cast buffer to SourceBuffer on page {}", page_num);
+                                    }
+                                } else if let Some(text_view) = child.downcast_ref::<gtk4::TextView>() {
+                                    // Access via TextView
+                                    println!("Page {}: Found TextView", page_num);
+                                    let buffer = text_view.buffer();
+                                    if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
+                                        syntax::update_buffer_style_scheme(source_buffer);
+                                        println!("Updated text view source buffer on page {}", page_num);
+                                        
+                                        // Force the view to redraw
+                                        text_view.queue_draw();
+                                    } else {
+                                        println!("Could not cast buffer to SourceBuffer on page {}", page_num);
+                                    }
+                                } else {
+                                    println!("Page {}: Child widget is neither SourceView nor TextView", page_num);
+                                }
+                                
+                                // Force the scrolled window to redraw too
+                                scrolled_window.queue_draw();
+                            }
+                        }
+                    }
+                }
+                
+                // Force redraw of the entire notebook
+                notebook.queue_draw();
+                
+                // We found the notebook, no need to continue searching
+                break;
+            }
+            current = child.next_sibling();
+        }
+    }
+    
+    // Let's also print the current dark mode setting to help with debugging
+    if let Some(settings) = gtk4::Settings::default() {
+        let is_dark = settings.is_gtk_application_prefer_dark_theme();
+        println!("Dark mode is now: {}", if is_dark { "enabled" } else { "disabled" });
+        
+        // If dark mode setting doesn't match our detection, try to fix it
+        let detected_dark_mode = syntax::is_dark_mode_enabled();
+        if detected_dark_mode != is_dark {
+            println!("Warning: Dark mode setting ({}) doesn't match detected preference ({}), fixing...",
+                     if is_dark { "enabled" } else { "disabled" },
+                     if detected_dark_mode { "enabled" } else { "disabled" });
+            settings.set_gtk_application_prefer_dark_theme(detected_dark_mode);
+        }
+    }
+    
+    // Force UI to update after a short delay
+    let window_clone = window.clone();
+    glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
+        window_clone.queue_draw();
+    });
+}
+
+
+
 /// Builds the user interface and sets up event handlers
 fn build_ui(app: &Application) {
     // Create the main application window
     let window = ui::create_window(app);
     
+    // Set up theme settings based on system preferences
+    if let Some(settings) = gtk4::Settings::default() {
+        // Explicitly check if system is in dark mode using our enhanced detection
+        let prefer_dark = syntax::is_dark_mode_enabled();
+        
+        // Ensure GTK settings match our detected preference
+        settings.set_gtk_application_prefer_dark_theme(prefer_dark);
+        
+        // Also update environment variables to make sure they're consistent
+        if prefer_dark {
+            std::env::set_var("GTK_THEME_PREFER_DARK", "1");
+            std::env::set_var("GTK_APPLICATION_PREFER_DARK_THEME", "1");
+        } else {
+            std::env::remove_var("GTK_THEME_PREFER_DARK");
+            std::env::remove_var("GTK_APPLICATION_PREFER_DARK_THEME");
+        }
+        
+        println!("System dark mode preference: {}", if prefer_dark { "enabled" } else { "disabled" });
+        println!("GTK dark mode setting: {}", if settings.is_gtk_application_prefer_dark_theme() { "enabled" } else { "disabled" });
+        
+        // Clone references to update editor views when theme changes
+        let window_clone = window.clone();
+        
+        // Connect to the notify::gtk-application-prefer-dark-theme signal
+        settings.connect_notify_local(
+            Some("gtk-application-prefer-dark-theme"),
+            move |_, _| {
+                // Find all source buffers and update their style schemes
+                update_all_buffer_themes(&window_clone);
+            }
+        );
+    }
+    
     // Create the header bar with action buttons
-    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button) = ui::create_header();
+    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, dark_mode_button) = ui::create_header();
+    
+    // Initialize dark mode button icon based on current theme
+    if let Some(settings) = gtk4::Settings::default() {
+        let is_dark = settings.is_gtk_application_prefer_dark_theme();
+        dark_mode_button.set_icon_name(if is_dark {
+            "weather-clear-night-symbolic"
+        } else {
+            "weather-clear-symbolic"
+        });
+    }
+
+    // Set up dark mode toggle button handler
+    let window_clone_for_dark_mode = window.clone();
+    dark_mode_button.connect_clicked(move |button| {
+        if let Some(settings) = gtk4::Settings::default() {
+            // Toggle dark mode
+            let current_dark_mode = settings.is_gtk_application_prefer_dark_theme();
+            let new_dark_mode = !current_dark_mode;
+            
+            println!("⚡⚡⚡ TOGGLING DARK MODE: {} -> {} ⚡⚡⚡", 
+                     if current_dark_mode { "ON" } else { "OFF" },
+                     if new_dark_mode { "ON" } else { "OFF" });
+            
+            // Update GTK settings
+            settings.set_gtk_application_prefer_dark_theme(new_dark_mode);
+            
+            // Update environment variables to make the change more reliable
+            if new_dark_mode {
+                std::env::set_var("GTK_THEME_PREFER_DARK", "1");
+                std::env::set_var("GTK_APPLICATION_PREFER_DARK_THEME", "1");
+            } else {
+                std::env::remove_var("GTK_THEME_PREFER_DARK");
+                std::env::remove_var("GTK_APPLICATION_PREFER_DARK_THEME");
+            }
+            
+            // Update button icon
+            button.set_icon_name(if new_dark_mode {
+                "weather-clear-night-symbolic"
+            } else {
+                "weather-clear-symbolic"
+            });
+            
+            println!("Dark mode toggled to: {}", if new_dark_mode { "enabled" } else { "disabled" });
+            
+            // Force settings to notify changes immediately
+            settings.notify("gtk-application-prefer-dark-theme");
+            
+            // Force an explicit update of all buffer themes
+            update_all_buffer_themes(&window_clone_for_dark_mode);
+            
+            // Schedule another update after a short delay to catch any views that weren't updated
+            let window_clone = window_clone_for_dark_mode.clone();
+            glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
+                update_all_buffer_themes(&window_clone);
+            });
+        }
+    });
 
     // Create a separate hidden button for handling save operations
     // This approach prevents stack overflow from circular references in the event handlers
@@ -54,6 +280,12 @@ fn build_ui(app: &Application) {
         initial_tab_actual_label, // Text label showing the file name in the tab
         initial_tab_close_button  // Button for closing the tab
     ) = ui::create_text_view();
+    
+    // Ensure the initial buffer gets the correct theme based on dark mode setting
+    if let Some(source_buffer) = initial_text_buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
+        syntax::update_buffer_style_scheme(source_buffer);
+        println!("Applied initial theme to first tab buffer");
+    }
 
     // Create a mapping between notebook tab indexes and their corresponding file paths
     // This allows tracking which file is open in each tab

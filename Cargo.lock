@@ -748,6 +748,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8917285742e9f3e1683f0a9c4e6b57960b7314d0b08d30d1ecd426713ee2eee9"
 
 [[package]]
+name = "sourceview5"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0e07d99b15f12767aa1c84870c45667f42bf24fd6a989dc70088e32854ef56e"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "gdk-pixbuf 0.20.9",
+ "gdk4",
+ "gio 0.20.9",
+ "glib 0.20.9",
+ "gtk4",
+ "libc",
+ "pango",
+ "sourceview5-sys",
+]
+
+[[package]]
+name = "sourceview5-sys"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a3759467713554a8063faa380237ee2c753e89026bbe1b8e9611d991cb106ff"
+dependencies = [
+ "gdk-pixbuf-sys 0.20.7",
+ "gdk4-sys",
+ "gio-sys 0.20.9",
+ "glib-sys 0.20.9",
+ "gobject-sys 0.20.9",
+ "gtk4-sys",
+ "libc",
+ "pango-sys",
+ "system-deps 7.0.3",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -809,6 +844,7 @@ dependencies = [
  "gtk4",
  "home",
  "mime_guess",
+ "sourceview5",
  "vte4",
 ]
 

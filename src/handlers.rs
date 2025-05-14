@@ -12,6 +12,9 @@ use gtk4::{
     MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType
 };
 
+// SourceView imports for syntax highlighting
+use sourceview5::{View as SourceView, Buffer as SourceBuffer};
+
 // Standard library imports
 use std::collections::HashMap;  // For mapping tab indices to file paths
 use std::rc::Rc;                // Reference counting for shared ownership
@@ -110,17 +113,17 @@ pub struct NewTabDependencies {
 /// This function is used to create a new tab for a new document,
 /// setting up all the necessary UI components and state tracking.
 fn create_new_empty_tab(deps: &NewTabDependencies) {
-    // Create a new text view and its associated buffer
-    let new_text_view = TextView::new();
-    let new_text_buffer = new_text_view.buffer();
-    new_text_buffer.set_text(""); // Start with empty content
+    // Create a new source view with syntax highlighting capabilities
+    let (source_view, source_buffer) = crate::syntax::create_source_view();
+    source_buffer.set_text(""); // Start with empty content
     
-    // Place the text view in a scrollable container
-    let new_scrolled_window = ScrolledWindow::builder()
-        .vexpand(true)  // Expand to fill available vertical space
-        .hexpand(true)  // Expand to fill available horizontal space
-        .child(&new_text_view)
-        .build();
+    // Get TextView and TextBuffer interfaces for compatibility with the rest of the code
+    // Clone source_view to avoid ownership move
+    let _new_text_view = source_view.clone().upcast::<TextView>();
+    let new_text_buffer = source_buffer.upcast::<TextBuffer>();
+    
+    // Place the source view in a scrollable container
+    let new_scrolled_window = crate::syntax::create_source_view_scrolled(&source_view);
     
     // Create a custom tab widget with label and close button
     let (tab_widget, tab_actual_label, tab_close_button) = crate::ui::create_tab_widget("Untitled");
@@ -458,16 +461,21 @@ fn open_or_focus_tab(
         notebook.set_current_page(Some(page_num));
         *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
     } else {
-        // Create new tab
-        let new_text_view = TextView::new();
-        let new_text_buffer = new_text_view.buffer();
-        new_text_buffer.set_text(content);
-
-        let new_scrolled_window = ScrolledWindow::builder()
-            .vexpand(true)
-            .hexpand(true) // Ensure this line has a comma if followed by more builder methods, or a semicolon if it's the last.
-            .child(&new_text_view)
-            .build(); // Added semicolon here, assuming it was missing or misplaced.
+        // Create new tab with syntax highlighting
+        // Create source view with syntax highlighting
+        let (source_view, source_buffer) = crate::syntax::create_source_view();
+        source_buffer.set_text(content);
+        
+        // Apply syntax highlighting based on file extension
+        crate::syntax::set_language_for_file(&source_buffer, file_to_open);
+        
+        // Get TextView and TextBuffer interfaces for compatibility with the rest of the code
+        // Clone source_view to avoid ownership move
+        let new_text_view = source_view.clone().upcast::<TextView>();
+        let new_text_buffer = source_buffer.upcast::<TextBuffer>();
+        
+        // Create scrolled window for the source view
+        let new_scrolled_window = crate::syntax::create_source_view_scrolled(&source_view);
 
         let file_name = file_to_open.file_name().unwrap_or_default().to_string_lossy().to_string();
         
@@ -771,6 +779,7 @@ fn setup_open_button_handler(
         let window_for_response = window.clone();
         let file_list_box_for_response = file_list_box.clone();
         let current_dir_for_response = current_dir.clone();
+        let save_menu_button_for_response = __save_menu_button.clone(); // Clone before the inner closure
 
 
         dialog.connect_response(move |dialog, response| {
@@ -787,7 +796,7 @@ fn setup_open_button_handler(
                                 &file_path_manager_for_response,   
                                 &save_button_clone,
                                 &save_as_button_clone,
-                                &mime_type,
+                                &mime_type.clone(), // Clone here to avoid ownership move
                                 &window_for_response, // Pass window
                                 &file_list_box_for_response, // Pass file_list_box
                                 &current_dir_for_response, // Pass current_dir
@@ -820,7 +829,12 @@ fn setup_open_button_handler(
                                             *current_dir_clone.borrow_mut() = parent.to_path_buf();
                                         }
                                         utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow());
-                                        utils::update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, Some(mime_type));
+                                        utils::update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, Some(mime_type.clone())); // Clone here
+                                        
+                                        // Also update the save menu button visibility if available
+                                        if let Some(save_menu_button) = save_menu_button_for_response.as_ref() {
+                                            utils::update_save_menu_button_visibility(save_menu_button, Some(mime_type));
+                                        }
                                     }
                                 }
                              }
@@ -1090,7 +1104,7 @@ fn setup_file_selection_handler(
                                     sw.set_child(Some(&picture_to_set)); 
                                     *active_tab_path_for_handler.borrow_mut() = Some(path_from_list.clone());
                                     file_path_manager_for_handler.borrow_mut().insert(0, path_from_list.clone());
-                                    utils::update_save_buttons_visibility(&save_button_for_handler, &save_as_button_for_handler, Some(mime_type));
+                                    utils::update_save_buttons_visibility(&save_button_for_handler, &save_as_button_for_handler, Some(mime_type.clone())); // Clone here
                                 }
                             }
                          }

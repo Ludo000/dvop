@@ -152,3 +152,36 @@ pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_ty
         }
     }
 }
+
+/// Gets a programming language name from a file extension
+/// 
+/// This function maps common file extensions to their programming language names
+/// which can be used for syntax highlighting or other language-specific features.
+pub fn get_language_from_extension(extension: &str) -> Option<&'static str> {
+    match extension.to_lowercase().as_str() {
+        "rs" => Some("rust"),
+        "py" => Some("python"),
+        "js" => Some("javascript"),
+        "ts" => Some("typescript"),
+        "html" | "htm" => Some("html"),
+        "css" => Some("css"),
+        "c" => Some("c"),
+        "cpp" | "cc" | "cxx" => Some("cpp"),
+        "h" | "hpp" | "hxx" => Some("cpp"),
+        "java" => Some("java"),
+        "sh" => Some("sh"),
+        "rb" => Some("ruby"),
+        "php" => Some("php"),
+        "xml" => Some("xml"),
+        "json" => Some("json"),
+        "md" => Some("markdown"),
+        "go" => Some("go"),
+        "swift" => Some("swift"),
+        "sql" => Some("sql"),
+        "yaml" | "yml" => Some("yaml"),
+        "toml" => Some("toml"),
+        "dart" => Some("dart"),
+        "kt" | "kts" => Some("kotlin"),
+        _ => None,
+    }
+}
