@@ -12,9 +12,6 @@ use gtk4::{
     MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType
 };
 
-// SourceView imports for syntax highlighting
-use sourceview5::{View as SourceView, Buffer as SourceBuffer};
-
 // Standard library imports
 use std::collections::HashMap;  // For mapping tab indices to file paths
 use std::rc::Rc;                // Reference counting for shared ownership
@@ -469,9 +466,8 @@ fn open_or_focus_tab(
         // Apply syntax highlighting based on file extension
         crate::syntax::set_language_for_file(&source_buffer, file_to_open);
         
-        // Get TextView and TextBuffer interfaces for compatibility with the rest of the code
+        // Get TextBuffer interfaces for compatibility with the rest of the code
         // Clone source_view to avoid ownership move
-        let new_text_view = source_view.clone().upcast::<TextView>();
         let new_text_buffer = source_buffer.upcast::<TextBuffer>();
         
         // Create scrolled window for the source view

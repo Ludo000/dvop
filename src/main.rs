@@ -30,26 +30,7 @@ fn main() {
             
             // Set dark mode preference
             settings.set_gtk_application_prefer_dark_theme(prefer_dark);
-            
-            // Try more aggressively to set dark mode by using environment variables too
-            if prefer_dark {
-                std::env::set_var("GTK_THEME_PREFER_DARK", "1");
-                std::env::set_var("GTK_APPLICATION_PREFER_DARK_THEME", "1");
-                
-                // Force an immediate settings update to ensure dark mode is applied
-                settings.notify("gtk-application-prefer-dark-theme");
-                
-                // If using adwaita-qt or other QT themes that can follow GTK, set QT env vars too
-                std::env::set_var("QT_STYLE_OVERRIDE", "adwaita-dark"); 
-            } else {
-                // Clear dark mode environment variables to make sure they don't override our decision
-                std::env::remove_var("GTK_THEME_PREFER_DARK");
-                std::env::remove_var("GTK_APPLICATION_PREFER_DARK_THEME");
-                std::env::remove_var("QT_STYLE_OVERRIDE");
-            }
-            
-            println!("Setting initial dark mode to: {}", if prefer_dark { "enabled" } else { "disabled" });
-            
+                    
             // Double check that the setting took effect
             if settings.is_gtk_application_prefer_dark_theme() != prefer_dark {
                 println!("Warning: GTK dark mode setting didn't match our preference! Trying again...");
@@ -175,19 +156,7 @@ fn build_ui(app: &Application) {
         
         // Ensure GTK settings match our detected preference
         settings.set_gtk_application_prefer_dark_theme(prefer_dark);
-        
-        // Also update environment variables to make sure they're consistent
-        if prefer_dark {
-            std::env::set_var("GTK_THEME_PREFER_DARK", "1");
-            std::env::set_var("GTK_APPLICATION_PREFER_DARK_THEME", "1");
-        } else {
-            std::env::remove_var("GTK_THEME_PREFER_DARK");
-            std::env::remove_var("GTK_APPLICATION_PREFER_DARK_THEME");
-        }
-        
-        println!("System dark mode preference: {}", if prefer_dark { "enabled" } else { "disabled" });
-        println!("GTK dark mode setting: {}", if settings.is_gtk_application_prefer_dark_theme() { "enabled" } else { "disabled" });
-        
+
         // Clone references to update editor views when theme changes
         let window_clone = window.clone();
         
@@ -202,64 +171,8 @@ fn build_ui(app: &Application) {
     }
     
     // Create the header bar with action buttons
-    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, dark_mode_button) = ui::create_header();
-    
-    // Initialize dark mode button icon based on current theme
-    if let Some(settings) = gtk4::Settings::default() {
-        let is_dark = settings.is_gtk_application_prefer_dark_theme();
-        dark_mode_button.set_icon_name(if is_dark {
-            "weather-clear-night-symbolic"
-        } else {
-            "weather-clear-symbolic"
-        });
-    }
+    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button) = ui::create_header();
 
-    // Set up dark mode toggle button handler
-    let window_clone_for_dark_mode = window.clone();
-    dark_mode_button.connect_clicked(move |button| {
-        if let Some(settings) = gtk4::Settings::default() {
-            // Toggle dark mode
-            let current_dark_mode = settings.is_gtk_application_prefer_dark_theme();
-            let new_dark_mode = !current_dark_mode;
-            
-            println!("⚡⚡⚡ TOGGLING DARK MODE: {} -> {} ⚡⚡⚡", 
-                     if current_dark_mode { "ON" } else { "OFF" },
-                     if new_dark_mode { "ON" } else { "OFF" });
-            
-            // Update GTK settings
-            settings.set_gtk_application_prefer_dark_theme(new_dark_mode);
-            
-            // Update environment variables to make the change more reliable
-            if new_dark_mode {
-                std::env::set_var("GTK_THEME_PREFER_DARK", "1");
-                std::env::set_var("GTK_APPLICATION_PREFER_DARK_THEME", "1");
-            } else {
-                std::env::remove_var("GTK_THEME_PREFER_DARK");
-                std::env::remove_var("GTK_APPLICATION_PREFER_DARK_THEME");
-            }
-            
-            // Update button icon
-            button.set_icon_name(if new_dark_mode {
-                "weather-clear-night-symbolic"
-            } else {
-                "weather-clear-symbolic"
-            });
-            
-            println!("Dark mode toggled to: {}", if new_dark_mode { "enabled" } else { "disabled" });
-            
-            // Force settings to notify changes immediately
-            settings.notify("gtk-application-prefer-dark-theme");
-            
-            // Force an explicit update of all buffer themes
-            update_all_buffer_themes(&window_clone_for_dark_mode);
-            
-            // Schedule another update after a short delay to catch any views that weren't updated
-            let window_clone = window_clone_for_dark_mode.clone();
-            glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
-                update_all_buffer_themes(&window_clone);
-            });
-        }
-    });
 
     // Create a separate hidden button for handling save operations
     // This approach prevents stack overflow from circular references in the event handlers

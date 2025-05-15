@@ -12,18 +12,12 @@ use gtk4::{
     // Common UI elements
     Button, HeaderBar, Label, ListBox, Picture, TextView, Image, TextBuffer,
     
-    // Scroll policy configuration
-    PolicyType,
-    
     // Menu components for split button functionality
     MenuButton, PopoverMenu, gio,
     
     // Layout orientation for containers
     Orientation
 };
-
-// Source view for syntax highlighting
-use sourceview5::{View as SourceView, Buffer as SourceBuffer};
 
 // Import our syntax highlighting module
 use crate::syntax;
@@ -56,7 +50,7 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
 ///
 /// This function creates the application's header bar with buttons for core functionality.
 /// Returns the header bar and the action buttons for connecting event handlers.
-pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button) {
+pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button) {
     // Create the main header bar
     let header = HeaderBar::new();
 
@@ -143,24 +137,8 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     let save_button = Button::new();
     save_button.set_visible(false); 
 
-    // Create a dark mode toggle button
-    let is_dark = crate::syntax::is_dark_mode_enabled();
-    println!("Creating dark mode button with initial state: {}", if is_dark { "dark" } else { "light" });
-    
-    let dark_mode_button = Button::builder()
-        .icon_name(if is_dark {
-            "weather-clear-night-symbolic" 
-        } else {
-            "weather-clear-symbolic"
-        })
-        .tooltip_text("Toggle Dark Mode")
-        .build();
-    
-    // Add the dark mode toggle button to the left side of the header
-    header.pack_end(&dark_mode_button);
-
     // Return the header and all action buttons
-    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, dark_mode_button)
+    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button)
 }
 
 /// Creates the main text editor view components
