@@ -2,7 +2,7 @@
 // This module contains helper functions used throughout the application
 
 use gtk4::prelude::*;
-use gtk4::{Button, ListBox, MenuButton};
+use gtk4::{Button, ListBox, MenuButton, pango};
 use std::path::PathBuf;
 use mime_guess;
 use mime_guess::Mime;
@@ -79,7 +79,8 @@ pub fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_pat
         let label = gtk4::Label::new(Some(&file_name_str));
         label.set_halign(gtk4::Align::Start);        // Left-align text
         label.set_margin_start(5);                   // Add left margin
-        
+        label.set_ellipsize(pango::EllipsizeMode::End);
+
         // Make folder names bold for better visual distinction
         label.set_markup(&format!("<span weight=\"bold\">{}</span>", file_name_str));
         
@@ -96,6 +97,7 @@ pub fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_pat
         let label = gtk4::Label::new(Some(&file_name_str));
         label.set_halign(gtk4::Align::Start);
         label.set_margin_start(5);
+        label.set_ellipsize(pango::EllipsizeMode::End);
 
         // Check if this file is the currently open one by comparing full paths
         if let Some(ref open_file_full_path) = file_path {
