@@ -91,21 +91,18 @@ pub fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_pat
     let mut selected_row = None;
     
     // Add files to the list
-    for (file_name_str, _entry) in files {
+    for (file_name_str, entry) in files {
         let row = gtk4::ListBoxRow::new();
         let label = gtk4::Label::new(Some(&file_name_str));
         label.set_halign(gtk4::Align::Start);
         label.set_margin_start(5);
 
-        // Check if this file is the currently open one
-        if let Some(ref path) = file_path {
-            let path = path.clone();
-            if let Some(file_name) = path.file_name() {
-                // If this matches the open file, underline it and remember for selection
-                if file_name.to_string_lossy() == file_name_str {
-                    label.set_markup(&format!("<u>{}</u>", file_name_str));
-                    selected_row = Some(row.clone());
-                }
+        // Check if this file is the currently open one by comparing full paths
+        if let Some(ref open_file_full_path) = file_path {
+            let current_entry_full_path = entry.path(); // Get PathBuf from DirEntry
+            if &current_entry_full_path == open_file_full_path {
+                label.set_markup(&format!("<u>{}</u>", file_name_str));
+                selected_row = Some(row.clone());
             }
         }
 
@@ -116,6 +113,8 @@ pub fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_pat
     // If we found the currently open file in the list, select it
     if let Some(row) = selected_row {
         file_list_box.select_row(Some(&row));
+    } else {
+        file_list_box.unselect_all();
     }
 }
 

@@ -639,6 +639,7 @@ fn setup_new_button_handler(
 
 
     new_button.connect_clicked(move |_| {
+        let save_as_button_for_new_tab = save_as_button_clone.clone(); // Clone for this specific closure
         let new_text_view = TextView::new();
         let new_text_buffer = new_text_view.buffer();
         new_text_buffer.set_text(""); // Empty content for new file
@@ -687,8 +688,8 @@ fn setup_new_button_handler(
             window: window_clone.clone(), // Pass the window for dialogs
             file_list_box: file_list_box_clone.clone(),
             current_dir: current_dir_clone.clone(),
-            save_button: save_button_clone.clone(),
-            save_as_button: save_as_button_clone.clone(),
+            save_button: save_button_clone.clone(), // Clone for NewTabDependencies
+            save_as_button: save_as_button_for_new_tab, // Use the clone specific to this closure
             _save_menu_button: None, // We don't have a menu button in this scope
         };
         let new_scrolled_window_clone_for_close = new_scrolled_window.clone();
@@ -1070,6 +1071,7 @@ fn setup_file_selection_handler(
             if path_from_list.is_dir() {
                 *current_dir_for_handler.borrow_mut() = path_from_list;
                 utils::update_file_list(&file_list_box_for_handler_update, &current_dir_for_handler.borrow(), &active_tab_path_for_handler.borrow());
+                file_list_box_for_handler_update.grab_focus(); // Add this line to shift focus
             } else if path_from_list.is_file() {
                 let mime_type = mime_guess::from_path(&path_from_list).first_or_octet_stream();
                 if utils::is_allowed_mime_type(&mime_type) {
@@ -1088,6 +1090,12 @@ fn setup_file_selection_handler(
                             &current_dir_for_handler,
                             None, // We don't have save_menu_button here
                         );
+                        // Ensure the list reflects the newly opened file as active
+                        utils::update_file_list(
+                            &file_list_box_for_handler_update,
+                            &current_dir_for_handler.borrow(),
+                            &active_tab_path_for_handler.borrow()
+                        );
                     }
                 } else if mime_type.type_() == "image" {
                     // Simplified image handling (same as open_button)
@@ -1101,6 +1109,12 @@ fn setup_file_selection_handler(
                                     *active_tab_path_for_handler.borrow_mut() = Some(path_from_list.clone());
                                     file_path_manager_for_handler.borrow_mut().insert(0, path_from_list.clone());
                                     utils::update_save_buttons_visibility(&save_button_for_handler, &save_as_button_for_handler, Some(mime_type.clone())); // Clone here
+                                    // Ensure the list reflects the newly "opened" image as active
+                                    utils::update_file_list(
+                                        &file_list_box_for_handler_update,
+                                        &current_dir_for_handler.borrow(),
+                                        &active_tab_path_for_handler.borrow()
+                                    );
                                 }
                             }
                          }
