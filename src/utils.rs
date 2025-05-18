@@ -146,10 +146,22 @@ pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_ty
     match mime_type {
         // Hide menu button for images since saving is not supported
         Some(mime) if mime.type_() == "image" => {
-            save_menu_button.set_visible(false);
+            // Get the parent widget of the menu button to hide the entire split button
+            if let Some(parent) = save_menu_button.parent() {
+                parent.set_visible(false); // Hide the entire container (split button)
+            } else {
+                // Fallback if there's no parent for some reason
+                save_menu_button.set_visible(false);
+            }
         },
         _ => {
-            save_menu_button.set_visible(true);
+            // Show the entire split button
+            if let Some(parent) = save_menu_button.parent() {
+                parent.set_visible(true); // Show the entire container (split button)
+            } else {
+                // Fallback if there's no parent for some reason
+                save_menu_button.set_visible(true);
+            }
         }
     }
 }

@@ -409,27 +409,58 @@ fn build_ui(app: &Application) {
         let current_dir_path_clone = current_dir_clone_for_switch.borrow().clone(); 
         utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_path_clone, &new_active_path);
 
-        // Update button states based on the content type of the newly selected tab
-        if let Some((_, _buffer)) = handlers::get_text_view_and_buffer_for_page(notebook, page_num) {
-            // For text content: determine appropriate MIME type and update button states
-            let mime_type = new_active_path.as_ref()
-                .map(|p| mime_guess::from_path(p).first_or_octet_stream())
-                .unwrap_or(mime_guess::mime::TEXT_PLAIN_UTF_8); // Default to plain text for unsaved files
-                
-            // Update visibility and state of save buttons based on content type
+        // Determine the MIME type from the file path
+        let mime_type = new_active_path.as_ref()
+            .map(|p| mime_guess::from_path(p).first_or_octet_stream())
+            .unwrap_or(mime_guess::mime::TEXT_PLAIN_UTF_8); // Default to plain text for unsaved files
+        
+        // Check if the current tab has a text view (editable content) or is an image tab
+        if let Some((_, _)) = handlers::get_text_view_and_buffer_for_page(notebook, page_num) {
+            // This is a text tab - enable save functionality
             utils::update_save_buttons_visibility(
                 &save_button_clone_for_switch, 
                 &save_as_button_clone_for_switch, 
                 Some(mime_type.clone())
             );
             
-            // Update the split button menu visibility
             utils::update_save_menu_button_visibility(
                 &save_menu_button_clone_for_switch, 
                 Some(mime_type)
             );
+        } else if let Some(page) = notebook.nth_page(Some(page_num)) {
+            // Handle cases where the tab contains non-text content (e.g., image)
+            if let Some(scrolled_window) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                if let Some(child) = scrolled_window.child() {
+                    // Check if the child is a Picture widget (image content)
+                    if child.is::<gtk4::Picture>() || mime_type.type_() == "image" {
+                        // This is an image tab - disable save functionality
+                        utils::update_save_buttons_visibility(
+                            &save_button_clone_for_switch, 
+                            &save_as_button_clone_for_switch, 
+                            Some(mime_guess::mime::IMAGE_PNG) // Use any image MIME type to trigger hiding
+                        );
+                        
+                        utils::update_save_menu_button_visibility(
+                            &save_menu_button_clone_for_switch, 
+                            Some(mime_guess::mime::IMAGE_PNG)
+                        );
+                    } else {
+                        // Other non-text content, use default behavior based on MIME type
+                        utils::update_save_buttons_visibility(
+                            &save_button_clone_for_switch, 
+                            &save_as_button_clone_for_switch, 
+                            Some(mime_type.clone())
+                        );
+                        
+                        utils::update_save_menu_button_visibility(
+                            &save_menu_button_clone_for_switch, 
+                            Some(mime_type)
+                        );
+                    }
+                }
+            }
         } else {
-            // For non-text content (e.g., images): disable save functionality
+            // Fallback: disable save functionality if we can't determine content type
             utils::update_save_buttons_visibility(
                 &save_button_clone_for_switch, 
                 &save_as_button_clone_for_switch, 

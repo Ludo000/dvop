@@ -537,7 +537,7 @@ fn open_or_focus_tab(
             current_dir: current_dir.clone(),
             save_button: save_button.clone(),
             save_as_button: save_as_button.clone(),
-            _save_menu_button: None, // We don't have a menu button in this scope
+            _save_menu_button: _save_menu_button.map(|btn| btn.clone()), // Pass the save menu button if available
         };
 
         tab_close_button.connect_clicked(move |_| {
@@ -559,7 +559,12 @@ fn open_or_focus_tab(
         });
         
         // Update save buttons visibility based on mime type
-        utils::update_save_buttons_visibility(save_button, save_as_button, Some(mime_type));
+        utils::update_save_buttons_visibility(save_button, save_as_button, Some(mime_type.clone()));
+        
+        // Also update the save menu button if available
+        if let Some(save_menu_btn) = _save_menu_button {
+            utils::update_save_menu_button_visibility(save_menu_btn, Some(mime_type));
+        }
     }
 }
 pub fn setup_button_handlers(
@@ -815,21 +820,20 @@ fn setup_open_button_handler(
                 if let Some(file_to_open) = dialog.file().and_then(|f| f.path()) {
                     let mime_type = mime_guess::from_path(&file_to_open).first_or_octet_stream();
                     if utils::is_allowed_mime_type(&mime_type) {
-                        if let Ok(content) = std::fs::read_to_string(&file_to_open) {
-                            open_or_focus_tab(
-                                &editor_notebook_clone,
-                                &file_to_open,
-                                &content,
-                                &active_tab_path_ref_for_response, 
-                                &file_path_manager_for_response,   
-                                &save_button_clone,
-                                &save_as_button_clone,
-                                &mime_type.clone(), // Clone here to avoid ownership move
-                                &window_for_response, // Pass window
-                                &file_list_box_for_response, // Pass file_list_box
-                                &current_dir_for_response, // Pass current_dir
-                                None, // We don't have the save_menu_button here
-                            );
+                        if let Ok(content) = std::fs::read_to_string(&file_to_open) {                        open_or_focus_tab(
+                            &editor_notebook_clone,
+                            &file_to_open,
+                            &content,
+                            &active_tab_path_ref_for_response, 
+                            &file_path_manager_for_response,   
+                            &save_button_clone,
+                            &save_as_button_clone,
+                            &mime_type.clone(), // Clone here to avoid ownership move
+                            &window_for_response, // Pass window
+                            &file_list_box_for_response, // Pass file_list_box
+                            &current_dir_for_response, // Pass current_dir
+                            save_menu_button_for_response.as_ref(), // Pass the save_menu_button
+                        );
 
                             if let Some(parent) = file_to_open.parent() {
                                 *current_dir_clone.borrow_mut() = parent.to_path_buf();
@@ -1070,11 +1074,13 @@ fn setup_file_selection_handler(
     let file_path_manager_clone = file_path_manager.clone();
     let current_dir_clone = current_dir.clone();
     let file_list_box_for_update = file_list_box.clone(); 
-    let error_label_clone = error_label.clone();
-    let picture_clone = picture.clone(); // picture is now cloned
+    let _error_label_clone = error_label.clone();
+    let _picture_clone = picture.clone(); // picture is now cloned
     let save_button_clone = save_button.clone();
     let save_as_button_clone = save_as_button.clone();
     let window_clone = window.clone(); // For NewTabDependencies
+    // Clone the MenuButton option to own it
+    let save_menu_button_option = _save_menu_button.map(|btn| btn.clone());
 
 
     file_list_box.connect_row_activated(move |_, row| {
@@ -1085,11 +1091,14 @@ fn setup_file_selection_handler(
         let file_path_manager_for_handler = file_path_manager_clone.clone();
         let current_dir_for_handler = current_dir_clone.clone();
         let file_list_box_for_handler_update = file_list_box_for_update.clone();
-        let error_label_for_handler = error_label_clone.clone();
-        let picture_for_handler = picture_clone.clone();
+        // No need to clone these as they're not used directly
+        // let _error_label_for_handler = _error_label_clone.clone();
+        // let _picture_for_handler = _picture_clone.clone();
         let save_button_for_handler = save_button_clone.clone();
         let save_as_button_for_handler = save_as_button_clone.clone();
         let window_for_handler = window_clone.clone();
+        // Clone the already-owned option
+        let save_menu_button_for_handler = save_menu_button_option.clone();
 
 
         if let Some(label) = row.child().and_then(|c| c.downcast::<Label>().ok()) {
@@ -1104,8 +1113,7 @@ fn setup_file_selection_handler(
             } else if path_from_list.is_file() {
                 let mime_type = mime_guess::from_path(&path_from_list).first_or_octet_stream();
                 if utils::is_allowed_mime_type(&mime_type) {
-                    if let Ok(content) = std::fs::read_to_string(&path_from_list) {
-                        open_or_focus_tab(
+                    if let Ok(content) = std::fs::read_to_string(&path_from_list) {                            open_or_focus_tab(
                             &editor_notebook_for_handler, 
                             &path_from_list,
                             &content,
@@ -1117,7 +1125,7 @@ fn setup_file_selection_handler(
                             &window_for_handler, 
                             &file_list_box_for_handler_update, 
                             &current_dir_for_handler,
-                            None, // We don't have save_menu_button here
+                            save_menu_button_for_handler.as_ref(), // Pass the save menu button option
                         );
                         // Ensure the list reflects the newly opened file as active
                         utils::update_file_list(
@@ -1140,7 +1148,7 @@ fn setup_file_selection_handler(
                         &window_for_handler, 
                         &file_list_box_for_handler_update, 
                         &current_dir_for_handler,
-                        None, // We don't have save_menu_button here
+                        save_menu_button_for_handler.as_ref() // Pass the save menu button option
                     );
                     // Ensure the list reflects the newly opened file as active
                     utils::update_file_list(
@@ -1162,7 +1170,7 @@ fn setup_file_selection_handler(
                         &window_for_handler, 
                         &file_list_box_for_handler_update, 
                         &current_dir_for_handler,
-                        None, // We don't have save_menu_button here
+                        save_menu_button_for_handler.as_ref(), // Pass the save menu button option
                     );
                     // Ensure the list reflects the newly opened file as active
                     utils::update_file_list(
