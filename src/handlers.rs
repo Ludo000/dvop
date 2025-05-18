@@ -458,40 +458,69 @@ fn open_or_focus_tab(
         notebook.set_current_page(Some(page_num));
         *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
     } else {
-        // Create new tab with syntax highlighting
-        // Create source view with syntax highlighting
-        let (source_view, source_buffer) = crate::syntax::create_source_view();
-        source_buffer.set_text(content);
-        
-        // Apply syntax highlighting based on file extension
-        crate::syntax::set_language_for_file(&source_buffer, file_to_open);
-        
-        // Get TextBuffer interfaces for compatibility with the rest of the code
-        // Clone source_view to avoid ownership move
-        let new_text_buffer = source_buffer.upcast::<TextBuffer>();
-        
-        // Create scrolled window for the source view
-        let new_scrolled_window = crate::syntax::create_source_view_scrolled(&source_view);
-
+        // Get file MIME type 
+        let mime_type = mime_guess::from_path(&file_to_open).first_or_octet_stream();
         let file_name = file_to_open.file_name().unwrap_or_default().to_string_lossy().to_string();
         
-        // Use ui::create_tab_widget
+        // Create tab widget regardless of content type
         let (tab_widget, tab_actual_label, tab_close_button) = crate::ui::create_tab_widget(&file_name);
+        
+        let new_scrolled_window = ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .build();
+            
+        // Handle different file types
+        if mime_type.type_() == "image" {
+            // Handle image file
+            if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file_to_open) {
+                let picture = Picture::new();
+                picture.set_pixbuf(Some(&pixbuf));
+                new_scrolled_window.set_child(Some(&picture));
+            } else {
+                // Failed to load image, show error
+                let error_msg = format!("Failed to load image: {}", file_name);
+                let error_label = Label::new(Some(&error_msg));
+                new_scrolled_window.set_child(Some(&error_label));
+            }
+        } else if utils::is_allowed_mime_type(&mime_type) {
+            // Handle text file
+            // Create source view with syntax highlighting
+            let (source_view, source_buffer) = crate::syntax::create_source_view();
+            source_buffer.set_text(content);
+            
+            // Apply syntax highlighting based on file extension
+            crate::syntax::set_language_for_file(&source_buffer, file_to_open);
+            
+            // Get TextBuffer interfaces for compatibility with the rest of the code
+            // Clone source_view to avoid ownership move
+            let new_text_buffer = source_buffer.upcast::<TextBuffer>();
+            
+            // Set the source view as the child of the scrolled window
+            new_scrolled_window.set_child(Some(&source_view));
 
+            // Dirty tracking
+            let tab_actual_label_clone = tab_actual_label.clone();
+            let file_name_clone = file_name.clone();
+            new_text_buffer.connect_changed(move |_buffer| { 
+                if !tab_actual_label_clone.text().ends_with("*") {
+                     tab_actual_label_clone.set_text(&format!("{}*", file_name_clone));
+                }
+            });
+        } else {
+            // Unsupported file type
+            let error_msg = format!("Unsupported file type: {}", file_name);
+            let error_label = Label::new(Some(&error_msg));
+            new_scrolled_window.set_child(Some(&error_label));
+        }
+
+        // Add the new tab to the notebook and make it the current page
         let new_page_num = notebook.append_page(&new_scrolled_window, Some(&tab_widget));
         notebook.set_current_page(Some(new_page_num));
 
+        // Update state
         file_path_manager.borrow_mut().insert(new_page_num, file_to_open.clone());
         *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
-        
-        // Dirty tracking
-        let tab_actual_label_clone = tab_actual_label.clone(); // Use the label from create_tab_widget
-        let file_name_clone = file_name.clone();
-        new_text_buffer.connect_changed(move |_buffer| { 
-            if !tab_actual_label_clone.text().ends_with("*") {
-                 tab_actual_label_clone.set_text(&format!("{}*", file_name_clone));
-            }
-        });
 
         // Connect close button
         let notebook_clone = notebook.clone();
@@ -528,9 +557,11 @@ fn open_or_focus_tab(
                 );
             }
         });
+        
+        // Update save buttons visibility based on mime type
+        utils::update_save_buttons_visibility(save_button, save_as_button, Some(mime_type));
     }
 }
-
 pub fn setup_button_handlers(
     new_button: &Button,
     open_button: &Button,
@@ -806,48 +837,46 @@ fn setup_open_button_handler(
                             }
                         }
                     } else if mime_type.type_() == "image" {
-                        // Image handling in tabs:
-                        // Option 1: Open in a new tab with a Picture widget
-                        // Option 2: Open with external viewer
-                        // For now, let\'s use the existing picture widget if no text tabs are open,
-                        // or show an error. This part needs a dedicated design.
-                        if editor_notebook_clone.n_pages() == 1 { // Assuming 1 initial empty tab
-                             if let Some(page_widget) = editor_notebook_clone.nth_page(Some(0)){
-                                if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
-                                    if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file_to_open) {
-                                        let picture_to_set = picture_clone.clone(); // Clone picture for setting
-                                        picture_to_set.set_pixbuf(Some(&pixbuf));
-                                        sw.set_child(Some(&picture_to_set)); // Use cloned picture
-                                        *active_tab_path_ref_for_response.borrow_mut() = Some(file_to_open.clone());
-                                         file_path_manager_for_response.borrow_mut().insert(0, file_to_open.clone());
+                        // For images, use open_or_focus_tab with empty content
+                        open_or_focus_tab(
+                            &editor_notebook_clone,
+                            &file_to_open,
+                            "", // Empty content for images
+                            &active_tab_path_ref_for_response,
+                            &file_path_manager_for_response,
+                            &save_button_clone,
+                            &save_as_button_clone,
+                            &mime_type,
+                            &window_for_response,
+                            &file_list_box_for_response,
+                            &current_dir_for_response,
+                            save_menu_button_for_response.as_ref(),
+                        );
 
-
-                                        if let Some(parent) = file_to_open.parent() {
-                                            *current_dir_clone.borrow_mut() = parent.to_path_buf();
-                                        }
-                                        utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow());
-                                        utils::update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, Some(mime_type.clone())); // Clone here
-                                        
-                                        // Also update the save menu button visibility if available
-                                        if let Some(save_menu_button) = save_menu_button_for_response.as_ref() {
-                                            utils::update_save_menu_button_visibility(save_menu_button, Some(mime_type));
-                                        }
-                                    }
-                                }
-                             }
-                        } else {
-                            // Can\'t open image in a new tab easily with current setup
-                            if let Some(page_widget) = editor_notebook_clone.current_page().and_then(|p| editor_notebook_clone.nth_page(Some(p))) {
-                                if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
-                                    sw.set_child(Some(&error_label_clone));
-                                }
-                            }
+                        if let Some(parent) = file_to_open.parent() {
+                            *current_dir_clone.borrow_mut() = parent.to_path_buf();
+                            utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow());
                         }
                     } else {
-                         if let Some(page_widget) = editor_notebook_clone.current_page().and_then(|p| editor_notebook_clone.nth_page(Some(p))) {
-                            if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
-                                sw.set_child(Some(&error_label_clone));
-                            }
+                        // Handle unsupported file types
+                        open_or_focus_tab(
+                            &editor_notebook_clone,
+                            &file_to_open,
+                            "", // Empty content for unsupported files
+                            &active_tab_path_ref_for_response,
+                            &file_path_manager_for_response,
+                            &save_button_clone,
+                            &save_as_button_clone,
+                            &mime_type,
+                            &window_for_response,
+                            &file_list_box_for_response,
+                            &current_dir_for_response,
+                            save_menu_button_for_response.as_ref(),
+                        );
+
+                        if let Some(parent) = file_to_open.parent() {
+                            *current_dir_clone.borrow_mut() = parent.to_path_buf();
+                            utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow());
                         }
                     }
                 }
@@ -1098,39 +1127,49 @@ fn setup_file_selection_handler(
                         );
                     }
                 } else if mime_type.type_() == "image" {
-                    // Simplified image handling (same as open_button)
-                     if editor_notebook_for_handler.n_pages() == 1 { // Use cloned notebook
-                         if let Some(page_widget) = editor_notebook_for_handler.nth_page(Some(0)){
-                            if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
-                                if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&path_from_list) {
-                                    let picture_to_set = picture_for_handler.clone(); 
-                                    picture_to_set.set_pixbuf(Some(&pixbuf));
-                                    sw.set_child(Some(&picture_to_set)); 
-                                    *active_tab_path_for_handler.borrow_mut() = Some(path_from_list.clone());
-                                    file_path_manager_for_handler.borrow_mut().insert(0, path_from_list.clone());
-                                    utils::update_save_buttons_visibility(&save_button_for_handler, &save_as_button_for_handler, Some(mime_type.clone())); // Clone here
-                                    // Ensure the list reflects the newly "opened" image as active
-                                    utils::update_file_list(
-                                        &file_list_box_for_handler_update,
-                                        &current_dir_for_handler.borrow(),
-                                        &active_tab_path_for_handler.borrow()
-                                    );
-                                }
-                            }
-                         }
-                    } else {
-                        if let Some(page_widget) = editor_notebook_for_handler.current_page().and_then(|p| editor_notebook_for_handler.nth_page(Some(p))) {
-                            if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
-                                sw.set_child(Some(&error_label_for_handler));
-                            }
-                        }
-                    }
+                    // Use open_or_focus_tab for images
+                    open_or_focus_tab(
+                        &editor_notebook_for_handler, 
+                        &path_from_list,
+                        "", // Empty content for images
+                        &active_tab_path_for_handler, 
+                        &file_path_manager_for_handler,   
+                        &save_button_for_handler,
+                        &save_as_button_for_handler,
+                        &mime_type,
+                        &window_for_handler, 
+                        &file_list_box_for_handler_update, 
+                        &current_dir_for_handler,
+                        None, // We don't have save_menu_button here
+                    );
+                    // Ensure the list reflects the newly opened file as active
+                    utils::update_file_list(
+                        &file_list_box_for_handler_update,
+                        &current_dir_for_handler.borrow(),
+                        &active_tab_path_for_handler.borrow()
+                    );
                 } else {
-                     if let Some(page_widget) = editor_notebook_for_handler.current_page().and_then(|p| editor_notebook_for_handler.nth_page(Some(p))) {
-                        if let Some(sw) = page_widget.downcast_ref::<ScrolledWindow>() {
-                            sw.set_child(Some(&error_label_for_handler));
-                        }
-                    }
+                    // Handle unsupported file type in a new tab
+                    open_or_focus_tab(
+                        &editor_notebook_for_handler, 
+                        &path_from_list,
+                        "", // Empty content for unsupported files
+                        &active_tab_path_for_handler, 
+                        &file_path_manager_for_handler,   
+                        &save_button_for_handler,
+                        &save_as_button_for_handler,
+                        &mime_type,
+                        &window_for_handler, 
+                        &file_list_box_for_handler_update, 
+                        &current_dir_for_handler,
+                        None, // We don't have save_menu_button here
+                    );
+                    // Ensure the list reflects the newly opened file as active
+                    utils::update_file_list(
+                        &file_list_box_for_handler_update,
+                        &current_dir_for_handler.borrow(),
+                        &active_tab_path_for_handler.borrow()
+                    );
                 }
             }
         }
