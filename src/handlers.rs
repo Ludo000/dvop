@@ -675,6 +675,9 @@ fn setup_new_button_handler(
 
 
     new_button.connect_clicked(move |_| {
+        // Close any empty untitled tabs first
+        close_empty_untitled_tabs(&editor_notebook_clone, &file_path_manager_clone);
+        
         let save_as_button_for_new_tab = save_as_button_clone.clone(); // Clone for this specific closure
         let new_text_view = TextView::new();
         let new_text_buffer = new_text_view.buffer();
@@ -801,8 +804,8 @@ fn setup_open_button_handler(
         let editor_notebook_clone = editor_notebook.clone();
         let current_dir_clone = current_dir.clone();
         let file_list_box_clone = file_list_box.clone();
-        let error_label_clone = error_label.clone();
-        let picture_clone = picture.clone();
+        let _error_label_clone = error_label.clone();
+        let _picture_clone = picture.clone();
         let save_button_clone = save_button.clone();
         let save_as_button_clone = save_as_button.clone();
         // Use the owned Rcs for the nested closure
@@ -818,6 +821,9 @@ fn setup_open_button_handler(
         dialog.connect_response(move |dialog, response| {
             if response == gtk4::ResponseType::Accept {
                 if let Some(file_to_open) = dialog.file().and_then(|f| f.path()) {
+                    // Close any empty untitled tabs before opening the file
+                    close_empty_untitled_tabs(&editor_notebook_clone, &file_path_manager_for_response);
+                    
                     let mime_type = mime_guess::from_path(&file_to_open).first_or_octet_stream();
                     if utils::is_allowed_mime_type(&mime_type) {
                         if let Ok(content) = std::fs::read_to_string(&file_to_open) {                        open_or_focus_tab(
@@ -1106,6 +1112,11 @@ fn setup_file_selection_handler(
             let mut path_from_list = current_dir_for_handler.borrow().clone(); // Use cloned current_dir
             path_from_list.push(&file_name.as_str());
 
+            // If it's a file (not a directory), close any empty untitled tabs before opening
+            if path_from_list.is_file() {
+                close_empty_untitled_tabs(&editor_notebook_for_handler, &file_path_manager_for_handler);
+            }
+            
             if path_from_list.is_dir() {
                 *current_dir_for_handler.borrow_mut() = path_from_list;
                 utils::update_file_list(&file_list_box_for_handler_update, &current_dir_for_handler.borrow(), &active_tab_path_for_handler.borrow());
@@ -1216,4 +1227,55 @@ fn setup_refresh_button_handler(
         // Pass the active tab\'s path for selection highlighting
         utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow());
     });
+}
+
+/// Helper function to close default empty untitled tabs
+/// 
+/// This function checks if there's an empty untitled tab and closes it
+/// when opening a new file or creating a new tab.
+fn close_empty_untitled_tabs(notebook: &Notebook, file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>) {
+    // Only proceed if there are pages to check
+    if notebook.n_pages() == 0 {
+        return;
+    }
+    
+    // Collect tabs to remove - we'll store their indices
+    let mut tabs_to_remove = Vec::new();
+    
+    // Check all tabs
+    for page_num in 0..notebook.n_pages() {
+        // Skip if this tab has a file associated with it in the path manager
+        if file_path_manager.borrow().contains_key(&page_num) {
+            continue;
+        }
+        
+        // Check if this tab is an untitled tab with no content
+        if let Some((_, buffer)) = get_text_view_and_buffer_for_page(notebook, page_num) {
+            // Get the tab label to verify it's "Untitled" (not "Untitled*")
+            if let Some(page) = notebook.nth_page(Some(page_num)) {
+                if let Some(tab_label_widget) = notebook.tab_label(&page) {
+                    if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                        if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                            let label_text = label.text();
+                            
+                            // Check if this is an empty untitled tab
+                            // This covers both cases: "Untitled" AND "Untitled*" with empty content
+                            if (label_text == "Untitled" || label_text == "Untitled*") && 
+                               buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).is_empty() {
+                                tabs_to_remove.push(page_num);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Remove the tabs in reverse order to avoid index shifting problems
+    tabs_to_remove.sort_unstable();
+    tabs_to_remove.reverse();
+    
+    for page_num in tabs_to_remove {
+        notebook.remove_page(Some(page_num));
+    }
 }
