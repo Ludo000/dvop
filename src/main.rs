@@ -361,14 +361,14 @@ fn build_ui(app: &Application) {
         }
     });
 
-    // Initialize the terminal emulator component
-    let terminal = ui::create_terminal();
-    let terminal_box = ui::create_terminal_box(&terminal);
+    // Create terminal notebook with tabs instead of single terminal
+    let (terminal_notebook, add_terminal_button) = ui::create_terminal_notebook();
+    let terminal_notebook_box = ui::create_terminal_notebook_box(&terminal_notebook, &add_terminal_button);
 
     // Create the main paned layout that contains:
     // - The file manager sidebar on the left
     // - The editor notebook and terminal in a vertical split on the right
-    let paned = ui::create_paned(&file_manager_panel, &editor_notebook, &terminal_box);
+    let paned = ui::create_paned(&file_manager_panel, &editor_notebook, &terminal_notebook_box);
 
     // Set the custom header bar as the window's titlebar
     window.set_titlebar(Some(&header));

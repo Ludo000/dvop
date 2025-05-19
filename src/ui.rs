@@ -338,7 +338,7 @@ pub fn create_file_manager_panel_container(nav_box: GtkBox, file_list_scrolled_w
 pub fn create_paned(
     file_manager_panel: &GtkBox,     // File browser sidebar
     editor_notebook: &Notebook,      // Editor tabs container
-    terminal_box: &ScrolledWindow    // Terminal emulator container
+    terminal_box: &impl IsA<gtk4::Widget>  // Terminal container (either ScrolledWindow or GtkBox)
 ) -> gtk4::Paned {
     // Create the main horizontal split pane
     let paned = gtk4::Paned::new(Orientation::Horizontal);
@@ -392,4 +392,77 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     tab_box.append(&close_button);
     
     (tab_box, label, close_button)
+}
+
+/// Creates a tabbed terminal interface with Add and Close buttons
+/// 
+/// This function creates a notebook container with an initial terminal tab,
+/// plus an "Add" button to create new terminal tabs.
+/// Each terminal tab has its own close button.
+pub fn create_terminal_notebook() -> (Notebook, Button) {
+    // Create a notebook for terminal tabs
+    let terminal_notebook = Notebook::new();
+    terminal_notebook.set_scrollable(true);
+    terminal_notebook.set_show_border(true);
+    
+    // Create an "Add Terminal" button
+    let add_terminal_button = Button::from_icon_name("list-add-symbolic");
+    add_terminal_button.set_tooltip_text(Some("Add a new terminal tab"));
+    
+    // Create the first terminal tab
+    add_terminal_tab(&terminal_notebook);
+    
+    // Connect the Add Terminal button click handler
+    let terminal_notebook_clone = terminal_notebook.clone();
+    add_terminal_button.connect_clicked(move |_| {
+        add_terminal_tab(&terminal_notebook_clone);
+    });
+    
+    (terminal_notebook, add_terminal_button)
+}
+
+/// Adds a new terminal tab to the terminal notebook
+/// 
+/// Creates a new terminal instance, places it in a tab, and adds it to the notebook
+fn add_terminal_tab(terminal_notebook: &Notebook) -> u32 {
+    // Create a new terminal
+    let terminal = create_terminal();
+    let terminal_box = create_terminal_box(&terminal);
+    
+    // Create a tab widget with a close button
+    let tab_index = terminal_notebook.n_pages();
+    let tab_title = format!("Terminal {}", tab_index + 1);
+    let (tab_widget, _tab_label, tab_close_button) = create_tab_widget(&tab_title);
+    
+    // Append the terminal to the notebook
+    let page_num = terminal_notebook.append_page(&terminal_box, Some(&tab_widget));
+    terminal_notebook.set_current_page(Some(page_num));
+    
+    // Connect the close button
+    let notebook_clone = terminal_notebook.clone();
+    tab_close_button.connect_clicked(move |_| {
+        // Don't close the last terminal tab
+        if notebook_clone.n_pages() > 1 {
+            notebook_clone.remove_page(Some(page_num));
+        }
+    });
+    
+    page_num
+}
+
+/// Creates a container box for the terminal notebook with the add button
+/// 
+/// The terminal notebook is placed in a box and the add button is placed as an action button
+/// in the notebook's tab bar area using the notebook's action widget feature
+pub fn create_terminal_notebook_box(terminal_notebook: &Notebook, add_terminal_button: &Button) -> GtkBox {
+    let terminal_box = GtkBox::new(Orientation::Vertical, 0);
+    
+    // Add the add button to the tab bar via the action widget feature
+    // This places the button in the same row as the tabs
+    terminal_notebook.set_action_widget(add_terminal_button, gtk4::PackType::End);
+    
+    // Pack just the notebook into the container box
+    terminal_box.append(terminal_notebook);
+    
+    terminal_box
 }
