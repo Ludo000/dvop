@@ -832,7 +832,7 @@ fn setup_open_button_handler(
     let file_list_box_for_response = file_list_box.clone();
     let current_dir_for_response = current_dir.clone();
     let save_menu_button_for_response = __save_menu_button.clone(); // Clone before the inner closure
-    let path_label_for_response = path_label.clone(); // Clone path_label for the inner closure
+    let _path_label_for_response = path_label.clone(); // Clone path_label for the inner closure (unused but kept for future use)
 
 
         dialog.connect_response(move |dialog, response| {

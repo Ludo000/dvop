@@ -16,7 +16,10 @@ use gtk4::{
     MenuButton, PopoverMenu, gio,
     
     // Layout orientation for containers
-    Orientation
+    Orientation,
+    
+    // GDK graphics components
+    gdk
 };
 
 // Import our syntax highlighting module
@@ -32,6 +35,7 @@ use std::path::PathBuf;  // For file paths
 use gtk4::gio::Cancellable;
 use vte4::Terminal as VteTerminal;
 use vte4::TerminalExtManual;
+use vte4::TerminalExt;
 
 // Home directory detection
 use home;
@@ -50,7 +54,7 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
 ///
 /// This function creates the application's header bar with buttons for core functionality.
 /// Returns the header bar and the action buttons for connecting event handlers.
-pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button) {
+pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button) {
     // Create the main header bar
     let header = HeaderBar::new();
 
@@ -138,7 +142,7 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     save_button.set_visible(false); 
 
     // Return the header and all action buttons
-    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button)
+    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button)
 }
 
 /// Creates the main text editor view components
@@ -221,6 +225,9 @@ pub fn create_text_view() -> (
 /// - working_dir: Optional working directory to start the terminal in. If None, uses the user's home directory
 pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
     let terminal = VteTerminal::new();
+    
+    // Set terminal colors to match the editor's theme
+    setup_terminal_theme(&terminal);
     
     // Get the user's default shell from environment variables
     if let Some(shell) = env::var("SHELL").ok() {
@@ -535,8 +542,163 @@ pub fn create_status_bar() -> (GtkBox, Label) {
     path_label.set_ellipsize(gtk4::pango::EllipsizeMode::Start); // Ellipsize at start if too long
     path_label.set_hexpand(true); // Use all available horizontal space
     
+    // Add some styling to make the status bar more visible
+    // Use CSS for styling - smaller font size and subtle styling
+    path_label.add_css_class("path-label");
+    path_label.set_css_classes(&["path-label", "dim-label"]);
+    
     // Add the label to the status bar
     status_bar.append(&path_label);
     
+    // Add a CSS class for custom styling
+    status_bar.add_css_class("basado-status-bar");
+    
     (status_bar, path_label)
+}
+
+/// Sets up the terminal color theme to match the editor's syntax highlighting theme
+///
+/// This function configures the VTE terminal colors to match the editor's color scheme
+/// based on whether the application is in dark mode or light mode. It sets:
+/// - Foreground (text) color
+/// - Background color
+/// - Cursor color
+/// - Selection colors
+/// - A 16-color palette (standard ANSI colors and bright variants)
+/// 
+/// The color scheme is designed to be readable and consistent with the editor's appearance.
+fn setup_terminal_theme(terminal: &VteTerminal) {
+    // Check if we're in dark mode to choose appropriate colors
+    let is_dark_mode = crate::syntax::is_dark_mode_enabled();
+    
+    if is_dark_mode {
+        // Dark mode color scheme
+        // Set foreground (text) color to light gray/white
+        terminal.set_color_foreground(&gdk::RGBA::new(0.85, 0.85, 0.85, 1.0));
+        
+        // Set background color to dark gray (not pure black for better readability)
+        terminal.set_color_background(&gdk::RGBA::new(0.15, 0.15, 0.15, 1.0));
+        
+        // Set cursor color for visibility
+        terminal.set_color_cursor(Some(&gdk::RGBA::new(0.8, 0.8, 0.8, 1.0)));
+        
+        // Set selection colors
+        terminal.set_color_highlight(Some(&gdk::RGBA::new(0.3, 0.3, 0.5, 1.0)));
+        terminal.set_color_highlight_foreground(Some(&gdk::RGBA::new(1.0, 1.0, 1.0, 1.0)));
+        
+        // Set the palette for ANSI colors
+        let palette = [
+            // Standard colors (0-7)
+            gdk::RGBA::new(0.15, 0.15, 0.15, 1.0), // Black
+            gdk::RGBA::new(0.8, 0.2, 0.2, 1.0),    // Red
+            gdk::RGBA::new(0.2, 0.7, 0.2, 1.0),    // Green
+            gdk::RGBA::new(0.8, 0.8, 0.0, 1.0),    // Yellow
+            gdk::RGBA::new(0.2, 0.5, 0.8, 1.0),    // Blue
+            gdk::RGBA::new(0.8, 0.2, 0.8, 1.0),    // Magenta
+            gdk::RGBA::new(0.0, 0.7, 0.7, 1.0),    // Cyan
+            gdk::RGBA::new(0.85, 0.85, 0.85, 1.0), // White
+            
+            // Bright colors (8-15)
+            gdk::RGBA::new(0.3, 0.3, 0.3, 1.0),    // Bright Black
+            gdk::RGBA::new(1.0, 0.3, 0.3, 1.0),    // Bright Red
+            gdk::RGBA::new(0.3, 0.9, 0.3, 1.0),    // Bright Green
+            gdk::RGBA::new(1.0, 1.0, 0.3, 1.0),    // Bright Yellow
+            gdk::RGBA::new(0.3, 0.6, 0.9, 1.0),    // Bright Blue
+            gdk::RGBA::new(0.9, 0.3, 0.9, 1.0),    // Bright Magenta
+            gdk::RGBA::new(0.3, 0.9, 0.9, 1.0),    // Bright Cyan
+            gdk::RGBA::new(1.0, 1.0, 1.0, 1.0),    // Bright White
+        ];
+        
+        // Create a vector of references to the RGBA values in the palette
+        let palette_refs: Vec<&gdk::RGBA> = palette.iter().collect();
+        
+        terminal.set_colors(
+            Some(&palette[7]), // Foreground
+            Some(&palette[0]), // Background
+            &palette_refs      // Palette references
+        );
+        
+    } else {
+        // Light mode color scheme
+        // Set foreground (text) color to dark gray/black
+        terminal.set_color_foreground(&gdk::RGBA::new(0.1, 0.1, 0.1, 1.0));
+        
+        // Set background color to white/very light gray
+        terminal.set_color_background(&gdk::RGBA::new(0.98, 0.98, 0.98, 1.0));
+        
+        // Set cursor color for visibility
+        terminal.set_color_cursor(Some(&gdk::RGBA::new(0.2, 0.2, 0.2, 1.0)));
+        
+        // Set selection colors
+        terminal.set_color_highlight(Some(&gdk::RGBA::new(0.7, 0.7, 0.9, 1.0)));
+        terminal.set_color_highlight_foreground(Some(&gdk::RGBA::new(0.0, 0.0, 0.0, 1.0)));
+        
+        // Set the palette for ANSI colors
+        let palette = [
+            // Standard colors (0-7)
+            gdk::RGBA::new(0.98, 0.98, 0.98, 1.0), // Black (actually white for background)
+            gdk::RGBA::new(0.7, 0.0, 0.0, 1.0),    // Red
+            gdk::RGBA::new(0.0, 0.6, 0.0, 1.0),    // Green
+            gdk::RGBA::new(0.6, 0.6, 0.0, 1.0),    // Yellow
+            gdk::RGBA::new(0.0, 0.3, 0.7, 1.0),    // Blue
+            gdk::RGBA::new(0.7, 0.0, 0.7, 1.0),    // Magenta
+            gdk::RGBA::new(0.0, 0.6, 0.6, 1.0),    // Cyan
+            gdk::RGBA::new(0.1, 0.1, 0.1, 1.0),    // White (actually black/dark gray for text)
+            
+            // Bright colors (8-15)
+            gdk::RGBA::new(0.8, 0.8, 0.8, 1.0),    // Bright Black (light gray)
+            gdk::RGBA::new(0.9, 0.2, 0.2, 1.0),    // Bright Red
+            gdk::RGBA::new(0.2, 0.8, 0.2, 1.0),    // Bright Green
+            gdk::RGBA::new(0.8, 0.8, 0.2, 1.0),    // Bright Yellow
+            gdk::RGBA::new(0.2, 0.4, 0.8, 1.0),    // Bright Blue
+            gdk::RGBA::new(0.8, 0.2, 0.8, 1.0),    // Bright Magenta
+            gdk::RGBA::new(0.2, 0.8, 0.8, 1.0),    // Bright Cyan
+            gdk::RGBA::new(0.0, 0.0, 0.0, 1.0),    // Bright White (actually black)
+        ];
+        
+        // Create a vector of references to the RGBA values in the palette
+        let palette_refs: Vec<&gdk::RGBA> = palette.iter().collect();
+        
+        terminal.set_colors(
+            Some(&palette[7]), // Foreground
+            Some(&palette[0]), // Background
+            &palette_refs      // Palette references
+        );
+    }
+}
+
+/// Updates the theme for all terminals in the terminal notebook
+/// 
+/// This should be called whenever the system theme changes to ensure
+/// the terminal colors match the new theme
+pub fn update_all_terminal_themes(terminal_notebook: &Notebook) {
+    println!("Updating themes for all terminal tabs...");
+    // Go through all tabs in the terminal notebook
+    for page_num in 0..terminal_notebook.n_pages() {
+        if let Some(page) = terminal_notebook.nth_page(Some(page_num)) {
+            // Try to find ScrolledWindow which contains our terminal
+            if let Some(scrolled_window) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                if let Some(child) = scrolled_window.child() {
+                    // Check if the child is a VteTerminal
+                    if let Some(terminal) = child.downcast_ref::<VteTerminal>() {
+                        println!("Updating theme for terminal tab {}", page_num);
+                        setup_terminal_theme(terminal);
+                        
+                        // Force redraw
+                        terminal.queue_draw();
+                    }
+                }
+            }
+        }
+    }
+    
+    // Force the notebook to redraw
+    terminal_notebook.queue_draw();
+    
+    // Print the current theme setting for debugging
+    if let Some(settings) = gtk4::Settings::default() {
+        let is_dark = settings.is_gtk_application_prefer_dark_theme();
+        println!("Terminal colors updated. Dark mode is now: {}", 
+            if is_dark { "enabled" } else { "disabled" });
+    }
 }

@@ -149,6 +149,13 @@ fn build_ui(app: &Application) {
     // Create the main application window
     let window = ui::create_window(app);
     
+    // Create the header bar with action buttons
+    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button) = ui::create_header();
+
+    // Create terminal notebook with tabs instead of single terminal
+    let (terminal_notebook, add_terminal_button) = ui::create_terminal_notebook();
+    let terminal_notebook_box = ui::create_terminal_notebook_box(&terminal_notebook, &add_terminal_button);
+    
     // Set up theme settings based on system preferences
     if let Some(settings) = gtk4::Settings::default() {
         // Explicitly check if system is in dark mode using our enhanced detection
@@ -159,6 +166,7 @@ fn build_ui(app: &Application) {
 
         // Clone references to update editor views when theme changes
         let window_clone = window.clone();
+        let terminal_notebook_clone = terminal_notebook.clone();
         
         // Connect to the notify::gtk-application-prefer-dark-theme signal
         settings.connect_notify_local(
@@ -166,18 +174,13 @@ fn build_ui(app: &Application) {
             move |_, _| {
                 // Find all source buffers and update their style schemes
                 update_all_buffer_themes(&window_clone);
+                
+                // Update terminal themes to match the new theme
+                ui::update_all_terminal_themes(&terminal_notebook_clone);
             }
         );
     }
-    
-    // Create the header bar with action buttons
-    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button) = ui::create_header();
 
-
-    // Create a separate hidden button for handling save operations
-    // This approach prevents stack overflow from circular references in the event handlers
-    let save_button = gtk4::Button::new();
-    
     // Initialize the text editor components
     // Returns multiple widgets and associated state for the editor UI
     let (
@@ -361,10 +364,6 @@ fn build_ui(app: &Application) {
         }
     });
 
-    // Create terminal notebook with tabs instead of single terminal
-    let (terminal_notebook, add_terminal_button) = ui::create_terminal_notebook();
-    let terminal_notebook_box = ui::create_terminal_notebook_box(&terminal_notebook, &add_terminal_button);
-
     // Connect the terminal button to open a new terminal at the current directory
     let terminal_notebook_clone = terminal_notebook.clone();
     let current_dir_clone_for_terminal = current_dir.clone();
@@ -376,8 +375,8 @@ fn build_ui(app: &Application) {
     // Create a status bar for displaying the current directory path
     let (status_bar, path_label) = ui::create_status_bar();
     
-    // Set the initial path label to show current directory
-    path_label.set_text(&format!("{}", current_dir.borrow().display()));
+    // Initialize the path label with the current directory
+    utils::update_path_label(&path_label, &current_dir.borrow());
     
     // Create the main paned layout that contains:
     // - The file manager sidebar on the left
