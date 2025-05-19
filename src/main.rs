@@ -208,7 +208,7 @@ fn build_ui(app: &Application) {
     let active_tab_path = Rc::new(RefCell::new(None::<PathBuf>));
 
     // Initialize the file manager panel components
-    let (file_list_box, file_list_scrolled_window, nav_box, up_button, refresh_button) =
+    let (file_list_box, file_list_scrolled_window, nav_box, up_button, refresh_button, terminal_button) =
         ui::create_file_manager_panel();
         
     // Assemble the file manager panel from its components
@@ -364,6 +364,14 @@ fn build_ui(app: &Application) {
     // Create terminal notebook with tabs instead of single terminal
     let (terminal_notebook, add_terminal_button) = ui::create_terminal_notebook();
     let terminal_notebook_box = ui::create_terminal_notebook_box(&terminal_notebook, &add_terminal_button);
+
+    // Connect the terminal button to open a new terminal at the current directory
+    let terminal_notebook_clone = terminal_notebook.clone();
+    let current_dir_clone_for_terminal = current_dir.clone();
+    terminal_button.connect_clicked(move |_| {
+        // Open a new terminal tab with the current directory path
+        ui::add_terminal_tab(&terminal_notebook_clone, Some(current_dir_clone_for_terminal.borrow().clone()));
+    });
 
     // Create the main paned layout that contains:
     // - The file manager sidebar on the left

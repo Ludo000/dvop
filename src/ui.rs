@@ -216,19 +216,25 @@ pub fn create_text_view() -> (
 /// Creates and initializes a terminal emulator
 /// 
 /// This function creates a VTE terminal widget and spawns the user's default shell in it
-pub fn create_terminal() -> VteTerminal {
+/// 
+/// Parameters:
+/// - working_dir: Optional working directory to start the terminal in. If None, uses the user's home directory
+pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
     let terminal = VteTerminal::new();
     
     // Get the user's default shell from environment variables
     if let Some(shell) = env::var("SHELL").ok() {
-        // Use the user's home directory as the starting directory for the terminal
-        let home_dir = home::home_dir().expect("Could not find home directory");
+        // Use the provided working directory or fall back to user's home directory
+        let dir = match working_dir {
+            Some(dir) => dir,
+            None => home::home_dir().expect("Could not find home directory")
+        };
         
-        if let Some(home_dir_str) = home_dir.to_str() {
+        if let Some(dir_str) = dir.to_str() {
             // Spawn the shell asynchronously in the terminal
             terminal.spawn_async(
                 vte4::PtyFlags::DEFAULT,          // Default pseudo-terminal flags
-                Some(home_dir_str),               // Working directory
+                Some(dir_str),                    // Working directory
                 &[&shell],                        // Command (user's shell)
                 &[],                              // Environment variables (none added)
                 glib::SpawnFlags::DEFAULT,        // Default spawn flags
@@ -243,7 +249,7 @@ pub fn create_terminal() -> VteTerminal {
                 },
             );
         } else {
-            eprintln!("Failed to convert home directory path to string");
+            eprintln!("Failed to convert directory path to string");
         }
     }
     terminal
@@ -269,7 +275,8 @@ pub fn create_terminal_box(terminal: &VteTerminal) -> ScrolledWindow {
 /// - GtkBox: Navigation toolbar with buttons
 /// - Button: Up button for navigating to parent directory
 /// - Button: Refresh button for updating the file list
-pub fn create_file_manager_panel() -> (ListBox, ScrolledWindow, GtkBox, Button, Button) {
+/// - Button: Open in Terminal button for opening the current directory in a terminal
+pub fn create_file_manager_panel() -> (ListBox, ScrolledWindow, GtkBox, Button, Button, Button) {
     // Create the list box that will display files and directories
     let file_list_box = ListBox::new();
     file_list_box.set_selection_mode(gtk4::SelectionMode::Single); // Allow single item selection
@@ -292,6 +299,13 @@ pub fn create_file_manager_panel() -> (ListBox, ScrolledWindow, GtkBox, Button, 
     up_button.set_child(Some(&up_button_icon));
     up_button.set_margin_start(5); // Add left margin
     
+    // Create the "Open in Terminal" button with a terminal icon
+    let terminal_button_icon = Image::from_icon_name("utilities-terminal-symbolic");
+    let terminal_button = Button::new();
+    terminal_button.set_child(Some(&terminal_button_icon));
+    terminal_button.set_tooltip_text(Some("Open current folder in a new terminal"));
+    terminal_button.set_margin_start(5); // Add left margin for spacing from the Up button
+    
     // Create the "Refresh" button with a standard icon
     let refresh_button_icon = Image::from_icon_name("view-refresh-symbolic");
     let refresh_button = Button::new();
@@ -303,12 +317,13 @@ pub fn create_file_manager_panel() -> (ListBox, ScrolledWindow, GtkBox, Button, 
     spacer.set_hexpand(true); // Make the spacer expand to push buttons apart
     
     // Assemble the navigation toolbar
-    nav_box.append(&up_button);      // Up button on left
-    nav_box.append(&spacer);         // Expanding space in middle
-    nav_box.append(&refresh_button); // Refresh button on right
+    nav_box.append(&up_button);       // Up button on left
+    nav_box.append(&terminal_button); // Terminal button next to up button
+    nav_box.append(&spacer);          // Expanding space in middle
+    nav_box.append(&refresh_button);  // Refresh button on right
     
     // Return the components for further assembly and event handling
-    (file_list_box, scrolled_window, nav_box, up_button, refresh_button)
+    (file_list_box, scrolled_window, nav_box, up_button, refresh_button, terminal_button)
 }
 
 /// Assembles the file manager panel from its components
@@ -408,14 +423,15 @@ pub fn create_terminal_notebook() -> (Notebook, Button) {
     // Create an "Add Terminal" button
     let add_terminal_button = Button::from_icon_name("list-add-symbolic");
     add_terminal_button.set_tooltip_text(Some("Add a new terminal tab"));
+    add_terminal_button.set_margin_end(5); // Add right padding
     
     // Create the first terminal tab
-    add_terminal_tab(&terminal_notebook);
+    add_terminal_tab(&terminal_notebook, None);
     
     // Connect the Add Terminal button click handler
     let terminal_notebook_clone = terminal_notebook.clone();
     add_terminal_button.connect_clicked(move |_| {
-        add_terminal_tab(&terminal_notebook_clone);
+        add_terminal_tab(&terminal_notebook_clone, None);
     });
     
     (terminal_notebook, add_terminal_button)
@@ -424,14 +440,29 @@ pub fn create_terminal_notebook() -> (Notebook, Button) {
 /// Adds a new terminal tab to the terminal notebook
 /// 
 /// Creates a new terminal instance, places it in a tab, and adds it to the notebook
-fn add_terminal_tab(terminal_notebook: &Notebook) -> u32 {
-    // Create a new terminal
-    let terminal = create_terminal();
+/// 
+/// Parameters:
+/// - terminal_notebook: The notebook to add the terminal tab to
+/// - working_dir: Optional working directory to start the terminal in
+///
+/// Returns the page number of the new tab
+pub fn add_terminal_tab(terminal_notebook: &Notebook, working_dir: Option<PathBuf>) -> u32 {
+    // Use the last folder name from the path for the tab title, or "Home" for default tabs
+    let tab_title = if let Some(dir_path) = &working_dir {
+        // Get the last component of the path (the folder name)
+        dir_path.file_name()
+                .and_then(|name| name.to_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "Home".to_string())
+    } else {
+        "home".to_string()
+    };
+    
+    // Create a new terminal with a clone of the working directory
+    let terminal = create_terminal(working_dir.clone());
     let terminal_box = create_terminal_box(&terminal);
     
-    // Create a tab widget with a close button
-    let tab_index = terminal_notebook.n_pages();
-    let tab_title = format!("Terminal {}", tab_index + 1);
+    // Create a tab widget with the folder name or default title
     let (tab_widget, _tab_label, tab_close_button) = create_tab_widget(&tab_title);
     
     // Append the terminal to the notebook
