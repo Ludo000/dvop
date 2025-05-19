@@ -42,6 +42,9 @@ use home;
 
 /// Creates the main application window with default settings
 pub fn create_window(app: &Application) -> ApplicationWindow {
+    // Apply our custom CSS styling before building the window
+    apply_custom_css();
+    
     ApplicationWindow::builder()
         .application(app)      // Associate with the GTK application
         .default_width(800)    // Initial window width
@@ -175,6 +178,10 @@ pub fn create_text_view() -> (
     // Create the tabbed notebook container with scrollable tabs
     let editor_notebook = Notebook::new();
     editor_notebook.set_scrollable(true);
+    editor_notebook.set_show_border(true);
+    
+    // Add CSS class for better tab styling
+    editor_notebook.add_css_class("basado-notebook");
 
     // Create the first "Untitled" tab
     let (tab_widget, tab_label, tab_close_button) = create_tab_widget("Untitled");
@@ -419,14 +426,34 @@ pub fn create_paned(
 /// - Button: Close button to close the tab
 pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     // Create horizontal container for tab contents
-    let tab_box = GtkBox::new(Orientation::Horizontal, 5);
-    tab_box.set_margin_bottom(2); // Add a small bottom margin for visual spacing
+    let tab_box = GtkBox::new(Orientation::Horizontal, 6); // Increased spacing for better appearance
+    
+    // Add CSS class for custom tab styling
+    tab_box.add_css_class("tab-box");
+    
+    // Add padding around the tab content for better visual presence
+    tab_box.set_margin_top(3);
+    tab_box.set_margin_bottom(3);
+    tab_box.set_margin_start(6); 
+    tab_box.set_margin_end(2);
     
     // Create label with the provided title
     let label = Label::new(Some(tab_title));
+    label.set_margin_start(2); // Add a small margin for label text
     
-    // Create close button with a standard X icon
+    // Create close button with a standard X icon, with a slightly raised appearance
     let close_button = Button::from_icon_name("window-close-symbolic");
+    
+    // Use a slightly raised button style for better clickability while keeping it compact
+    close_button.add_css_class("circular"); // Make button more rounded
+    close_button.set_valign(gtk4::Align::Center);
+    
+    // Set button margins for proper spacing
+    close_button.set_margin_start(2);
+    close_button.set_margin_end(0);
+    
+    // Reduce the button size while keeping it clickable
+    close_button.set_size_request(22, 22);
     
     // Assemble tab components
     tab_box.append(&label);
@@ -446,10 +473,13 @@ pub fn create_terminal_notebook() -> (Notebook, Button) {
     terminal_notebook.set_scrollable(true);
     terminal_notebook.set_show_border(true);
     
+    // Add some CSS classes for better tab styling
+    terminal_notebook.add_css_class("basado-notebook");
+    
     // Create an "Add Terminal" button
     let add_terminal_button = Button::from_icon_name("list-add-symbolic");
     add_terminal_button.set_tooltip_text(Some("Add a new terminal tab"));
-    add_terminal_button.set_margin_end(5); // Add right padding
+    add_terminal_button.set_margin_end(8); // Add right padding
     
     // Create the first terminal tab
     add_terminal_tab(&terminal_notebook, None);
@@ -565,6 +595,80 @@ pub fn create_status_bar() -> (GtkBox, Label) {
     status_bar.add_css_class("basado-status-bar");
     
     (status_bar, path_label)
+}
+
+/// Apply custom CSS to enhance the appearance of tabs
+/// 
+/// This function creates and applies CSS styles to improve the tab appearance,
+/// making them look less flat and more visually distinct.
+pub fn apply_custom_css() {
+    // Get the default CSS provider
+    let provider = gtk4::CssProvider::new();
+    
+    // Define our custom CSS
+    let css = r#"
+    /* Style all notebook tabs */
+    notebook > header > tabs > tab {
+        padding: 2px;
+        background-color: transparent;
+    }
+    
+    /* Apply custom container styling */
+    .tab-box {
+        border-radius: 4px;
+        padding: 2px;
+    }
+    
+    /* Increase contrast between active and inactive tabs */
+    notebook > header > tabs > tab {
+        background-color: alpha(currentColor, 0.05);
+        border-radius: 4px 4px 0 0;
+    }
+    
+    /* Style checked/active tabs */
+    notebook > header > tabs > tab:checked {
+        background-color: alpha(currentColor, 0.2);
+        box-shadow: 0 1px 2px alpha(black, 0.1);
+    }
+    
+    /* Make active tab text more prominent */
+    notebook > header > tabs > tab:checked label {
+        font-weight: 500;
+    }
+    
+    /* Give tabs more depth */
+    notebook > header {
+        border-bottom: 1px solid alpha(currentColor, 0.2);
+    }
+    
+    /* Style close buttons in tabs */
+    .tab-box button.circular {
+        min-height: 20px;
+        min-width: 20px;
+        padding: 0;
+        border-radius: 50%;
+        border: none;
+        box-shadow: none;
+        -gtk-icon-shadow: none;
+        outline: none;
+    }
+    
+    /* Style buttons on hover */
+    .tab-box button.circular:hover {
+        background-color: alpha(currentColor, 0.3);
+        border: none;
+    }
+    "#;
+    
+    // Load CSS into the provider
+    provider.load_from_data(css);
+    
+    // Apply the CSS to the default screen
+    gtk4::style_context_add_provider_for_display(
+        &gtk4::gdk::Display::default().expect("Could not get default display"),
+        &provider,
+        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
 }
 
 /// Sets up the terminal color theme to match the editor's syntax highlighting theme
