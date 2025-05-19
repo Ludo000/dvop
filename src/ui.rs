@@ -268,7 +268,7 @@ pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
 pub fn create_terminal_box(terminal: &VteTerminal) -> ScrolledWindow {
     ScrolledWindow::builder()
         .child(terminal)           // Set the terminal as the child widget
-        .vexpand(false)            // Don't expand vertically to fill all available space
+        .vexpand(true)             // Expand vertically to fill all available space
         .hexpand(true)             // Expand horizontally to fill available width
         .min_content_height(150)   // Set minimum height for usability
         .build()
@@ -378,6 +378,9 @@ pub fn create_paned(
     
     // Place terminal at the bottom of the vertical split
     editor_paned.set_end_child(Some(terminal_box));
+    
+    // Make the editor paned expand vertically
+    editor_paned.set_vexpand(true);
     
     // Place file manager on the left side of the horizontal split
     paned.set_start_child(Some(file_manager_panel));
@@ -515,8 +518,14 @@ pub fn create_terminal_notebook_box(terminal_notebook: &Notebook, add_terminal_b
     // This places the button in the same row as the tabs
     terminal_notebook.set_action_widget(add_terminal_button, gtk4::PackType::End);
     
+    // Set the terminal notebook to expand vertically
+    terminal_notebook.set_vexpand(true);
+    
     // Pack just the notebook into the container box
     terminal_box.append(terminal_notebook);
+    
+    // Make the entire container expand vertically
+    terminal_box.set_vexpand(true);
     
     terminal_box
 }
