@@ -350,14 +350,17 @@ pub fn create_file_manager_panel_container(nav_box: GtkBox, file_list_scrolled_w
 /// This function arranges the major UI components into a nested paned layout:
 /// - Horizontal split between file manager (left) and editor+terminal (right)
 /// - The right side has a vertical split between editor (top) and terminal (bottom)
+/// - A status bar is placed at the bottom of the entire application
 pub fn create_paned(
     file_manager_panel: &GtkBox,     // File browser sidebar
     editor_notebook: &Notebook,      // Editor tabs container
-    terminal_box: &impl IsA<gtk4::Widget>  // Terminal container (either ScrolledWindow or GtkBox)
-) -> gtk4::Paned {
+    terminal_box: &impl IsA<gtk4::Widget>,  // Terminal container (either ScrolledWindow or GtkBox)
+    status_bar: &GtkBox              // Status bar with path label
+) -> GtkBox {
     // Create the main horizontal split pane
     let paned = gtk4::Paned::new(Orientation::Horizontal);
     paned.set_wide_handle(true);  // Use a wider drag handle for easier resizing
+    paned.set_vexpand(true);      // Allow the paned area to expand vertically
     
     // Create the vertical split pane for the right side
     let editor_paned = gtk4::Paned::new(Orientation::Vertical);
@@ -379,7 +382,20 @@ pub fn create_paned(
     paned.set_position(200);        // Width of file manager sidebar
     editor_paned.set_position(400); // Height of editor area
     
-    paned
+    // Create a vertical box to hold the paned layout and status bar
+    let main_container = GtkBox::new(Orientation::Vertical, 0);
+    
+    // Add the paned container as the main content
+    main_container.append(&paned);
+    
+    // Add a separator before the status bar
+    let separator = gtk4::Separator::new(Orientation::Horizontal);
+    main_container.append(&separator);
+    
+    // Add the status bar at the bottom
+    main_container.append(status_bar);
+    
+    main_container
 }
 
 /// Creates a custom tab widget with a label and close button
@@ -496,4 +512,31 @@ pub fn create_terminal_notebook_box(terminal_notebook: &Notebook, add_terminal_b
     terminal_box.append(terminal_notebook);
     
     terminal_box
+}
+
+/// Creates a status bar for the bottom of the application
+///
+/// This function creates a status bar with a label to display the current directory path
+/// 
+/// Returns a tuple of:
+/// - GtkBox: The status bar container
+/// - Label: The path label that will display the current directory path
+pub fn create_status_bar() -> (GtkBox, Label) {
+    // Create a horizontal box for the status bar
+    let status_bar = GtkBox::new(Orientation::Horizontal, 5);
+    status_bar.set_margin_start(10);
+    status_bar.set_margin_end(10);
+    status_bar.set_margin_top(5);
+    status_bar.set_margin_bottom(5);
+    
+    // Create a label to display the path
+    let path_label = Label::new(None);
+    path_label.set_halign(gtk4::Align::Start); // Align text to the left
+    path_label.set_ellipsize(gtk4::pango::EllipsizeMode::Start); // Ellipsize at start if too long
+    path_label.set_hexpand(true); // Use all available horizontal space
+    
+    // Add the label to the status bar
+    status_bar.append(&path_label);
+    
+    (status_bar, path_label)
 }

@@ -165,3 +165,10 @@ pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_ty
         }
     }
 }
+
+/// Updates the status bar path label with the current directory path
+///
+/// This should be called whenever the current directory changes
+pub fn update_path_label(path_label: &gtk4::Label, current_dir: &PathBuf) {
+    path_label.set_text(&format!("{}", current_dir.display()));
+}

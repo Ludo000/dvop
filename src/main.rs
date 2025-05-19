@@ -373,10 +373,17 @@ fn build_ui(app: &Application) {
         ui::add_terminal_tab(&terminal_notebook_clone, Some(current_dir_clone_for_terminal.borrow().clone()));
     });
 
+    // Create a status bar for displaying the current directory path
+    let (status_bar, path_label) = ui::create_status_bar();
+    
+    // Set the initial path label to show current directory
+    path_label.set_text(&format!("{}", current_dir.borrow().display()));
+    
     // Create the main paned layout that contains:
     // - The file manager sidebar on the left
     // - The editor notebook and terminal in a vertical split on the right
-    let paned = ui::create_paned(&file_manager_panel, &editor_notebook, &terminal_notebook_box);
+    // - The status bar at the bottom
+    let main_container = ui::create_paned(&file_manager_panel, &editor_notebook, &terminal_notebook_box, &status_bar);
 
     // Set the custom header bar as the window's titlebar
     window.set_titlebar(Some(&header));
@@ -389,8 +396,8 @@ fn build_ui(app: &Application) {
     // This is appropriate for the initial empty "Untitled" document
     utils::update_save_menu_button_visibility(&save_menu_button, Some(mime_guess::mime::TEXT_PLAIN_UTF_8));
     
-    // Set the paned layout as the main content of the window
-    window.set_child(Some(&paned));
+    // Set the main container (with paned layout and status bar) as the window's content
+    window.set_child(Some(&main_container));
 
     // Set up the tab switching handler to update UI state when changing tabs
     // Clone all required references for use in the closure
@@ -499,7 +506,8 @@ fn build_ui(app: &Application) {
         &up_button,            // Navigation button for parent directory
         &refresh_button,       // Button to refresh file list
         &file_list_box,        // File list box (duplicate param for historical reasons)
-        Some(&save_menu_button) // Split button menu component
+        Some(&save_menu_button), // Split button menu component
+        Some(&path_label)       // Path label for the status bar
     );
 
     // Show the main window to display the application
