@@ -419,6 +419,17 @@ fn actually_close_tab(
         // If other tabs remain, GTK will automatically switch to a new page (e.g., the one at page_num_to_close, or page 0).
         // The connect_switch_page handler in main.rs is responsible for updating active_tab_path.
         // We need to ensure that file_path_manager contains the correct path for the new current page.
+        
+        // Get the current page after tab removal and update active_tab_path
+        if let Some(current_page) = notebook.current_page() {
+            let new_active_path = file_path_manager_rc.borrow().get(&current_page).cloned();
+            *active_tab_path_rc.borrow_mut() = new_active_path;
+            
+            // If we have dependencies provided, update the file list selection
+            if let Some(deps) = new_tab_deps {
+                utils::update_file_list(&deps.file_list_box, &deps.current_dir.borrow(), &active_tab_path_rc.borrow());
+            }
+        }
         // The re-indexing above should have handled this.
         // If the active tab was closed, switch_page will fire. If a different tab was closed, 
         // the current page might not change, but its index in file_path_manager might be wrong if it was after the closed tab.
