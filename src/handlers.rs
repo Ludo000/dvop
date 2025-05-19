@@ -380,6 +380,8 @@ fn actually_close_tab(
     active_tab_path_rc: &Rc<RefCell<Option<PathBuf>>>,
     new_tab_deps: Option<&NewTabDependencies>,
 ) {
+    let n_pages_before_close = notebook.n_pages();
+    
     notebook.remove_page(Some(page_num_to_close));
     
     { // Scope for mutable borrow of file_path_manager
@@ -410,11 +412,16 @@ fn actually_close_tab(
     if notebook.n_pages() == 0 {
         // No pages left, active_tab_path should be None.
         *active_tab_path_rc.borrow_mut() = None;
-        if let Some(deps) = new_tab_deps {
-            // It's now safe to call create_new_empty_tab as the mutable borrow 
-            // on file_path_manager_rc has been released.
-            create_new_empty_tab(deps);
+        
+        // Only create a new empty tab if this wasn't the last tab and we have dependencies
+        if n_pages_before_close > 1 && new_tab_deps.is_some() {
+            if let Some(deps) = new_tab_deps {
+                // It's now safe to call create_new_empty_tab as the mutable borrow 
+                // on file_path_manager_rc has been released.
+                create_new_empty_tab(deps);
+            }
         }
+        // If it was the last tab (n_pages_before_close == 1), we don't create a new one
     } else {
         // If other tabs remain, GTK will automatically switch to a new page (e.g., the one at page_num_to_close, or page 0).
         // The connect_switch_page handler in main.rs is responsible for updating active_tab_path.
@@ -688,10 +695,7 @@ fn setup_new_button_handler(
     let window_clone = window.clone();
 
 
-    new_button.connect_clicked(move |_| {
-        // Close any empty untitled tabs first
-        close_empty_untitled_tabs(&editor_notebook_clone, &file_path_manager_clone);
-        
+    new_button.connect_clicked(move |_| {        
         let save_as_button_for_new_tab = save_as_button_clone.clone(); // Clone for this specific closure
         let new_text_view = TextView::new();
         let new_text_buffer = new_text_view.buffer();
