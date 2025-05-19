@@ -497,10 +497,12 @@ pub fn add_terminal_tab(terminal_notebook: &Notebook, working_dir: Option<PathBu
     
     // Connect the close button
     let notebook_clone = terminal_notebook.clone();
+    let terminal_box_clone = terminal_box.clone();
     tab_close_button.connect_clicked(move |_| {
-        // Don't close the last terminal tab
-        if notebook_clone.n_pages() > 1 {
-            notebook_clone.remove_page(Some(page_num));
+        // Find the current page number for this tab's content - it may have changed since creation
+        if let Some(current_page_num) = notebook_clone.page_num(&terminal_box_clone) {
+            // Remove the terminal tab regardless of whether it's the last one
+            notebook_clone.remove_page(Some(current_page_num));
         }
     });
     
