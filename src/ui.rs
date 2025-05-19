@@ -628,7 +628,7 @@ pub fn apply_custom_css() {
     /* Style checked/active tabs */
     notebook > header > tabs > tab:checked {
         background-color: alpha(currentColor, 0.2);
-        box-shadow: 0 1px 2px alpha(black, 0.1);
+        box-shadow: 0 2px 4px alpha(black, 0.5);
     }
     
     /* Make active tab text more prominent */
