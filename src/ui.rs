@@ -891,10 +891,16 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
     // Debug: print available schemes
     println!("Available style schemes: {:?}", available_schemes);
     
+    // Make sure we have the latest settings
+    settings::refresh_settings();
+    
     // Get current settings
     let settings_instance = settings::get_settings();
     let current_light_theme = settings_instance.get_light_theme();
     let current_dark_theme = settings_instance.get_dark_theme();
+    
+    println!("Settings dialog using - Light theme: {}, Dark theme: {}", 
+             current_light_theme, current_dark_theme);
     
     // Get current theme based on system theme
     let current_system_theme = syntax::get_preferred_style_scheme();
@@ -953,6 +959,9 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
             if let Err(e) = settings::get_settings_mut().save() {
                 eprintln!("Failed to save settings: {}", e);
             }
+            
+            // Release the mutex before refreshing settings
+            drop(settings::get_settings_mut());
             
             // Refresh settings across the application
             settings::refresh_settings();

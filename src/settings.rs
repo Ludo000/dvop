@@ -180,10 +180,21 @@ pub fn get_settings_mut() -> std::sync::MutexGuard<'static, EditorSettings> {
     SETTINGS_INSTANCE.lock().unwrap()
 }
 
+// Used to prevent recursive calls to refresh_settings
+static mut REFRESHING: bool = false;
+
 /// Forces a reload of settings and triggers updates
 /// 
 /// This function should be called after settings have been changed and saved
 pub fn refresh_settings() {
+    // Prevent recursive calls
+    unsafe {
+        if REFRESHING {
+            return;
+        }
+        REFRESHING = true;
+    }
+    
     // Lock the settings instance
     let mut settings = SETTINGS_INSTANCE.lock().unwrap();
     
@@ -194,4 +205,9 @@ pub fn refresh_settings() {
     println!("Settings refreshed:");
     println!("  Light theme: {}", settings.get_light_theme());
     println!("  Dark theme: {}", settings.get_dark_theme());
+    
+    // Reset the refreshing flag
+    unsafe {
+        REFRESHING = false;
+    }
 }

@@ -86,23 +86,43 @@ pub fn is_dark_mode_enabled() -> bool {
     false
 }
 
+// Track if we're currently getting the preferred style scheme to avoid recursive calls
+static mut GETTING_STYLE: bool = false;
+
 /// Gets the appropriate style scheme name based on user preferences
 /// 
 /// Returns user-configured theme for light or dark mode, without fallback logic
 pub fn get_preferred_style_scheme() -> String {
-    // Get user theme preference based on current mode
+    // Prevent recursive calls when refresh_settings calls back into this function
+    unsafe {
+        if GETTING_STYLE {
+            return if is_dark_mode_enabled() {
+                "solarized-dark".to_string()
+            } else {
+                "solarized-light".to_string()
+            };
+        }
+        GETTING_STYLE = true;
+    }
+    
+    // Get a fresh copy of settings
     let settings = crate::settings::get_settings();
     
     // Return the user's configured theme based on dark/light mode without fallbacks
     let theme = if is_dark_mode_enabled() {
-        let theme = settings.get_dark_theme().to_string();
+        let theme = settings.get_dark_theme();
         println!("Using dark theme: {}", theme);
         theme
     } else {
-        let theme = settings.get_light_theme().to_string();
+        let theme = settings.get_light_theme();
         println!("Using light theme: {}", theme);
         theme
     };
+    
+    // Reset the flag
+    unsafe {
+        GETTING_STYLE = false;
+    }
     
     theme
 }
