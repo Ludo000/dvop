@@ -3,11 +3,13 @@ mod ui;        // User interface components and layout
 mod handlers;  // Event handlers and business logic
 mod utils;     // Utility functions used across the application
 mod syntax;    // Syntax highlighting functionality
+mod settings;  // User settings and preferences
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
 use gtk4::Application;  // Main GTK application class
 use gtk4::gio;          // GIO for menu and action support
+use gtk4::glib;         // GLib for clone macro and other utilities
 use std::rc::Rc;        // Reference counting for shared ownership
 use std::cell::RefCell; // Interior mutability pattern
 use std::collections::HashMap; // For mapping tab indices to file paths
@@ -16,6 +18,9 @@ use std::io::Write;            // File writing capabilities
 
 /// Application entry point - initializes the GTK application and runs the main loop
 fn main() {
+    // Initialize user settings first
+    settings::initialize_settings();
+    
     // Create the main GTK application with a unique application ID
     let app = Application::builder()
         .application_id("com.example.BasadoTextEditor")
@@ -150,7 +155,7 @@ fn build_ui(app: &Application) {
     let window = ui::create_window(app);
     
     // Create the header bar with action buttons
-    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button) = ui::create_header();
+    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button) = ui::create_header();
 
     // Create terminal notebook with tabs instead of single terminal
     let (terminal_notebook, add_terminal_button) = ui::create_terminal_notebook();
@@ -511,4 +516,20 @@ fn build_ui(app: &Application) {
 
     // Show the main window to display the application
     window.show();
+
+    // Set up the settings button handler
+    let window_clone_for_settings = window.clone();
+    settings_button.connect_clicked(move |_| {
+        // Create and show the settings dialog
+        let dialog = ui::create_settings_dialog(&window_clone_for_settings);
+        
+        // When the dialog is closed, update all buffer themes
+        let window_ref = window_clone_for_settings.clone();
+        dialog.connect_close(move |_| {
+            // Apply the new theme settings to all buffers
+            update_all_buffer_themes(&window_ref);
+        });
+        
+        dialog.show();
+    });
 }

@@ -19,12 +19,16 @@ use gtk4::{
     Orientation,
     
     // GDK graphics components
-    gdk
+    gdk,
+    
+    // Dialog components
+    Dialog
 };
 
-// Import our syntax highlighting module
+// Import our modules
 use crate::syntax;
-
+use crate::settings;
+use sourceview5::StyleSchemeManager;
 // Standard library imports
 use std::cell::RefCell;  // For interior mutability pattern
 use std::rc::Rc;         // For shared ownership
@@ -57,7 +61,7 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
 ///
 /// This function creates the application's header bar with buttons for core functionality.
 /// Returns the header bar and the action buttons for connecting event handlers.
-pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button) {
+pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button, Button) {
     // Create the main header bar
     let header = HeaderBar::new();
 
@@ -142,10 +146,21 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     // Create a hidden regular save button for programmatic access
     // This avoids circular reference issues when connecting signals
     let save_button = Button::new();
-    save_button.set_visible(false); 
+    save_button.set_visible(false);
+    
+    // Create a Settings button with icon and label
+    let settings_button = Button::new();
+    let settings_button_icon = Image::from_icon_name("preferences-system-symbolic");
+    let settings_button_label = Label::new(Some("Settings"));
+    let settings_button_box = GtkBox::new(Orientation::Horizontal, 5);
+    settings_button_box.append(&settings_button_icon);
+    settings_button_box.append(&settings_button_label);
+    settings_button.set_child(Some(&settings_button_box));
+    settings_button.set_tooltip_text(Some("Editor Settings"));
+    header.pack_end(&settings_button);
 
     // Return the header and all action buttons
-    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button)
+    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button)
 }
 
 /// Creates the main text editor view components
@@ -815,5 +830,234 @@ pub fn update_all_terminal_themes(terminal_notebook: &Notebook) {
         let is_dark = settings.is_gtk_application_prefer_dark_theme();
         println!("Terminal colors updated. Dark mode is now: {}", 
             if is_dark { "enabled" } else { "disabled" });
+    }
+}
+
+/// Creates a settings dialog for configuring editor preferences
+///
+/// This function creates a dialog where the user can:
+/// - Choose preferred syntax highlighting color schemes
+/// - Set other editor preferences
+///
+/// Returns the dialog for display
+pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
+    // Create a dialog with standard buttons
+    let dialog = Dialog::builder()
+        .title("Editor Settings")
+        .transient_for(parent)
+        .modal(true)
+        .destroy_with_parent(true)
+        .use_header_bar(1) // Use header bar
+        .build();
+    
+    // Get the content area to add our widgets
+    let content_area = dialog.content_area();
+    content_area.set_margin_top(10);
+    content_area.set_margin_bottom(10);
+    content_area.set_margin_start(10);
+    content_area.set_margin_end(10);
+    content_area.set_spacing(10);
+    
+    // Create a container for the settings
+    let settings_box = GtkBox::new(Orientation::Vertical, 10);
+    
+    // Create a section for syntax highlighting themes
+    let themes_label = Label::new(Some("Syntax Highlighting Themes"));
+    themes_label.set_halign(gtk4::Align::Start);
+    themes_label.set_margin_bottom(5);
+    themes_label.add_css_class("heading");
+    settings_box.append(&themes_label);
+    
+    // Add info about current system theme mode
+    let system_mode = if syntax::is_dark_mode_enabled() {
+        "dark mode"
+    } else {
+        "light mode" 
+    };
+    let current_system_theme_name = syntax::get_preferred_style_scheme();
+    let theme_info = Label::new(Some(&format!("Current system theme: {} (using {})", current_system_theme_name, system_mode)));
+    theme_info.set_halign(gtk4::Align::Start);
+    theme_info.set_margin_bottom(10);
+    theme_info.add_css_class("caption");
+    settings_box.append(&theme_info);
+    
+    // Get available color schemes
+    let scheme_manager = StyleSchemeManager::new();
+    let available_schemes: Vec<String> = scheme_manager.scheme_ids()
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    
+    // Get current settings
+    let settings_instance = settings::get_settings();
+    let current_light_theme = settings_instance.get_light_theme();
+    let current_dark_theme = settings_instance.get_dark_theme();
+    
+    // Get current theme based on system theme
+    let current_system_theme = syntax::get_preferred_style_scheme();
+    
+    // Create dropdowns for light and dark themes
+    // Select the appropriate theme based on the current system state
+    let light_theme_box = if !syntax::is_dark_mode_enabled() {
+        // If we're in light mode, prioritize the current system theme for the light theme dropdown
+        create_theme_selection_box("Light Mode Theme:", &available_schemes, current_system_theme)
+    } else {
+        create_theme_selection_box("Light Mode Theme:", &available_schemes, current_light_theme)
+    };
+    
+    let dark_theme_box = if syntax::is_dark_mode_enabled() {
+        // If we're in dark mode, prioritize the current system theme for the dark theme dropdown
+        create_theme_selection_box("Dark Mode Theme:", &available_schemes, current_system_theme)
+    } else {
+        create_theme_selection_box("Dark Mode Theme:", &available_schemes, current_dark_theme)
+    };
+    
+    settings_box.append(&light_theme_box.0);
+    settings_box.append(&dark_theme_box.0);
+    
+    // Add the settings box to the content area
+    content_area.append(&settings_box);
+    
+    // Add save and cancel buttons
+    dialog.add_button("Cancel", gtk4::ResponseType::Cancel);
+    dialog.add_button("Save", gtk4::ResponseType::Accept);
+    dialog.set_default_response(gtk4::ResponseType::Accept);
+    
+    // Handle the dialog response
+    // We need to capture the dropdowns and available_schemes to get their values when the user clicks Save
+    let light_dropdown = light_theme_box.1;
+    let dark_dropdown = dark_theme_box.1;
+    let available_schemes_clone = available_schemes.clone();
+    
+    dialog.connect_response(move |dialog, response| {
+        if response == gtk4::ResponseType::Accept {
+            // Get the selected theme values from the position in the dropdown
+            let light_position = light_dropdown.selected() as usize;
+            if light_position < available_schemes_clone.len() {
+                let light_theme = &available_schemes_clone[light_position];
+                let settings = settings::get_settings_mut();
+                settings.set_light_theme(light_theme);
+            }
+            
+            let dark_position = dark_dropdown.selected() as usize;
+            if dark_position < available_schemes_clone.len() {
+                let dark_theme = &available_schemes_clone[dark_position];
+                let settings = settings::get_settings_mut();
+                settings.set_dark_theme(dark_theme);
+            }
+            
+            // Save settings to disk
+            if let Err(e) = settings::get_settings_mut().save() {
+                eprintln!("Failed to save settings: {}", e);
+            }
+            
+            // Get a reference to the parent window to update themes
+            if let Some(parent) = dialog.transient_for() {
+                if let Ok(parent_window) = parent.downcast::<ApplicationWindow>() {
+                    // Find all notebooks in the window and update their themes
+                    let notebooks = find_notebooks(&parent_window);
+                    for notebook in notebooks {
+                        update_notebook_themes(&notebook);
+                    }
+                }
+            }
+        }
+        
+        dialog.close();
+    });
+    
+    dialog
+}
+
+/// Creates a theme selection dropdown with label
+///
+/// Returns a tuple containing:
+/// - A container with the label and dropdown
+/// - The dropdown widget for connecting signals
+fn create_theme_selection_box(label_text: &str, available_themes: &[String], current_theme: &str) 
+    -> (GtkBox, gtk4::DropDown) 
+{
+    let box_container = GtkBox::new(Orientation::Horizontal, 10);
+    
+    // Add label
+    let label = Label::new(Some(label_text));
+    label.set_halign(gtk4::Align::Start);
+    label.set_width_chars(20);
+    label.set_xalign(0.0);
+    box_container.append(&label);
+    
+    // Create a string list model for the dropdown
+    let model = gtk4::StringList::new(&[]);
+    for theme in available_themes {
+        model.append(theme);
+    }
+    
+    // Create dropdown
+    let dropdown = gtk4::DropDown::new(Some(model), None::<gtk4::Expression>);
+    dropdown.set_hexpand(true);
+    
+    // Set current selection
+    for (idx, theme) in available_themes.iter().enumerate() {
+        if theme == current_theme {
+            dropdown.set_selected(idx as u32);
+            break;
+        }
+    }
+    
+    box_container.append(&dropdown);
+    
+    (box_container, dropdown)
+}
+
+/// Finds all notebooks within a window
+/// 
+/// This function finds all notebook widgets in the window.
+fn find_notebooks(window: &ApplicationWindow) -> Vec<Notebook> {
+    // For simplicity, we'll look for notebooks by their names or in specific locations
+    // This is a simplified approach - in a real application you might want to traverse
+    // the widget tree properly
+    
+    let mut result = Vec::new();
+    
+    // In this editor, we know there's a main notebook for editors
+    // We can assume it's the main editor notebook based on your application structure
+    if let Some(notebook) = window
+        .child()
+        .and_then(|child| child.first_child())
+        .and_then(|box_container| box_container.first_child()) 
+    {
+        if let Ok(notebook) = notebook.downcast::<Notebook>() {
+            result.push(notebook);
+        }
+    }
+    
+    result
+}
+
+/// Updates the themes in all sourceview buffers in a notebook
+/// 
+/// This function updates all sourceview buffers in a notebook with the current theme
+fn update_notebook_themes(notebook: &Notebook) {
+    for i in 0..notebook.n_pages() {
+        if let Some(page) = notebook.nth_page(Some(i)) {
+            // Try to find a ScrolledWindow inside the page
+            if let Some(scrolled) = page.first_child() {
+                if let Ok(scrolled_window) = scrolled.downcast::<ScrolledWindow>() {
+                    // Try to get the child of the scrolled window, which should be our SourceView
+                    if let Some(child) = scrolled_window.child() {
+                        // Check if this is a SourceView
+                        if let Ok(source_view) = child.downcast::<sourceview5::View>() {
+                            // Get the buffer and update its theme
+                            let buffer = source_view.buffer();
+                            // Here we can safely downcast to SourceBuffer
+                            if let Ok(source_buffer) = buffer.downcast::<sourceview5::Buffer>() {
+                                // Update the buffer's theme
+                                syntax::update_buffer_style_scheme(&source_buffer);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

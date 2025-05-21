@@ -86,9 +86,9 @@ pub fn is_dark_mode_enabled() -> bool {
     false
 }
 
-/// Gets the appropriate style scheme name based on system theme
+/// Gets the appropriate style scheme name based on system theme and user preferences
 /// 
-/// Returns "classic" for light theme and "cobalt" or other dark scheme for dark theme
+/// Returns user-configured theme for light or dark mode, with appropriate fallbacks
 pub fn get_preferred_style_scheme() -> &'static str {
     // Get the StyleSchemeManager to check available schemes
     let scheme_manager = StyleSchemeManager::new();
@@ -97,17 +97,31 @@ pub fn get_preferred_style_scheme() -> &'static str {
         .map(|s| s.to_string())
         .collect();
     
+    // Get user theme preference based on current mode
+    let settings = crate::settings::get_settings();
+    let user_preferred_theme = if is_dark_mode_enabled() {
+        settings.get_dark_theme()
+    } else {
+        settings.get_light_theme()
+    };
+    
+    // First try the user's preferred theme
+    if available_schemes.iter().any(|s| s == user_preferred_theme) {
+        return user_preferred_theme;
+    }
+    
+    // Fallbacks if the user's preferred theme isn't available
     if is_dark_mode_enabled() {
-        // Try several dark schemes in order of preference
-        for scheme in ["Yaru-dark", "Adwaita-dark", "kate-dark", "oblivion", "cobalt", "monokai", "solarized-dark"] {
+        // Try several dark schemes in order of preference, with solarized-dark first
+        for scheme in ["solarized-dark", "Yaru-dark", "Adwaita-dark", "kate-dark", "oblivion", "cobalt", "monokai"] {
             if available_schemes.iter().any(|s| s == scheme) {
                 return scheme;
             }
         }
         "classic" // Last fallback if no dark theme is available
     } else {
-        // Try several light schemes in order of preference
-        for scheme in ["Yaru", "Adwaita", "kate", "classic", "tango", "solarized-light"] {
+        // Try several light schemes in order of preference, with solarized-light first
+        for scheme in ["solarized-light", "Yaru", "Adwaita", "kate", "classic", "tango"] {
             if available_schemes.iter().any(|s| s == scheme) {
                 return scheme;
             }
