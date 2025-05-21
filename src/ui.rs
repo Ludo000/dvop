@@ -888,6 +888,9 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
         .map(|s| s.to_string())
         .collect();
     
+    // Debug: print available schemes
+    println!("Available style schemes: {:?}", available_schemes);
+    
     // Get current settings
     let settings_instance = settings::get_settings();
     let current_light_theme = settings_instance.get_light_theme();
@@ -900,14 +903,14 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
     // Select the appropriate theme based on the current system state
     let light_theme_box = if !syntax::is_dark_mode_enabled() {
         // If we're in light mode, prioritize the current system theme for the light theme dropdown
-        create_theme_selection_box("Light Mode Theme:", &available_schemes, current_system_theme)
+        create_theme_selection_box("Light Mode Theme:", &available_schemes, current_system_theme.clone())
     } else {
         create_theme_selection_box("Light Mode Theme:", &available_schemes, current_light_theme)
     };
     
     let dark_theme_box = if syntax::is_dark_mode_enabled() {
         // If we're in dark mode, prioritize the current system theme for the dark theme dropdown
-        create_theme_selection_box("Dark Mode Theme:", &available_schemes, current_system_theme)
+        create_theme_selection_box("Dark Mode Theme:", &available_schemes, current_system_theme.clone())
     } else {
         create_theme_selection_box("Dark Mode Theme:", &available_schemes, current_dark_theme)
     };
@@ -934,16 +937,16 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
             // Get the selected theme values from the position in the dropdown
             let light_position = light_dropdown.selected() as usize;
             if light_position < available_schemes_clone.len() {
-                let light_theme = &available_schemes_clone[light_position];
-                let settings = settings::get_settings_mut();
-                settings.set_light_theme(light_theme);
+                let light_theme = available_schemes_clone[light_position].clone();
+                let mut settings = settings::get_settings_mut();
+                settings.set_light_theme(&light_theme);
             }
             
             let dark_position = dark_dropdown.selected() as usize;
             if dark_position < available_schemes_clone.len() {
-                let dark_theme = &available_schemes_clone[dark_position];
-                let settings = settings::get_settings_mut();
-                settings.set_dark_theme(dark_theme);
+                let dark_theme = available_schemes_clone[dark_position].clone();
+                let mut settings = settings::get_settings_mut();
+                settings.set_dark_theme(&dark_theme);
             }
             
             // Save settings to disk
@@ -951,14 +954,14 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
                 eprintln!("Failed to save settings: {}", e);
             }
             
+            // Refresh settings across the application
+            settings::refresh_settings();
+            
             // Get a reference to the parent window to update themes
             if let Some(parent) = dialog.transient_for() {
                 if let Ok(parent_window) = parent.downcast::<ApplicationWindow>() {
-                    // Find all notebooks in the window and update their themes
-                    let notebooks = find_notebooks(&parent_window);
-                    for notebook in notebooks {
-                        update_notebook_themes(&notebook);
-                    }
+                    // Apply theme changes throughout the application
+                    apply_theme_changes_globally(&parent_window);
                 }
             }
         }
@@ -974,7 +977,7 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
 /// Returns a tuple containing:
 /// - A container with the label and dropdown
 /// - The dropdown widget for connecting signals
-fn create_theme_selection_box(label_text: &str, available_themes: &[String], current_theme: &str) 
+fn create_theme_selection_box(label_text: &str, available_themes: &[String], current_theme: String) 
     -> (GtkBox, gtk4::DropDown) 
 {
     let box_container = GtkBox::new(Orientation::Horizontal, 10);
@@ -998,7 +1001,7 @@ fn create_theme_selection_box(label_text: &str, available_themes: &[String], cur
     
     // Set current selection
     for (idx, theme) in available_themes.iter().enumerate() {
-        if theme == current_theme {
+        if theme == &current_theme {
             dropdown.set_selected(idx as u32);
             break;
         }
@@ -1060,4 +1063,59 @@ fn update_notebook_themes(notebook: &Notebook) {
             }
         }
     }
+}
+
+/// Updates themes throughout the application
+/// 
+/// This function updates all theme-related components to reflect the current settings:
+/// - Updates all editor buffers with the current syntax highlighting theme
+/// - Updates all terminal tabs with matching theme colors
+/// - Updates any other UI elements that depend on theme settings
+/// 
+/// Should be called after changing theme settings.
+pub fn apply_theme_changes_globally(parent_window: &ApplicationWindow) {
+    println!("Applying global theme changes...");
+    
+    // Get fresh settings to ensure we have the latest values
+    let settings = crate::settings::get_settings();
+    println!("Current settings - Light theme: {}, Dark theme: {}", 
+             settings.get_light_theme(), settings.get_dark_theme());
+    
+    // Find all notebooks in the window
+    let notebooks = find_notebooks(parent_window);
+    for notebook in &notebooks {
+        // Update editor themes
+        update_notebook_themes(notebook);
+    }
+    
+    // Find the terminal notebook if it exists
+    if let Some(terminal_notebook) = find_terminal_notebook(parent_window) {
+        // Update terminal themes
+        update_all_terminal_themes(&terminal_notebook);
+    }
+    
+    // Force a redraw of the window to ensure theme changes are visible
+    parent_window.queue_draw();
+    
+    println!("Theme changes applied successfully");
+}
+
+/// Finds the terminal notebook within a window
+fn find_terminal_notebook(window: &ApplicationWindow) -> Option<Notebook> {
+    // Look through the window structure to find the terminal notebook
+    // This is specific to the structure of our application window
+    
+    window.child()
+        .and_then(|main_box| main_box.first_child())  // Main content box
+        .and_then(|paned| paned.last_child())         // The horizontal paned container
+        .and_then(|editor_paned| editor_paned.last_child()) // The vertical paned container
+        .and_then(|terminal_box| terminal_box.first_child())
+        .and_then(|child| {
+            // Check if this is our terminal notebook
+            if let Ok(notebook) = child.downcast::<Notebook>() {
+                Some(notebook)
+            } else {
+                None
+            }
+        })
 }

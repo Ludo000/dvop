@@ -89,16 +89,22 @@ pub fn is_dark_mode_enabled() -> bool {
 /// Gets the appropriate style scheme name based on user preferences
 /// 
 /// Returns user-configured theme for light or dark mode, without fallback logic
-pub fn get_preferred_style_scheme() -> &'static str {
+pub fn get_preferred_style_scheme() -> String {
     // Get user theme preference based on current mode
     let settings = crate::settings::get_settings();
     
     // Return the user's configured theme based on dark/light mode without fallbacks
-    if is_dark_mode_enabled() {
-        settings.get_dark_theme()
+    let theme = if is_dark_mode_enabled() {
+        let theme = settings.get_dark_theme().to_string();
+        println!("Using dark theme: {}", theme);
+        theme
     } else {
-        settings.get_light_theme()
-    }
+        let theme = settings.get_light_theme().to_string();
+        println!("Using light theme: {}", theme);
+        theme
+    };
+    
+    theme
 }
 
 /// Creates a sourceview with syntax highlighting instead of a regular TextView
@@ -113,9 +119,14 @@ pub fn create_source_view() -> (View, Buffer) {
     let scheme_manager = StyleSchemeManager::new();
     let preferred_scheme = get_preferred_style_scheme();
     
+    println!("Creating new source view with theme: {}", preferred_scheme);
+    
     // Apply the user's preferred theme directly
-    if let Some(scheme) = scheme_manager.scheme(preferred_scheme) {
+    if let Some(scheme) = scheme_manager.scheme(&preferred_scheme) {
+        println!("Successfully applied theme '{}' to new buffer", preferred_scheme);
         buffer.set_style_scheme(Some(&scheme));
+    } else {
+        println!("WARNING: Failed to find theme '{}' for new buffer", preferred_scheme);
     }
 
     // Create the view with the buffer
@@ -141,9 +152,21 @@ pub fn update_buffer_style_scheme(buffer: &Buffer) {
     let scheme_manager = StyleSchemeManager::new();
     let preferred_scheme = get_preferred_style_scheme();
     
+    println!("Updating buffer style scheme to: {}", preferred_scheme);
+    
     // Simply apply the user's preferred theme without fallbacks
-    if let Some(scheme) = scheme_manager.scheme(preferred_scheme) {
+    if let Some(scheme) = scheme_manager.scheme(&preferred_scheme) {
+        println!("Successfully found and applied theme: {}", preferred_scheme);
         buffer.set_style_scheme(Some(&scheme));
+    } else {
+        println!("WARNING: Theme '{}' not found in available schemes!", preferred_scheme);
+        
+        // List available schemes for debugging
+        let available_schemes: Vec<String> = scheme_manager.scheme_ids()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        println!("Available schemes: {:?}", available_schemes);
     }
 
     // Force the buffer to redraw with the "changed" signal

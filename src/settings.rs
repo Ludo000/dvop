@@ -11,6 +11,7 @@ const DEFAULT_LIGHT_THEME: &str = "solarized-light";
 const DEFAULT_DARK_THEME: &str = "solarized-dark";
 
 /// Represents user-configurable settings for the application
+#[derive(Clone)]
 pub struct EditorSettings {
     // Store settings in a simple HashMap for flexibility
     values: HashMap<String, String>,
@@ -102,13 +103,13 @@ impl EditorSettings {
     }
 
     /// Gets the preferred light theme
-    pub fn get_light_theme(&self) -> &str {
-        self.get("light_theme").map_or(DEFAULT_LIGHT_THEME, |s| s.as_str())
+    pub fn get_light_theme(&self) -> String {
+        self.get("light_theme").map_or(DEFAULT_LIGHT_THEME.to_string(), |s| s.clone())
     }
 
     /// Gets the preferred dark theme
-    pub fn get_dark_theme(&self) -> &str {
-        self.get("dark_theme").map_or(DEFAULT_DARK_THEME, |s| s.as_str())
+    pub fn get_dark_theme(&self) -> String {
+        self.get("dark_theme").map_or(DEFAULT_DARK_THEME.to_string(), |s| s.clone())
     }
 
     /// Sets the preferred light theme
@@ -139,34 +140,58 @@ fn get_config_dir() -> PathBuf {
     PathBuf::from("./config")
 }
 
-// Global settings instance
-static mut SETTINGS_INSTANCE: Option<EditorSettings> = None;
+use std::sync::{Mutex, Once};
+use once_cell::sync::Lazy;
+
+// Global settings instance using thread-safe patterns
+static SETTINGS_INSTANCE: Lazy<Mutex<EditorSettings>> = Lazy::new(|| {
+    Mutex::new(EditorSettings::new())
+});
+static INIT: Once = Once::new();
 
 /// Initializes global settings
 pub fn initialize_settings() {
-    unsafe {
-        SETTINGS_INSTANCE = Some(EditorSettings::new());
-    }
+    // This ensures initialization happens only once
+    INIT.call_once(|| {
+        // The initialization happens in the Lazy::new above
+        // We just need to ensure it's called
+        let _ = &SETTINGS_INSTANCE;
+    });
 }
 
-/// Gets a reference to global settings
-/// 
-/// # Safety
-/// This is unsafe because it accesses a static mutable variable.
-/// It should only be called after initialize_settings() and in a context 
-/// where there are no other references to SETTINGS_INSTANCE.
-pub fn get_settings() -> &'static EditorSettings {
-    unsafe {
-        SETTINGS_INSTANCE.as_ref().expect("Settings not initialized")
-    }
+/// Gets the settings or a temporary clone of the settings for read operations
+///
+/// This creates a fresh copy of the settings each time to ensure we get the latest values.
+/// Any changes made through get_settings_mut() will be reflected in subsequent get_settings() calls.
+pub fn get_settings() -> EditorSettings {
+    // Ensure settings are initialized
+    initialize_settings();
+    
+    // Get a fresh clone of the settings
+    SETTINGS_INSTANCE.lock().unwrap().clone()
 }
 
-/// Gets a mutable reference to global settings
+/// Updates and returns the mutable settings
 /// 
-/// # Safety
-/// This is unsafe for the same reasons as get_settings()
-pub fn get_settings_mut() -> &'static mut EditorSettings {
-    unsafe {
-        SETTINGS_INSTANCE.as_mut().expect("Settings not initialized")
-    }
+/// This function locks the mutex to perform changes and returns a mutable
+/// reference to the settings. Call save() afterwards to persist changes.
+pub fn get_settings_mut() -> std::sync::MutexGuard<'static, EditorSettings> {
+    initialize_settings();
+    SETTINGS_INSTANCE.lock().unwrap()
+}
+
+/// Forces a reload of settings and triggers updates
+/// 
+/// This function should be called after settings have been changed and saved
+pub fn refresh_settings() {
+    // Lock the settings instance
+    let mut settings = SETTINGS_INSTANCE.lock().unwrap();
+    
+    // Reload settings from disk
+    settings.load();
+    
+    // Print some debugging info about the current themes
+    println!("Settings refreshed:");
+    println!("  Light theme: {}", settings.get_light_theme());
+    println!("  Dark theme: {}", settings.get_dark_theme());
 }

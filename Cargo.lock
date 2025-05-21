@@ -844,6 +844,7 @@ dependencies = [
  "gtk4",
  "home",
  "mime_guess",
+ "once_cell",
  "sourceview5",
  "vte4",
 ]
