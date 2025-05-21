@@ -86,47 +86,18 @@ pub fn is_dark_mode_enabled() -> bool {
     false
 }
 
-/// Gets the appropriate style scheme name based on system theme and user preferences
+/// Gets the appropriate style scheme name based on user preferences
 /// 
-/// Returns user-configured theme for light or dark mode, with appropriate fallbacks
+/// Returns user-configured theme for light or dark mode, without fallback logic
 pub fn get_preferred_style_scheme() -> &'static str {
-    // Get the StyleSchemeManager to check available schemes
-    let scheme_manager = StyleSchemeManager::new();
-    let available_schemes: Vec<String> = scheme_manager.scheme_ids()
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-    
     // Get user theme preference based on current mode
     let settings = crate::settings::get_settings();
-    let user_preferred_theme = if is_dark_mode_enabled() {
+    
+    // Return the user's configured theme based on dark/light mode without fallbacks
+    if is_dark_mode_enabled() {
         settings.get_dark_theme()
     } else {
         settings.get_light_theme()
-    };
-    
-    // First try the user's preferred theme
-    if available_schemes.iter().any(|s| s == user_preferred_theme) {
-        return user_preferred_theme;
-    }
-    
-    // Fallbacks if the user's preferred theme isn't available
-    if is_dark_mode_enabled() {
-        // Try several dark schemes in order of preference, with solarized-dark first
-        for scheme in ["solarized-dark", "Yaru-dark", "Adwaita-dark", "kate-dark", "oblivion", "cobalt", "monokai"] {
-            if available_schemes.iter().any(|s| s == scheme) {
-                return scheme;
-            }
-        }
-        "classic" // Last fallback if no dark theme is available
-    } else {
-        // Try several light schemes in order of preference, with solarized-light first
-        for scheme in ["solarized-light", "Yaru", "Adwaita", "kate", "classic", "tango"] {
-            if available_schemes.iter().any(|s| s == scheme) {
-                return scheme;
-            }
-        }
-        "classic" // Default light theme
     }
 }
 
@@ -138,31 +109,13 @@ pub fn create_source_view() -> (View, Buffer) {
     // Create the buffer first with syntax highlighting
     let buffer = Buffer::new(None);
     
-    // Set up syntax highlighting with a style scheme based on system theme
+    // Set up syntax highlighting with a style scheme based on user preferences
     let scheme_manager = StyleSchemeManager::new();
     let preferred_scheme = get_preferred_style_scheme();
     
-    // Special handling for the case where we found a dark scheme by searching
-    let available_schemes: Vec<String> = scheme_manager.scheme_ids()
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-    
+    // Apply the user's preferred theme directly
     if let Some(scheme) = scheme_manager.scheme(preferred_scheme) {
         buffer.set_style_scheme(Some(&scheme));
-    } else if is_dark_mode_enabled() && available_schemes.iter().any(|s| s.contains("dark")) {
-        // Find any scheme with "dark" in the name
-        let dark_scheme_name = available_schemes.iter()
-            .find(|s| s.contains("dark"))
-            .unwrap()
-            .clone();
-        
-        if let Some(dark_scheme) = scheme_manager.scheme(&dark_scheme_name) {
-            buffer.set_style_scheme(Some(&dark_scheme));
-        }
-    } else if let Some(fallback_scheme) = scheme_manager.scheme("classic") {
-        // Fallback to classic scheme if the preferred one isn't available
-        buffer.set_style_scheme(Some(&fallback_scheme));
     }
 
     // Create the view with the buffer
@@ -180,7 +133,7 @@ pub fn create_source_view() -> (View, Buffer) {
     (source_view, buffer)
 }
 
-/// Updates the style scheme of an existing buffer based on system theme
+/// Updates the style scheme of an existing buffer based on user theme preference
 /// 
 /// This function can be called when the system theme changes to update
 /// the syntax highlighting style scheme accordingly
@@ -188,28 +141,9 @@ pub fn update_buffer_style_scheme(buffer: &Buffer) {
     let scheme_manager = StyleSchemeManager::new();
     let preferred_scheme = get_preferred_style_scheme();
     
-    // Special handling for the case where we found a dark scheme by searching
-    let available_schemes: Vec<String> = scheme_manager.scheme_ids()
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-    
-    // Try to apply the preferred scheme
+    // Simply apply the user's preferred theme without fallbacks
     if let Some(scheme) = scheme_manager.scheme(preferred_scheme) {
         buffer.set_style_scheme(Some(&scheme));
-    } else if is_dark_mode_enabled() && available_schemes.iter().any(|s| s.contains("dark")) {
-        // Find any scheme with "dark" in the name
-        let dark_scheme_name = available_schemes.iter()
-            .find(|s| s.contains("dark"))
-            .unwrap()
-            .clone();
-        
-        if let Some(dark_scheme) = scheme_manager.scheme(&dark_scheme_name) {
-            buffer.set_style_scheme(Some(&dark_scheme));
-        }
-    } else if let Some(fallback_scheme) = scheme_manager.scheme("classic") {
-        // Fallback to classic scheme if the preferred one isn't available
-        buffer.set_style_scheme(Some(&fallback_scheme));
     }
 
     // Force the buffer to redraw with the "changed" signal

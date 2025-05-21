@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use home::home_dir;
 
 // Default settings values
-const DEFAULT_LIGHT_THEME: &str = "classic";
-const DEFAULT_DARK_THEME: &str = "cobalt";
+const DEFAULT_LIGHT_THEME: &str = "solarized-light";
+const DEFAULT_DARK_THEME: &str = "solarized-dark";
 
 /// Represents user-configurable settings for the application
 pub struct EditorSettings {
