@@ -69,8 +69,8 @@ For detailed Windows setup instructions, see the [GTK-rs book](https://gtk-rs.or
 ## Building the Application
 Clone the repository:
    ```bash
-    git clone https://github.com/Ludo000/text-editor.git 
-    cd text-editor/
+    git clone https://github.com/Ludo000/basado-text-editor.git 
+    cd basado-text-editor/
    ```
 Build the application:
    ```bash

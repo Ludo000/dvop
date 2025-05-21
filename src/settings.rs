@@ -127,13 +127,13 @@ impl EditorSettings {
 fn get_config_dir() -> PathBuf {
     // First try to use XDG_CONFIG_HOME
     if let Ok(xdg_config) = std::env::var("XDG_CONFIG_HOME") {
-        let path = Path::new(&xdg_config).join("text-editor");
+        let path = Path::new(&xdg_config).join("basado-text-editor");
         return path;
     }
     
-    // Then fall back to ~/.config/text-editor
+    // Then fall back to ~/.config/basado-text-editor
     if let Some(home) = home_dir() {
-        return home.join(".config").join("text-editor");
+        return home.join(".config").join("basado-text-editor");
     }
     
     // Last resort: use the current directory

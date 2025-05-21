@@ -9,6 +9,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
+name = "basado-text-editor"
+version = "0.1.0"
+dependencies = [
+ "gdk-pixbuf 0.18.5",
+ "glib 0.20.9",
+ "gtk4",
+ "home",
+ "mime_guess",
+ "once_cell",
+ "sourceview5",
+ "vte4",
+]
+
+[[package]]
 name = "bitflags"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -834,20 +848,6 @@ name = "target-lexicon"
 version = "0.12.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
-
-[[package]]
-name = "text-editor"
-version = "0.1.0"
-dependencies = [
- "gdk-pixbuf 0.18.5",
- "glib 0.20.9",
- "gtk4",
- "home",
- "mime_guess",
- "once_cell",
- "sourceview5",
- "vte4",
-]
 
 [[package]]
 name = "thiserror"
