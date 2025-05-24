@@ -378,10 +378,10 @@ fn build_ui(app: &Application) {
     });
 
     // Create a status bar for displaying the current directory path
-    let (status_bar, path_label) = ui::create_status_bar();
+    let (status_bar, path_box) = ui::create_status_bar();
     
-    // Initialize the path label with the current directory
-    utils::update_path_label(&path_label, &current_dir.borrow());
+    // Initialize the path box with clickable buttons for each directory segment
+    utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
     
     // Create the main paned layout that contains:
     // - The file manager sidebar on the left
@@ -511,7 +511,7 @@ fn build_ui(app: &Application) {
         &refresh_button,       // Button to refresh file list
         &file_list_box,        // File list box (duplicate param for historical reasons)
         Some(&save_menu_button), // Split button menu component
-        Some(&path_label)       // Path label for the status bar
+        Some(&path_box)         // Path box for the status bar with clickable segments
     );
 
     // Show the main window to display the application

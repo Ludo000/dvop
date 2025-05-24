@@ -579,12 +579,13 @@ pub fn create_terminal_notebook_box(terminal_notebook: &Notebook, add_terminal_b
 
 /// Creates a status bar for the bottom of the application
 ///
-/// This function creates a status bar with a label to display the current directory path
+/// This function creates a status bar with a horizontal box to display the current directory path
+/// as a series of clickable buttons, one for each directory level
 /// 
 /// Returns a tuple of:
 /// - GtkBox: The status bar container
-/// - Label: The path label that will display the current directory path
-pub fn create_status_bar() -> (GtkBox, Label) {
+/// - GtkBox: The path box that will contain individual path segment buttons
+pub fn create_status_bar() -> (GtkBox, GtkBox) {
     // Create a horizontal box for the status bar
     let status_bar = GtkBox::new(Orientation::Horizontal, 5);
     status_bar.set_margin_start(10);
@@ -592,24 +593,21 @@ pub fn create_status_bar() -> (GtkBox, Label) {
     status_bar.set_margin_top(5);
     status_bar.set_margin_bottom(5);
     
-    // Create a label to display the path
-    let path_label = Label::new(None);
-    path_label.set_halign(gtk4::Align::Start); // Align text to the left
-    path_label.set_ellipsize(gtk4::pango::EllipsizeMode::Start); // Ellipsize at start if too long
-    path_label.set_hexpand(true); // Use all available horizontal space
+    // Create a horizontal box to hold the path segment buttons
+    let path_box = GtkBox::new(Orientation::Horizontal, 2);
+    path_box.set_halign(gtk4::Align::Start); // Align to the left
+    path_box.set_hexpand(true); // Use all available horizontal space
     
-    // Add some styling to make the status bar more visible
-    // Use CSS for styling - smaller font size and subtle styling
-    path_label.add_css_class("path-label");
-    path_label.set_css_classes(&["path-label", "dim-label"]);
+    // Add some styling to make the path box visually distinct
+    path_box.add_css_class("path-box");
     
-    // Add the label to the status bar
-    status_bar.append(&path_label);
+    // Add the path box to the status bar
+    status_bar.append(&path_box);
     
     // Add a CSS class for custom styling
     status_bar.add_css_class("basado-status-bar");
     
-    (status_bar, path_label)
+    (status_bar, path_box)
 }
 
 /// Apply custom CSS to enhance the appearance of tabs
@@ -620,65 +618,49 @@ pub fn apply_custom_css() {
     // Get the default CSS provider
     let provider = gtk4::CssProvider::new();
     
-    // Define our custom CSS
-    let css = r#"
-    /* Style all notebook tabs */
-    notebook > header > tabs > tab {
-        padding: 2px;
-        background-color: transparent;
-    }
+    // Define custom CSS rules
+    let css = "
+        /* Tab styling */
+        tab {
+            padding: 4px;
+            margin: 2px 0;
+        }
+        
+        /* Status bar styling */
+        .basado-status-bar {
+            border-top: 1px solid alpha(#999, 0.3);
+        }
+        
+        /* Path navigation styling */
+        .path-box {
+            padding: 2px;
+        }
+        
+        .path-segment-button {
+            padding: 2px 4px;
+            margin: 0 1px;
+            border-radius: 4px;
+            min-height: 24px;
+            min-width: 24px;
+            border: 1px solid transparent;
+        }
+        
+        .path-segment-button:hover {
+            background-color: alpha(#888, 0.1);
+            border-color: alpha(#888, 0.3);
+        }
+        
+        .path-separator {
+            opacity: 0.7;
+            margin: 0 1px;
+            font-family: monospace;
+        }
+    ";
     
-    /* Apply custom container styling */
-    .tab-box {
-        border-radius: 4px;
-        padding: 2px;
-    }
-    
-    /* Increase contrast between active and inactive tabs */
-    notebook > header > tabs > tab {
-        background-color: alpha(currentColor, 0.05);
-        border-radius: 4px 4px 0 0;
-    }
-    
-    /* Style checked/active tabs */
-    notebook > header > tabs > tab:checked {
-        background-color: alpha(currentColor, 0.2);
-        box-shadow: 0 2px 4px alpha(black, 0.5);
-    }
-    
-    /* Make active tab text more prominent */
-    notebook > header > tabs > tab:checked label {
-        font-weight: 500;
-    }
-    
-    /* Give tabs more depth */
-    notebook > header {
-        border-bottom: 1px solid alpha(currentColor, 0.2);
-    }
-    
-    /* Style close buttons in tabs */
-    .tab-box button.circular {
-        min-height: 20px;
-        min-width: 20px;
-        padding: 0;
-        border-radius: 50%;
-        border: none;
-        box-shadow: none;
-        -gtk-icon-shadow: none;
-        outline: none;
-    }
-    
-    /* Style buttons on hover */
-    .tab-box button.circular:hover {
-        background-color: alpha(currentColor, 0.3);
-        border: none;
-    }
-    "#;
-    
-    // Load CSS into the provider
+    // Load the CSS
     provider.load_from_data(css);
     
-    // Apply the CSS to the default screen
+    // Apply the CSS to all windows in the application
     gtk4::style_context_add_provider_for_display(
         &gtk4::gdk::Display::default().expect("Could not get default display"),
         &provider,

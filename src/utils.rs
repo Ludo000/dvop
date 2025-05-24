@@ -4,6 +4,8 @@
 use gtk4::prelude::*;
 use gtk4::{Button, ListBox, MenuButton, pango};
 use std::path::PathBuf;
+use std::rc::Rc;
+use std::cell::RefCell;
 use mime_guess;
 use mime_guess::Mime;
 
@@ -173,8 +175,171 @@ pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_ty
 /// This formats the path in a user-friendly way and should be called whenever
 /// the current directory changes.
 pub fn update_path_label(path_label: &gtk4::Label, current_dir: &PathBuf) {
+    // Simply display the full path for better reliability
     path_label.set_text(&format!("{}", current_dir.display()));
     
     // Set tooltip to show the full path on hover (helpful for long paths)
     path_label.set_tooltip_text(Some(&current_dir.display().to_string()));
+    
+    // Make the path label look interactive
+    path_label.add_css_class("clickable-path");
+}
+
+/// Parses a PathBuf into its component segments
+///
+/// Returns a vector of (display_name, full_path) tuples for each segment of the path
+/// Each tuple contains the segment name and the full path to that segment
+pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
+    let mut components = Vec::new();
+    let mut current = PathBuf::new();
+    
+    // Get user's home directory
+    let home_dir = home::home_dir();
+    
+    // Check if the path is under the user's home directory
+    if let Some(home) = &home_dir {
+        if path.starts_with(home) {
+            // Start with home directory
+            current = home.clone();
+            components.push(("Home".to_string(), current.clone()));
+            
+            // Skip the parts that are already included in the home path
+            let rel_path = path.strip_prefix(home).unwrap_or(path);
+            for component in rel_path.components() {
+                match component {
+                    std::path::Component::Normal(os_str) => {
+                        if let Some(name) = os_str.to_str() {
+                            current.push(name);
+                            components.push((name.to_string(), current.clone()));
+                        }
+                    },
+                    _ => {} // Skip other component types
+                }
+            }
+            
+            return components;
+        }
+    }
+    
+    // For paths not under home, start with root if it's an absolute path
+    if path.is_absolute() {
+        current.push("/");
+        components.push(("Root".to_string(), current.clone()));
+    }
+    
+    // Add each path component with its full path
+    for component in path.components() {
+        match component {
+            std::path::Component::Normal(os_str) => {
+                if let Some(name) = os_str.to_str() {
+                    current.push(name);
+                    components.push((name.to_string(), current.clone()));
+                }
+            },
+            // Handle other path component types if needed
+            std::path::Component::RootDir => {
+                if components.is_empty() { // Only add if not already added
+                    current = PathBuf::from("/");
+                    components.push(("/".to_string(), current.clone()));
+                }
+            },
+            std::path::Component::ParentDir => {
+                if !current.as_os_str().is_empty() {
+                    current.pop();
+                    // Parent directory component (..) - not adding to components list
+                }
+            },
+            _ => {} // Skip other component types
+        }
+    }
+    
+    components
+}
+
+/// Updates the status bar path box with clickable buttons for each path segment
+///
+/// This creates a series of buttons, one for each directory in the path,
+/// allowing the user to click on any folder to navigate directly to it.
+pub fn update_path_buttons(
+    path_box: &gtk4::Box,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    file_list_box: &gtk4::ListBox,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>
+) {
+    let current_path = current_dir.borrow().clone();
+    // Clear any existing buttons
+    while let Some(child) = path_box.first_child() {
+        path_box.remove(&child);
+    }
+    
+    // Get path components
+    let components = parse_path_components(&current_path);
+    
+    // Create a button for each path component
+    for (i, (display_name, path)) in components.iter().enumerate() {
+        // Create a button for this path segment
+        let button = gtk4::Button::new();
+        
+        // Special handling for home and root directories
+        if i == 0 {
+            if display_name == "Home" {
+                // Use home icon for user's home directory
+                let icon = gtk4::Image::from_icon_name("user-home-symbolic");
+                button.set_child(Some(&icon));
+                button.set_tooltip_text(Some("Home Directory"));
+            } else if display_name == "Root" {
+                // Use drive icon for root directory
+                let icon = gtk4::Image::from_icon_name("drive-harddisk-symbolic");
+                button.set_child(Some(&icon));
+                button.set_tooltip_text(Some("Root Directory"));
+            } else {
+                button.set_label(display_name);
+            }
+        } else {
+            button.set_label(display_name);
+        }
+        
+        // Add styling
+        button.add_css_class("path-segment-button");
+        button.set_has_frame(false);  // Make it look like a link
+        
+        // Clone needed variables for the closure
+        let path_clone = path.clone();
+        let file_list_box_clone = file_list_box.clone();
+        let active_tab_path_clone = active_tab_path.clone();
+        let current_dir_clone = current_dir.clone();
+        
+        // We need weak references to the path_box to avoid ownership issues
+        let path_box_weak = glib::object::WeakRef::new();
+        path_box_weak.set(Some(path_box));
+        
+        // Connect clicked signal
+        button.connect_clicked(move |_| {
+            // Navigate to this path segment by updating the current_dir
+            *current_dir_clone.borrow_mut() = path_clone.clone();
+            
+            // Update the file list to show this directory
+            update_file_list(
+                &file_list_box_clone,
+                &current_dir_clone.borrow(),
+                &active_tab_path_clone.borrow()
+            );
+            
+            // Update path buttons to reflect the new current directory
+            // Get the path_box from the weak reference
+            if let Some(pb) = path_box_weak.upgrade() {
+                if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
+                    update_path_buttons(box_widget, &current_dir_clone, &file_list_box_clone, &active_tab_path_clone);
+                }
+            }
+        });
+        
+        // Add a separator after all but the last component
+        path_box.append(&button);
+        if i < components.len() - 1 {
+            let separator = gtk4::Label::new(Some("/"));
+            separator.add_css_class("path-separator");
+            path_box.append(&separator);
+        }
+    }
 }

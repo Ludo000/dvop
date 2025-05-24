@@ -603,7 +603,7 @@ pub fn setup_button_handlers(
     refresh_button: &Button,
     file_list_box_clone: &ListBox, // This is likely the same as file_list_box, ensure it's used consistently
     _save_menu_button: Option<&MenuButton>, // Prefix with underscore to acknowledge it's unused
-    path_label: Option<&gtk4::Label> // Optional path label for status bar
+    path_box: Option<&gtk4::Box> // Optional path box for status bar
 ) {
     setup_new_button_handler(
         new_button,
@@ -630,7 +630,7 @@ pub fn setup_button_handlers(
         active_tab_path,
         file_path_manager,
         _save_menu_button,
-        path_label,
+        path_box,
     );
 
     setup_save_button_handler(
@@ -665,13 +665,13 @@ pub fn setup_button_handlers(
         save_as_button,
         window, // Pass window
         _save_menu_button, // Pass save_menu_button with the renamed parameter
-        path_label, // Pass the path label for status bar updates
+        path_box, // Pass the path box for status bar with clickable segments
     );
 
     // These handlers likely don't need direct access to the editor_notebook content itself
     // but might influence which file is considered "active" if that logic is centralized.
-    setup_up_button_handler(up_button, current_dir, file_list_box, active_tab_path, path_label); // Pass active_tab_path and path_label
-    setup_refresh_button_handler(refresh_button, file_list_box, current_dir, active_tab_path, path_label); // Pass active_tab_path and path_label
+    setup_up_button_handler(up_button, current_dir, file_list_box, active_tab_path, path_box); // Pass active_tab_path and path_box
+    setup_refresh_button_handler(refresh_button, file_list_box, current_dir, active_tab_path, path_box); // Pass active_tab_path and path_box
 }
 
 fn setup_new_button_handler(
@@ -780,7 +780,7 @@ fn setup_open_button_handler(
     active_tab_path_ref: &Rc<RefCell<Option<PathBuf>>>,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
     _save_menu_button: Option<&MenuButton>, // Renamed with underscore to acknowledge it's unused
-    path_label: Option<&gtk4::Label> // Optional path label for status bar
+    path_box: Option<&gtk4::Box> // Optional path box for status bar with clickable segments
 ) {
     let editor_notebook = editor_notebook.clone();
     let window = window.clone();
@@ -795,7 +795,7 @@ fn setup_open_button_handler(
     let file_path_manager_owned = file_path_manager.clone();
     // Clone the save_menu_button (renamed to match the parameter name)
     let __save_menu_button = _save_menu_button.cloned(); // Double underscore to avoid confusion with parameter name
-    let path_label = path_label.cloned(); // Clone the optional path label
+    let path_box = path_box.cloned(); // Clone the optional path box
 
     open_button.connect_clicked(move |_| {
         let dialog = gtk4::FileChooserDialog::new(
@@ -836,7 +836,7 @@ fn setup_open_button_handler(
     let file_list_box_for_response = file_list_box.clone();
     let current_dir_for_response = current_dir.clone();
     let save_menu_button_for_response = __save_menu_button.clone(); // Clone before the inner closure
-    let _path_label_for_response = path_label.clone(); // Clone path_label for the inner closure (unused but kept for future use)
+    let _path_box_for_response = path_box.clone(); // Clone path_box for the inner closure (unused but kept for future use)
 
 
         dialog.connect_response(move |dialog, response| {
@@ -1096,7 +1096,7 @@ fn setup_file_selection_handler(
     save_as_button: &Button,
     window: &ApplicationWindow, // Added for NewTabDependencies
     _save_menu_button: Option<&MenuButton>, // Prefix with _ to acknowledge it's unused currently
-    path_label: Option<&gtk4::Label> // Optional path label for status bar
+    path_box: Option<&gtk4::Box> // Optional path box for status bar with clickable segments
 ) {
     let editor_notebook_clone = editor_notebook.clone(); // Renamed for clarity
     let active_tab_path_ref_clone = active_tab_path_ref.clone();
@@ -1110,8 +1110,8 @@ fn setup_file_selection_handler(
     let window_clone = window.clone(); // For NewTabDependencies
     // Clone the MenuButton option to own it
     let save_menu_button_option = _save_menu_button.map(|btn| btn.clone());
-    // Clone the path label option
-    let path_label_option = path_label.cloned();
+    // Clone the path box option
+    let path_box_option = path_box.cloned();
 
 
     file_list_box.connect_row_activated(move |_, row| {
@@ -1147,9 +1147,11 @@ fn setup_file_selection_handler(
                 utils::update_file_list(&file_list_box_for_handler_update, &current_dir_for_handler.borrow(), &active_tab_path_for_handler.borrow());
                 file_list_box_for_handler_update.grab_focus(); // Add this line to shift focus
                 
-                // Update the path label if provided
-                if let Some(label) = &path_label_option {
-                    utils::update_path_label(label, &path_from_list);
+                // Update the path buttons if provided
+                if let Some(box_widget) = &path_box_option {
+                    if let Some(path_box) = box_widget.downcast_ref::<gtk4::Box>() {
+                        utils::update_path_buttons(path_box, &current_dir_for_handler, &file_list_box_for_handler_update, &active_tab_path_for_handler);
+                    }
                 }
             } else if path_from_list.is_file() {
                 let mime_type = mime_guess::from_path(&path_from_list).first_or_octet_stream();
@@ -1230,12 +1232,12 @@ fn setup_up_button_handler(
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &ListBox,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>, // Changed from file_path
-    path_label: Option<&gtk4::Label> // Optional path label for status bar
+    path_box: Option<&gtk4::Box> // Optional path box for status bar
 ) {
     let current_dir = current_dir.clone();
     let file_list_box_clone = file_list_box.clone();
     let active_tab_path = active_tab_path.clone(); // Clone Rc for closure
-    let path_label = path_label.cloned(); // Clone the optional Label widget
+    let path_box = path_box.cloned(); // Clone the optional Box widget
     
     up_button.connect_clicked(move |_| {
         let mut path = current_dir.borrow().clone();
@@ -1244,9 +1246,9 @@ fn setup_up_button_handler(
             // Pass the active tab\'s path for selection highlighting
             utils::update_file_list(&file_list_box_clone, &current_dir.borrow(), &active_tab_path.borrow());
             
-            // Update the path label if provided
-            if let Some(label) = &path_label {
-                utils::update_path_label(label, &path);
+            // Update the path buttons if provided
+            if let Some(path_box) = &path_box {
+                utils::update_path_buttons(path_box, &current_dir, &file_list_box_clone, &active_tab_path);
             }
         }
     });
@@ -1257,21 +1259,20 @@ fn setup_refresh_button_handler(
     file_list_box: &ListBox,
     current_dir: &Rc<RefCell<PathBuf>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>, // Changed from file_path
-    path_label: Option<&gtk4::Label> // Optional path label for status bar
+    path_box: Option<&gtk4::Box> // Optional path box for status bar
 ) {
     let file_list_box = file_list_box.clone();
     let current_dir = current_dir.clone();
     let active_tab_path = active_tab_path.clone(); // Clone Rc for closure
-    let path_label = path_label.cloned(); // Clone the optional Label widget
+    let path_box = path_box.cloned(); // Clone the optional Box widget
     
     refresh_button.connect_clicked(move |_| {
-        let current_path = current_dir.borrow().clone();
         // Pass the active tab\'s path for selection highlighting
         utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow());
         
-        // Update the path label if provided
-        if let Some(label) = &path_label {
-            utils::update_path_label(label, &current_path);
+        // Update the path buttons if provided
+        if let Some(path_box) = &path_box {
+            utils::update_path_buttons(path_box, &current_dir, &file_list_box, &active_tab_path);
         }
     });
 }
