@@ -202,6 +202,9 @@ fn build_ui(app: &Application) {
         initial_tab_close_button  // Button for closing the tab
     ) = ui::create_text_view();
     
+    // Set up keyboard shortcuts for common operations
+    utils::setup_keyboard_shortcuts(&window, &save_button, &open_button, &new_button, &save_as_button, Some(&editor_notebook));
+    
     // Ensure the initial buffer gets the correct theme based on dark mode setting
     if let Some(source_buffer) = initial_text_buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
         syntax::update_buffer_style_scheme(source_buffer);

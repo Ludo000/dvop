@@ -2,7 +2,7 @@
 // This module contains helper functions used throughout the application
 
 use gtk4::prelude::*;
-use gtk4::{Button, ListBox, MenuButton, pango};
+use gtk4::{Button, ListBox, MenuButton, pango, ApplicationWindow, EventControllerKey, gdk, glib};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -342,4 +342,188 @@ pub fn update_path_buttons(
             path_box.append(&separator);
         }
     }
+}
+
+/// Sets up common keyboard shortcuts for the application
+///
+/// This function adds keyboard shortcuts like Ctrl+S for saving, Ctrl+O for opening files,
+/// Ctrl+N for new files, Ctrl+Tab for navigating tabs, and other standard editor shortcuts.
+pub fn setup_keyboard_shortcuts(
+    window: &ApplicationWindow, 
+    save_button: &Button, 
+    open_button: &Button, 
+    new_button: &Button, 
+    save_as_button: &Button,
+    editor_notebook: Option<&gtk4::Notebook>
+) {
+    // Create a key event controller
+    let key_controller = EventControllerKey::new();
+    
+    // Clone button references for use in the closure
+    let save_button_clone = save_button.clone();
+    let save_as_button_clone = save_as_button.clone();
+    let open_button_clone = open_button.clone();
+    let new_button_clone = new_button.clone();
+    let window_clone = window.clone();
+    
+    // Clone notebook for use in the closure
+    let editor_notebook_clone = editor_notebook.cloned();
+    
+    // Connect the key pressed event
+    key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
+        // Check modifier keys
+        let ctrl_pressed = state.contains(gdk::ModifierType::CONTROL_MASK);
+        let shift_pressed = state.contains(gdk::ModifierType::SHIFT_MASK);
+        let alt_pressed = state.contains(gdk::ModifierType::ALT_MASK);
+        
+        // Handle keyboard shortcuts with Ctrl modifier
+        if ctrl_pressed && !alt_pressed {
+            match keyval.name().as_deref() {
+                // File operations
+                // Ctrl+S: Save
+                Some("s") => {
+                    if !shift_pressed {
+                        save_button_clone.emit_clicked();
+                        println!("Keyboard shortcut: Ctrl+S (Save)");
+                        return glib::Propagation::Stop; // Event handled
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+Shift+S: Save As
+                Some("S") | Some("s") if shift_pressed => {
+                    save_as_button_clone.emit_clicked();
+                    println!("Keyboard shortcut: Ctrl+Shift+S (Save As)");
+                    return glib::Propagation::Stop;
+                },
+                // Ctrl+O: Open
+                Some("o") => {
+                    if !shift_pressed {
+                        open_button_clone.emit_clicked();
+                        println!("Keyboard shortcut: Ctrl+O (Open)");
+                        return glib::Propagation::Stop;
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+N: New file
+                Some("n") => {
+                    if !shift_pressed {
+                        new_button_clone.emit_clicked();
+                        println!("Keyboard shortcut: Ctrl+N (New File)");
+                        return glib::Propagation::Stop;
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+Q or Ctrl+W: Quit/Close
+                Some("q") | Some("w") => {
+                    // For Ctrl+Q, close the entire application
+                    if keyval.name().as_deref() == Some("q") {
+                        println!("Keyboard shortcut: Ctrl+Q (Quit)");
+                        window_clone.close();
+                        return glib::Propagation::Stop;
+                    }
+                    // For Ctrl+W, we could close the current tab (not implemented here)
+                    if keyval.name().as_deref() == Some("w") {
+                        println!("Keyboard shortcut: Ctrl+W (Close Tab) - Not implemented yet");
+                        // Future implementation could close the current tab
+                        return glib::Propagation::Proceed;
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+Tab: Next tab
+                Some("Tab") => {
+                    if let Some(notebook) = &editor_notebook_clone {
+                        if let Some(current_page) = notebook.current_page() {
+                            let page_count = notebook.n_pages();
+                            if page_count > 0 {
+                                let next_page = if shift_pressed {
+                                    // Ctrl+Shift+Tab: Go to previous tab
+                                    if current_page == 0 { page_count - 1 } else { current_page - 1 }
+                                } else {
+                                    // Ctrl+Tab: Go to next tab
+                                    (current_page + 1) % page_count
+                                };
+                                notebook.set_current_page(Some(next_page));
+                                println!("Keyboard shortcut: Ctrl+{}Tab (Switch Tab)",
+                                    if shift_pressed { "Shift+" } else { "" });
+                                return glib::Propagation::Stop;
+                            }
+                        }
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+PageDown: Next tab
+                Some("Page_Down") => {
+                    if let Some(notebook) = &editor_notebook_clone {
+                        if let Some(current_page) = notebook.current_page() {
+                            let page_count = notebook.n_pages();
+                            if page_count > 0 {
+                                let next_page = (current_page + 1) % page_count;
+                                notebook.set_current_page(Some(next_page));
+                                println!("Keyboard shortcut: Ctrl+PageDown (Next Tab)");
+                                return glib::Propagation::Stop;
+                            }
+                        }
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+PageUp: Previous tab
+                Some("Page_Up") => {
+                    if let Some(notebook) = &editor_notebook_clone {
+                        if let Some(current_page) = notebook.current_page() {
+                            let page_count = notebook.n_pages();
+                            if page_count > 0 {
+                                let prev_page = if current_page == 0 { page_count - 1 } else { current_page - 1 };
+                                notebook.set_current_page(Some(prev_page));
+                                println!("Keyboard shortcut: Ctrl+PageUp (Previous Tab)");
+                                return glib::Propagation::Stop;
+                            }
+                        }
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+F: Find - Placeholder for future implementation
+                Some("f") => {
+                    println!("Keyboard shortcut: Ctrl+F (Find) - Not implemented yet");
+                    // Implementation of Find functionality could be added here
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+H: Replace - Placeholder for future implementation
+                Some("h") => {
+                    println!("Keyboard shortcut: Ctrl+H (Replace) - Not implemented yet");
+                    // Implementation of Replace functionality could be added here
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+Z: Undo - Managed by GtkTextView but log for debugging
+                Some("z") => {
+                    println!("Keyboard shortcut: Ctrl+Z (Undo) - Handled by GtkTextView");
+                    return glib::Propagation::Proceed; // Let GtkTextView handle it
+                },
+                // Ctrl+Y/Ctrl+Shift+Z: Redo - Managed by GtkTextView but log for debugging
+                Some("y") | Some("Z") => {
+                    println!("Keyboard shortcut: Ctrl+{} (Redo) - Handled by GtkTextView", 
+                             if keyval.name().as_deref() == Some("y") { "Y" } else { "Shift+Z" });
+                    return glib::Propagation::Proceed; // Let GtkTextView handle it
+                },
+                // Let other Ctrl shortcuts pass through to the editor (like Ctrl+C, Ctrl+V)
+                _ => {}
+            }
+        }
+        
+        // Let the event propagate to other handlers (like the text editor's built-in shortcuts)
+        glib::Propagation::Proceed
+    });
+    
+    // Add the controller to the window
+    window.add_controller(key_controller);
+    
+    // Log that keyboard shortcuts have been set up
+    println!("Keyboard shortcuts initialized:");
+    println!("  - Ctrl+S: Save");
+    println!("  - Ctrl+Shift+S: Save As");
+    println!("  - Ctrl+O: Open");
+    println!("  - Ctrl+N: New file");
+    println!("  - Ctrl+Q: Quit application");
+    println!("  - Ctrl+Tab/Ctrl+Shift+Tab: Switch between tabs");
+    println!("  - Ctrl+PageDown/Ctrl+PageUp: Navigate between tabs");
+    println!("  - Other standard shortcuts (Ctrl+C, Ctrl+V, etc.) handled by GTK");
 }
