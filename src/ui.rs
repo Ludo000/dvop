@@ -452,9 +452,15 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     tab_box.set_margin_start(6); 
     tab_box.set_margin_end(2);
     
+    // Set a minimum width for the tab box
+    tab_box.set_size_request(100, -1); // 100px minimum width, default height
+    
     // Create label with the provided title
     let label = Label::new(Some(tab_title));
     label.set_margin_start(2); // Add a small margin for label text
+    label.set_width_chars(8); // Set a minimum width for better UI consistency
+    label.set_ellipsize(gtk4::pango::EllipsizeMode::End); // Add ellipsis if text overflows
+    label.add_css_class("tab-label"); // Add custom CSS class for styling
     
     // Create close button with a standard X icon, with a slightly raised appearance
     let close_button = Button::from_icon_name("window-close-symbolic");
@@ -624,6 +630,12 @@ pub fn apply_custom_css() {
         tab {
             padding: 4px;
             margin: 2px 0;
+            min-width: 100px; /* Add minimum width for tabs */
+        }
+        
+        .tab-label {
+            min-width: 60px; /* Ensure label has minimum width */
+            padding: 2px 4px;
         }
         
         /* Status bar styling */
