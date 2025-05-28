@@ -440,41 +440,41 @@ pub fn create_paned(
 /// - Label: Text label displaying the filename
 /// - Button: Close button to close the tab
 pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
-    // Create horizontal container for tab contents
-    let tab_box = GtkBox::new(Orientation::Horizontal, 6); // Increased spacing for better appearance
+    // Create horizontal container for tab contents with comfortable spacing
+    let tab_box = GtkBox::new(Orientation::Horizontal, 4);
     
     // Add CSS class for custom tab styling
     tab_box.add_css_class("tab-box");
     
-    // Add padding around the tab content for better visual presence
-    tab_box.set_margin_top(3);
-    tab_box.set_margin_bottom(3);
-    tab_box.set_margin_start(6); 
+    // Set comfortable margins
+    tab_box.set_margin_top(2);
+    tab_box.set_margin_bottom(2);
+    tab_box.set_margin_start(4); 
     tab_box.set_margin_end(2);
     
-    // Set a minimum width for the tab box
-    tab_box.set_size_request(100, -1); // 100px minimum width, default height
+    // Set a comfortable minimum width for the tab box
+    tab_box.set_size_request(80, -1);
     
     // Create label with the provided title
     let label = Label::new(Some(tab_title));
-    label.set_margin_start(2); // Add a small margin for label text
-    label.set_width_chars(8); // Set a minimum width for better UI consistency
+    label.set_margin_start(3);
+    label.set_width_chars(7); // Comfortable minimum width
     label.set_ellipsize(gtk4::pango::EllipsizeMode::End); // Add ellipsis if text overflows
     label.add_css_class("tab-label"); // Add custom CSS class for styling
     
-    // Create close button with a standard X icon, with a slightly raised appearance
+    // Create close button with a standard X icon
     let close_button = Button::from_icon_name("window-close-symbolic");
     
-    // Use a slightly raised button style for better clickability while keeping it compact
+    // Use a comfortably sized button
     close_button.add_css_class("circular"); // Make button more rounded
     close_button.set_valign(gtk4::Align::Center);
     
-    // Set button margins for proper spacing
+    // Set comfortable button margins
     close_button.set_margin_start(2);
-    close_button.set_margin_end(0);
+    close_button.set_margin_end(1);
     
-    // Reduce the button size while keeping it clickable
-    close_button.set_size_request(22, 22);
+    // Make the button a comfortable size
+    close_button.set_size_request(20, 20);
     
     // Assemble tab components
     tab_box.append(&label);
@@ -621,63 +621,167 @@ pub fn create_status_bar() -> (GtkBox, GtkBox) {
 /// This function creates and applies CSS styles to improve the tab appearance,
 /// making them look less flat and more visually distinct.
 pub fn apply_custom_css() {
-    // Get the default CSS provider
     let provider = gtk4::CssProvider::new();
     
-    // Define custom CSS rules
-    let css = "
-        /* Tab styling */
-        tab {
-            padding: 4px;
-            margin: 2px 0;
-            min-width: 100px; /* Add minimum width for tabs */
-        }
-        
-        .tab-label {
-            min-width: 60px; /* Ensure label has minimum width */
-            padding: 2px 4px;
-        }
-        
-        /* Status bar styling */
-        .basado-status-bar {
-            border-top: 1px solid alpha(#999, 0.3);
-        }
-        
-        /* Path navigation styling */
-        .path-box {
-            padding: 2px;
-        }
-        
-        .path-segment-button {
-            padding: 2px 4px;
-            margin: 0 1px;
-            border-radius: 4px;
-            min-height: 24px;
-            min-width: 24px;
-            border: 1px solid transparent;
-        }
-        
-        .path-segment-button:hover {
-            background-color: alpha(#888, 0.1);
-            border-color: alpha(#888, 0.3);
-        }
-        
-        .path-separator {
-            opacity: 0.7;
-            margin: 0 1px;
-            font-family: monospace;
-        }
-    ";
+    let css = build_complete_css();
     
-    // Load the CSS
-    provider.load_from_data(css);
+    // Load and apply the CSS
+    provider.load_from_data(&css);
     
-    // Apply the CSS to all windows in the application
     gtk4::style_context_add_provider_for_display(
         &gtk4::gdk::Display::default().expect("Could not get default display"),
         &provider,
         gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION
     );
+}
+
+/// Builds the complete CSS string by combining all component styles
+fn build_complete_css() -> String {
+    format!(
+        "{}{}{}{}",
+        get_notebook_tab_styles(),
+        get_button_styles(),
+        get_status_bar_styles(),
+        get_path_navigation_styles()
+    )
+}
+
+/// Returns CSS styles for notebook tabs and related components
+fn get_notebook_tab_styles() -> &'static str {
+    "
+    /* === NOTEBOOK AND TAB STYLES === */
+    
+    /* Notebook header container */
+    notebook > header {
+        padding: 1px;
+        margin: 0;
+    }
+    
+    notebook > header > tabs {
+        margin: 0;
+        padding: 1px;
+    }
+    
+    /* Base tab styling */
+    tab {
+        padding: 3px 6px;
+        min-width: 80px;
+        min-height: 26px;
+        border-radius: 5px 5px 0 0;
+        border-bottom: 3px solid transparent;
+        background-color: shade(@theme_bg_color, 0.85);
+        box-shadow: 0 -1px 2px -1px shade(@theme_bg_color, 1.1) inset;
+        transition: all 0.2s ease;
+        margin: 1px 2px 0 2px;
+        margin-bottom: -1px;
+    }
+    
+    /* Active/selected tab styling */
+    tab:checked {
+        background-color: shade(@theme_bg_color, 1.5);
+        border-bottom: 3px solid @theme_selected_bg_color;
+        box-shadow: 0 -2px 3px -1px shade(@theme_bg_color, 1.2) inset;
+    }
+    
+    /* Tab label styling */
+    .tab-label {
+        min-width: 60px;
+        padding: 1px 3px;
+        margin: 0;
+        font-size: 95%;
+        opacity: 0.85;
+    }
+    
+    tab:checked .tab-label {
+        opacity: 1.0;
+        font-weight: 500;
+    }
+    "
+}
+
+/// Returns CSS styles for buttons, including circular close buttons
+fn get_button_styles() -> String {
+    let is_dark_mode = crate::syntax::is_dark_mode_enabled();
+    let active_tab_shade = if is_dark_mode { "2" } else { "0.85" };
+    
+    format!(
+        "
+    /* === BUTTON STYLES === */
+    
+    /* Circular button base styling */
+    button.circular {{
+        background-color: shade(@theme_bg_color, 0.85);
+        min-height: 20px;
+        min-width: 20px;
+        padding: 1px;
+        margin: 0;
+        border: none;
+        border-radius: 50%;
+    }}
+    
+    /* Circular button icon styling */
+    button.circular image {{
+        background-color: shade(@theme_bg_color, 0.85);
+        -gtk-icon-transform: scale(0.8);
+        border-radius: 50%;
+        min-height: 20px;
+        min-width: 20px;
+    }}
+    
+    /* Circular button styling in active tabs */
+    tab:checked button.circular,
+    tab:checked button.circular image {{
+        background-color: shade(@theme_bg_color, {});
+        border-radius: 50%;
+        min-height: 20px;
+        min-width: 20px;
+    }}
+    ",
+        active_tab_shade
+    )
+}
+
+/// Returns CSS styles for the status bar
+fn get_status_bar_styles() -> &'static str {
+    "
+    /* === STATUS BAR STYLES === */
+    
+    .basado-status-bar {
+        border-top: 1px solid alpha(#999, 0.3);
+    }
+    "
+}
+
+/// Returns CSS styles for path navigation components
+fn get_path_navigation_styles() -> &'static str {
+    "
+    /* === PATH NAVIGATION STYLES === */
+    
+    .path-box {
+        padding: 2px;
+    }
+    
+    .path-segment-button {
+        padding: 2px 4px;
+        margin: 0 1px;
+        border-radius: 4px;
+        min-height: 24px;
+        min-width: 24px;
+        border: 1px solid transparent;
+        transition: all 0.15s ease;
+    }
+    
+    .path-segment-button:hover {
+        background-color: alpha(#888, 0.1);
+        border-color: alpha(#888, 0.3);
+    }
+    
+    .path-separator {
+        opacity: 0.7;
+        margin: 0 1px;
+        font-family: monospace;
+    }
+    "
 }
 
 /// Sets up the terminal color theme to match the editor's syntax highlighting theme
