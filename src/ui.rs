@@ -1188,12 +1188,9 @@ pub fn apply_theme_changes_globally(parent_window: &ApplicationWindow) {
     println!("Current settings - Light theme: {}, Dark theme: {}", 
              settings.get_light_theme(), settings.get_dark_theme());
     
-    // Find all notebooks in the window
-    let notebooks = find_notebooks(parent_window);
-    for notebook in &notebooks {
-        // Update editor themes
-        update_notebook_themes(notebook);
-    }
+    // Use the robust buffer update function from main.rs instead of the simpler one
+    // This ensures all editor buffers are updated regardless of their widget structure
+    crate::update_all_buffer_themes(parent_window);
     
     // Find the terminal notebook if it exists
     if let Some(terminal_notebook) = find_terminal_notebook(parent_window) {
@@ -1225,4 +1222,29 @@ fn find_terminal_notebook(window: &ApplicationWindow) -> Option<Notebook> {
                 None
             }
         })
+}
+
+/// Manually refreshes all themes in the application
+/// This can be called when you suspect the automatic theme detection isn't working
+pub fn manually_refresh_themes(window: &ApplicationWindow) {
+    println!("=== Manual Theme Refresh ===");
+    
+    // Debug current theme state
+    crate::syntax::debug_theme_detection();
+    
+    // Find all notebooks in the window and update their themes
+    let notebooks = find_notebooks(window);
+    for notebook in &notebooks {
+        update_notebook_themes(notebook);
+    }
+    
+    // Update terminal themes if they exist
+    if let Some(terminal_notebook) = find_terminal_notebook(window) {
+        update_all_terminal_themes(&terminal_notebook);
+    }
+    
+    // Force a complete redraw
+    window.queue_draw();
+    
+    println!("Manual theme refresh completed");
 }

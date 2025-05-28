@@ -11,20 +11,39 @@ use std::path::Path;
 /// Checks the GTK settings and environment to determine if the system prefers dark mode
 pub fn is_dark_mode_enabled() -> bool {
     
-    // First check GTK settings directly
-    if let Some(settings) = Settings::default() {
-        let gtk_setting = settings.is_gtk_application_prefer_dark_theme();
-        if gtk_setting {
-            return true;
-        }
-    }
-    
-    // Check for desktop environment specific settings
+    // Check for desktop environment specific settings FIRST (more reliable than GTK settings)
     let desktop_env = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
 
-
     if desktop_env.contains("GNOME") || desktop_env.contains("Unity") {
-        // Try gsettings for GNOME
+        // Try GIO Settings first (more reliable than gsettings command)
+        use gtk4::gio::prelude::*;
+        // GIO Settings new() can panic if schema doesn't exist, so we need to wrap it carefully
+        match std::panic::catch_unwind(|| gtk4::gio::Settings::new("org.gnome.desktop.interface")) {
+            Ok(gio_settings) => {
+                // Check the new color-scheme setting (Ubuntu 22.04+)
+                let color_scheme = gio_settings.string("color-scheme");
+                if color_scheme.as_str() == "prefer-dark" {
+                    return true;
+                }
+                if color_scheme.as_str() == "prefer-light" || color_scheme.as_str() == "default" {
+                    return false; // Explicitly return false for light themes - this is definitive
+                }
+                
+                // Check the gtk-theme setting as fallback
+                let gtk_theme = gio_settings.string("gtk-theme");
+                let theme_lower = gtk_theme.to_lowercase();
+                if theme_lower.contains("dark") {
+                    return true;
+                } else if theme_lower == "yaru" || theme_lower == "adwaita" || theme_lower.contains("light") {
+                    return false; // Explicitly return false for known light themes
+                }
+            },
+            Err(_) => {
+                // Schema not available, continue to fallback methods
+            }
+        }
+        
+        // Legacy method: Try gsettings command
         let output = std::process::Command::new("gsettings")
             .args(["get", "org.gnome.desktop.interface", "color-scheme"])
             .output()
@@ -34,9 +53,9 @@ pub fn is_dark_mode_enabled() -> bool {
             let output_str = String::from_utf8_lossy(&output.stdout);
             if output_str.contains("dark") {
                 return true;
+            } else if output_str.contains("light") || output_str.contains("default") {
+                return false; // Explicitly return false for light themes
             }
-        } else {
-            println!("Could not execute gsettings command for color-scheme");
         }
         
         // Also try the gtk-theme setting which might indicate a dark theme
@@ -46,12 +65,12 @@ pub fn is_dark_mode_enabled() -> bool {
             .ok();
             
         if let Some(output) = output {
-            let output_str = String::from_utf8_lossy(&output.stdout);
-            if output_str.to_lowercase().contains("dark") {
+            let output_str = String::from_utf8_lossy(&output.stdout).to_lowercase();
+            if output_str.contains("dark") {
                 return true;
+            } else if output_str.contains("light") || output_str.contains("yaru") || output_str.contains("adwaita") {
+                return false; // Explicitly return false for known light themes
             }
-        } else {
-            println!("Could not execute gsettings command for gtk-theme");
         }
     } else if desktop_env.contains("KDE") {
         // Try kreadconfig5 for KDE Plasma
@@ -65,10 +84,27 @@ pub fn is_dark_mode_enabled() -> bool {
             if output_str.contains("Dark") || output_str.contains("dark") || output_str.contains("Breeze Dark") {
                 return true;
             }
-        } else {
-            println!("Could not execute kreadconfig5 command for ColorScheme");
         }
     }
+    
+    // NOTE: GTK settings check disabled because it can lag behind system theme changes
+    // and override correct GSettings detection. We rely on GSettings which is more reliable.
+    // 
+    // Check GTK settings as a fallback (may not always be accurate with Ubuntu theme switching)
+    // if let Some(settings) = Settings::default() {
+    //     let gtk_setting = settings.is_gtk_application_prefer_dark_theme();
+    //     if gtk_setting {
+    //         return true;
+    //     }
+    //     
+    //     // Also check the theme name itself
+    //     let theme_name = settings.gtk_theme_name();
+    //     if let Some(theme) = theme_name {
+    //         if theme.to_lowercase().contains("dark") {
+    //             return true;
+    //         }
+    //     }
+    // }
     
     // Check for any other common dark theme indicators
     let typical_dark_themes = [
@@ -169,6 +205,9 @@ pub fn create_source_view() -> (View, Buffer) {
 /// This function can be called when the system theme changes to update
 /// the syntax highlighting style scheme accordingly
 pub fn update_buffer_style_scheme(buffer: &Buffer) {
+    // Force refresh of settings to pick up any theme changes
+    crate::settings::refresh_settings();
+    
     let scheme_manager = StyleSchemeManager::new();
     let preferred_scheme = get_preferred_style_scheme();
     
@@ -266,4 +305,70 @@ pub fn create_source_view_scrolled(source_view: &View) -> ScrolledWindow {
         .vscrollbar_policy(gtk4::PolicyType::Automatic)
         .child(source_view)
         .build()
+}
+
+/// Debug function to print current theme detection status
+/// Useful for troubleshooting theme switching issues
+pub fn debug_theme_detection() {
+    println!("=== Theme Detection Debug ===");
+    
+    // Check GTK settings
+    if let Some(settings) = Settings::default() {
+        let gtk_setting = settings.is_gtk_application_prefer_dark_theme();
+        println!("GTK dark theme preference: {}", gtk_setting);
+        
+        let theme_name = settings.gtk_theme_name();
+        println!("Current GTK theme name: {:?}", theme_name);
+        
+        let icon_theme = settings.gtk_icon_theme_name();
+        println!("Current icon theme: {:?}", icon_theme);
+    } else {
+        println!("GTK settings not available");
+    }
+    
+    // Check GIO settings for GNOME
+    use gtk4::gio::prelude::*;
+    match std::panic::catch_unwind(|| gtk4::gio::Settings::new("org.gnome.desktop.interface")) {
+        Ok(gio_settings) => {
+            let color_scheme = gio_settings.string("color-scheme");
+            println!("GNOME color-scheme: {}", color_scheme);
+            
+            let gtk_theme = gio_settings.string("gtk-theme");
+            println!("GNOME gtk-theme: {}", gtk_theme);
+        },
+        Err(_) => {
+            println!("GNOME desktop interface settings not available");
+        }
+    }
+    
+    // Check environment variables
+    if let Ok(desktop_env) = std::env::var("XDG_CURRENT_DESKTOP") {
+        println!("Desktop environment: {}", desktop_env);
+    }
+    
+    if let Ok(gtk_theme) = std::env::var("GTK_THEME") {
+        println!("GTK_THEME environment variable: {}", gtk_theme);
+    }
+    
+    // Final detection result
+    let is_dark = is_dark_mode_enabled();
+    println!("Final dark mode detection: {}", is_dark);
+    println!("=============================");
+}
+
+/// Forces GTK settings to sync with the detected system theme
+/// This helps ensure GTK applications properly reflect system theme changes
+pub fn sync_gtk_with_system_theme() {
+    if let Some(settings) = Settings::default() {
+        let detected_dark_mode = is_dark_mode_enabled();
+        let current_gtk_setting = settings.is_gtk_application_prefer_dark_theme();
+        
+        if detected_dark_mode != current_gtk_setting {
+            println!("Syncing GTK setting: detected={}, current={}", detected_dark_mode, current_gtk_setting);
+            settings.set_gtk_application_prefer_dark_theme(detected_dark_mode);
+            
+            // Force refresh of user settings to pick up theme change
+            crate::settings::refresh_settings();
+        }
+    }
 }

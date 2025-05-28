@@ -7,7 +7,7 @@ mod settings;  // User settings and preferences
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
-use gtk4::Application;  // Main GTK application class
+use gtk4::{Application, ApplicationWindow};  // Main GTK application classes
 use gtk4::gio;          // GIO for menu and action support
 use gtk4::glib;         // GLib for clone macro and other utilities
 use std::rc::Rc;        // Reference counting for shared ownership
@@ -53,78 +53,78 @@ fn main() {
 }
 
 /// Updates the style scheme of all editor buffers when the system theme changes
-fn update_all_buffer_themes(window: &gtk4::ApplicationWindow) {
+pub fn update_all_buffer_themes(window: &gtk4::ApplicationWindow) {
     println!("Beginning comprehensive theme update for all buffers...");
 
-    // Get the notebook from our application structure
-    // We know the structure has a window with a box, and the notebook is in that box
-    if let Some(root_box) = window.child().and_then(|w| w.downcast::<gtk4::Box>().ok()) {
-        // Find editor notebook in the box
-        let mut current = root_box.first_child();
-        while let Some(child) = current {
-            if let Some(notebook) = child.downcast_ref::<gtk4::Notebook>() {
-                let n_pages = notebook.n_pages();
-                println!("Theme changed! Updating {} notebook pages...", n_pages);
+    // First, let's try a more comprehensive search for notebooks
+    fn find_all_notebooks(widget: &gtk4::Widget) -> Vec<gtk4::Notebook> {
+        let mut notebooks = Vec::new();
+        
+        // Check if this widget is a notebook
+        if let Some(notebook) = widget.downcast_ref::<gtk4::Notebook>() {
+            notebooks.push(notebook.clone());
+        }
+        
+        // Recursively search children
+        let mut child = widget.first_child();
+        while let Some(current_child) = child {
+            notebooks.extend(find_all_notebooks(&current_child));
+            child = current_child.next_sibling();
+        }
+        
+        notebooks
+    }
+
+    let notebooks = find_all_notebooks(window.upcast_ref::<gtk4::Widget>());
+    println!("Found {} notebooks in the window", notebooks.len());
+
+    for (notebook_idx, notebook) in notebooks.iter().enumerate() {
+        let n_pages = notebook.n_pages();
+        println!("Notebook {}: Updating {} pages...", notebook_idx, n_pages);
+        
+        // Iterate through all notebook pages
+        for page_num in 0..n_pages {
+            if let Some(page) = notebook.nth_page(Some(page_num)) {
+                println!("Processing notebook {} page {}", notebook_idx, page_num);
                 
-                // Iterate through all notebook pages
-                for page_num in 0..n_pages {
-                    if let Some(page) = notebook.nth_page(Some(page_num)) {
-                        // Try to find ScrolledWindow which contains our SourceView
-                        if let Some(scrolled_window) = page.downcast_ref::<gtk4::ScrolledWindow>() {
-                            if let Some(child) = scrolled_window.child() {
-                                println!("Processing page {}: found child widget", page_num);
-                                
-                                // For our editor, we use SourceView but cast it to TextView
-                                // We need to try both approaches
-                                if let Some(source_view) = child.downcast_ref::<sourceview5::View>() {
-                                    // Direct SourceView access
-                                    println!("Page {}: Found SourceView", page_num);
-                                    let buffer = source_view.buffer();
-                                    
-                                    // Make sure we're working with the right buffer type
-                                    if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
-                                        syntax::update_buffer_style_scheme(source_buffer);
-                                        println!("Updated source view buffer on page {}", page_num);
-                                        
-                                        // Force the view to redraw
-                                        source_view.queue_draw();
-                                    } else {
-                                        println!("Could not cast buffer to SourceBuffer on page {}", page_num);
-                                    }
-                                } else if let Some(text_view) = child.downcast_ref::<gtk4::TextView>() {
-                                    // Access via TextView
-                                    println!("Page {}: Found TextView", page_num);
-                                    let buffer = text_view.buffer();
-                                    if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
-                                        syntax::update_buffer_style_scheme(source_buffer);
-                                        println!("Updated text view source buffer on page {}", page_num);
-                                        
-                                        // Force the view to redraw
-                                        text_view.queue_draw();
-                                    } else {
-                                        println!("Could not cast buffer to SourceBuffer on page {}", page_num);
-                                    }
-                                } else {
-                                    println!("Page {}: Child widget is neither SourceView nor TextView", page_num);
-                                }
-                                
-                                // Force the scrolled window to redraw too
-                                scrolled_window.queue_draw();
-                            }
-                        }
+                // Try to find any SourceView in this page (could be nested)
+                fn find_source_views(widget: &gtk4::Widget) -> Vec<sourceview5::View> {
+                    let mut views = Vec::new();
+                    
+                    if let Some(source_view) = widget.downcast_ref::<sourceview5::View>() {
+                        views.push(source_view.clone());
+                    }
+                    
+                    let mut child = widget.first_child();
+                    while let Some(current_child) = child {
+                        views.extend(find_source_views(&current_child));
+                        child = current_child.next_sibling();
+                    }
+                    
+                    views
+                }
+                
+                let source_views = find_source_views(&page);
+                println!("Found {} source views in page {}", source_views.len(), page_num);
+                
+                for (view_idx, source_view) in source_views.iter().enumerate() {
+                    let buffer = source_view.buffer();
+                    if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
+                        println!("Updating source buffer {} in page {}", view_idx, page_num);
+                        syntax::update_buffer_style_scheme(source_buffer);
+                        source_view.queue_draw();
                     }
                 }
                 
-                // Force redraw of the entire notebook
-                notebook.queue_draw();
-                
-                // We found the notebook, no need to continue searching
-                break;
+                // Force the page to redraw
+                page.queue_draw();
             }
-            current = child.next_sibling();
         }
+        
+        // Force the notebook to redraw
+        notebook.queue_draw();
     }
-    
+
     // Let's also print the current dark mode setting to help with debugging
     if let Some(settings) = gtk4::Settings::default() {
         let is_dark = settings.is_gtk_application_prefer_dark_theme();
@@ -139,7 +139,7 @@ fn update_all_buffer_themes(window: &gtk4::ApplicationWindow) {
             settings.set_gtk_application_prefer_dark_theme(detected_dark_mode);
         }
     }
-    
+
     // Force UI to update after a short delay
     let window_clone = window.clone();
     glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
@@ -163,27 +163,54 @@ fn build_ui(app: &Application) {
     
     // Set up theme settings based on system preferences
     if let Some(settings) = gtk4::Settings::default() {
-        // Explicitly check if system is in dark mode using our enhanced detection
-        let prefer_dark = syntax::is_dark_mode_enabled();
+        // Don't override the system preference - let GTK handle it naturally
+        // This allows the app to respond to system theme changes automatically
         
-        // Ensure GTK settings match our detected preference
-        settings.set_gtk_application_prefer_dark_theme(prefer_dark);
-
         // Clone references to update editor views when theme changes
         let window_clone = window.clone();
         let terminal_notebook_clone = terminal_notebook.clone();
         
-        // Connect to the notify::gtk-application-prefer-dark-theme signal
+        // Connect to multiple theme-related signals to catch all possible theme changes
+        let window_clone_2 = window_clone.clone();
+        let terminal_notebook_clone_2 = terminal_notebook_clone.clone();
+        let window_clone_3 = window_clone.clone();
+        let terminal_notebook_clone_3 = terminal_notebook_clone.clone();
+        
+        // Primary signal for dark theme preference changes
         settings.connect_notify_local(
             Some("gtk-application-prefer-dark-theme"),
             move |_, _| {
-                // Find all source buffers and update their style schemes
+                println!("Theme changed via gtk-application-prefer-dark-theme signal");
+                syntax::sync_gtk_with_system_theme();
                 update_all_buffer_themes(&window_clone);
-                
-                // Update terminal themes to match the new theme
                 ui::update_all_terminal_themes(&terminal_notebook_clone);
             }
         );
+        
+        // Secondary signal for general theme name changes (catches more theme switches)
+        settings.connect_notify_local(
+            Some("gtk-theme-name"),
+            move |_, _| {
+                println!("Theme changed via gtk-theme-name signal");
+                syntax::sync_gtk_with_system_theme();
+                update_all_buffer_themes(&window_clone_2);
+                ui::update_all_terminal_themes(&terminal_notebook_clone_2);
+            }
+        );
+        
+        // Monitor icon theme changes which often accompany theme switches
+        settings.connect_notify_local(
+            Some("gtk-icon-theme-name"),
+            move |_, _| {
+                println!("Icon theme changed - may indicate system theme change");
+                syntax::sync_gtk_with_system_theme();
+                update_all_buffer_themes(&window_clone_3);
+                ui::update_all_terminal_themes(&terminal_notebook_clone_3);
+            }
+        );
+        
+        // Set up a GSettings monitor for GNOME/Ubuntu theme changes
+        setup_gsettings_monitor(&window, &terminal_notebook);
     }
 
     // Initialize the text editor components
@@ -201,6 +228,10 @@ fn build_ui(app: &Application) {
         initial_tab_actual_label, // Text label showing the file name in the tab
         initial_tab_close_button  // Button for closing the tab
     ) = ui::create_text_view();
+    
+    // Debug theme detection at startup
+    println!("=== Theme Detection at Startup ===");
+    syntax::debug_theme_detection();
     
     // Set up keyboard shortcuts for common operations
     utils::setup_keyboard_shortcuts(&window, &save_button, &open_button, &new_button, &save_as_button, Some(&editor_notebook));
@@ -535,4 +566,49 @@ fn build_ui(app: &Application) {
         
         dialog.show();
     });
+}
+
+/// Sets up a GSettings monitor to detect Ubuntu/GNOME theme changes
+/// This provides better integration with system theme switching on Ubuntu
+fn setup_gsettings_monitor(window: &ApplicationWindow, terminal_notebook: &gtk4::Notebook) {
+    use gio::prelude::*;
+    
+    let window_clone = window.clone();
+    let terminal_notebook_clone = terminal_notebook.clone();
+    
+    // Monitor the GNOME color-scheme setting which is the primary way Ubuntu switches themes
+    match std::panic::catch_unwind(|| gio::Settings::new("org.gnome.desktop.interface")) {
+        Ok(settings) => {
+        let window_clone_2 = window_clone.clone();
+        let terminal_notebook_clone_2 = terminal_notebook_clone.clone();
+        
+        // Monitor color-scheme changes (prefer-dark, prefer-light, default)
+        settings.connect_changed(Some("color-scheme"), move |_, _| {
+            println!("System color-scheme changed via GSettings");
+            // Small delay to ensure the change has propagated
+            let window_clone_inner = window_clone.clone();
+            let terminal_notebook_clone_inner = terminal_notebook_clone.clone();
+            glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
+                update_all_buffer_themes(&window_clone_inner);
+                ui::update_all_terminal_themes(&terminal_notebook_clone_inner);
+            });
+        });
+        
+        // Also monitor gtk-theme changes for additional coverage
+        settings.connect_changed(Some("gtk-theme"), move |_, _| {
+            println!("GTK theme changed via GSettings");
+            let window_clone_inner = window_clone_2.clone();
+            let terminal_notebook_clone_inner = terminal_notebook_clone_2.clone();
+            glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
+                update_all_buffer_themes(&window_clone_inner);
+                ui::update_all_terminal_themes(&terminal_notebook_clone_inner);
+            });
+        });
+        
+        println!("GSettings monitor set up for org.gnome.desktop.interface");
+        },
+        Err(_) => {
+            println!("Could not set up GSettings monitor - org.gnome.desktop.interface not available");
+        }
+    }
 }
