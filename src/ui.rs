@@ -583,7 +583,7 @@ pub fn create_path_bar() -> (GtkBox, GtkBox, Button, Button, Button) {
     let up_button = Button::new();
     up_button.set_child(Some(&up_button_icon));
     up_button.set_tooltip_text(Some("Go to parent directory"));
-    up_button.set_margin_end(5); // Add spacing from path
+    up_button.set_margin_end(2); // Add spacing from path
     
     // Create a horizontal box to hold the path segment buttons
     let path_box = GtkBox::new(Orientation::Horizontal, 2);
@@ -598,15 +598,15 @@ pub fn create_path_bar() -> (GtkBox, GtkBox, Button, Button, Button) {
     let refresh_button = Button::new();
     refresh_button.set_child(Some(&refresh_button_icon));
     refresh_button.set_tooltip_text(Some("Refresh file list"));
-    refresh_button.set_margin_start(5); // Add spacing from path
-    refresh_button.set_margin_end(5); // Add spacing before terminal button
+    refresh_button.set_margin_start(2); // Add spacing from path
+    refresh_button.set_margin_end(2); // Reduced spacing before terminal button
     
     // Create the "Open in Terminal" button with a terminal icon
     let terminal_button_icon = Image::from_icon_name("utilities-terminal-symbolic");
     let terminal_button = Button::new();
     terminal_button.set_child(Some(&terminal_button_icon));
     terminal_button.set_tooltip_text(Some("Open current folder in a new terminal"));
-    terminal_button.set_margin_start(5); // Add spacing from refresh button
+    terminal_button.set_margin_start(2); // Reduced spacing from refresh button
     
     // Assemble the path bar: up button, path, refresh button, terminal button
     path_bar.append(&up_button);
