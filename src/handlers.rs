@@ -700,74 +700,22 @@ fn setup_new_button_handler(
 
 
     new_button.connect_clicked(move |_| {        
-        let save_as_button_for_new_tab = save_as_button_clone.clone(); // Clone for this specific closure
-        let new_text_view = TextView::new();
-        let new_text_buffer = new_text_view.buffer();
-        new_text_buffer.set_text(""); // Empty content for new file
-
-        let new_scrolled_window = ScrolledWindow::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .child(&new_text_view)
-            .build();
-
-        // Use ui::create_tab_widget
-        let (tab_widget, tab_actual_label, tab_close_button) = crate::ui::create_tab_widget("Untitled");
-
-        let new_page_num = editor_notebook_clone.append_page(&new_scrolled_window, Some(&tab_widget));
-        editor_notebook_clone.set_current_page(Some(new_page_num));
-
-        *active_tab_path_ref_clone.borrow_mut() = None; // No path for new, unsaved file
-        // file_path_manager.borrow_mut().insert(new_page_num, PathBuf::new()); // Or some placeholder for untitled
-
-        // Update file list (optional, as no file is selected)
-        utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow());
-        utils::update_save_buttons_visibility(&save_button_clone, &save_as_button_clone, Some(mime_guess::mime::TEXT_PLAIN_UTF_8));
-
-        // Connect changed signal for dirty tracking
-        let tab_actual_label_clone = tab_actual_label.clone();
-        let new_text_buffer_clone_for_dirty = new_text_buffer.clone();
-        new_text_buffer.connect_changed(move |_buffer| {
-            let label_text = tab_actual_label_clone.text();
-            if label_text == "Untitled" && !new_text_buffer_clone_for_dirty.text(&new_text_buffer_clone_for_dirty.start_iter(), &new_text_buffer_clone_for_dirty.end_iter(), false).is_empty() {
-                 tab_actual_label_clone.set_text("*Untitled");
-            } else if label_text == "*Untitled" && new_text_buffer_clone_for_dirty.text(&new_text_buffer_clone_for_dirty.start_iter(), &new_text_buffer_clone_for_dirty.end_iter(), false).is_empty() {
-                tab_actual_label_clone.set_text("Untitled");
-            }
-        });
-
-        // Connect close button
-        let notebook_for_close = editor_notebook_clone.clone();
-        let window_for_close = window_clone.clone(); // window_clone is from the outer scope
-        let file_path_manager_for_close = file_path_manager_clone.clone();
-        let active_tab_path_for_close = active_tab_path_ref_clone.clone();
-        
+        // Use the modern create_new_empty_tab function which creates SourceView widgets
+        // that are properly found by the theme update system
         let deps_for_new_tab_creation = NewTabDependencies {
-            editor_notebook: editor_notebook_clone.clone(), // Use the notebook_clone from this scope
+            editor_notebook: editor_notebook_clone.clone(),
             active_tab_path: active_tab_path_ref_clone.clone(),
             file_path_manager: file_path_manager_clone.clone(),
-            window: window_clone.clone(), // Pass the window for dialogs
+            window: window_clone.clone(),
             file_list_box: file_list_box_clone.clone(),
             current_dir: current_dir_clone.clone(),
-            save_button: save_button_clone.clone(), // Clone for NewTabDependencies
-            save_as_button: save_as_button_for_new_tab, // Use the clone specific to this closure
+            save_button: save_button_clone.clone(),
+            save_as_button: save_as_button_clone.clone(),
             _save_menu_button: None, // We don't have a menu button in this scope
         };
-        let new_scrolled_window_clone_for_close = new_scrolled_window.clone();
-        tab_close_button.connect_clicked(move |_| {
-            if let Some(current_idx_for_this_tab) = notebook_for_close.page_num(&new_scrolled_window_clone_for_close) {
-                handle_close_tab_request(
-                    &notebook_for_close,
-                    current_idx_for_this_tab,
-                    &window_for_close,
-                    &file_path_manager_for_close,
-                    &active_tab_path_for_close,
-                    &deps_for_new_tab_creation.current_dir, // New
-                    &deps_for_new_tab_creation.file_list_box, // New
-                    Some(deps_for_new_tab_creation.clone())
-                );
-            }
-        });
+        
+        // Create the new tab using the modern system that creates SourceView widgets
+        create_new_empty_tab(&deps_for_new_tab_creation);
     });
 }
 
