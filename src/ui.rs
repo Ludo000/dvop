@@ -65,6 +65,13 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     // Create the main header bar
     let header = HeaderBar::new();
 
+    // Create a Settings button with icon only (no label)
+    let settings_button = Button::new();
+    let settings_button_icon = Image::from_icon_name("preferences-system-symbolic");
+    settings_button.set_child(Some(&settings_button_icon));
+    settings_button.set_tooltip_text(Some("Editor Settings"));
+    header.pack_start(&settings_button);
+
     // Create the New File button with icon and label
     let new_button = Button::new();
     let new_button_icon = Image::from_icon_name("document-new-symbolic");
@@ -147,17 +154,6 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     // This avoids circular reference issues when connecting signals
     let save_button = Button::new();
     save_button.set_visible(false);
-    
-    // Create a Settings button with icon and label
-    let settings_button = Button::new();
-    let settings_button_icon = Image::from_icon_name("preferences-system-symbolic");
-    let settings_button_label = Label::new(Some("Settings"));
-    let settings_button_box = GtkBox::new(Orientation::Horizontal, 5);
-    settings_button_box.append(&settings_button_icon);
-    settings_button_box.append(&settings_button_label);
-    settings_button.set_child(Some(&settings_button_box));
-    settings_button.set_tooltip_text(Some("Editor Settings"));
-    header.pack_end(&settings_button);
 
     // Return the header and all action buttons
     (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button)
