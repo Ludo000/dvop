@@ -533,6 +533,7 @@ pub fn create_terminal_notebook_box(terminal_notebook: &Notebook, add_terminal_b
 /// Returns a tuple of:
 /// - GtkBox: The status bar container
 /// - GtkBox: The path box that will contain individual path segment buttons
+#[allow(dead_code)]
 pub fn create_status_bar() -> (GtkBox, GtkBox) {
     // Create a horizontal box for the status bar
     let status_bar = GtkBox::new(Orientation::Horizontal, 5);

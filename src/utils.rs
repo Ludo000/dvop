@@ -153,6 +153,7 @@ pub fn update_file_list(
 /// Backward-compatible wrapper for update_file_list with default TabSwitch behavior
 /// 
 /// This function provides compatibility for existing calls that don't specify selection source
+#[allow(dead_code)]
 pub fn update_file_list_default(file_list_box: &ListBox, current_dir: &PathBuf, file_path: &Option<PathBuf>) {
     update_file_list(file_list_box, current_dir, file_path, FileSelectionSource::TabSwitch);
 }
@@ -209,6 +210,7 @@ pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_ty
 /// 
 /// This formats the path in a user-friendly way and should be called whenever
 /// the current directory changes.
+#[allow(dead_code)]
 pub fn update_path_label(path_label: &gtk4::Label, current_dir: &PathBuf) {
     // Simply display the full path for better reliability
     path_label.set_text(&format!("{}", current_dir.display()));
@@ -416,17 +418,20 @@ pub fn setup_keyboard_shortcuts(
         if ctrl_pressed && !alt_pressed {
             match keyval.name().as_deref() {
                 // File operations
-                // Ctrl+S: Save
+                // Ctrl+S: Save or Ctrl+Shift+S: Save As
                 Some("s") => {
-                    if !shift_pressed {
+                    if shift_pressed {
+                        save_as_button_clone.emit_clicked();
+                        println!("Keyboard shortcut: Ctrl+Shift+S (Save As)");
+                        return glib::Propagation::Stop;
+                    } else {
                         save_button_clone.emit_clicked();
                         println!("Keyboard shortcut: Ctrl+S (Save)");
                         return glib::Propagation::Stop; // Event handled
                     }
-                    return glib::Propagation::Proceed;
                 },
-                // Ctrl+Shift+S: Save As
-                Some("S") | Some("s") if shift_pressed => {
+                // Ctrl+Shift+S: Save As (uppercase S)
+                Some("S") => {
                     save_as_button_clone.emit_clicked();
                     println!("Keyboard shortcut: Ctrl+Shift+S (Save As)");
                     return glib::Propagation::Stop;
