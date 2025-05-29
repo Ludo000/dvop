@@ -549,6 +549,7 @@ fn build_ui(app: &Application) {
     let save_button_clone_for_switch = save_button.clone();
     let save_as_button_clone_for_switch = save_as_button.clone();
     let save_menu_button_clone_for_switch = save_menu_button.clone();
+    let path_box_clone_for_switch = path_box.clone();
 
     // Connect to the notebook's switch-page signal
     editor_notebook.connect_switch_page(move |notebook, _page, page_num| {
@@ -561,7 +562,26 @@ fn build_ui(app: &Application) {
         // Update the active tab path reference
         *active_tab_path_clone_for_switch.borrow_mut() = new_active_path.clone();
 
-        // Update file list highlighting to show the current file
+        // If the focused tab has a file, update current directory to match the file's directory
+        if let Some(file_path) = &new_active_path {
+            if let Some(parent_dir) = file_path.parent() {
+                let parent_path = parent_dir.to_path_buf();
+                // Only update if the directory is different from current
+                if *current_dir_clone_for_switch.borrow() != parent_path {
+                    *current_dir_clone_for_switch.borrow_mut() = parent_path;
+                    
+                    // Update the file list to show the new directory
+                    utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_clone_for_switch.borrow(), &new_active_path);
+                    
+                    // Update the path buttons to reflect the new current directory
+                    utils::update_path_buttons(&path_box_clone_for_switch, &current_dir_clone_for_switch, &file_list_box_clone_for_switch, &active_tab_path_clone_for_switch);
+                    
+                    return; // Exit early since we've already updated the file list
+                }
+            }
+        }
+
+        // Update file list highlighting to show the current file (only if directory didn't change)
         let current_dir_path_clone = current_dir_clone_for_switch.borrow().clone(); 
         utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_path_clone, &new_active_path);
 
