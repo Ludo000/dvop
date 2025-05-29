@@ -340,7 +340,7 @@ fn build_ui(app: &Application) {
         ui::create_file_manager_panel_container(file_list_scrolled_window);
 
     // Create the path bar with navigation buttons and path segments
-    let (path_bar, path_box, up_button, _refresh_button, _terminal_button) = ui::create_path_bar();
+    let (path_bar, path_box, up_button, _refresh_button, terminal_button) = ui::create_path_bar();
     
     // Create the main container that will hold the path bar and paned content
     let main_container = GtkBox::new(gtk4::Orientation::Vertical, 0);
@@ -704,6 +704,14 @@ fn build_ui(app: &Application) {
         Some(&path_box),        // Path box for the status bar with clickable segments
         &current_selection_source, // Track selection source for click-outside detection
     );
+
+    // Set up the terminal button handler to open a new terminal in the current directory
+    let terminal_notebook_clone_for_terminal_button = terminal_notebook.clone();
+    let current_dir_clone_for_terminal_button = current_dir.clone();
+    terminal_button.connect_clicked(move |_| {
+        // Add a new terminal tab in the current directory
+        ui::add_terminal_tab(&terminal_notebook_clone_for_terminal_button, Some(current_dir_clone_for_terminal_button.borrow().clone()));
+    });
 
     // Show the main window to display the application
     window.show();
