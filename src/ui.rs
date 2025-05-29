@@ -449,12 +449,12 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     tab_box.set_margin_end(2);
     
     // Set a comfortable minimum width for the tab box
-    tab_box.set_size_request(80, -1);
+    tab_box.set_size_request(120, -1);
     
     // Create label with the provided title
     let label = Label::new(Some(tab_title));
     label.set_margin_start(3);
-    label.set_width_chars(7); // Comfortable minimum width
+    label.set_width_chars(10); // Increased width for longer tabs
     label.set_ellipsize(gtk4::pango::EllipsizeMode::End); // Add ellipsis if text overflows
     label.add_css_class("tab-label"); // Add custom CSS class for styling
     
@@ -661,7 +661,7 @@ fn get_notebook_tab_styles() -> &'static str {
     /* Base tab styling */
     tab {
         padding: 3px 6px;
-        min-width: 80px;
+        min-width: 120px;
         min-height: 26px;
         border-radius: 5px 5px 0 0;
         border-bottom: 3px solid transparent;
@@ -681,7 +681,7 @@ fn get_notebook_tab_styles() -> &'static str {
     
     /* Tab label styling */
     .tab-label {
-        min-width: 60px;
+        min-width: 80px;
         padding: 1px 3px;
         margin: 0;
         font-size: 95%;
