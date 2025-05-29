@@ -119,7 +119,7 @@ fn create_new_empty_tab(deps: &NewTabDependencies) {
     
     // Get TextView and TextBuffer interfaces for compatibility with the rest of the code
     // Clone source_view to avoid ownership move
-    let _new_text_view = source_view.clone().upcast::<TextView>();
+    let new_text_view = source_view.clone().upcast::<TextView>();
     let new_text_buffer = source_buffer.upcast::<TextBuffer>();
     
     // Place the source view in a scrollable container
@@ -132,6 +132,9 @@ fn create_new_empty_tab(deps: &NewTabDependencies) {
     let new_page_num = deps.editor_notebook.append_page(&new_scrolled_window, Some(&tab_widget));
     // Setting current page after append ensures the switch_page signal is emitted properly
     deps.editor_notebook.set_current_page(Some(new_page_num));
+    
+    // Focus the text area of the new tab so the user can start typing immediately
+    new_text_view.grab_focus();
     
     // Update the active tab path to None (unsaved document)
     *deps.active_tab_path.borrow_mut() = None;
@@ -479,6 +482,11 @@ fn open_or_focus_tab(
     if let Some(page_num) = page_to_focus {
         notebook.set_current_page(Some(page_num));
         *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+        
+        // Focus the text area of the existing tab
+        if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, page_num) {
+            text_view.grab_focus();
+        }
     } else {
         // Get file MIME type 
         let mime_type = mime_guess::from_path(&file_to_open).first_or_octet_stream();
@@ -539,6 +547,13 @@ fn open_or_focus_tab(
         // Add the new tab to the notebook and make it the current page
         let new_page_num = notebook.append_page(&new_scrolled_window, Some(&tab_widget));
         notebook.set_current_page(Some(new_page_num));
+
+        // Focus the text area of the newly opened file if it's a text file
+        if utils::is_allowed_mime_type(&mime_type) {
+            if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, new_page_num) {
+                text_view.grab_focus();
+            }
+        }
 
         // Update state
         file_path_manager.borrow_mut().insert(new_page_num, file_to_open.clone());
