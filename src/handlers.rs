@@ -163,8 +163,8 @@ fn create_new_empty_tab(deps: &NewTabDependencies) {
     new_text_buffer.connect_changed(move |buffer| {
         let label_text = tab_actual_label_clone.text();
         if label_text == "Untitled" && !buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).is_empty() {
-            tab_actual_label_clone.set_text("Untitled*");
-        } else if label_text == "Untitled*" && buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).is_empty() {
+            tab_actual_label_clone.set_text("*Untitled");
+        } else if label_text == "*Untitled" && buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).is_empty() {
             tab_actual_label_clone.set_text("Untitled");
         }
     });
@@ -199,17 +199,17 @@ pub fn update_tab_label_after_save(notebook: &Notebook, page_num: u32, new_name_
             if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
                 if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
                     let base_name = new_name_opt.map(String::from)
-                        .unwrap_or_else(|| label.text().trim_end_matches('*').to_string());
+                        .unwrap_or_else(|| label.text().trim_start_matches('*').to_string());
                     
                     let mut final_text = base_name;
                     if is_now_dirty {
-                        if !final_text.ends_with('*') {
-                            final_text.push('*');
+                        if !final_text.starts_with('*') {
+                            final_text = format!("*{}", final_text);
                         }
                     }
                     // Ensure no double asterisks if base_name somehow had one and is_now_dirty is true
-                    if final_text.ends_with("**") {
-                        final_text.pop();
+                    if final_text.starts_with("**") {
+                        final_text = final_text[1..].to_string();
                     }
                     label.set_text(&final_text);
                 }
@@ -234,7 +234,7 @@ pub fn handle_close_tab_request(
             let mut is_dirty = false;
             if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
                 if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
-                    if label.text().ends_with('*') {
+                    if label.text().starts_with('*') {
                         is_dirty = true;
                     }
                 }
@@ -258,10 +258,12 @@ pub fn handle_close_tab_request(
                 &format!("Save changes to {} before closing?", filename_str) // Corrected format string: removed quotes around {}
             );
             dialog.add_buttons(&[
-                ("Save", ResponseType::Yes),
-                ("Don't Save", ResponseType::No),
                 ("Cancel", ResponseType::Cancel),
+                ("Don't Save", ResponseType::No),
+                ("Save", ResponseType::Yes),
             ]);
+
+            dialog.set_default_response(ResponseType::Cancel);
 
             let notebook_clone = notebook.clone();
             let file_path_manager_clone = file_path_manager.clone();
@@ -297,7 +299,9 @@ pub fn handle_close_tab_request(
                             } else { // Untitled file, need to "Save As"
                                 let save_as_dialog = gtk4::FileChooserDialog::new(
                                     Some("Save File As"), Some(&window_clone), gtk4::FileChooserAction::Save,
-                                    &[("Save", gtk4::ResponseType::Accept), ("Cancel", gtk4::ResponseType::Cancel)]);
+                                    &[("Cancel", gtk4::ResponseType::Cancel), ("Save", gtk4::ResponseType::Accept)]);
+                                
+                                save_as_dialog.set_default_response(gtk4::ResponseType::Cancel);
                                 
                                 let current_dialog_dir_path = current_dir_clone.borrow().clone();
                                 
@@ -521,8 +525,8 @@ fn open_or_focus_tab(
             let tab_actual_label_clone = tab_actual_label.clone();
             let file_name_clone = file_name.clone();
             new_text_buffer.connect_changed(move |_buffer| { 
-                if !tab_actual_label_clone.text().ends_with("*") {
-                     tab_actual_label_clone.set_text(&format!("{}*", file_name_clone));
+                if !tab_actual_label_clone.text().starts_with("*") {
+                     tab_actual_label_clone.set_text(&format!("*{}", file_name_clone));
                 }
             });
         } else {
@@ -726,8 +730,8 @@ fn setup_new_button_handler(
         new_text_buffer.connect_changed(move |_buffer| {
             let label_text = tab_actual_label_clone.text();
             if label_text == "Untitled" && !new_text_buffer_clone_for_dirty.text(&new_text_buffer_clone_for_dirty.start_iter(), &new_text_buffer_clone_for_dirty.end_iter(), false).is_empty() {
-                 tab_actual_label_clone.set_text("Untitled*");
-            } else if label_text == "Untitled*" && new_text_buffer_clone_for_dirty.text(&new_text_buffer_clone_for_dirty.start_iter(), &new_text_buffer_clone_for_dirty.end_iter(), false).is_empty() {
+                 tab_actual_label_clone.set_text("*Untitled");
+            } else if label_text == "*Untitled" && new_text_buffer_clone_for_dirty.text(&new_text_buffer_clone_for_dirty.start_iter(), &new_text_buffer_clone_for_dirty.end_iter(), false).is_empty() {
                 tab_actual_label_clone.set_text("Untitled");
             }
         });
@@ -802,8 +806,10 @@ fn setup_open_button_handler(
             Some("Open File"),
             Some(&window),
             gtk4::FileChooserAction::Open,
-            &[("Open", gtk4::ResponseType::Accept), ("Cancel", gtk4::ResponseType::Cancel)],
+            &[("Cancel", gtk4::ResponseType::Cancel), ("Open", gtk4::ResponseType::Accept)],
         );
+
+        dialog.set_default_response(gtk4::ResponseType::Cancel);
 
         let current_dialog_dir_path = current_dir.borrow().clone();
         // Explicitly type annotation for gio_file_result and wrap the call in Ok()
@@ -960,8 +966,10 @@ fn setup_save_button_handler(
                     Some("Save File"),
                     Some(&window),
                     gtk4::FileChooserAction::Save,
-                    &[("Save", gtk4::ResponseType::Accept), ("Cancel", gtk4::ResponseType::Cancel)],
+                    &[("Cancel", gtk4::ResponseType::Cancel), ("Save", gtk4::ResponseType::Accept)],
                 );
+                
+                dialog.set_default_response(gtk4::ResponseType::Cancel);
                 // ... (rest of save_as logic, simplified here) ...
                 let editor_notebook_clone = editor_notebook.clone();
                 let active_tab_path_ref_clone = active_tab_path_ref.clone();
@@ -1022,8 +1030,10 @@ fn setup_save_as_button_handler(
                 Some("Save File As"),
                 Some(&window),
                 gtk4::FileChooserAction::Save,
-                &[("Save As", gtk4::ResponseType::Accept), ("Cancel", gtk4::ResponseType::Cancel)],
+                &[("Cancel", gtk4::ResponseType::Cancel), ("Save As", gtk4::ResponseType::Accept)],
             );
+
+            dialog.set_default_response(gtk4::ResponseType::Cancel);
 
             let current_dialog_dir_path = current_dir.borrow().clone();
             // Explicitly type annotation for gio_file_result and wrap the call in Ok()

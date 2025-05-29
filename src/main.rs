@@ -266,7 +266,7 @@ fn build_ui(app: &Application) {
                 if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
                     if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
                         if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
-                            if label.text().ends_with('*') {
+                            if label.text().starts_with('*') {
                                 // Found an unsaved file - get its name
                                 let filename = file_path_manager_clone_for_close.borrow()
                                     .get(&page_num)
@@ -299,9 +299,11 @@ fn build_ui(app: &Application) {
             );
             
             dialog.add_buttons(&[
-                ("Close Anyway", gtk4::ResponseType::Yes),
                 ("Cancel", gtk4::ResponseType::Cancel),
+                ("Close Anyway", gtk4::ResponseType::Yes),
             ]);
+            
+            dialog.set_default_response(gtk4::ResponseType::Cancel);
             
             let window_clone_for_dialog = window_clone_for_close.clone();
             
@@ -428,10 +430,10 @@ fn build_ui(app: &Application) {
         
         // If the file was previously unmodified and now has content, mark as modified
         if label_text == "Untitled" && !text_content.is_empty() {
-            initial_tab_actual_label_clone.set_text("Untitled*");
+            initial_tab_actual_label_clone.set_text("*Untitled");
         } 
         // If the file was previously modified but now is empty, remove the modified indicator
-        else if label_text.ends_with('*') && text_content.is_empty() && label_text == "Untitled*" {
+        else if label_text.starts_with('*') && text_content.is_empty() && label_text == "*Untitled" {
             initial_tab_actual_label_clone.set_text("Untitled");
         }
     });
