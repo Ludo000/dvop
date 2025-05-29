@@ -495,15 +495,6 @@ pub fn setup_keyboard_shortcuts(
                     // Implementation of Replace functionality could be added here
                     return glib::Propagation::Proceed;
                 },
-                // Ctrl+T: Refresh theme (manual theme detection refresh)
-                Some("t") => {
-                    if !shift_pressed {
-                        println!("Keyboard shortcut: Ctrl+T (Refresh Theme)");
-                        crate::ui::manually_refresh_themes(&window_clone);
-                        return glib::Propagation::Stop;
-                    }
-                    return glib::Propagation::Proceed;
-                },
                 // Ctrl+Z: Undo - Managed by GtkTextView but log for debugging
                 Some("z") => {
                     println!("Keyboard shortcut: Ctrl+Z (Undo) - Handled by GtkTextView");
@@ -534,7 +525,6 @@ pub fn setup_keyboard_shortcuts(
     println!("  - Ctrl+O: Open");
     println!("  - Ctrl+N: New file");
     println!("  - Ctrl+Q: Quit application");
-    println!("  - Ctrl+T: Refresh theme (manual)");
     println!("  - Ctrl+Tab/Ctrl+Shift+Tab: Switch between tabs");
     println!("  - Ctrl+PageDown/Ctrl+PageUp: Navigate between tabs");
     println!("  - Other standard shortcuts (Ctrl+C, Ctrl+V, etc.) handled by GTK");

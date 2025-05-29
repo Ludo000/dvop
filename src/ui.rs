@@ -1146,56 +1146,6 @@ fn create_theme_selection_box(label_text: &str, available_themes: &[String], cur
 /// Finds all notebooks within a window
 /// 
 /// This function finds all notebook widgets in the window.
-fn find_notebooks(window: &ApplicationWindow) -> Vec<Notebook> {
-    // For simplicity, we'll look for notebooks by their names or in specific locations
-    // This is a simplified approach - in a real application you might want to traverse
-    // the widget tree properly
-    
-    let mut result = Vec::new();
-    
-    // In this editor, we know there's a main notebook for editors
-    // We can assume it's the main editor notebook based on your application structure
-    if let Some(notebook) = window
-        .child()
-        .and_then(|child| child.first_child())
-        .and_then(|box_container| box_container.first_child()) 
-    {
-        if let Ok(notebook) = notebook.downcast::<Notebook>() {
-            result.push(notebook);
-        }
-    }
-    
-    result
-}
-
-/// Updates the themes in all sourceview buffers in a notebook
-/// 
-/// This function updates all sourceview buffers in a notebook with the current theme
-fn update_notebook_themes(notebook: &Notebook) {
-    for i in 0..notebook.n_pages() {
-        if let Some(page) = notebook.nth_page(Some(i)) {
-            // Try to find a ScrolledWindow inside the page
-            if let Some(scrolled) = page.first_child() {
-                if let Ok(scrolled_window) = scrolled.downcast::<ScrolledWindow>() {
-                    // Try to get the child of the scrolled window, which should be our SourceView
-                    if let Some(child) = scrolled_window.child() {
-                        // Check if this is a SourceView
-                        if let Ok(source_view) = child.downcast::<sourceview5::View>() {
-                            // Get the buffer and update its theme
-                            let buffer = source_view.buffer();
-                            // Here we can safely downcast to SourceBuffer
-                            if let Ok(source_buffer) = buffer.downcast::<sourceview5::Buffer>() {
-                                // Update the buffer's theme
-                                syntax::update_buffer_style_scheme(&source_buffer);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 /// Updates themes throughout the application
 /// 
 /// This function updates all theme-related components to reflect the current settings:
@@ -1248,27 +1198,4 @@ fn find_terminal_notebook(window: &ApplicationWindow) -> Option<Notebook> {
         })
 }
 
-/// Manually refreshes all themes in the application
-/// This can be called when you suspect the automatic theme detection isn't working
-pub fn manually_refresh_themes(window: &ApplicationWindow) {
-    println!("=== Manual Theme Refresh ===");
-    
-    // Debug current theme state
-    crate::syntax::debug_theme_detection();
-    
-    // Find all notebooks in the window and update their themes
-    let notebooks = find_notebooks(window);
-    for notebook in &notebooks {
-        update_notebook_themes(notebook);
-    }
-    
-    // Update terminal themes if they exist
-    if let Some(terminal_notebook) = find_terminal_notebook(window) {
-        update_all_terminal_themes(&terminal_notebook);
-    }
-    
-    // Force a complete redraw
-    window.queue_draw();
-    
-    println!("Manual theme refresh completed");
-}
+
