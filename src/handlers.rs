@@ -9,7 +9,10 @@ use gtk4::{
     TextView, Label, Picture, Notebook, MenuButton,
     
     // Dialog components
-    MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType
+    MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType,
+    
+    // Event handling
+    GestureClick, EventControllerKey,
 };
 
 // Standard library imports
@@ -1066,6 +1069,91 @@ fn setup_file_selection_handler(
     // Clone the path box option
     let path_box_option = path_box.cloned();
 
+    // Add keyboard support for file deletion
+    let key_controller = EventControllerKey::new();
+    let file_list_box_for_key = file_list_box.clone();
+    let editor_notebook_for_key = editor_notebook.clone();
+    let active_tab_path_for_key = active_tab_path_ref.clone();
+    let file_path_manager_for_key = file_path_manager.clone();
+    let current_dir_for_key = current_dir.clone();
+    let window_for_key = window.clone();
+    
+    key_controller.connect_key_pressed(move |_controller, keyval, _keycode, _state| {
+        if keyval == gtk4::gdk::Key::Delete {
+            // Get the selected row
+            if let Some(selected_row) = file_list_box_for_key.selected_row() {
+                if let Some(label) = selected_row.child().and_then(|c| c.downcast::<Label>().ok()) {
+                    let file_name = label.text();
+                    let mut file_path = current_dir_for_key.borrow().clone();
+                    file_path.push(&file_name.as_str());
+                    
+                    // Only delete files, not directories
+                    if file_path.is_file() {
+                        handle_file_deletion(
+                            &file_path,
+                            &window_for_key,
+                            &file_list_box_for_key,
+                            &current_dir_for_key,
+                            &active_tab_path_for_key,
+                            &editor_notebook_for_key,
+                            &file_path_manager_for_key,
+                        );
+                        return glib::Propagation::Stop;
+                    }
+                }
+            }
+        }
+        glib::Propagation::Proceed
+    });
+    
+    file_list_box.add_controller(key_controller);
+
+    // Add right-click context menu support
+    let right_click_gesture = GestureClick::new();
+    right_click_gesture.set_button(3); // Right mouse button
+    
+    let file_list_box_for_context = file_list_box.clone();
+    let editor_notebook_for_context = editor_notebook.clone();
+    let active_tab_path_for_context = active_tab_path_ref.clone();
+    let file_path_manager_for_context = file_path_manager.clone();
+    let current_dir_for_context = current_dir.clone();
+    let window_for_context = window.clone();
+    
+    right_click_gesture.connect_pressed(move |gesture, _n_press, x, y| {
+        // Find which row was clicked
+        if let Some(row) = file_list_box_for_context.row_at_y(y as i32) {
+            // Select the row that was right-clicked
+            file_list_box_for_context.select_row(Some(&row));
+            
+            if let Some(label) = row.child().and_then(|c| c.downcast::<Label>().ok()) {
+                let file_name = label.text();
+                let mut file_path = current_dir_for_context.borrow().clone();
+                file_path.push(&file_name.as_str());
+                
+                // Only show context menu for files, not directories
+                if file_path.is_file() {
+                    // Get the widget that triggered the gesture for proper coordinate conversion
+                    if let Some(widget) = gesture.widget() {
+                        show_file_context_menu(
+                            &file_path,
+                            &window_for_context,
+                            &file_list_box_for_context,
+                            &current_dir_for_context,
+                            &active_tab_path_for_context,
+                            &editor_notebook_for_context,
+                            &file_path_manager_for_context,
+                            &widget,
+                            &row,
+                            x,
+                            y,
+                        );
+                    }
+                }
+            }
+        }
+    });
+    
+    file_list_box.add_controller(right_click_gesture);
 
     file_list_box.connect_row_activated(move |_, row| {
         // Clone necessary items again for the inner part of the closure if they are used across awaits or complex logic
@@ -1256,4 +1344,199 @@ fn close_empty_untitled_tabs(notebook: &Notebook, file_path_manager: &Rc<RefCell
     for page_num in tabs_to_remove {
         notebook.remove_page(Some(page_num));
     }
+}
+
+/// Shows a confirmation dialog and deletes a file if confirmed
+///
+/// This function displays a warning dialog to the user asking for confirmation
+/// before deleting the specified file. If confirmed, the file is deleted and
+/// the file list is refreshed.
+pub fn handle_file_deletion(
+    file_path: &PathBuf,
+    window: &ApplicationWindow,
+    file_list_box: &ListBox,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+    editor_notebook: &Notebook,
+    file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+) {
+    let file_name = file_path.file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| "Unknown file".to_string());
+    
+    // Create confirmation dialog
+    let dialog = MessageDialog::new(
+        Some(window),
+        DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
+        MessageType::Warning,
+        ButtonsType::None,
+        &format!("Are you sure you want to delete '{}'?\n\nThis action cannot be undone.", file_name)
+    );
+    
+    dialog.add_buttons(&[
+        ("Cancel", ResponseType::Cancel),
+        ("Delete", ResponseType::Accept),
+    ]);
+    
+    dialog.set_default_response(ResponseType::Cancel);
+    
+    // Clone variables for the closure
+    let file_path_clone = file_path.clone();
+    let file_list_box_clone = file_list_box.clone();
+    let current_dir_clone = current_dir.clone();
+    let active_tab_path_clone = active_tab_path.clone();
+    let editor_notebook_clone = editor_notebook.clone();
+    let file_path_manager_clone = file_path_manager.clone();
+    let window_clone = window.clone();
+    
+    dialog.connect_response(move |d, response| {
+        if response == ResponseType::Accept {
+            // User confirmed deletion
+            match std::fs::remove_file(&file_path_clone) {
+                Ok(()) => {
+                    println!("Successfully deleted file: {:?}", file_path_clone);
+                    
+                    // Check if the deleted file was open in any tab and close it
+                    close_tab_if_file_open(&editor_notebook_clone, &file_path_clone, &file_path_manager_clone, &active_tab_path_clone);
+                    
+                    // Refresh the file list
+                    utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_clone.borrow());
+                }
+                Err(e) => {
+                    eprintln!("Failed to delete file: {:?}, error: {}", file_path_clone, e);
+                    
+                    // Show error dialog
+                    let error_dialog = MessageDialog::new(
+                        Some(&window_clone),
+                        DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
+                        MessageType::Error,
+                        ButtonsType::Ok,
+                        &format!("Failed to delete file: {}", e)
+                    );
+                    error_dialog.show();
+                }
+            }
+        }
+        d.close();
+    });
+    
+    dialog.show();
+}
+
+/// Closes a tab if the specified file is currently open
+///
+/// This helper function checks all open tabs to see if any contain the specified file,
+/// and if so, closes that tab without showing save prompts (since the file is being deleted).
+fn close_tab_if_file_open(
+    notebook: &Notebook,
+    file_path: &PathBuf,
+    file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+) {
+    let manager = file_path_manager.borrow();
+    
+    // Find if the file is open in any tab
+    for (&page_num, path) in manager.iter() {
+        if path == file_path {
+            // File is open in this tab, close it without saving prompts
+            drop(manager); // Release the borrow before closing tab
+            actually_close_tab(notebook, page_num, file_path_manager, active_tab_path, None);
+            break;
+        }
+    }
+}
+
+/// Shows a context menu for file operations
+///
+/// This function creates and displays a context menu when a user right-clicks
+/// on a file in the file manager. Currently supports file deletion.
+fn show_file_context_menu(
+    file_path: &PathBuf,
+    window: &ApplicationWindow,
+    file_list_box: &ListBox,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+    editor_notebook: &Notebook,
+    file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    _gesture_widget: &gtk4::Widget,
+    clicked_row: &gtk4::ListBoxRow,
+    x: f64,
+    y: f64,
+) {
+    println!("DEBUG: Creating context menu for file: {:?}", file_path);
+    
+    // Create a simple button in a popover instead of using menu model
+    let popover = gtk4::Popover::new();
+    
+    // Create a box to hold the button
+    let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    menu_box.add_css_class("menu");
+    
+    // Create delete button
+    let delete_button = Button::with_label("Delete");
+    delete_button.add_css_class("destructive-action");
+    delete_button.set_hexpand(true);
+    
+    // Clone variables for the button closure
+    let file_path_clone = file_path.clone();
+    let window_clone = window.clone();
+    let file_list_box_clone = file_list_box.clone();
+    let current_dir_clone = current_dir.clone();
+    let active_tab_path_clone = active_tab_path.clone();
+    let editor_notebook_clone = editor_notebook.clone();
+    let file_path_manager_clone = file_path_manager.clone();
+    let popover_weak = popover.downgrade();
+    
+    delete_button.connect_clicked(move |_| {
+        println!("DEBUG: Delete button clicked!");
+        
+        // Hide the context menu first
+        if let Some(popover) = popover_weak.upgrade() {
+            popover.popdown();
+        }
+        
+        // Show deletion confirmation
+        handle_file_deletion(
+            &file_path_clone,
+            &window_clone,
+            &file_list_box_clone,
+            &current_dir_clone,
+            &active_tab_path_clone,
+            &editor_notebook_clone,
+            &file_path_manager_clone,
+        );
+    });
+    
+    menu_box.append(&delete_button);
+    popover.set_child(Some(&menu_box));
+    
+    // Set the parent to the clicked row for proper positioning
+    popover.set_parent(clicked_row);
+    
+    // Convert coordinates from gesture widget to the row widget
+    let row_allocation = clicked_row.allocation();
+    
+    // Position the menu relative to the clicked row
+    // Use a small rectangle at the click position within the row
+    let relative_x = x.max(0.0).min(row_allocation.width() as f64 - 1.0);
+    let relative_y = y.max(0.0).min(row_allocation.height() as f64 - 1.0);
+    
+    popover.set_pointing_to(Some(&gtk4::gdk::Rectangle::new(
+        relative_x as i32,
+        relative_y as i32,
+        1,
+        1
+    )));
+    
+    // Properly handle cleanup when the popover is closed
+    let popover_weak_cleanup = popover.downgrade();
+    popover.connect_closed(move |_| {
+        if let Some(popover) = popover_weak_cleanup.upgrade() {
+            popover.unparent();
+        }
+    });
+    
+    // Show the popover
+    println!("DEBUG: Showing context menu popover");
+    popover.popup();
 }
