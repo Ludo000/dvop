@@ -604,7 +604,6 @@ pub fn setup_button_handlers(
     error_label: &Label,
     picture: &Picture, 
     up_button: &Button,
-    refresh_button: &Button,
     file_list_box_clone: &ListBox, // This is likely the same as file_list_box, ensure it's used consistently
     _save_menu_button: Option<&MenuButton>, // Prefix with underscore to acknowledge it's unused
     path_box: Option<&gtk4::Box> // Optional path box for status bar
@@ -675,7 +674,6 @@ pub fn setup_button_handlers(
     // These handlers likely don't need direct access to the editor_notebook content itself
     // but might influence which file is considered "active" if that logic is centralized.
     setup_up_button_handler(up_button, current_dir, file_list_box, active_tab_path, path_box); // Pass active_tab_path and path_box
-    setup_refresh_button_handler(refresh_button, file_list_box, current_dir, active_tab_path, path_box); // Pass active_tab_path and path_box
 }
 
 fn setup_new_button_handler(
@@ -1208,29 +1206,6 @@ fn setup_up_button_handler(
             if let Some(path_box) = &path_box {
                 utils::update_path_buttons(path_box, &current_dir, &file_list_box_clone, &active_tab_path);
             }
-        }
-    });
-}
-
-fn setup_refresh_button_handler(
-    refresh_button: &Button,
-    file_list_box: &ListBox,
-    current_dir: &Rc<RefCell<PathBuf>>,
-    active_tab_path: &Rc<RefCell<Option<PathBuf>>>, // Changed from file_path
-    path_box: Option<&gtk4::Box> // Optional path box for status bar
-) {
-    let file_list_box = file_list_box.clone();
-    let current_dir = current_dir.clone();
-    let active_tab_path = active_tab_path.clone(); // Clone Rc for closure
-    let path_box = path_box.cloned(); // Clone the optional Box widget
-    
-    refresh_button.connect_clicked(move |_| {
-        // Pass the active tab\'s path for selection highlighting
-        utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow());
-        
-        // Update the path buttons if provided
-        if let Some(path_box) = &path_box {
-            utils::update_path_buttons(path_box, &current_dir, &file_list_box, &active_tab_path);
         }
     });
 }

@@ -8,6 +8,7 @@ mod settings;  // User settings and preferences
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
 use gtk4::{Application, ApplicationWindow, Label};  // Main GTK application classes
+use gtk4::Box as GtkBox;  // Box container for layout
 use gtk4::gio;          // GIO for menu and action support
 use gtk4::glib;         // GLib for clone macro and other utilities
 use std::rc::Rc;        // Reference counting for shared ownership
@@ -331,12 +332,12 @@ fn build_ui(app: &Application) {
     });
 
     // Initialize the file manager panel components
-    let (file_list_box, file_list_scrolled_window, nav_box, up_button, refresh_button, terminal_button) =
+    let (file_list_box, file_list_scrolled_window) =
         ui::create_file_manager_panel();
         
     // Assemble the file manager panel from its components
     let file_manager_panel =
-        ui::create_file_manager_panel_container(nav_box, file_list_scrolled_window);
+        ui::create_file_manager_panel_container(file_list_scrolled_window);
 
     // Define GIO actions for save operations to be used by the menu
     let save_action = gio::SimpleAction::new("save", None);
@@ -484,6 +485,22 @@ fn build_ui(app: &Application) {
         }
     });
 
+    // Create a path bar for displaying the current directory path below the header
+    let (path_bar, path_box, up_button, refresh_button, terminal_button) = ui::create_path_bar();
+    
+    // Connect the refresh button to refresh the file list
+    let file_list_box_clone_for_refresh = file_list_box.clone();
+    let current_dir_clone_for_refresh = current_dir.clone();
+    let active_tab_path_clone_for_refresh = active_tab_path.clone();
+    refresh_button.connect_clicked(move |_| {
+        // Refresh the file list
+        utils::update_file_list(
+            &file_list_box_clone_for_refresh,
+            &current_dir_clone_for_refresh.borrow(),
+            &active_tab_path_clone_for_refresh.borrow()
+        );
+    });
+    
     // Connect the terminal button to open a new terminal at the current directory
     let terminal_notebook_clone = terminal_notebook.clone();
     let current_dir_clone_for_terminal = current_dir.clone();
@@ -491,9 +508,6 @@ fn build_ui(app: &Application) {
         // Open a new terminal tab with the current directory path
         ui::add_terminal_tab(&terminal_notebook_clone, Some(current_dir_clone_for_terminal.borrow().clone()));
     });
-
-    // Create a status bar for displaying the current directory path
-    let (status_bar, path_box) = ui::create_status_bar();
     
     // Initialize the path box with clickable buttons for each directory segment
     utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
@@ -501,8 +515,16 @@ fn build_ui(app: &Application) {
     // Create the main paned layout that contains:
     // - The file manager sidebar on the left
     // - The editor notebook and terminal in a vertical split on the right
-    // - The status bar at the bottom
-    let main_container = ui::create_paned(&file_manager_panel, &editor_notebook, &terminal_notebook_box, &status_bar);
+    let paned_content = ui::create_paned(&file_manager_panel, &editor_notebook, &terminal_notebook_box);
+    
+    // Create the main container that arranges all components vertically
+    let main_container = GtkBox::new(gtk4::Orientation::Vertical, 0);
+    
+    // Add the path bar below the header
+    main_container.append(&path_bar);
+    
+    // Add the main paned content
+    main_container.append(&paned_content);
 
     // Set the custom header bar as the window's titlebar
     window.set_titlebar(Some(&header));
@@ -623,7 +645,6 @@ fn build_ui(app: &Application) {
         &error_label,          // Label for displaying errors
         &picture,              // Widget for displaying images
         &up_button,            // Navigation button for parent directory
-        &refresh_button,       // Button to refresh file list
         &file_list_box,        // File list box (duplicate param for historical reasons)
         Some(&save_menu_button), // Split button menu component
         Some(&path_box)         // Path box for the status bar with clickable segments
