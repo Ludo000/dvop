@@ -28,7 +28,9 @@ pub fn is_allowed_mime_type(mime_type: &Mime) -> bool {
     // Allow specific application types that are typically text-based
     mime_type.essence_str() == "application/xml" ||
     mime_type.essence_str() == "application/x-httpd-php" ||
-    mime_type.essence_str() == "application/x-mspublisher"
+    mime_type.essence_str() == "application/x-mspublisher" ||
+    mime_type.essence_str() == "application/x-sh"
+
 }
 
 /// Updates the file browser list with contents of the current directory
