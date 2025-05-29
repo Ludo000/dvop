@@ -7,7 +7,7 @@ mod settings;  // User settings and preferences
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
-use gtk4::{Application, ApplicationWindow};  // Main GTK application classes
+use gtk4::{Application, ApplicationWindow, Label};  // Main GTK application classes
 use gtk4::gio;          // GIO for menu and action support
 use gtk4::glib;         // GLib for clone macro and other utilities
 use std::rc::Rc;        // Reference counting for shared ownership
@@ -248,6 +248,85 @@ fn build_ui(app: &Application) {
     
     // Track the file path of the currently active tab
     let active_tab_path = Rc::new(RefCell::new(None::<PathBuf>));
+
+    // Set up window close event handler to check for unsaved changes
+    let window_clone_for_close = window.clone();
+    let editor_notebook_clone_for_close = editor_notebook.clone();
+    let file_path_manager_clone_for_close = file_path_manager.clone();
+    
+    window.connect_close_request(move |_| {
+        // Check if any tabs have unsaved changes (indicated by '*' in tab labels)
+        let notebook = &editor_notebook_clone_for_close;
+        let mut unsaved_files = Vec::new();
+        
+        // Iterate through all tabs to check for unsaved changes
+        let num_pages = notebook.n_pages();
+        for page_num in 0..num_pages {
+            if let Some(page_widget) = notebook.nth_page(Some(page_num)) {
+                if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
+                    if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                        if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                            if label.text().ends_with('*') {
+                                // Found an unsaved file - get its name
+                                let filename = file_path_manager_clone_for_close.borrow()
+                                    .get(&page_num)
+                                    .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
+                                    .unwrap_or_else(|| "Untitled".to_string());
+                                unsaved_files.push(filename);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If there are unsaved files, show confirmation dialog
+        if !unsaved_files.is_empty() {
+            let message = if unsaved_files.len() == 1 {
+                format!("You have unsaved changes in {}.\n\nAre you sure you want to close the application without saving?", unsaved_files[0])
+            } else {
+                format!("You have unsaved changes in {} files:\n• {}\n\nAre you sure you want to close the application without saving?", 
+                        unsaved_files.len(), 
+                        unsaved_files.join("\n• "))
+            };
+            
+            let dialog = gtk4::MessageDialog::new(
+                Some(&window_clone_for_close),
+                gtk4::DialogFlags::MODAL | gtk4::DialogFlags::DESTROY_WITH_PARENT,
+                gtk4::MessageType::Warning,
+                gtk4::ButtonsType::None,
+                &message
+            );
+            
+            dialog.add_buttons(&[
+                ("Close Anyway", gtk4::ResponseType::Yes),
+                ("Cancel", gtk4::ResponseType::Cancel),
+            ]);
+            
+            let window_clone_for_dialog = window_clone_for_close.clone();
+            
+            dialog.connect_response(move |d, response| {
+                d.close();
+                match response {
+                    gtk4::ResponseType::Yes => {
+                        // User chose "Close Anyway" - allow the close to proceed
+                        // We need to temporarily disconnect the close handler to avoid recursion
+                        window_clone_for_dialog.destroy();
+                    }
+                    _ => {
+                        // User chose "Cancel" or closed dialog - close was already stopped
+                        // Do nothing, the close request was already stopped
+                    }
+                }
+            });
+            
+            dialog.present();
+            return glib::Propagation::Stop; // Prevent window from closing until user decides
+        }
+        
+        // No unsaved changes, allow normal close
+        glib::Propagation::Proceed
+    });
 
     // Initialize the file manager panel components
     let (file_list_box, file_list_scrolled_window, nav_box, up_button, refresh_button, terminal_button) =
