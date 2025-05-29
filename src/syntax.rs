@@ -122,24 +122,27 @@ pub fn is_dark_mode_enabled() -> bool {
     false
 }
 
+use std::cell::Cell;
+
 // Track if we're currently getting the preferred style scheme to avoid recursive calls
-static mut GETTING_STYLE: bool = false;
+thread_local! {
+    static GETTING_STYLE: Cell<bool> = Cell::new(false);
+}
 
 /// Gets the appropriate style scheme name based on user preferences
 /// 
 /// Returns user-configured theme for light or dark mode, without fallback logic
 pub fn get_preferred_style_scheme() -> String {
     // Prevent recursive calls when refresh_settings calls back into this function
-    unsafe {
-        if GETTING_STYLE {
-            return if is_dark_mode_enabled() {
-                "solarized-dark".to_string()
-            } else {
-                "solarized-light".to_string()
-            };
-        }
-        GETTING_STYLE = true;
+    if GETTING_STYLE.with(|flag| flag.get()) {
+        return if is_dark_mode_enabled() {
+            "solarized-dark".to_string()
+        } else {
+            "solarized-light".to_string()
+        };
     }
+    
+    GETTING_STYLE.with(|flag| flag.set(true));
     
     // Get a fresh copy of settings
     let settings = crate::settings::get_settings();
@@ -156,9 +159,7 @@ pub fn get_preferred_style_scheme() -> String {
     };
     
     // Reset the flag
-    unsafe {
-        GETTING_STYLE = false;
-    }
+    GETTING_STYLE.with(|flag| flag.set(false));
     
     theme
 }
