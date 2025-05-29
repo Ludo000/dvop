@@ -228,9 +228,8 @@ pub fn update_buffer_style_scheme(buffer: &Buffer) {
         println!("Available schemes: {:?}", available_schemes);
     }
 
-    // Force the buffer to redraw with the "changed" signal
-    // This ensures the theme change is immediately visible in existing views
-    buffer.emit_by_name::<()>("changed", &[]);
+    // Note: We don't emit the "changed" signal here as it would mark clean files as dirty.
+    // The set_style_scheme() call above is sufficient to update the visual appearance.
 }
 
 /// Sets the language for syntax highlighting based on file extension
