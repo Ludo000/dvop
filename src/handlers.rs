@@ -171,23 +171,20 @@ fn create_new_empty_tab(deps: &NewTabDependencies) {
 
     // Connect close button for this new tab
     let deps_clone_for_close = deps.clone();
+    let new_scrolled_window_clone = new_scrolled_window.clone();
     tab_close_button.connect_clicked(move |_| {
-        // Find the current page number of this tab, as it might have shifted
-        if let Some(page_widget_of_tab) = new_scrolled_window.parent() { // This gets the GtkBox (tab_widget)
-             if let Some(parent_notebook) = page_widget_of_tab.parent().and_then(|p| p.downcast::<Notebook>().ok()) { // This should be editor_notebook
-                if let Some(current_idx_for_this_tab) = parent_notebook.page_num(&page_widget_of_tab.parent().unwrap()) { // page_num needs the child of notebook
-                     handle_close_tab_request(
-                        &deps_clone_for_close.editor_notebook,
-                        current_idx_for_this_tab,
-                        &deps_clone_for_close.window,
-                        &deps_clone_for_close.file_path_manager,
-                        &deps_clone_for_close.active_tab_path,
-                        &deps_clone_for_close.current_dir, // New
-                        &deps_clone_for_close.file_list_box, // New
-                        Some(deps_clone_for_close.clone())
-                    );
-                }
-             }
+        // Find the current page number of this tab using the correct widget reference
+        if let Some(current_idx_for_this_tab) = deps_clone_for_close.editor_notebook.page_num(&new_scrolled_window_clone) {
+            handle_close_tab_request(
+                &deps_clone_for_close.editor_notebook,
+                current_idx_for_this_tab,
+                &deps_clone_for_close.window,
+                &deps_clone_for_close.file_path_manager,
+                &deps_clone_for_close.active_tab_path,
+                &deps_clone_for_close.current_dir,
+                &deps_clone_for_close.file_list_box,
+                Some(deps_clone_for_close.clone())
+            );
         }
     });
 }
