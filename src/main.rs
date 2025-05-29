@@ -339,6 +339,13 @@ fn build_ui(app: &Application) {
     let file_manager_panel =
         ui::create_file_manager_panel_container(file_list_scrolled_window);
 
+    // Create the path bar with navigation buttons and path segments
+    let (path_bar, path_box, up_button, _refresh_button, _terminal_button) = ui::create_path_bar();
+    
+    // Create the main container that will hold the path bar and paned content
+    let main_container = GtkBox::new(gtk4::Orientation::Vertical, 0);
+    main_container.append(&path_bar);
+
     // Define GIO actions for save operations to be used by the menu
     let save_action = gio::SimpleAction::new("save", None);
     let save_as_action = gio::SimpleAction::new("save-as", None);
@@ -485,29 +492,8 @@ fn build_ui(app: &Application) {
         }
     });
 
-    // Create a path bar for displaying the current directory path below the header
-    let (path_bar, path_box, up_button, refresh_button, terminal_button) = ui::create_path_bar();
-    
-    // Connect the refresh button to refresh the file list
-    let file_list_box_clone_for_refresh = file_list_box.clone();
-    let current_dir_clone_for_refresh = current_dir.clone();
-    let active_tab_path_clone_for_refresh = active_tab_path.clone();
-    refresh_button.connect_clicked(move |_| {
-        // Refresh the file list
-        utils::update_file_list(
-            &file_list_box_clone_for_refresh,
-            &current_dir_clone_for_refresh.borrow(),
-            &active_tab_path_clone_for_refresh.borrow()
-        );
-    });
-    
-    // Connect the terminal button to open a new terminal at the current directory
-    let terminal_notebook_clone = terminal_notebook.clone();
-    let current_dir_clone_for_terminal = current_dir.clone();
-    terminal_button.connect_clicked(move |_| {
-        // Open a new terminal tab with the current directory path
-        ui::add_terminal_tab(&terminal_notebook_clone, Some(current_dir_clone_for_terminal.borrow().clone()));
-    });
+    // Track the current file selection source for click-outside detection
+    let current_selection_source = Rc::new(RefCell::new(utils::FileSelectionSource::TabSwitch));
     
     // Initialize the path box with clickable buttons for each directory segment
     utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
@@ -517,12 +503,60 @@ fn build_ui(app: &Application) {
     // - The editor notebook and terminal in a vertical split on the right
     let paned_content = ui::create_paned(&file_manager_panel, &editor_notebook, &terminal_notebook_box);
     
-    // Create the main container that arranges all components vertically
-    let main_container = GtkBox::new(gtk4::Orientation::Vertical, 0);
+    // Add click-outside detection for file manager to switch from DirectClick to TabSwitch styling
+    // This allows the file manager to revert to subtle highlighting when focus is lost
+    let click_controller = gtk4::GestureClick::new();
+    let file_list_box_clone_for_click_outside = file_list_box.clone();
+    let file_manager_panel_clone = file_manager_panel.clone();
+    let current_dir_clone_for_click_outside = current_dir.clone();
+    let active_tab_path_clone_for_click_outside = active_tab_path.clone();
+    let current_selection_source_clone = current_selection_source.clone();
     
-    // Add the path bar below the header
-    main_container.append(&path_bar);
+    click_controller.connect_pressed(move |_gesture, _n_press, x, y| {
+        println!("Click detected at coordinates: ({}, {})", x, y);
+        
+        // Check if the current selection is DirectClick (only then do we need to switch)
+        if *current_selection_source_clone.borrow() == utils::FileSelectionSource::DirectClick {
+            println!("Current selection is DirectClick, checking if click is outside file manager");
+            
+            // Check if the click was outside the file manager panel bounds
+            let file_manager_allocation = file_manager_panel_clone.allocation();
+            let fm_x = file_manager_allocation.x() as f64;
+            let fm_y = file_manager_allocation.y() as f64;
+            let fm_width = file_manager_allocation.width() as f64;
+            let fm_height = file_manager_allocation.height() as f64;
+            
+            println!("File manager bounds: x={}, y={}, width={}, height={}", fm_x, fm_y, fm_width, fm_height);
+            
+            let clicked_outside_file_manager = x < fm_x || 
+                y < fm_y ||
+                x > (fm_x + fm_width) || 
+                y > (fm_y + fm_height);
+            
+            if clicked_outside_file_manager {
+                println!("Click outside file manager detected! Switching from DirectClick to TabSwitch styling");
+                
+                // Update selection source to TabSwitch
+                *current_selection_source_clone.borrow_mut() = utils::FileSelectionSource::TabSwitch;
+                
+                // Update file list to use TabSwitch styling instead of DirectClick
+                utils::update_file_list(
+                    &file_list_box_clone_for_click_outside,
+                    &current_dir_clone_for_click_outside.borrow(),
+                    &active_tab_path_clone_for_click_outside.borrow(),
+                    utils::FileSelectionSource::TabSwitch
+                );
+            } else {
+                println!("Click was inside file manager bounds");
+            }
+        } else {
+            println!("Current selection is not DirectClick, ignoring click");
+        }
+    });
     
+    // Add the click controller to the main window to capture all clicks
+    window.add_controller(click_controller);
+
     // Add the main paned content
     main_container.append(&paned_content);
 
@@ -531,7 +565,7 @@ fn build_ui(app: &Application) {
 
     // Initialize the file browser panel with the current directory contents
     // Initially there's no active file selection since we start with an empty "Untitled" tab
-    utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow());
+    utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow(), utils::FileSelectionSource::TabSwitch);
     
     // Set up the save menu button visibility for the default text plain content type
     // This is appropriate for the initial empty "Untitled" document
@@ -571,7 +605,7 @@ fn build_ui(app: &Application) {
                     *current_dir_clone_for_switch.borrow_mut() = parent_path;
                     
                     // Update the file list to show the new directory
-                    utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_clone_for_switch.borrow(), &new_active_path);
+                    utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_clone_for_switch.borrow(), &new_active_path, utils::FileSelectionSource::TabSwitch);
                     
                     // Update the path buttons to reflect the new current directory
                     utils::update_path_buttons(&path_box_clone_for_switch, &current_dir_clone_for_switch, &file_list_box_clone_for_switch, &active_tab_path_clone_for_switch);
@@ -583,7 +617,7 @@ fn build_ui(app: &Application) {
 
         // Update file list highlighting to show the current file (only if directory didn't change)
         let current_dir_path_clone = current_dir_clone_for_switch.borrow().clone(); 
-        utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_path_clone, &new_active_path);
+        utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_path_clone, &new_active_path, utils::FileSelectionSource::TabSwitch);
 
         // Determine the MIME type from the file path
         let mime_type = new_active_path.as_ref()
@@ -667,7 +701,8 @@ fn build_ui(app: &Application) {
         &up_button,            // Navigation button for parent directory
         &file_list_box,        // File list box (duplicate param for historical reasons)
         Some(&save_menu_button), // Split button menu component
-        Some(&path_box)         // Path box for the status bar with clickable segments
+        Some(&path_box),        // Path box for the status bar with clickable segments
+        &current_selection_source, // Track selection source for click-outside detection
     );
 
     // Show the main window to display the application

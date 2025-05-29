@@ -805,6 +805,25 @@ fn get_path_navigation_styles() -> &'static str {
     .file-manager-panel listbox {
         background-color: @view_bg_color;
     }
+    
+    /* === FILE SELECTION STYLING === */
+    
+    /* File selected by tab switch - subtle highlight */
+    .file-selected-by-tab {
+        background-color: alpha(@theme_selected_bg_color, 0.7);
+    }
+    
+    /* File selected by direct click - more prominent highlight */
+    .file-selected-by-click {
+        background-color: alpha(@theme_selected_bg_color, 1);
+        box-shadow: 0 1px 2px alpha(#000, 0.1);
+    }
+    .file-selected-by-tab * {
+        text-decoration: underline;
+    }
+    .file-selected-by-click * {
+        text-decoration: underline overline;
+    }
     "
 }
 

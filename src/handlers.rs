@@ -144,7 +144,7 @@ fn create_new_empty_tab(deps: &NewTabDependencies) {
     let active_path_for_update = deps.active_tab_path.borrow().clone(); // Will be None here
     
     // Update the file browser to reflect the current state
-    utils::update_file_list(&deps.file_list_box, &current_dir_path_clone, &active_path_for_update);
+    utils::update_file_list(&deps.file_list_box, &current_dir_path_clone, &active_path_for_update, utils::FileSelectionSource::TabSwitch);
     
     // Enable save buttons appropriate for plain text content
     utils::update_save_buttons_visibility(
@@ -345,7 +345,7 @@ pub fn handle_close_tab_request(
                                                         if let Some(parent) = file_to_save.parent() {
                                                             *cd_save_as.borrow_mut() = parent.to_path_buf();
                                                         }
-                                                        utils::update_file_list(&flb_save_as, &cd_save_as.borrow(), &atp_save_as.borrow());
+                                                        utils::update_file_list(&flb_save_as, &cd_save_as.borrow(), &atp_save_as.borrow(), utils::FileSelectionSource::TabSwitch);
                                                         actually_close_tab(&nc_save_as, page_num_to_close, &fpm_save_as, &atp_save_as, ntd_save_as.as_ref());
                                                     } else { eprintln!("Error writing to new file: {:?}", file_to_save); }
                                                 }
@@ -438,7 +438,7 @@ fn actually_close_tab(
             
             // If we have dependencies provided, update the file list selection
             if let Some(deps) = new_tab_deps {
-                utils::update_file_list(&deps.file_list_box, &deps.current_dir.borrow(), &active_tab_path_rc.borrow());
+                utils::update_file_list(&deps.file_list_box, &deps.current_dir.borrow(), &active_tab_path_rc.borrow(), utils::FileSelectionSource::TabSwitch);
             }
         }
         // The re-indexing above should have handled this.
@@ -606,7 +606,8 @@ pub fn setup_button_handlers(
     up_button: &Button,
     file_list_box_clone: &ListBox, // This is likely the same as file_list_box, ensure it's used consistently
     _save_menu_button: Option<&MenuButton>, // Prefix with underscore to acknowledge it's unused
-    path_box: Option<&gtk4::Box> // Optional path box for status bar
+    path_box: Option<&gtk4::Box>, // Optional path box for status bar
+    current_selection_source: &Rc<RefCell<utils::FileSelectionSource>>, // Track selection source for click-outside detection
 ) {
     setup_new_button_handler(
         new_button,
@@ -669,6 +670,7 @@ pub fn setup_button_handlers(
         window, // Pass window
         _save_menu_button, // Pass save_menu_button with the renamed parameter
         path_box, // Pass the path box for status bar with clickable segments
+        current_selection_source, // Pass the selection source tracker for click-outside detection
     );
 
     // These handlers likely don't need direct access to the editor_notebook content itself
@@ -817,7 +819,7 @@ fn setup_open_button_handler(
                             if let Some(parent) = file_to_open.parent() {
                                 let parent_path = parent.to_path_buf();
                                 *current_dir_clone.borrow_mut() = parent_path.clone();
-                                utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow());
+                                utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow(), utils::FileSelectionSource::TabSwitch);
                             }
                         }
                     } else if mime_type.type_() == "image" {
@@ -839,7 +841,7 @@ fn setup_open_button_handler(
 
                         if let Some(parent) = file_to_open.parent() {
                             *current_dir_clone.borrow_mut() = parent.to_path_buf();
-                            utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow());
+                            utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow(), utils::FileSelectionSource::TabSwitch);
                         }
                     } else {
                         // Handle unsupported file types
@@ -860,7 +862,7 @@ fn setup_open_button_handler(
 
                         if let Some(parent) = file_to_open.parent() {
                             *current_dir_clone.borrow_mut() = parent.to_path_buf();
-                            utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow());
+                            utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow(), utils::FileSelectionSource::TabSwitch);
                         }
                     }
                 }
@@ -937,7 +939,7 @@ fn setup_save_button_handler(
                                     if let Some(parent) = file.parent() {
                                         *current_dir_clone.borrow_mut() = parent.to_path_buf();
                                     }
-                                    utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow());
+                                    utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow(), utils::FileSelectionSource::TabSwitch);
                                 }
                             }
                         }
@@ -1026,7 +1028,7 @@ fn setup_save_as_button_handler(
                                     if let Some(parent) = file_to_save.parent() {
                                         *current_dir_clone.borrow_mut() = parent.to_path_buf();
                                     }
-                                     utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow());
+                                     utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow(), utils::FileSelectionSource::TabSwitch);
                                 }
                             }
                         }
@@ -1052,7 +1054,8 @@ fn setup_file_selection_handler(
     save_as_button: &Button,
     window: &ApplicationWindow, // Added for NewTabDependencies
     _save_menu_button: Option<&MenuButton>, // Prefix with _ to acknowledge it's unused currently
-    path_box: Option<&gtk4::Box> // Optional path box for status bar with clickable segments
+    path_box: Option<&gtk4::Box>, // Optional path box for status bar with clickable segments
+    current_selection_source: &Rc<RefCell<utils::FileSelectionSource>>, // Track selection source for click-outside detection
 ) {
     let editor_notebook_clone = editor_notebook.clone(); // Renamed for clarity
     let active_tab_path_ref_clone = active_tab_path_ref.clone();
@@ -1068,6 +1071,8 @@ fn setup_file_selection_handler(
     let save_menu_button_option = _save_menu_button.map(|btn| btn.clone());
     // Clone the path box option
     let path_box_option = path_box.cloned();
+    // Clone the selection source tracker
+    let current_selection_source_clone = current_selection_source.clone();
 
     // Add keyboard support for file deletion
     let key_controller = EventControllerKey::new();
@@ -1171,6 +1176,8 @@ fn setup_file_selection_handler(
         let window_for_handler = window_clone.clone();
         // Clone the already-owned option
         let save_menu_button_for_handler = save_menu_button_option.clone();
+        // Clone the selection source tracker for this closure
+        let current_selection_source_for_handler = current_selection_source_clone.clone();
 
 
         if let Some(label) = row.child().and_then(|c| c.downcast::<Label>().ok()) {
@@ -1185,7 +1192,7 @@ fn setup_file_selection_handler(
             
             if path_from_list.is_dir() {
                 *current_dir_for_handler.borrow_mut() = path_from_list.clone();
-                utils::update_file_list(&file_list_box_for_handler_update, &current_dir_for_handler.borrow(), &active_tab_path_for_handler.borrow());
+                utils::update_file_list(&file_list_box_for_handler_update, &current_dir_for_handler.borrow(), &active_tab_path_for_handler.borrow(), utils::FileSelectionSource::TabSwitch);
                 file_list_box_for_handler_update.grab_focus(); // Add this line to shift focus
                 
                 // Update the path buttons if provided
@@ -1211,11 +1218,14 @@ fn setup_file_selection_handler(
                             &current_dir_for_handler,
                             save_menu_button_for_handler.as_ref(), // Pass the save menu button option
                         );
-                        // Ensure the list reflects the newly opened file as active
+                        // Ensure the list reflects the newly opened file as active with DirectClick styling
+                        // and update the selection source tracker
+                        *current_selection_source_clone.borrow_mut() = utils::FileSelectionSource::DirectClick;
                         utils::update_file_list(
                             &file_list_box_for_handler_update,
                             &current_dir_for_handler.borrow(),
-                            &active_tab_path_for_handler.borrow()
+                            &active_tab_path_for_handler.borrow(),
+                            utils::FileSelectionSource::DirectClick
                         );
                     }
                 } else if mime_type.type_() == "image" {
@@ -1234,11 +1244,14 @@ fn setup_file_selection_handler(
                         &current_dir_for_handler,
                         save_menu_button_for_handler.as_ref() // Pass the save menu button option
                     );
-                    // Ensure the list reflects the newly opened file as active
+                    // Ensure the list reflects the newly opened file as active with DirectClick styling
+                    // and update the selection source tracker
+                    *current_selection_source_for_handler.borrow_mut() = utils::FileSelectionSource::DirectClick;
                     utils::update_file_list(
                         &file_list_box_for_handler_update,
                         &current_dir_for_handler.borrow(),
-                        &active_tab_path_for_handler.borrow()
+                        &active_tab_path_for_handler.borrow(),
+                        utils::FileSelectionSource::DirectClick
                     );
                 } else {
                     // Handle unsupported file type in a new tab
@@ -1256,11 +1269,14 @@ fn setup_file_selection_handler(
                         &current_dir_for_handler,
                         save_menu_button_for_handler.as_ref(), // Pass the save menu button option
                     );
-                    // Ensure the list reflects the newly opened file as active
+                    // Ensure the list reflects the newly opened file as active with DirectClick styling
+                    // and update the selection source tracker
+                    *current_selection_source_for_handler.borrow_mut() = utils::FileSelectionSource::DirectClick;
                     utils::update_file_list(
                         &file_list_box_for_handler_update,
                         &current_dir_for_handler.borrow(),
-                        &active_tab_path_for_handler.borrow()
+                        &active_tab_path_for_handler.borrow(),
+                        utils::FileSelectionSource::DirectClick
                     );
                 }
             }
@@ -1285,7 +1301,7 @@ fn setup_up_button_handler(
         if path.pop() {
             *current_dir.borrow_mut() = path.clone();
             // Pass the active tab\'s path for selection highlighting
-            utils::update_file_list(&file_list_box_clone, &current_dir.borrow(), &active_tab_path.borrow());
+            utils::update_file_list(&file_list_box_clone, &current_dir.borrow(), &active_tab_path.borrow(), utils::FileSelectionSource::TabSwitch);
             
             // Update the path buttons if provided
             if let Some(path_box) = &path_box {
@@ -1400,7 +1416,7 @@ pub fn handle_file_deletion(
                     close_tab_if_file_open(&editor_notebook_clone, &file_path_clone, &file_path_manager_clone, &active_tab_path_clone);
                     
                     // Refresh the file list
-                    utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_clone.borrow());
+                    utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_clone.borrow(), utils::FileSelectionSource::TabSwitch);
                 }
                 Err(e) => {
                     eprintln!("Failed to delete file: {:?}, error: {}", file_path_clone, e);

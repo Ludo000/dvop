@@ -9,6 +9,15 @@ use std::cell::RefCell;
 use mime_guess;
 use mime_guess::Mime;
 
+/// Represents the source of file selection for different visual styling
+#[derive(Clone, Copy, PartialEq)]
+pub enum FileSelectionSource {
+    /// File was selected by switching tabs
+    TabSwitch,
+    /// File was selected by direct click in file manager
+    DirectClick,
+}
+
 /// Checks if a MIME type is supported for editing in the text editor
 ///
 /// This function determines whether a file with the given MIME type
@@ -36,8 +45,13 @@ pub fn is_allowed_mime_type(mime_type: &Mime) -> bool {
 /// Updates the file browser list with contents of the current directory
 ///
 /// This function refreshes the file list to show folders and files in the current directory,
-/// and highlights the currently open file if applicable.
-pub fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_path: &Option<PathBuf>) {
+/// and highlights the currently open file if applicable with different styling based on selection source.
+pub fn update_file_list(
+    file_list_box: &ListBox, 
+    current_dir: &PathBuf, 
+    file_path: &Option<PathBuf>,
+    selection_source: FileSelectionSource,
+) {
     // Clear the existing list contents
     while let Some(child) = file_list_box.first_child() {
         file_list_box.remove(&child);
@@ -107,7 +121,19 @@ pub fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_pat
         if let Some(ref open_file_full_path) = file_path {
             let current_entry_full_path = entry.path(); // Get PathBuf from DirEntry
             if &current_entry_full_path == open_file_full_path {
-                label.set_markup(&format!("<u>{}</u>", file_name_str));
+                // Apply different styling based on selection source
+                match selection_source {
+                    FileSelectionSource::TabSwitch => {
+                        // For tab switches, use a subtle CSS class
+                        row.add_css_class("file-selected-by-tab");
+                        label.set_markup(&format!("{}", file_name_str));
+                    },
+                    FileSelectionSource::DirectClick => {
+                        // For direct clicks, use a more prominent CSS class
+                        row.add_css_class("file-selected-by-click");
+                        label.set_markup(&format!("{}", file_name_str));
+                    },
+                }
                 selected_row = Some(row.clone());
             }
         }
@@ -122,6 +148,13 @@ pub fn update_file_list(file_list_box: &ListBox, current_dir: &PathBuf, file_pat
     } else {
         file_list_box.unselect_all();
     }
+}
+
+/// Backward-compatible wrapper for update_file_list with default TabSwitch behavior
+/// 
+/// This function provides compatibility for existing calls that don't specify selection source
+pub fn update_file_list_default(file_list_box: &ListBox, current_dir: &PathBuf, file_path: &Option<PathBuf>) {
+    update_file_list(file_list_box, current_dir, file_path, FileSelectionSource::TabSwitch);
 }
 
 /// Updates the visibility of save buttons based on content type
@@ -324,7 +357,8 @@ pub fn update_path_buttons(
             update_file_list(
                 &file_list_box_clone,
                 &current_dir_clone.borrow(),
-                &active_tab_path_clone.borrow()
+                &active_tab_path_clone.borrow(),
+                FileSelectionSource::TabSwitch
             );
             
             // Update path buttons to reflect the new current directory
