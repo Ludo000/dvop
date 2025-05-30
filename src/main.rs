@@ -300,9 +300,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     println!("=== Theme Detection at Startup ===");
     syntax::debug_theme_detection();
     
-    // Set up keyboard shortcuts for common operations
-    utils::setup_keyboard_shortcuts(&window, &save_button, &open_button, &new_button, &save_as_button, Some(&editor_notebook));
-    
     // Ensure the initial buffer gets the correct theme based on dark mode setting
     if let Some(source_buffer) = initial_text_buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
         syntax::update_buffer_style_scheme(source_buffer);
@@ -408,6 +405,20 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Create the path bar with navigation buttons and path segments
     let (path_bar, path_box, up_button, _refresh_button, terminal_button) = ui::create_path_bar();
     
+    // Set up keyboard shortcuts for common operations (including Ctrl+L for path editing)
+    utils::setup_keyboard_shortcuts(
+        &window, 
+        &save_button, 
+        &open_button, 
+        &new_button, 
+        &save_as_button, 
+        Some(&editor_notebook),
+        Some(&path_box),
+        Some(&current_dir),
+        Some(&file_list_box),
+        Some(&active_tab_path)
+    );
+
     // Create the main container that will hold the path bar and paned content
     let main_container = GtkBox::new(gtk4::Orientation::Vertical, 0);
     main_container.append(&path_bar);

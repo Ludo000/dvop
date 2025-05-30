@@ -2,12 +2,13 @@
 // This module contains helper functions used throughout the application
 
 use gtk4::prelude::*;
-use gtk4::{Button, ListBox, MenuButton, pango, ApplicationWindow, EventControllerKey, gdk, glib};
+use gtk4::{Button, ListBox, MenuButton, pango, ApplicationWindow, EventControllerKey, gdk, glib, Entry};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::cell::RefCell;
 use mime_guess;
 use mime_guess::Mime;
+use home;
 
 /// Represents the source of file selection for different visual styling
 #[derive(Clone, Copy, PartialEq)]
@@ -382,6 +383,180 @@ pub fn update_path_buttons(
     }
 }
 
+/// Toggles between showing path buttons and an input entry for manual path editing
+/// 
+/// This function implements the Ctrl+L functionality where the user can press Ctrl+L
+/// to replace the clickable path buttons with a text input field where they can
+/// manually type a path and press Enter to navigate to it.
+pub fn toggle_path_input_mode(
+    path_box: &gtk4::Box,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    file_list_box: &gtk4::ListBox,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>
+) {
+    // Check if we're already in input mode by looking for an Entry widget
+    let mut has_entry = false;
+    let mut child = path_box.first_child();
+    while let Some(current_child) = child {
+        if current_child.downcast_ref::<Entry>().is_some() {
+            has_entry = true;
+            break;
+        }
+        child = current_child.next_sibling();
+    }
+    
+    if has_entry {
+        // We're in input mode, switch back to buttons
+        restore_path_buttons(path_box, current_dir, file_list_box, active_tab_path);
+    } else {
+        // We're in button mode, switch to input
+        show_path_input(path_box, current_dir, file_list_box, active_tab_path);
+    }
+}
+
+/// Shows a text input field for manual path entry
+fn show_path_input(
+    path_box: &gtk4::Box,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    file_list_box: &gtk4::ListBox,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>
+) {
+    // Clear existing buttons
+    while let Some(child) = path_box.first_child() {
+        path_box.remove(&child);
+    }
+    
+    // Ensure the path_box is configured to expand properly
+    path_box.set_hexpand(true);
+    path_box.set_halign(gtk4::Align::Fill);
+    path_box.set_homogeneous(false);  // Allow children to have different sizes
+    
+    // Create a text entry widget that takes all available space
+    let entry = Entry::new();
+    entry.set_hexpand(true);  // Expand horizontally to fill available space
+    entry.set_halign(gtk4::Align::Fill);  // Fill the entire width
+    entry.set_valign(gtk4::Align::Center);  // Center vertically
+    entry.set_width_request(-1);  // No minimum width restriction
+    entry.set_size_request(-1, -1);  // No size restrictions
+    entry.set_placeholder_text(Some("Enter path..."));
+    entry.add_css_class("path-input");  // Add CSS class for styling
+    
+    // Set the current path as the initial text
+    let current_path_str = current_dir.borrow().display().to_string();
+    entry.set_text(&current_path_str);
+    
+    // Select all text so user can immediately start typing
+    entry.select_region(0, -1);
+    
+    // Clone references for the closure
+    let current_dir_clone = current_dir.clone();
+    let file_list_box_clone = file_list_box.clone();
+    let active_tab_path_clone = active_tab_path.clone();
+    let path_box_weak = glib::object::WeakRef::new();
+    path_box_weak.set(Some(path_box));
+    
+    // Handle Enter key press to navigate to the entered path
+    entry.connect_activate(move |entry| {
+        let entered_path = entry.text();
+        let path_str = entered_path.as_str();
+        
+        // Try to parse and validate the path
+        let new_path = if path_str.starts_with("~/") {
+            // Handle home directory expansion
+            if let Some(home_dir) = home::home_dir() {
+                home_dir.join(&path_str[2..])
+            } else {
+                PathBuf::from(path_str)
+            }
+        } else if path_str.starts_with("~") && path_str.len() == 1 {
+            // Just ~ means home directory
+            home::home_dir().unwrap_or_else(|| PathBuf::from("/"))
+        } else {
+            PathBuf::from(path_str)
+        };
+        
+        // Check if the path exists and is a directory
+        if new_path.exists() && new_path.is_dir() {
+            // Update current directory
+            *current_dir_clone.borrow_mut() = new_path;
+            
+            // Update file list
+            update_file_list(
+                &file_list_box_clone,
+                &current_dir_clone.borrow(),
+                &active_tab_path_clone.borrow(),
+                FileSelectionSource::TabSwitch
+            );
+            
+            // Restore path buttons
+            if let Some(pb) = path_box_weak.upgrade() {
+                if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
+                    restore_path_buttons(box_widget, &current_dir_clone, &file_list_box_clone, &active_tab_path_clone);
+                }
+            }
+        } else {
+            // Invalid path - show error and keep input mode
+            entry.add_css_class("error");
+            entry.set_tooltip_text(Some("Invalid path or directory does not exist"));
+            
+            // Remove error styling after a short delay
+            let entry_weak = glib::object::WeakRef::new();
+            entry_weak.set(Some(entry));
+            glib::timeout_add_local_once(std::time::Duration::from_secs(3), move || {
+                if let Some(e) = entry_weak.upgrade() {
+                    if let Some(entry_widget) = e.downcast_ref::<Entry>() {
+                        entry_widget.remove_css_class("error");
+                        entry_widget.set_tooltip_text(None);
+                    }
+                }
+            });
+        }
+    });
+    
+    // Handle Escape key to cancel and restore buttons
+    let key_controller = EventControllerKey::new();
+    let path_box_weak_esc = glib::object::WeakRef::new();
+    path_box_weak_esc.set(Some(path_box));
+    let current_dir_clone_esc = current_dir.clone();
+    let file_list_box_clone_esc = file_list_box.clone();
+    let active_tab_path_clone_esc = active_tab_path.clone();
+    
+    key_controller.connect_key_pressed(move |_controller, keyval, _keycode, _state| {
+        if keyval == gdk::Key::Escape {
+            // Restore path buttons without changing directory
+            if let Some(pb) = path_box_weak_esc.upgrade() {
+                if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
+                    restore_path_buttons(box_widget, &current_dir_clone_esc, &file_list_box_clone_esc, &active_tab_path_clone_esc);
+                }
+            }
+            return glib::Propagation::Stop;
+        }
+        glib::Propagation::Proceed
+    });
+    
+    entry.add_controller(key_controller);
+    
+    // Add the entry to the path box and focus it
+    path_box.append(&entry);
+    entry.grab_focus();
+}
+
+/// Restores the clickable path buttons from input mode
+fn restore_path_buttons(
+    path_box: &gtk4::Box,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    file_list_box: &gtk4::ListBox,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>
+) {
+    // Clear the input widget
+    while let Some(child) = path_box.first_child() {
+        path_box.remove(&child);
+    }
+    
+    // Restore the normal path buttons
+    update_path_buttons(path_box, current_dir, file_list_box, active_tab_path);
+}
+
 /// Sets up common keyboard shortcuts for the application
 ///
 /// This function adds keyboard shortcuts like Ctrl+S for saving, Ctrl+O for opening files,
@@ -392,7 +567,11 @@ pub fn setup_keyboard_shortcuts(
     open_button: &Button, 
     new_button: &Button, 
     save_as_button: &Button,
-    editor_notebook: Option<&gtk4::Notebook>
+    editor_notebook: Option<&gtk4::Notebook>,
+    path_box: Option<&gtk4::Box>,
+    current_dir: Option<&Rc<RefCell<PathBuf>>>,
+    file_list_box: Option<&gtk4::ListBox>,
+    active_tab_path: Option<&Rc<RefCell<Option<PathBuf>>>>
 ) {
     // Create a key event controller
     let key_controller = EventControllerKey::new();
@@ -406,6 +585,12 @@ pub fn setup_keyboard_shortcuts(
     
     // Clone notebook for use in the closure
     let editor_notebook_clone = editor_notebook.cloned();
+    
+    // Clone path-related references for Ctrl+L functionality
+    let path_box_clone = path_box.cloned();
+    let current_dir_clone = current_dir.cloned();
+    let file_list_box_clone = file_list_box.cloned();
+    let active_tab_path_clone = active_tab_path.cloned();
     
     // Connect the key pressed event
     key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
@@ -545,6 +730,21 @@ pub fn setup_keyboard_shortcuts(
                              if keyval.name().as_deref() == Some("y") { "Y" } else { "Shift+Z" });
                     return glib::Propagation::Proceed; // Let GtkTextView handle it
                 },
+                // Ctrl+L: Focus location bar / Edit path manually
+                Some("l") => {
+                    println!("Keyboard shortcut: Ctrl+L (Edit Path)");
+                    // Call the function to toggle path input mode
+                    if let (Some(pb), Some(cd), Some(flb), Some(atp)) = (
+                        &path_box_clone, 
+                        &current_dir_clone, 
+                        &file_list_box_clone, 
+                        &active_tab_path_clone
+                    ) {
+                        toggle_path_input_mode(pb, cd, flb, atp);
+                        return glib::Propagation::Stop;
+                    }
+                    return glib::Propagation::Proceed;
+                },
                 // Let other Ctrl shortcuts pass through to the editor (like Ctrl+C, Ctrl+V)
                 _ => {}
             }
@@ -563,6 +763,7 @@ pub fn setup_keyboard_shortcuts(
     println!("  - Ctrl+Shift+S: Save As");
     println!("  - Ctrl+O: Open");
     println!("  - Ctrl+N: New file");
+    println!("  - Ctrl+L: Edit path manually");
     println!("  - Ctrl+Q: Quit application");
     println!("  - Ctrl+Tab/Ctrl+Shift+Tab: Switch between tabs");
     println!("  - Ctrl+PageDown/Ctrl+PageUp: Navigate between tabs");

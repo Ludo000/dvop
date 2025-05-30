@@ -793,6 +793,37 @@ fn get_path_navigation_styles() -> &'static str {
         font-family: monospace;
     }
     
+    /* === PATH INPUT ENTRY STYLES === */
+    
+    entry.path-input {
+        margin: 1px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        /* Ensure the entry takes all available space */
+        min-width: 0;
+    }
+    
+    entry.path-input.error {
+        border-color: #e74c3c;
+        background-color: alpha(#e74c3c, 0.1);
+    }
+    
+    @keyframes shake {
+        0%, 20%, 40%, 60%, 80%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    }
+        color: #e74c3c;
+        animation: path-entry-error 0.3s ease;
+    }
+    
+    @keyframes path-entry-error {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(-2px); }
+        50% { transform: translateX(2px); }
+        75% { transform: translateX(-1px); }
+        100% { transform: translateX(0); }
+    }
+    
     /* === NAVIGATION SECTION STYLES === */
     
     .file-manager-panel {
