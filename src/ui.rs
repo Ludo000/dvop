@@ -811,19 +811,27 @@ fn get_path_navigation_styles() -> &'static str {
     
     /* File selected by tab switch - subtle highlight */
     .file-selected-by-tab {
-        background-color: alpha(@theme_selected_bg_color, 0.7);
+        border: 2px solid @theme_selected_bg_color;
+        border-left: 4px solid @theme_selected_bg_color;
+        background-color: alpha(@theme_selected_bg_color, 0);
+        border-radius: 0 6px 6px 0;
+        margin-left: 2px;
+        margin-right: 4px;
+        transition: all 0.2s ease;
+        color: @theme_fg_color;
     }
     
-    /* File selected by direct click - more prominent highlight */
+    /* File selected by direct click - more prominent highlight with icon */
     .file-selected-by-click {
         background-color: alpha(@theme_selected_bg_color, 1);
-        box-shadow: 0 1px 2px alpha(#000, 0.1);
-    }
-    .file-selected-by-tab * {
-        text-decoration: underline;
-    }
-    .file-selected-by-click * {
-        text-decoration: underline overline;
+        border-left: 4px solid @theme_selected_bg_color;
+        border-right: 2px solid alpha(@theme_selected_bg_color, 1);
+        border-top: 2px solid alpha(@theme_selected_bg_color, 1);
+        border-bottom: 2px solid alpha(@theme_selected_bg_color, 1);
+        border-radius: 0 6px 6px 0;
+        margin-left: 2px;
+        margin-right: 4px;
+        box-shadow: 0 2px 4px alpha(#000, 0.15);
     }
     "
 }

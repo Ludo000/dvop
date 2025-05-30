@@ -131,7 +131,7 @@ pub fn update_file_list(
                     FileSelectionSource::DirectClick => {
                         // For direct clicks, use a more prominent CSS class
                         row.add_css_class("file-selected-by-click");
-                        label.set_markup(&format!("{}", file_name_str));
+                        label.set_markup(&format!("<u>{}</u>", file_name_str));
                     },
                 }
                 selected_row = Some(row.clone());
