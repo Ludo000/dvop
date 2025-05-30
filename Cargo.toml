@@ -12,3 +12,4 @@ mime_guess = "2.0"
 gdk-pixbuf = "0.18"
 sourceview5 = "0.9.1"  # For syntax highlighting
 once_cell = "1.21"  # For thread-safe lazy initialization
+clap = { version = "4.0", features = ["derive"] }  # Command line argument parsing

@@ -16,15 +16,51 @@ use std::cell::RefCell; // Interior mutability pattern
 use std::collections::HashMap; // For mapping tab indices to file paths
 use std::path::PathBuf;        // File system path representation
 use std::io::Write;            // File writing capabilities
+use clap::Parser;       // Command line argument parsing
+
+/// Command line arguments for the Basado Text Editor
+#[derive(Parser, Debug, Clone)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// File to open
+    #[arg(help = "Path to the file to open")]
+    file: Option<PathBuf>,
+}
 
 /// Application entry point - initializes the GTK application and runs the main loop
 fn main() {
+    // Check for help and version flags before GTK takes over
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 {
+        if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
+            Args::parse(); // This will show help and exit
+            return;
+        }
+        if args.contains(&"--version".to_string()) || args.contains(&"-V".to_string()) {
+            Args::parse(); // This will show version and exit
+            return;
+        }
+    }
+    
+    // Parse command line arguments (mainly for non-GTK cases)
+    let parsed_args = Args::try_parse().unwrap_or_else(|_| Args { file: None });
+    
+    // Debug output
+    println!("Command line args parsed: {:?}", parsed_args);
+    if let Some(ref file) = parsed_args.file {
+        println!("File to open: {:?}", file);
+    } else {
+        println!("No file specified");
+    }
+    
     // Initialize user settings first
     settings::initialize_settings();
     
     // Create the main GTK application with a unique application ID
+    // Set flags to handle file opening
     let app = Application::builder()
         .application_id("com.example.BasadoTextEditor")
+        .flags(gio::ApplicationFlags::HANDLES_OPEN)
         .build();
     
     // Force GTK to respect system dark mode settings
@@ -46,10 +82,37 @@ fn main() {
         }
     });
     
-    // Connect the activate signal to the build_ui function
-    app.connect_activate(build_ui);
+    // Connect the activate signal to the build_ui function with file argument
+    let args_for_activate = parsed_args.clone();
+    app.connect_activate(move |app| {
+        println!("activate signal called!");
+        build_ui(app, args_for_activate.file.clone());
+    });
+
+    // Connect the open signal to handle file opening from command line
+    app.connect_open(move |app, files, _hint| {
+        println!("open signal called with {} files", files.len());
+        if let Some(file) = files.first() {
+            if let Some(path) = file.path() {
+                println!("Opening file from command line: {:?}", path);
+                build_ui(app, Some(path));
+            } else {
+                println!("File has no path, opening without file");
+                build_ui(app, None);
+            }
+        } else {
+            println!("No files provided to open signal");
+            build_ui(app, None);
+        }
+    });
+    
+    // Add startup signal for debugging
+    app.connect_startup(|_| {
+        println!("startup signal called!");
+    });
     
     // Start the GTK main loop
+    println!("Starting app.run()");
     app.run();
 }
 
@@ -151,7 +214,10 @@ pub fn update_all_buffer_themes(window: &gtk4::ApplicationWindow) {
 
 
 /// Builds the user interface and sets up event handlers
-fn build_ui(app: &Application) {
+fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
+    // Debug output
+    println!("build_ui called with file_to_open: {:?}", file_to_open);
+    
     // Create the main application window
     let window = ui::create_window(app);
     
@@ -712,6 +778,111 @@ fn build_ui(app: &Application) {
         // Add a new terminal tab in the current directory
         ui::add_terminal_tab(&terminal_notebook_clone_for_terminal_button, Some(current_dir_clone_for_terminal_button.borrow().clone()));
     });
+
+    // Handle file opening from command line arguments
+    println!("Checking file_to_open: {:?}", file_to_open);
+    if let Some(ref file_path) = file_to_open {
+        println!("Processing file argument: {:?}", file_path);
+        // Check if the file exists and is readable
+        if file_path.exists() {
+            if file_path.is_file() {
+                // Close any empty untitled tabs before opening the file
+                handlers::close_empty_untitled_tabs(&editor_notebook, &file_path_manager);
+                
+                let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                
+                if utils::is_allowed_mime_type(&mime_type) {
+                    // Try to read the file content
+                    match std::fs::read_to_string(&file_path) {
+                        Ok(content) => {
+                            // Open the file in a new tab
+                            handlers::open_or_focus_tab(
+                                &editor_notebook,
+                                &file_path,
+                                &content,
+                                &active_tab_path,
+                                &file_path_manager,
+                                &save_button,
+                                &save_as_button,
+                                &mime_type,
+                                &window,
+                                &file_list_box,
+                                &current_dir,
+                                Some(&save_menu_button),
+                            );
+                            
+                            // Update current directory to the file's parent directory
+                            if let Some(parent) = file_path.parent() {
+                                *current_dir.borrow_mut() = parent.to_path_buf();
+                                utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow(), utils::FileSelectionSource::TabSwitch);
+                                utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
+                            }
+                            
+                            println!("Successfully opened file: {:?}", file_path);
+                        }
+                        Err(e) => {
+                            eprintln!("Error reading file {:?}: {}", file_path, e);
+                            // Could show an error dialog here in the future
+                        }
+                    }
+                } else if mime_type.type_() == "image" {
+                    // Handle image files
+                    handlers::open_or_focus_tab(
+                        &editor_notebook,
+                        &file_path,
+                        "", // Empty content for images
+                        &active_tab_path,
+                        &file_path_manager,
+                        &save_button,
+                        &save_as_button,
+                        &mime_type,
+                        &window,
+                        &file_list_box,
+                        &current_dir,
+                        Some(&save_menu_button),
+                    );
+                    
+                    // Update current directory to the file's parent directory
+                    if let Some(parent) = file_path.parent() {
+                        *current_dir.borrow_mut() = parent.to_path_buf();
+                        utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow(), utils::FileSelectionSource::TabSwitch);
+                        utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
+                    }
+                    
+                    println!("Successfully opened image file: {:?}", file_path);
+                } else {
+                    // Handle unsupported file types by opening them with empty content
+                    handlers::open_or_focus_tab(
+                        &editor_notebook,
+                        &file_path,
+                        "", // Empty content for unsupported files
+                        &active_tab_path,
+                        &file_path_manager,
+                        &save_button,
+                        &save_as_button,
+                        &mime_type,
+                        &window,
+                        &file_list_box,
+                        &current_dir,
+                        Some(&save_menu_button),
+                    );
+                    
+                    // Update current directory to the file's parent directory
+                    if let Some(parent) = file_path.parent() {
+                        *current_dir.borrow_mut() = parent.to_path_buf();
+                        utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow(), utils::FileSelectionSource::TabSwitch);
+                        utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
+                    }
+                    
+                    println!("Opened unsupported file type: {:?}", file_path);
+                }
+            } else {
+                eprintln!("Error: {:?} is not a file", file_path);
+            }
+        } else {
+            eprintln!("Error: File {:?} does not exist", file_path);
+        }
+    }
 
     // Show the main window to display the application
     window.show();

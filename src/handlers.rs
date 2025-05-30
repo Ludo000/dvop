@@ -453,7 +453,7 @@ fn actually_close_tab(
 
 
 // Helper function to open a file in a new tab or focus if already open
-fn open_or_focus_tab(
+pub fn open_or_focus_tab(
     notebook: &Notebook,
     file_to_open: &PathBuf,
     content: &str,
@@ -1330,7 +1330,7 @@ fn setup_up_button_handler(
 /// 
 /// This function checks if there's an empty untitled tab and closes it
 /// when opening a new file or creating a new tab.
-fn close_empty_untitled_tabs(notebook: &Notebook, file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>) {
+pub fn close_empty_untitled_tabs(notebook: &Notebook, file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>) {
     // Only proceed if there are pages to check
     if notebook.n_pages() == 0 {
         return;
