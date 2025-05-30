@@ -394,13 +394,29 @@ pub fn toggle_path_input_mode(
     file_list_box: &gtk4::ListBox,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>
 ) {
-    // Check if we're already in input mode by looking for an Entry widget
+    // Check if we're already in input mode by looking for an Entry widget or input container
     let mut has_entry = false;
     let mut child = path_box.first_child();
     while let Some(current_child) = child {
+        // Check if this child is an Entry widget directly
         if current_child.downcast_ref::<Entry>().is_some() {
             has_entry = true;
             break;
+        }
+        // Check if this child is a Box that might contain our input container
+        if let Some(child_box) = current_child.downcast_ref::<gtk4::Box>() {
+            // Check if this box contains an Entry (our input container)
+            let mut inner_child = child_box.first_child();
+            while let Some(inner_current) = inner_child {
+                if inner_current.downcast_ref::<Entry>().is_some() {
+                    has_entry = true;
+                    break;
+                }
+                inner_child = inner_current.next_sibling();
+            }
+            if has_entry {
+                break;
+            }
         }
         child = current_child.next_sibling();
     }
@@ -431,6 +447,12 @@ fn show_path_input(
     path_box.set_halign(gtk4::Align::Fill);
     path_box.set_homogeneous(false);  // Allow children to have different sizes
     
+    // Create a horizontal container for the entry and close button
+    let input_container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    input_container.set_hexpand(true);
+    input_container.set_halign(gtk4::Align::Fill);
+    input_container.add_css_class("path-input-container");
+    
     // Create a text entry widget that takes all available space
     let entry = Entry::new();
     entry.set_hexpand(true);  // Expand horizontally to fill available space
@@ -440,6 +462,15 @@ fn show_path_input(
     entry.set_size_request(-1, -1);  // No size restrictions
     entry.set_placeholder_text(Some("Enter path..."));
     entry.add_css_class("path-input");  // Add CSS class for styling
+    
+    // Create a close button
+    let close_button = Button::new();
+    let close_icon = gtk4::Image::from_icon_name("window-close-symbolic");
+    close_button.set_child(Some(&close_icon));
+    close_button.set_tooltip_text(Some("Cancel path editing (Esc)"));
+    close_button.add_css_class("flat");  // Make it look less prominent
+    close_button.add_css_class("path-input-close");
+    close_button.set_valign(gtk4::Align::Center);
     
     // Set the current path as the initial text
     let current_path_str = current_dir.borrow().display().to_string();
@@ -536,8 +567,28 @@ fn show_path_input(
     
     entry.add_controller(key_controller);
     
-    // Add the entry to the path box and focus it
-    path_box.append(&entry);
+    // Connect close button click to restore path buttons
+    let path_box_weak_close = glib::object::WeakRef::new();
+    path_box_weak_close.set(Some(path_box));
+    let current_dir_clone_close = current_dir.clone();
+    let file_list_box_clone_close = file_list_box.clone();
+    let active_tab_path_clone_close = active_tab_path.clone();
+    
+    close_button.connect_clicked(move |_| {
+        // Restore path buttons without changing directory
+        if let Some(pb) = path_box_weak_close.upgrade() {
+            if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
+                restore_path_buttons(box_widget, &current_dir_clone_close, &file_list_box_clone_close, &active_tab_path_clone_close);
+            }
+        }
+    });
+    
+    // Add the entry and close button to the container
+    input_container.append(&entry);
+    input_container.append(&close_button);
+    
+    // Add the input container to the path box and focus the entry
+    path_box.append(&input_container);
     entry.grab_focus();
 }
 

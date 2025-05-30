@@ -796,9 +796,10 @@ fn get_path_navigation_styles() -> &'static str {
     /* === PATH INPUT ENTRY STYLES === */
     
     entry.path-input {
-        margin: 1px;
-        padding: 4px 8px;
-        border-radius: 4px;
+        margin: 1px 0 1px 1px;
+        padding: 2px 6px;
+        border-radius: 4px 0 0 4px;
+        border-right: none;
         /* Ensure the entry takes all available space */
         min-width: 0;
     }
@@ -808,22 +809,33 @@ fn get_path_navigation_styles() -> &'static str {
         background-color: alpha(#e74c3c, 0.1);
     }
     
-    @keyframes shake {
-        0%, 20%, 40%, 60%, 80%, 100% { transform: translateX(0); }
-        10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-    }
-        color: #e74c3c;
-        animation: path-entry-error 0.3s ease;
+    /* === PATH INPUT CLOSE BUTTON STYLES === */
+    
+    button.path-input-close {
+        border-left: none;
+        border-top: 1px solid alpha(@theme_fg_color, 0.3);
+        border-right: 1px solid alpha(@theme_fg_color, 0.3);
+        border-bottom: 1px solid alpha(@theme_fg_color, 0.3);
+        border-radius: 0 6px 6px 0;
+        margin: 1px 1px 1px 0;
+        padding: 2px 4px;
+        min-width: 20px;
+        min-height: 24px;
+        max-height: 24px;
+        background-color: shade(@theme_bg_color, 0.95);
+        transition: all 0.15s ease;
     }
     
-    @keyframes path-entry-error {
-        0% { transform: translateX(0); }
-        25% { transform: translateX(-2px); }
-        50% { transform: translateX(2px); }
-        75% { transform: translateX(-1px); }
-        100% { transform: translateX(0); }
+    button.path-input-close:hover {
+        background-color: alpha(@theme_selected_bg_color, 0.1);
+        border-color: alpha(@theme_selected_bg_color, 0.5);
     }
     
+    button.path-input-close:active {
+        background-color: alpha(@theme_selected_bg_color, 0.2);
+        border-color: @theme_selected_bg_color;
+    }
+
     /* === NAVIGATION SECTION STYLES === */
     
     .file-manager-panel {
@@ -863,6 +875,23 @@ fn get_path_navigation_styles() -> &'static str {
         margin-left: 2px;
         margin-right: 4px;
         box-shadow: 0 2px 4px alpha(#000, 0.15);
+    }
+
+    /* === PATH INPUT CONTAINER STYLES === */
+    
+    .path-input-container {
+        margin: 0;
+        padding: 0;
+    }
+    
+    .path-input-container entry {
+        min-height: 24px;
+        max-height: 24px;
+    }
+    
+    .path-input-container button {
+        min-height: 24px;
+        max-height: 24px;
     }
     "
 }
