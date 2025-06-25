@@ -598,6 +598,7 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     let key_controller = gtk4::EventControllerKey::new();
     let popover_clone = popover.clone();
     let list_box_clone = list_box.clone();
+    let scrolled_clone = scrolled.clone();
     
     key_controller.connect_key_pressed(move |_, keyval, _, _| {
         println!("Popover key pressed: {:?}", keyval);
@@ -621,6 +622,8 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                     let next_index = selected_row.index() + 1;
                     if let Some(next_row) = list_box_clone.row_at_index(next_index) {
                         list_box_clone.select_row(Some(&next_row));
+                        // Scroll to make the selected row visible
+                        scroll_to_row(&scrolled_clone, &next_row);
                     }
                 }
                 glib::Propagation::Stop
@@ -631,6 +634,8 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                     let prev_index = selected_row.index().saturating_sub(1);
                     if let Some(prev_row) = list_box_clone.row_at_index(prev_index) {
                         list_box_clone.select_row(Some(&prev_row));
+                        // Scroll to make the selected row visible
+                        scroll_to_row(&scrolled_clone, &prev_row);
                     }
                 }
                 glib::Propagation::Stop
@@ -656,6 +661,36 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     println!("ListBox has_focus: {}", list_box.has_focus());
     
     println!("Custom completion popup displayed with {} suggestions", suggestions_with_content.len());
+}
+
+/// Helper function to scroll to a specific row in the scrolled window
+fn scroll_to_row(scrolled: &ScrolledWindow, row: &gtk4::ListBoxRow) {
+    // Get the row's allocation (position and size)
+    let row_allocation = row.allocation();
+    let row_height = row_allocation.height() as f64;
+    let row_y = row_allocation.y() as f64;
+    
+    // Get the scrolled window's viewport
+    if let Some(_viewport) = scrolled.child() {
+        let adjustment = scrolled.vadjustment();
+        let current_scroll = adjustment.value();
+        let page_size = adjustment.page_size();
+        
+        // Calculate if we need to scroll
+        let visible_top = current_scroll;
+        let visible_bottom = current_scroll + page_size;
+        
+        // If the row is above the visible area, scroll up to it
+        if row_y < visible_top {
+            adjustment.set_value(row_y);
+        }
+        // If the row is below the visible area, scroll down to show it
+        else if row_y + row_height > visible_bottom {
+            let new_scroll = (row_y + row_height) - page_size;
+            adjustment.set_value(new_scroll.max(0.0));
+        }
+        // If the row is already visible, don't scroll
+    }
 }
 
 /// Setup keyboard shortcuts for completion with improved auto-trigger
