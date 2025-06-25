@@ -346,19 +346,47 @@ pub fn trigger_completion(source_view: &View) {
     // If no suggestions, add some default ones only if no prefix
     if suggestions_with_content.is_empty() {
         if prefix.is_empty() {
-            // Only show default suggestions if there's no prefix at all
-            let defaults = vec![
-                ("fn (snippet)".to_string(), CompletionItem::Snippet("fn".to_string(), 
-                    "fn function_name(parameters) -> return_type {\n    // body\n}".to_string())),
-                ("let (keyword)".to_string(), CompletionItem::Keyword("let".to_string())),
-                ("mut (keyword)".to_string(), CompletionItem::Keyword("mut".to_string())),
-                ("if (keyword)".to_string(), CompletionItem::Keyword("if".to_string())),
-                ("else (keyword)".to_string(), CompletionItem::Keyword("else".to_string())),
-                ("match (snippet)".to_string(), CompletionItem::Snippet("match".to_string(),
-                    "match expression {\n    pattern => result,\n}".to_string())),
-            ];
+            // Show comprehensive default suggestions based on language
+            let defaults = match language.as_str() {
+                "rust" => vec![
+                    ("fn (snippet)".to_string(), CompletionItem::Snippet("fn".to_string(), 
+                        "fn function_name(parameters) -> return_type {\n    // body\n}".to_string())),
+                    ("struct (snippet)".to_string(), CompletionItem::Snippet("struct".to_string(),
+                        "struct Name {\n    field: Type,\n}".to_string())),
+                    ("impl (snippet)".to_string(), CompletionItem::Snippet("impl".to_string(),
+                        "impl Type {\n    // methods\n}".to_string())),
+                    ("match (snippet)".to_string(), CompletionItem::Snippet("match".to_string(),
+                        "match expression {\n    pattern => result,\n}".to_string())),
+                    ("if (snippet)".to_string(), CompletionItem::Snippet("if".to_string(),
+                        "if condition {\n    // body\n}".to_string())),
+                    ("for (snippet)".to_string(), CompletionItem::Snippet("for".to_string(),
+                        "for item in iterator {\n    // body\n}".to_string())),
+                    ("async_fn (snippet)".to_string(), CompletionItem::Snippet("async_fn".to_string(),
+                        "async fn function_name(parameters) -> return_type {\n    // async body\n}".to_string())),
+                    ("test (snippet)".to_string(), CompletionItem::Snippet("test".to_string(),
+                        "#[test]\nfn test_name() {\n    // test code\n}".to_string())),
+                    ("vec_new (snippet)".to_string(), CompletionItem::Snippet("vec_new".to_string(),
+                        "let vec = Vec::new();".to_string())),
+                    ("result (snippet)".to_string(), CompletionItem::Snippet("result".to_string(),
+                        "Result<T, E>".to_string())),
+                    ("let (keyword)".to_string(), CompletionItem::Keyword("let".to_string())),
+                    ("mut (keyword)".to_string(), CompletionItem::Keyword("mut".to_string())),
+                    ("pub (keyword)".to_string(), CompletionItem::Keyword("pub".to_string())),
+                    ("use (keyword)".to_string(), CompletionItem::Keyword("use".to_string())),
+                ],
+                _ => vec![
+                    ("fn (snippet)".to_string(), CompletionItem::Snippet("fn".to_string(), 
+                        "fn function_name(parameters) -> return_type {\n    // body\n}".to_string())),
+                    ("let (keyword)".to_string(), CompletionItem::Keyword("let".to_string())),
+                    ("mut (keyword)".to_string(), CompletionItem::Keyword("mut".to_string())),
+                    ("if (keyword)".to_string(), CompletionItem::Keyword("if".to_string())),
+                    ("else (keyword)".to_string(), CompletionItem::Keyword("else".to_string())),
+                    ("match (snippet)".to_string(), CompletionItem::Snippet("match".to_string(),
+                        "match expression {\n    pattern => result,\n}".to_string())),
+                ]
+            };
             suggestions_with_content = defaults;
-            println!("Using default suggestions for empty prefix");
+            println!("Using default {} suggestions for empty prefix", language);
         } else {
             println!("No suggestions found for prefix: '{}'", prefix);
             // Don't add test_completion fallback if we have a specific prefix
@@ -758,72 +786,50 @@ pub fn get_completion_documentation(keyword: &str, language: &str) -> String {
 /// Expand snippet content by removing placeholders and converting to simple text
 /// For now, this is a basic implementation that removes ${n:placeholder} syntax
 fn expand_snippet_content(content: &str) -> String {
-    let mut result = content.to_string();
+    // Use regex to find and replace all snippet placeholders ${n:default_text}
+    // For now, we'll use a simple parser since regex is not available
     
-    // Simple replacement for common snippet patterns
-    // ${1:function_name} -> function_name
-    // ${2:parameters} -> parameters
-    // etc.
-    
-    // Replace common placeholders with their default text
-    result = result.replace("${1:function_name}", "function_name");
-    result = result.replace("${2:parameters}", "parameters");
-    result = result.replace("${3:return_type}", "return_type");
-    result = result.replace("${4:// body}", "// body");
-    result = result.replace("${1:Name}", "Name");
-    result = result.replace("${2:field}", "field");
-    result = result.replace("${3:Type}", "Type");
-    result = result.replace("${1:Type}", "Type");
-    result = result.replace("${2:// methods}", "// methods");
-    result = result.replace("${1:expression}", "expression");
-    result = result.replace("${2:pattern}", "pattern");
-    result = result.replace("${3:result}", "result");
-    result = result.replace("${1:condition}", "condition");
-    result = result.replace("${2:// body}", "// body");
-    result = result.replace("${1:item}", "item");
-    result = result.replace("${2:iterator}", "iterator");
-    result = result.replace("${3:// body}", "// body");
-    result = result.replace("${1:// body}", "// body");
-    result = result.replace("${1:// code}", "// code");
-    result = result.replace("${1:test_name}", "test_name");
-    result = result.replace("${2:// test code}", "// test code");
-    result = result.replace("${1:Debug, Clone}", "Debug, Clone");
-    result = result.replace("${2:Name}", "Name");
-    result = result.replace("${3:field}", "field");
-    result = result.replace("${4:Type}", "Type");
-    result = result.replace("${1:Name}", "Name");
-    result = result.replace("${2:Variant1}", "Variant1");
-    result = result.replace("${3:Variant2}", "Variant2");
-    result = result.replace("${4:Type}", "Type");
-    result = result.replace("${1:module_name}", "module_name");
-    result = result.replace("${2:// module contents}", "// module contents");
-    result = result.replace("${1:crate}", "crate");
-    result = result.replace("${2:module}", "module");
-    result = result.replace("${3:item}", "item");
-    result = result.replace("${1:TraitName}", "TraitName");
-    result = result.replace("${2:// trait methods}", "// trait methods");
-    
-    // Remove any remaining ${n} patterns
-    let chars: Vec<char> = result.chars().collect();
+    let mut result = String::new();
+    let chars: Vec<char> = content.chars().collect();
     let mut i = 0;
-    let mut output = String::new();
     
     while i < chars.len() {
         if i + 2 < chars.len() && chars[i] == '$' && chars[i + 1] == '{' {
             // Find the closing brace
             let mut j = i + 2;
-            while j < chars.len() && chars[j] != '}' {
+            let mut brace_count = 1;
+            
+            while j < chars.len() && brace_count > 0 {
+                if chars[j] == '{' {
+                    brace_count += 1;
+                } else if chars[j] == '}' {
+                    brace_count -= 1;
+                }
                 j += 1;
             }
-            if j < chars.len() {
-                // Skip the entire ${...} pattern
-                i = j + 1;
+            
+            if brace_count == 0 {
+                // Extract the placeholder content
+                let placeholder: String = chars[i + 2..j - 1].iter().collect();
+                
+                // Parse ${n:default_text} format
+                if let Some(colon_pos) = placeholder.find(':') {
+                    // Extract the default text after the colon
+                    let default_text = &placeholder[colon_pos + 1..];
+                    result.push_str(default_text);
+                } else {
+                    // Just a number, use generic placeholder
+                    result.push_str("placeholder");
+                }
+                
+                i = j;
                 continue;
             }
         }
-        output.push(chars[i]);
+        
+        result.push(chars[i]);
         i += 1;
     }
     
-    output
+    result
 }
