@@ -1,0 +1,121 @@
+// Java language completion provider
+
+use super::LanguageProvider;
+
+pub struct JavaProvider;
+
+impl LanguageProvider for JavaProvider {
+    fn keywords(&self) -> &[&'static str] {
+        &[
+            "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class",
+            "const", "continue", "default", "do", "double", "else", "enum", "extends", "final",
+            "finally", "float", "for", "goto", "if", "implements", "import", "instanceof", "int",
+            "interface", "long", "native", "new", "package", "private", "protected", "public",
+            "return", "short", "static", "strictfp", "super", "switch", "synchronized", "this",
+            "throw", "throws", "transient", "try", "void", "volatile", "while", "true", "false",
+            "null", "String", "System", "out", "println", "print", "Scanner", "ArrayList",
+            "HashMap", "HashSet", "List", "Map", "Set", "Collection", "Iterator", "Exception",
+            "Object", "Class", "Thread", "Runnable", "Integer", "Double", "Boolean", "Character"
+        ]
+    }
+
+    fn snippets(&self) -> &[(&'static str, &'static str)] {
+        &[
+            ("main", "public static void main(String[] args) {\n    ${1:// code}\n}"),
+            ("class", "public class ${1:ClassName} {\n    ${2:// class members}\n}"),
+            ("method", "${1:public} ${2:void} ${3:methodName}(${4:parameters}) {\n    ${5:// body}\n}"),
+            ("constructor", "public ${1:ClassName}(${2:parameters}) {\n    ${3:// constructor body}\n}"),
+            ("if", "if (${1:condition}) {\n    ${2:// body}\n}"),
+            ("for", "for (${1:int i = 0}; ${2:i < length}; ${3:i++}) {\n    ${4:// body}\n}"),
+            ("enhanced_for", "for (${1:Type} ${2:item} : ${3:collection}) {\n    ${4:// body}\n}"),
+            ("while", "while (${1:condition}) {\n    ${2:// body}\n}"),
+            ("try", "try {\n    ${1:// code}\n} catch (${2:Exception} ${3:e}) {\n    ${4:// handle exception}\n}"),
+            ("switch", "switch (${1:expression}) {\n    case ${2:value}:\n        ${3:// code}\n        break;\n    default:\n        ${4:// default}\n        break;\n}"),
+            ("interface", "public interface ${1:InterfaceName} {\n    ${2:// interface methods}\n}"),
+            ("enum", "public enum ${1:EnumName} {\n    ${2:VALUE1}, ${3:VALUE2}\n}"),
+            ("import", "import ${1:package.ClassName};"),
+            ("package", "package ${1:com.example.package};"),
+            ("sysout", "System.out.println(${1:\"Hello World\"});"),
+        ]
+    }
+
+    fn get_documentation(&self, keyword: &str) -> String {
+        match keyword {
+            "class" => "class keyword - Define a class\n\nSyntax: public class Name { }".to_string(),
+            "interface" => "interface keyword - Define an interface\n\nSyntax: public interface Name { }".to_string(),
+            "enum" => "enum keyword - Define enumeration\n\nSyntax: enum Name { VALUE1, VALUE2 }".to_string(),
+            "public" => "public modifier - Makes members accessible everywhere".to_string(),
+            "private" => "private modifier - Restricts access to the same class".to_string(),
+            "protected" => "protected modifier - Accessible within package and subclasses".to_string(),
+            "static" => "static modifier - Belongs to class rather than instance\n\nUsage: static void method()".to_string(),
+            "final" => "final modifier - Cannot be overridden/extended\n\nUsage: final class/method/variable".to_string(),
+            "abstract" => "abstract modifier - Must be implemented by subclass\n\nUsage: abstract class/method".to_string(),
+            "synchronized" => "synchronized modifier - Thread-safe access\n\nUsage: synchronized method/block".to_string(),
+            "volatile" => "volatile modifier - Prevents compiler optimization\n\nUsage: volatile variable".to_string(),
+            "transient" => "transient modifier - Excludes from serialization\n\nUsage: transient field".to_string(),
+            "native" => "native modifier - Implemented in native code\n\nUsage: native method".to_string(),
+            "strictfp" => "strictfp modifier - Ensures floating-point precision\n\nUsage: strictfp class/method".to_string(),
+            "extends" => "extends keyword - Class inheritance\n\nSyntax: class Child extends Parent".to_string(),
+            "implements" => "implements keyword - Interface implementation\n\nSyntax: class Name implements Interface".to_string(),
+            "super" => "super keyword - Reference to parent class\n\nUsage: super.method() or super(args)".to_string(),
+            "this" => "this keyword - Reference to current object\n\nUsage: this.field or this(args)".to_string(),
+            "new" => "new operator - Create object instance\n\nUsage: Type obj = new Type(args);".to_string(),
+            "instanceof" => "instanceof operator - Type checking\n\nUsage: if (obj instanceof Type)".to_string(),
+            "import" => "import statement - Import classes/packages\n\nSyntax: import package.ClassName;".to_string(),
+            "package" => "package statement - Define package\n\nSyntax: package com.example.name;".to_string(),
+            "if" => "if statement - Conditional execution\n\nSyntax: if (condition) { body }".to_string(),
+            "else" => "else clause - Alternative execution\n\nSyntax: if (condition) { } else { }".to_string(),
+            "for" => "for loop - Iterate with counter\n\nSyntax: for (init; condition; increment) { body }".to_string(),
+            "while" => "while loop - Execute while condition is true\n\nSyntax: while (condition) { body }".to_string(),
+            "do" => "do-while loop - Execute at least once\n\nSyntax: do { body } while (condition);".to_string(),
+            "switch" => "switch statement - Multi-way branching\n\nSyntax: switch (expr) { case value: break; }".to_string(),
+            "case" => "case label - Switch case\n\nSyntax: case value: statements; break;".to_string(),
+            "default" => "default label - Switch default case\n\nSyntax: default: statements; break;".to_string(),
+            "break" => "break statement - Exit loop or switch\n\nUsage: break;".to_string(),
+            "continue" => "continue statement - Skip iteration\n\nUsage: continue;".to_string(),
+            "return" => "return statement - Return from method\n\nSyntax: return value;".to_string(),
+            "try" => "try statement - Exception handling\n\nSyntax: try { code } catch (Exception e) { }".to_string(),
+            "catch" => "catch clause - Handle exceptions\n\nSyntax: catch (ExceptionType e) { handler }".to_string(),
+            "finally" => "finally clause - Always executed code\n\nSyntax: try { } finally { cleanup }".to_string(),
+            "throw" => "throw statement - Throw exception\n\nSyntax: throw new Exception(\"message\");".to_string(),
+            "throws" => "throws clause - Declare exceptions\n\nSyntax: void method() throws Exception".to_string(),
+            "assert" => "assert statement - Runtime assertion\n\nSyntax: assert condition : message;".to_string(),
+            "String" => "String class - Immutable character sequence\n\nMethods: length(), charAt(), substring()".to_string(),
+            "System" => "System class - System utilities\n\nMembers: out, in, err, currentTimeMillis()".to_string(),
+            "out" => "System.out - Standard output stream\n\nMethods: println(), print(), printf()".to_string(),
+            "println" => "println() - Print line to stdout\n\nUsage: System.out.println(value);".to_string(),
+            "print" => "print() - Print to stdout without newline\n\nUsage: System.out.print(value);".to_string(),
+            "Scanner" => "Scanner class - Input parsing\n\nMethods: next(), nextInt(), nextLine(), hasNext()".to_string(),
+            "ArrayList" => "ArrayList class - Resizable array\n\nMethods: add(), get(), set(), remove(), size()".to_string(),
+            "HashMap" => "HashMap class - Hash table implementation\n\nMethods: put(), get(), remove(), containsKey()".to_string(),
+            "HashSet" => "HashSet class - Hash set implementation\n\nMethods: add(), remove(), contains(), size()".to_string(),
+            "List" => "List interface - Ordered collection\n\nImplementations: ArrayList, LinkedList, Vector".to_string(),
+            "Map" => "Map interface - Key-value mapping\n\nImplementations: HashMap, TreeMap, LinkedHashMap".to_string(),
+            "Set" => "Set interface - Unique elements collection\n\nImplementations: HashSet, TreeSet, LinkedHashSet".to_string(),
+            "Collection" => "Collection interface - Root collection interface\n\nSubinterfaces: List, Set, Queue".to_string(),
+            "Iterator" => "Iterator interface - Traverse collections\n\nMethods: hasNext(), next(), remove()".to_string(),
+            "Exception" => "Exception class - Base exception class\n\nSubclasses: RuntimeException, IOException, etc.".to_string(),
+            "Object" => "Object class - Root of class hierarchy\n\nMethods: toString(), equals(), hashCode()".to_string(),
+            "Class" => "Class class - Runtime class information\n\nMethods: getName(), newInstance(), getMethods()".to_string(),
+            "Thread" => "Thread class - Thread of execution\n\nMethods: start(), run(), sleep(), join()".to_string(),
+            "Runnable" => "Runnable interface - Task for thread execution\n\nMethod: run()".to_string(),
+            "Integer" => "Integer class - Integer wrapper\n\nMethods: parseInt(), valueOf(), intValue()".to_string(),
+            "Double" => "Double class - Double wrapper\n\nMethods: parseDouble(), valueOf(), doubleValue()".to_string(),
+            "Boolean" => "Boolean class - Boolean wrapper\n\nMethods: parseBoolean(), valueOf(), booleanValue()".to_string(),
+            "Character" => "Character class - Character wrapper\n\nMethods: isDigit(), isLetter(), toLowerCase()".to_string(),
+            "null" => "null literal - Null reference\n\nUsage: Object obj = null;".to_string(),
+            "true" => "true literal - Boolean true value".to_string(),
+            "false" => "false literal - Boolean false value".to_string(),
+            "void" => "void keyword - No return value\n\nUsage: public void method()".to_string(),
+            "boolean" => "boolean type - Boolean primitive\n\nValues: true, false".to_string(),
+            "byte" => "byte type - 8-bit signed integer\n\nRange: -128 to 127".to_string(),
+            "short" => "short type - 16-bit signed integer\n\nRange: -32,768 to 32,767".to_string(),
+            "int" => "int type - 32-bit signed integer\n\nRange: -2^31 to 2^31-1".to_string(),
+            "long" => "long type - 64-bit signed integer\n\nRange: -2^63 to 2^63-1".to_string(),
+            "float" => "float type - 32-bit floating point\n\nPrecision: ~7 decimal digits".to_string(),
+            "double" => "double type - 64-bit floating point\n\nPrecision: ~15 decimal digits".to_string(),
+            "char" => "char type - 16-bit Unicode character\n\nRange: '\\u0000' to '\\uFFFF'".to_string(),
+            _ => format!("{} - Java keyword/identifier", keyword),
+        }
+    }
+}

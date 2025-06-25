@@ -4,132 +4,14 @@
 use sourceview5::{prelude::*, CompletionWords, View, Buffer, CompletionProvider};
 use gtk4::{gdk, Popover, ListBox, Label, ScrolledWindow};
 use glib;
-use std::collections::HashMap;
 use std::path::Path;
-use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicBool, Ordering};
+
+mod completion;
+use completion::{get_language_keywords, get_language_snippets, get_keyword_documentation};
 
 // Static flag to prevent recursive completion triggering
 static COMPLETION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
-
-/// Language-specific keyword definitions
-static LANGUAGE_KEYWORDS: Lazy<HashMap<&'static str, Vec<&'static str>>> = Lazy::new(|| {
-    let mut map = HashMap::new();
-    
-    // Rust keywords
-    map.insert("rust", vec![
-        "as", "async", "await", "break", "const", "continue", "crate", "dyn", "else", "enum",
-        "extern", "false", "fn", "for", "if", "impl", "in", "let", "loop", "match", "mod",
-        "move", "mut", "pub", "ref", "return", "self", "Self", "static", "struct", "super",
-        "trait", "true", "type", "unsafe", "use", "where", "while", "abstract", "become",
-        "box", "do", "final", "macro", "override", "priv", "typeof", "unsized", "virtual", "yield",
-        "String", "Vec", "HashMap", "HashSet", "Option", "Result", "println!", "eprintln!", "format!",
-        "vec!", "Some", "None", "Ok", "Err", "Clone", "Copy", "Debug", "Default", "PartialEq",
-        "Eq", "PartialOrd", "Ord", "Hash", "Display", "From", "Into", "TryFrom", "TryInto",
-        "Box", "Arc", "Rc", "RefCell", "Cell", "Mutex", "RwLock", "thread", "spawn", "join"
-    ]);
-    
-    // JavaScript/TypeScript keywords
-    map.insert("javascript", vec![
-        "abstract", "arguments", "boolean", "break", "byte", "case", "catch", "char", "class",
-        "const", "continue", "debugger", "default", "delete", "do", "double", "else", "enum",
-        "eval", "export", "extends", "false", "final", "finally", "float", "for", "function",
-        "goto", "if", "implements", "import", "in", "instanceof", "int", "interface", "let",
-        "long", "native", "new", "null", "package", "private", "protected", "public", "return",
-        "short", "static", "super", "switch", "synchronized", "this", "throw", "throws",
-        "transient", "true", "try", "typeof", "var", "void", "volatile", "while", "with", "yield",
-        "console", "document", "window", "Array", "Object", "Promise", "async", "await",
-        "setTimeout", "setInterval", "clearTimeout", "clearInterval", "fetch", "JSON",
-        "localStorage", "sessionStorage", "getElementById", "querySelector", "addEventListener"
-    ]);
-    
-    // Python keywords
-    map.insert("python", vec![
-        "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
-        "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global",
-        "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
-        "return", "try", "while", "with", "yield", "print", "len", "range", "enumerate",
-        "zip", "map", "filter", "sorted", "reversed", "sum", "min", "max", "abs", "round",
-        "int", "float", "str", "list", "tuple", "dict", "set", "bool", "type", "isinstance",
-        "hasattr", "getattr", "setattr", "delattr", "open", "file", "input", "raw_input",
-        "__init__", "__str__", "__repr__", "__len__", "__getitem__", "__setitem__", "__iter__"
-    ]);
-    
-    // C/C++ keywords
-    map.insert("c", vec![
-        "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else",
-        "enum", "extern", "float", "for", "goto", "if", "inline", "int", "long", "register",
-        "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch",
-        "typedef", "union", "unsigned", "void", "volatile", "while", "_Alignas", "_Alignof",
-        "_Atomic", "_Static_assert", "_Noreturn", "_Thread_local", "_Generic", "printf",
-        "scanf", "malloc", "free", "sizeof", "NULL", "true", "false", "bool", "size_t",
-        "FILE", "stdin", "stdout", "stderr", "fopen", "fclose", "fread", "fwrite", "fprintf"
-    ]);
-    
-    // C++ additional keywords
-    map.insert("cpp", vec![
-        "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit",
-        "atomic_noexcept", "auto", "bitand", "bitor", "bool", "break", "case", "catch",
-        "char", "char8_t", "char16_t", "char32_t", "class", "compl", "concept", "const",
-        "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await",
-        "co_return", "co_yield", "decltype", "default", "delete", "do", "double",
-        "dynamic_cast", "else", "enum", "explicit", "export", "extern", "false", "float",
-        "for", "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace",
-        "new", "noexcept", "not", "not_eq", "nullptr", "operator", "or", "or_eq",
-        "private", "protected", "public", "reflexpr", "register", "reinterpret_cast",
-        "requires", "return", "short", "signed", "sizeof", "static", "static_assert",
-        "static_cast", "struct", "switch", "synchronized", "template", "this", "thread_local",
-        "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned",
-        "using", "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq",
-        "std", "cout", "cin", "endl", "vector", "string", "map", "set", "pair", "make_pair",
-        "unique_ptr", "shared_ptr", "weak_ptr", "make_unique", "make_shared"
-    ]);
-    
-    // Java keywords
-    map.insert("java", vec![
-        "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class",
-        "const", "continue", "default", "do", "double", "else", "enum", "extends", "final",
-        "finally", "float", "for", "goto", "if", "implements", "import", "instanceof", "int",
-        "interface", "long", "native", "new", "package", "private", "protected", "public",
-        "return", "short", "static", "strictfp", "super", "switch", "synchronized", "this",
-        "throw", "throws", "transient", "try", "void", "volatile", "while", "true", "false",
-        "null", "String", "System", "out", "println", "print", "Scanner", "ArrayList",
-        "HashMap", "HashSet", "List", "Map", "Set", "Collection", "Iterator", "Exception",
-        "Object", "Class", "Thread", "Runnable", "Integer", "Double", "Boolean", "Character"
-    ]);
-    
-    // HTML keywords
-    map.insert("html", vec![
-        "html", "head", "title", "body", "div", "span", "p", "a", "img", "ul", "ol", "li",
-        "h1", "h2", "h3", "h4", "h5", "h6", "table", "tr", "td", "th", "thead", "tbody",
-        "form", "input", "button", "select", "option", "textarea", "label", "fieldset",
-        "legend", "nav", "header", "footer", "section", "article", "aside", "main", "figure",
-        "figcaption", "audio", "video", "source", "canvas", "svg", "script", "style", "link",
-        "meta", "br", "hr", "strong", "em", "b", "i", "u", "small", "mark", "del", "ins",
-        "sub", "sup", "blockquote", "cite", "q", "abbr", "address", "time", "code", "pre",
-        "kbd", "samp", "var", "dfn", "data", "output", "progress", "meter", "details", "summary",
-        "iframe", "embed", "object", "param", "area", "map", "track", "wbr", "ruby", "rt", "rp"
-    ]);
-    
-    // CSS keywords and properties
-    map.insert("css", vec![
-        "color", "background", "background-color", "background-image", "background-repeat",
-        "background-position", "background-size", "border", "border-color", "border-style",
-        "border-width", "border-radius", "margin", "padding", "width", "height", "min-width",
-        "max-width", "min-height", "max-height", "display", "position", "top", "right",
-        "bottom", "left", "float", "clear", "overflow", "z-index", "font", "font-family",
-        "font-size", "font-weight", "font-style", "text-align", "text-decoration",
-        "text-transform", "line-height", "letter-spacing", "word-spacing", "white-space",
-        "vertical-align", "list-style", "table-layout", "border-collapse", "border-spacing",
-        "caption-side", "empty-cells", "cursor", "outline", "visibility", "opacity",
-        "box-shadow", "text-shadow", "transform", "transition", "animation", "flex",
-        "grid", "align-items", "justify-content", "flex-direction", "flex-wrap",
-        "align-content", "justify-items", "place-items", "gap", "row-gap", "column-gap"
-    ]);
-    
-    map
-});
-
 /// Extract the programming language from buffer language setting
 fn get_buffer_language(buffer: &Buffer) -> String {
     if let Some(language) = buffer.language() {
@@ -180,7 +62,8 @@ pub fn populate_buffer_with_keywords(buffer: &Buffer) {
         buffer.place_cursor(&start_iter);
     }
     
-    if let Some(keywords) = LANGUAGE_KEYWORDS.get(language.as_str()) {
+    let keywords = get_language_keywords(&language);
+    if !keywords.is_empty() {
         println!("Added {} keywords as completion hints for {}", keywords.len(), language);
     } else {
         println!("No keywords found for language: {}", language);
@@ -202,16 +85,15 @@ impl CustomCompletionWords {
         
         // Add language-specific keywords
         let language = get_buffer_language(buffer);
-        if let Some(keywords) = LANGUAGE_KEYWORDS.get(language.as_str()) {
-            for _keyword in keywords {
-                // CompletionWords doesn't have add_word method in this version
-                // Instead, it automatically extracts words from registered buffers
-                // We can create a temporary buffer with keywords and register it
-                let keyword_buffer = Buffer::new(None);
-                let keywords_text = keywords.join(" ");
-                keyword_buffer.set_text(&keywords_text);
-                completion_words.register(&keyword_buffer);
-            }
+        let keywords = get_language_keywords(&language);
+        if !keywords.is_empty() {
+            // CompletionWords doesn't have add_word method in this version
+            // Instead, it automatically extracts words from registered buffers
+            // We can create a temporary buffer with keywords and register it
+            let keyword_buffer = Buffer::new(None);
+            let keywords_text = keywords.join(" ");
+            keyword_buffer.set_text(&keywords_text);
+            completion_words.register(&keyword_buffer);
             println!("Added {} keywords for language: {}", keywords.len(), language);
         }
         
@@ -243,7 +125,8 @@ impl CustomKeywordProvider {
         let mut proposals = Vec::new();
         
         // Get keywords for the current language
-        if let Some(keywords) = LANGUAGE_KEYWORDS.get(self.language.as_str()) {
+        let keywords = get_language_keywords(&self.language);
+        if !keywords.is_empty() {
             // Return all keywords for now (we can add filtering later)
             proposals.extend(keywords.iter().map(|k| k.to_string()));
         }
@@ -282,7 +165,8 @@ pub fn setup_completion(source_view: &View) {
         
         // Create a second completion provider with language keywords
         let language = get_buffer_language(source_buffer);
-        if let Some(keywords) = LANGUAGE_KEYWORDS.get(language.as_str()) {
+        let keywords = get_language_keywords(&language);
+        if !keywords.is_empty() {
             // Create a temporary buffer with all keywords separated by spaces and newlines
             let keyword_buffer = Buffer::new(None);
             let mut keywords_text = String::new();
@@ -462,7 +346,8 @@ pub fn trigger_completion(source_view: &View) {
     let prefix_lower = prefix.to_lowercase();
     
     // Add language keywords that match the prefix
-    if let Some(keywords) = LANGUAGE_KEYWORDS.get(language.as_str()) {
+    let keywords = get_language_keywords(&language);
+    if !keywords.is_empty() {
         println!("Found {} keywords for language {}", keywords.len(), language);
         for keyword in keywords {
             if prefix.is_empty() || keyword.to_lowercase().starts_with(&prefix_lower) {
@@ -835,96 +720,7 @@ pub fn setup_completion_shortcuts(source_view: &View) {
 
 /// Create completion documentation
 pub fn get_completion_documentation(keyword: &str, language: &str) -> String {
-    match (language, keyword) {
-        // Rust documentation
-        ("rust", "fn") => "fn keyword - Define a function\n\nSyntax: fn name(params) -> return_type { body }".to_string(),
-        ("rust", "struct") => "struct keyword - Define a structure\n\nSyntax: struct Name { field: Type }".to_string(),
-        ("rust", "enum") => "enum keyword - Define an enumeration\n\nSyntax: enum Name { Variant1, Variant2 }".to_string(),
-        ("rust", "impl") => "impl keyword - Implement methods for a type\n\nSyntax: impl Type { fn method(&self) {} }".to_string(),
-        ("rust", "match") => "match keyword - Pattern matching\n\nSyntax: match expr { pattern => result }".to_string(),
-        ("rust", "Vec") => "Vec<T> - A growable array type\n\nExample: let v = Vec::new(); v.push(1);".to_string(),
-        ("rust", "Option") => "Option<T> - Represents optional values\n\nVariants: Some(T), None".to_string(),
-        ("rust", "Result") => "Result<T, E> - Error handling type\n\nVariants: Ok(T), Err(E)".to_string(),
-        
-        // JavaScript documentation
-        ("javascript", "function") => "function keyword - Define a function\n\nSyntax: function name(params) { body }".to_string(),
-        ("javascript", "class") => "class keyword - Define a class\n\nSyntax: class Name { constructor() {} }".to_string(),
-        ("javascript", "async") => "async keyword - Define an asynchronous function\n\nSyntax: async function name() { await expr; }".to_string(),
-        ("javascript", "Promise") => "Promise - Represents asynchronous operations\n\nMethods: then(), catch(), finally()".to_string(),
-        ("javascript", "console") => "console object - Provides debugging methods\n\nMethods: log(), error(), warn(), info()".to_string(),
-        
-        // Python documentation
-        ("python", "def") => "def keyword - Define a function\n\nSyntax: def name(params): body".to_string(),
-        ("python", "class") => "class keyword - Define a class\n\nSyntax: class Name: def __init__(self): pass".to_string(),
-        ("python", "import") => "import keyword - Import modules\n\nSyntax: import module or from module import name".to_string(),
-        ("python", "list") => "list - Mutable sequence type\n\nMethods: append(), extend(), insert(), remove()".to_string(),
-        ("python", "dict") => "dict - Mapping type (dictionary)\n\nMethods: keys(), values(), items(), get()".to_string(),
-        
-        // C/C++ documentation
-        ("c", "printf") => "printf() - Print formatted output\n\nSyntax: printf(\"format\", args...)".to_string(),
-        ("c", "malloc") => "malloc() - Allocate memory\n\nSyntax: void* malloc(size_t size)".to_string(),
-        ("cpp", "std") => "std namespace - Standard library namespace\n\nContains: vector, string, map, cout, cin, etc.".to_string(),
-        ("cpp", "vector") => "std::vector - Dynamic array\n\nMethods: push_back(), pop_back(), size(), clear()".to_string(),
-        
-        // Java documentation
-        ("java", "class") => "class keyword - Define a class\n\nSyntax: public class Name { }".to_string(),
-        ("java", "public") => "public modifier - Makes members accessible everywhere".to_string(),
-        ("java", "private") => "private modifier - Restricts access to the same class".to_string(),
-        ("java", "String") => "String class - Immutable character sequence\n\nMethods: length(), charAt(), substring()".to_string(),
-        
-        // HTML documentation
-        ("html", "div") => "<div> element - Generic container\n\nUsage: <div>content</div>".to_string(),
-        ("html", "span") => "<span> element - Inline container\n\nUsage: <span>text</span>".to_string(),
-        ("html", "form") => "<form> element - User input form\n\nAttributes: action, method".to_string(),
-        
-        // CSS documentation
-        ("css", "display") => "display property - Controls element layout\n\nValues: block, inline, flex, grid, none".to_string(),
-        ("css", "position") => "position property - Element positioning\n\nValues: static, relative, absolute, fixed, sticky".to_string(),
-        ("css", "flex") => "flex property - Flexible box layout\n\nShorthand for: flex-grow flex-shrink flex-basis".to_string(),
-        
-        _ => format!("{} - {} keyword/identifier", keyword, language),
-    }
+    get_keyword_documentation(language, keyword)
 }
 
-/// Common code snippets for different languages
-static CODE_SNIPPETS: Lazy<HashMap<&'static str, Vec<(&'static str, &'static str)>>> = Lazy::new(|| {
-    let mut map = HashMap::new();
-    
-    // Rust snippets
-    map.insert("rust", vec![
-        ("fn", "fn ${1:function_name}(${2:parameters}) -> ${3:return_type} {\n    ${4:// body}\n}"),
-        ("struct", "struct ${1:Name} {\n    ${2:field}: ${3:Type},\n}"),
-        ("impl", "impl ${1:Type} {\n    ${2:// methods}\n}"),
-        ("match", "match ${1:expression} {\n    ${2:pattern} => ${3:result},\n}"),
-        ("if", "if ${1:condition} {\n    ${2:// body}\n}"),
-        ("for", "for ${1:item} in ${2:iterator} {\n    ${3:// body}\n}"),
-        ("while", "while ${1:condition} {\n    ${2:// body}\n}"),
-        ("loop", "loop {\n    ${1:// body}\n    break;\n}"),
-        ("main", "fn main() {\n    ${1:// code}\n}"),
-        ("test", "#[test]\nfn ${1:test_name}() {\n    ${2:// test code}\n}"),
-    ]);
-    
-    // JavaScript snippets
-    map.insert("javascript", vec![
-        ("function", "function ${1:name}(${2:parameters}) {\n    ${3:// body}\n}"),
-        ("arrow", "(${1:parameters}) => {\n    ${2:// body}\n}"),
-        ("class", "class ${1:Name} {\n    constructor(${2:parameters}) {\n        ${3:// constructor}\n    }\n}"),
-        ("if", "if (${1:condition}) {\n    ${2:// body}\n}"),
-        ("for", "for (${1:let i = 0}; ${2:i < length}; ${3:i++}) {\n    ${4:// body}\n}"),
-        ("foreach", "${1:array}.forEach((${2:item}) => {\n    ${3:// body}\n});"),
-        ("promise", "new Promise((resolve, reject) => {\n    ${1:// async code}\n});"),
-    ]);
-    
-    // Python snippets
-    map.insert("python", vec![
-        ("def", "def ${1:function_name}(${2:parameters}):\n    ${3:pass}"),
-        ("class", "class ${1:ClassName}:\n    def __init__(self${2:, parameters}):\n        ${3:pass}"),
-        ("if", "if ${1:condition}:\n    ${2:pass}"),
-        ("for", "for ${1:item} in ${2:iterable}:\n    ${3:pass}"),
-        ("while", "while ${1:condition}:\n    ${2:pass}"),
-        ("try", "try:\n    ${1:pass}\nexcept ${2:Exception} as e:\n    ${3:pass}"),
-        ("with", "with ${1:expression} as ${2:variable}:\n    ${3:pass}"),
-    ]);
-    
-    map
-});
+
