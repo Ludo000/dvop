@@ -2,7 +2,7 @@
 // This module handles the visual aspects and setup of code completion
 
 use sourceview5::{prelude::*, CompletionWords, View, Buffer, CompletionProvider};
-use gtk4::{gdk, Popover, ListBox, Label, ScrolledWindow};
+use gtk4::{gdk, Popover, ListBox, Label, ScrolledWindow, Image, Box as GtkBox, Orientation};
 use glib;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -369,7 +369,7 @@ pub fn trigger_completion(source_view: &View) {
     
     // Sort suggestions by display text
     suggestions_with_content.sort_by(|a, b| a.0.cmp(&b.0));
-    suggestions_with_content.truncate(15); // Limit to 15 suggestions
+    suggestions_with_content.truncate(20); // Increase to 20 suggestions to test scrolling
     
     println!("Found {} completion suggestions: {:?}", 
              suggestions_with_content.len(), 
@@ -412,31 +412,68 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     let scrolled = ScrolledWindow::builder()
         .max_content_height(200)
         .max_content_width(300)
-        .propagate_natural_height(true)
+        .min_content_height(200)
+        .min_content_width(250)
+        .propagate_natural_height(false)
+        .propagate_natural_width(false)
         .hscrollbar_policy(gtk4::PolicyType::Never)
         .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .overlay_scrolling(true)
         .build();
     println!("ScrolledWindow created");
     
     // Create list box for suggestions
     let list_box = ListBox::builder()
         .selection_mode(gtk4::SelectionMode::Single)
+        .show_separators(false)
         .build();
+    
+    // Ensure the list box can be scrolled
+    list_box.set_size_request(250, -1);
+    
     println!("ListBox created");
     
     // Add suggestions to list
-    for (i, (display_text, _)) in suggestions_with_content.iter().enumerate() {
+    for (i, (display_text, completion_item)) in suggestions_with_content.iter().enumerate() {
         println!("Adding suggestion {}: {}", i, display_text);
+        
+        // Create a horizontal box to hold icon and text
+        let item_box = GtkBox::new(Orientation::Horizontal, 8);
+        item_box.set_margin_start(8);
+        item_box.set_margin_end(8);
+        item_box.set_margin_top(4);
+        item_box.set_margin_bottom(4);
+        
+        // Create appropriate icon based on completion type
+        let icon = match completion_item {
+            CompletionItem::Keyword(_) => {
+                // Use a wrench/tool icon for language keywords (reserved words)
+                Image::from_icon_name("insert-text-symbolic")
+            },
+            CompletionItem::Snippet(_, _) => {
+                // Use a template/code block icon for code snippets
+                Image::from_icon_name("text-x-script-symbolic")
+            },
+            CompletionItem::BufferWord(_) => {
+                // Use a text file icon for words from the current buffer
+                Image::from_icon_name("text-x-generic-symbolic")
+            },
+        };
+        
+        // Set icon size
+        icon.set_icon_size(gtk4::IconSize::Normal);
+        
+        // Create label for the text
         let label = Label::builder()
             .label(display_text)
             .xalign(0.0)
-            .margin_start(8)
-            .margin_end(8)
-            .margin_top(4)
-            .margin_bottom(4)
             .build();
         
-        list_box.append(&label);
+        // Add icon and label to the box
+        item_box.append(&icon);
+        item_box.append(&label);
+        
+        list_box.append(&item_box);
     }
     
     // Select first row by default
@@ -505,20 +542,29 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     let cursor_mark = buffer.get_insert();
     let cursor_iter = buffer.iter_at_mark(&cursor_mark);
     
-    // Get cursor rectangle in source view coordinates
+    // Get cursor rectangle in buffer coordinates first
     let cursor_rect = source_view.iter_location(&cursor_iter);
-    println!("Cursor location: x={}, y={}, width={}, height={}", 
+    println!("Cursor location (buffer coords): x={}, y={}, width={}, height={}", 
              cursor_rect.x(), cursor_rect.y(), cursor_rect.width(), cursor_rect.height());
     
-    // Position popover at cursor location
-    let pointing_rect = gdk::Rectangle::new(
+    // Convert buffer coordinates to widget coordinates
+    let (widget_x, widget_y) = source_view.buffer_to_window_coords(
+        gtk4::TextWindowType::Widget,
         cursor_rect.x(),
-        cursor_rect.y() + cursor_rect.height(), // Position below cursor
-        1,
+        cursor_rect.y()
+    );
+    
+    println!("Cursor location (widget coords): x={}, y={}", widget_x, widget_y);
+    
+    // Position the popover below the cursor
+    let pointing_rect = gdk::Rectangle::new(
+        widget_x,
+        widget_y + cursor_rect.height(),
+        cursor_rect.width().max(1),  // Ensure minimum width
         1
     );
     popover.set_pointing_to(Some(&pointing_rect));
-    println!("Popover positioned at cursor location");
+    println!("Popover positioned at widget coordinates: x={}, y={}", widget_x, widget_y + cursor_rect.height());
     
     // Handle keyboard navigation in the popover
     let key_controller = gtk4::EventControllerKey::new();
