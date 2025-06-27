@@ -2,7 +2,7 @@
 // This module handles the visual aspects and setup of code completion
 
 use sourceview5::{prelude::*, View, Buffer};
-use gtk4::{gdk, Popover, ListBox, Label, ScrolledWindow, Image, Box as GtkBox, Orientation};
+use gtk4::{gdk, Popover, ListBox, Label, ScrolledWindow, Image, Box as GtkBox, Orientation, pango};
 use glib;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -350,6 +350,14 @@ pub fn trigger_completion(source_view: &View) {
 fn create_completion_popup(source_view: &View, suggestions_with_content: &[(String, CompletionItem)], _prefix: &str, word_start_offset: i32, cursor_offset: i32) {
     println!("=== CREATING POPOVER ===");
     
+    // Get language for documentation
+    let buffer = source_view.buffer();
+    let language = if let Some(source_buffer) = buffer.downcast_ref::<sourceview5::Buffer>() {
+        get_buffer_language(source_buffer)
+    } else {
+        "generic".to_string()
+    };
+    
     // Create popover
     let popover = Popover::new();
     println!("Popover created");
@@ -362,10 +370,10 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     
     // Create scrolled window for suggestions
     let scrolled = ScrolledWindow::builder()
-        .max_content_height(200)
-        .max_content_width(300)
+        .max_content_height(350)  // Slightly increased height
+        .max_content_width(1000)  // Much wider for extensive documentation display
         .min_content_height(200)
-        .min_content_width(250)
+        .min_content_width(800)   // Significantly increased minimum width for documentation
         .propagate_natural_height(false)
         .propagate_natural_width(false)
         .hscrollbar_policy(gtk4::PolicyType::Never)
@@ -381,7 +389,7 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
         .build();
     
     // Ensure the list box can be scrolled
-    list_box.set_size_request(250, -1);
+    list_box.set_size_request(800, -1);  // Much wider for extensive documentation
     
     println!("ListBox created");
     
@@ -389,12 +397,12 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     for (i, (display_text, completion_item)) in suggestions_with_content.iter().enumerate() {
         println!("Adding suggestion {}: {}", i, display_text);
         
-        // Create a horizontal box to hold icon and text
-        let item_box = GtkBox::new(Orientation::Horizontal, 8);
-        item_box.set_margin_start(8);
-        item_box.set_margin_end(8);
-        item_box.set_margin_top(4);
-        item_box.set_margin_bottom(4);
+        // Create a horizontal box to hold icon, text, and documentation
+        let item_box = GtkBox::new(Orientation::Horizontal, 12);  // Increased spacing
+        item_box.set_margin_start(12);   // Increased margins
+        item_box.set_margin_end(12);
+        item_box.set_margin_top(6);      // Increased vertical spacing
+        item_box.set_margin_bottom(6);
         
         // Create appropriate icon based on completion type
         let icon = match completion_item {
@@ -415,15 +423,71 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
         // Set icon size
         icon.set_icon_size(gtk4::IconSize::Normal);
         
-        // Create label for the text
+        // Create label for the main text with compact fixed width
         let label = Label::builder()
             .label(display_text)
             .xalign(0.0)
+            .hexpand(false)
+            .width_chars(20)  // Reduced width to give more room to documentation
             .build();
         
-        // Add icon and label to the box
+        // Get and add documentation
+        let doc_text = match completion_item {
+            CompletionItem::Keyword(keyword) => {
+                get_keyword_documentation(&language, keyword)
+            },
+            CompletionItem::Snippet(trigger, _) => {
+                // For snippets, get documentation for the trigger keyword
+                let base_doc = get_keyword_documentation(&language, trigger);
+                if base_doc.contains(&format!("{} - {} keyword/identifier", trigger, language)) {
+                    // If no specific documentation, provide generic snippet info
+                    format!("{} (snippet) - Code template for {}", trigger, trigger)
+                } else {
+                    format!("{} (snippet)", base_doc)
+                }
+            },
+            CompletionItem::BufferWord(word) => {
+                format!("{} - Word from current buffer", word)
+            }
+        };
+        
+        // Create documentation label with much more horizontal space
+        let doc_label = Label::builder()
+            .label(&doc_text)
+            .xalign(0.0)
+            .hexpand(true)
+            .wrap(true)                              // Enable wrapping for long documentation
+            .wrap_mode(pango::WrapMode::Word)        // Wrap at word boundaries
+            .max_width_chars(80)                     // Much more characters for extensive documentation
+            .build();
+        
+        // Style the documentation label to be smaller and dimmed
+        doc_label.add_css_class("completion-doc");
+        
+        // Add some CSS styling for better appearance with more spacing
+        let css_provider = gtk4::CssProvider::new();
+        css_provider.load_from_data(
+            ".completion-doc { 
+                font-size: 0.9em; 
+                color: alpha(@theme_fg_color, 0.65); 
+                margin-left: 30px;
+                line-height: 1.3;
+                padding-right: 10px;
+            }"
+        );
+        
+        if let Some(display) = gdk::Display::default() {
+            gtk4::style_context_add_provider_for_display(
+                &display,
+                &css_provider,
+                gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
+        }
+        
+        // Add icon, label, and documentation to the horizontal box
         item_box.append(&icon);
         item_box.append(&label);
+        item_box.append(&doc_label);
         
         list_box.append(&item_box);
     }
@@ -435,7 +499,7 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     
     scrolled.set_child(Some(&list_box));
     popover.set_child(Some(&scrolled));
-    println!("Popover content set");
+    println!("Popover content set with documentation");
     
     // Handle selection
     let buffer = source_view.buffer();
@@ -584,7 +648,7 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     println!("Popover is_visible: {}", popover.is_visible());
     println!("ListBox has_focus: {}", list_box.has_focus());
     
-    println!("Custom completion popup displayed with {} suggestions", suggestions_with_content.len());
+    println!("Custom completion popup displayed with {} suggestions and documentation", suggestions_with_content.len());
 }
 
 /// Helper function to scroll to a specific row in the scrolled window
