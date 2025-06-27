@@ -1,7 +1,7 @@
 // UI components and setup functions for completion
 // This module handles the visual aspects and setup of code completion
 
-use sourceview5::{prelude::*, CompletionWords, View, Buffer, CompletionProvider};
+use sourceview5::{prelude::*, View, Buffer};
 use gtk4::{gdk, Popover, ListBox, Label, ScrolledWindow, Image, Box as GtkBox, Orientation};
 use glib;
 use std::path::Path;
@@ -41,102 +41,28 @@ fn get_buffer_language(buffer: &Buffer) -> String {
     }
 }
 
-/// Populate buffer with language keywords for better completion
-/// This adds some sample words directly to the buffer to ensure completion has content
-pub fn populate_buffer_with_keywords(buffer: &Buffer) {
-    let language = get_buffer_language(buffer);
-    println!("Setting up keywords for language: {}", language);
-    
-    // Add some basic completion words to the buffer content
-    // This ensures the CompletionWords provider has something to work with
-    let basic_words = match language.as_str() {
-        "rust" => "fn let mut if else match Vec String Option Result println macro struct impl trait",
-        "javascript" => "function var let const if else for while class async await",
-        "python" => "def class if else for while import from return print",
-        _ => "function if else for while class"
-    };
-    
-    // Get current buffer text
-    let current_text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
-    
-    // Only add words if buffer is mostly empty
-    if current_text.trim().len() < 100 {
-        let mut end_iter = buffer.end_iter();
-        let comment_words = format!("\n/* Completion: {} */\n", basic_words);
-        buffer.insert(&mut end_iter, &comment_words);
-        
-        // Move cursor back to a reasonable position
-        let start_iter = buffer.start_iter();
-        buffer.place_cursor(&start_iter);
-    }
-    
-    let keywords = get_language_keywords(&language);
-    if !keywords.is_empty() {
-        println!("Added {} keywords as completion hints for {}", keywords.len(), language);
-    } else {
-        println!("No keywords found for language: {}", language);
-    }
-}
-
 /// Setup completion for a source view with proper provider configuration  
 pub fn setup_completion(source_view: &View) {
-    println!("=== SETTING UP COMPLETION ===");
-    let completion = source_view.completion();
+    println!("=== SETTING UP MANUAL COMPLETION ONLY ===");
     let buffer = source_view.buffer();
     
     // Cast buffer to SourceView Buffer
     if let Some(source_buffer) = buffer.downcast_ref::<Buffer>() {
-        println!("Buffer cast successful, setting up completion...");
+        println!("Buffer cast successful, manual completion ready...");
         
-        // Populate buffer with keywords for better completion
-        populate_buffer_with_keywords(source_buffer);
-        
-        // Create completion words provider (this will automatically scan buffer words)
-        let completion_words = CompletionWords::new(Some("Buffer Words"));
-        completion_words.register(source_buffer);
-        
-        // Add the words completion provider
-        completion.add_provider(&completion_words.upcast::<CompletionProvider>());
-        println!("Added CompletionWords provider to completion");
-        
-        // Configure completion behavior for better visibility and responsiveness
-        completion.set_page_size(15); // Show 15 proposals per page
-        completion.set_show_icons(true); // Show icons in completion
-        completion.set_remember_info_visibility(true); // Remember info panel state
-        
-        // Create a second completion provider with language keywords
+        // Get the language for context (but don't set up auto-completion)
         let language = get_buffer_language(source_buffer);
-        let keywords = get_language_keywords(&language);
-        if !keywords.is_empty() {
-            // Create a temporary buffer with all keywords separated by spaces and newlines
-            let keyword_buffer = Buffer::new(None);
-            let mut keywords_text = String::new();
-            for (i, keyword) in keywords.iter().enumerate() {
-                if i > 0 {
-                    keywords_text.push(' ');
-                    if i % 10 == 0 { // Add newlines every 10 keywords for better parsing
-                        keywords_text.push('\n');
-                    }
-                }
-                keywords_text.push_str(keyword);
-            }
-            keywords_text.push('\n'); // End with newline
-            keyword_buffer.set_text(&keywords_text);
-            
-            // Create another CompletionWords for keywords
-            let keyword_completion = CompletionWords::new(Some("Language Keywords"));
-            keyword_completion.register(&keyword_buffer);
-            
-            completion.add_provider(&keyword_completion.upcast::<CompletionProvider>());
-            println!("Added keyword completion provider with {} keywords for {}", keywords.len(), language);
-        }
+        println!("Language detected: {}", language);
         
-        println!("Completion configuration complete");
-        println!("Code completion enabled for source view");
+        // Note: We're NOT setting up the automatic CompletionWords providers
+        // Only manual completion via Ctrl+Space will be available
+        
+        println!("Manual completion configuration complete");
+        println!("Use Ctrl+Space or F1 to trigger completion manually");
     } else {
         println!("WARNING: Could not setup completion - buffer is not a SourceView buffer");
     }
-    println!("=== COMPLETION SETUP COMPLETE ===");
+    println!("=== MANUAL COMPLETION SETUP COMPLETE ===");
 }
 
 /// Enhanced completion setup with file-specific behavior
@@ -145,49 +71,35 @@ pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
     
     if let Some(path) = file_path {
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-        println!("Setting up enhanced completion for file type: {}", extension);
+        println!("Setting up manual completion for file type: {}", extension);
         
-        // The completion provider will automatically detect the language
-        // from the syntax highlighting and provide appropriate completions
-        
-        // Enable additional features based on file type
-        let completion = source_view.completion();
+        // Note: Only manual completion (Ctrl+Space) is available
+        // No automatic completion providers are configured
         
         match extension {
             "rs" => {
-                // Rust-specific completion settings
-                completion.set_page_size(20); // More proposals for Rust
-                println!("Enhanced Rust completion enabled");
+                println!("Manual Rust completion enabled");
             },
             "js" | "ts" | "jsx" | "tsx" => {
-                // JavaScript/TypeScript-specific settings
-                println!("Enhanced JavaScript/TypeScript completion enabled");
+                println!("Manual JavaScript/TypeScript completion enabled");
             },
             "py" => {
-                // Python-specific settings
-                completion.set_page_size(12);
-                println!("Enhanced Python completion enabled");
+                println!("Manual Python completion enabled");
             },
             "java" => {
-                // Java-specific settings
-                completion.set_page_size(18);
-                println!("Enhanced Java completion enabled");
+                println!("Manual Java completion enabled");
             },
             "c" | "cpp" | "cc" | "cxx" | "h" | "hpp" => {
-                // C/C++-specific settings
-                completion.set_page_size(16);
-                println!("Enhanced C/C++ completion enabled");
+                println!("Manual C/C++ completion enabled");
             },
             "html" | "htm" => {
-                // HTML-specific settings
-                println!("Enhanced HTML completion enabled");
+                println!("Manual HTML completion enabled");
             },
             "css" | "scss" | "sass" | "less" => {
-                // CSS-specific settings
-                println!("Enhanced CSS completion enabled");
+                println!("Manual CSS completion enabled");
             },
             _ => {
-                println!("Generic completion enabled for file type: {}", extension);
+                println!("Manual completion enabled for file type: {}", extension);
             }
         }
     }
@@ -705,7 +617,7 @@ fn scroll_to_row(scrolled: &ScrolledWindow, row: &gtk4::ListBoxRow) {
     }
 }
 
-/// Setup keyboard shortcuts for completion with improved auto-trigger
+/// Setup keyboard shortcuts for completion with manual trigger only
 pub fn setup_completion_shortcuts(source_view: &View) {
     println!("Setting up completion keyboard shortcuts...");
     
@@ -748,81 +660,10 @@ pub fn setup_completion_shortcuts(source_view: &View) {
     
     source_view.add_controller(key_controller);
     
-    // Also set up buffer change monitoring for auto-completion triggers
-    let buffer = source_view.buffer();
-    let source_view_for_buffer = source_view.clone();
-    
-    buffer.connect_changed(move |buffer| {
-        // Check if completion is already in progress
-        if COMPLETION_IN_PROGRESS.load(Ordering::SeqCst) {
-            return;
-        }
-        
-        // Get the cursor position and check what was just typed
-        let cursor_mark = buffer.get_insert();
-        let cursor_iter = buffer.iter_at_mark(&cursor_mark);
-        
-        // Look at the character before the cursor
-        if !cursor_iter.is_start() {
-            let mut prev_iter = cursor_iter;
-            prev_iter.backward_char();
-            let prev_char = prev_iter.char();
-            
-            // Check if this character should trigger completion
-            let should_trigger = match prev_char {
-                '.' => {
-                    println!("Detected '.' - checking for auto-trigger");
-                    true
-                },
-                ':' => {
-                    // Check if it's :: (Rust path separator)
-                    if !prev_iter.is_start() {
-                        let mut prev_prev_iter = prev_iter;
-                        prev_prev_iter.backward_char();
-                        let prev_prev_char = prev_prev_iter.char();
-                        if prev_prev_char == ':' {
-                            println!("Detected '::' - triggering completion");
-                            true
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                },
-                '>' => {
-                    // Check if it's -> (arrow operator)
-                    if !prev_iter.is_start() {
-                        let mut prev_prev_iter = prev_iter;
-                        prev_prev_iter.backward_char();
-                        let prev_prev_char = prev_prev_iter.char();
-                        if prev_prev_char == '-' {
-                            println!("Detected '->' - triggering completion");
-                            true
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                },
-                _ => false,
-            };
-            
-            if should_trigger {
-                println!("Auto-triggering completion due to character: '{}'", prev_char);
-                let sv = source_view_for_buffer.clone();
-                glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
-                    trigger_completion(&sv);
-                });
-            }
-        }
-    });
-    
     println!("Completion keyboard shortcuts enabled:");
     println!("  - Ctrl+Space for manual trigger");
     println!("  - F1 for testing trigger"); 
-    println!("  - Auto-trigger on ., ::, ->");
+    println!("  - Auto-completion has been DISABLED");
 }
 
 /// Get completion documentation
