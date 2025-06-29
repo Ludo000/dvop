@@ -161,98 +161,6 @@ impl LanguageProvider for RustProvider {
             "serde", "tokio", "reqwest", "clap", "anyhow", "thiserror", "log", "env_logger", "tracing",
             "chrono", "uuid", "regex", "rayon", "crossbeam", "dashmap", "once_cell", "lazy_static",
             "parking_lot", "flume", "criterion", "proptest", "quickcheck", "mockall", "wiremock",
-            
-            // Additional Rust keywords and types
-            "const_fn", "const_generics", "inline_const", "raw_identifier", "edition_2021", "edition_2018",
-            "lifetime", "static_lifetime", "elided_lifetime", "higher_ranked", "for_lifetimes",
-            "phantom_data", "PhantomData", "zero_sized", "DST", "unsized_types", "dynamically_sized",
-            
-            // More collections and data structures
-            "LinkedList", "BinaryHeap", "Range", "RangeInclusive", "RangeFrom", "RangeTo", "RangeFull",
-            "Bound", "Included", "Excluded", "Unbounded", "Cow", "ToOwned", "Borrowed", "Owned",
-            
-            // Additional async/await ecosystem
-            "LocalSet", "JoinSet", "TaskLocal", "yield_now", "block_in_place", "spawn_blocking",
-            "spawn_local", "AbortHandle", "JoinError", "Cancelled", "RuntimeFlavor", "current_thread",
-            "multi_thread", "Builder", "Runtime", "Handle", "Guard", "EnterGuard",
-            
-            // More iterator types and adapters
-            "IterMut", "IntoIter", "Iter", "Enumerate", "Filter", "Map", "FlatMap", "FilterMap",
-            "Take", "Skip", "TakeWhile", "SkipWhile", "Peekable", "Rev", "Cycle", "Chain", "Zip",
-            "Cloned", "Copied", "Fuse", "Scan", "StepBy", "Flatten", "Inspect",
-            
-            // More trait objects and dynamic dispatch
-            "dyn_trait", "trait_object", "vtable", "fat_pointer", "object_safe", "coherence",
-            "orphan_rule", "blanket_impl", "associated_const", "const_generic_expr",
-            
-            // Concurrency primitives
-            "channel", "mpsc", "oneshot", "broadcast", "watch", "Sender", "Receiver", "UnboundedSender",
-            "UnboundedReceiver", "Notify", "Semaphore", "RwLockReadGuard", "RwLockWriteGuard",
-            "MutexGuard", "OwnedMutexGuard", "OwnedRwLockReadGuard", "OwnedRwLockWriteGuard",
-            
-            // FFI and unsafe programming
-            "extern_C", "extern_Rust", "extern_system", "abi", "calling_convention", "repr_C",
-            "repr_transparent", "repr_packed", "repr_align", "layout", "size_align", "NonZero",
-            "NonZeroU8", "NonZeroU16", "NonZeroU32", "NonZeroU64", "NonZeroUsize", "NonZeroI8",
-            "NonZeroI16", "NonZeroI32", "NonZeroI64", "NonZeroIsize",
-            
-            // Memory layout and alignment
-            "align", "packed", "transparent", "field_offset", "offset_of", "ptr_metadata",
-            "Pointee", "metadata", "to_raw_parts", "from_raw_parts", "thin_ptr", "wide_ptr",
-            
-            // Procedural macros
-            "proc_macro2", "TokenStream2", "TokenTree2", "proc_macro_crate", "proc_macro_error",
-            "darling", "syn_parse", "parse_quote", "quote_spanned", "format_ident",
-            
-            // More web framework types (axum, warp, actix)
-            "axum", "warp", "actix_web", "hyper", "tonic", "tower", "tower_service", "Service",
-            "middleware", "extract", "Extension", "State", "Json", "Query", "Path", "Form",
-            "Multipart", "TypedHeader", "WebSocketUpgrade", "sse", "ServerSentEvents",
-            
-            // Database and ORM
-            "sqlx", "diesel", "sea_orm", "rusqlite", "postgres", "mysql", "sqlite", "mongodb",
-            "redis", "memcached", "Connection", "Pool", "Transaction", "Migration", "Schema",
-            
-            // Serialization formats
-            "serde_json", "toml", "yaml", "xml", "bincode", "postcard", "rmp", "csv", "ron",
-            "deserialize_with", "serialize_with", "flatten", "skip_serializing", "skip_deserializing",
-            
-            // Logging and tracing
-            "tracing_subscriber", "log4rs", "fern", "simplelog", "flexi_logger", "Subscriber",
-            "Layer", "Filter", "fmt_layer", "json", "Registry", "span", "event", "instrument",
-            "info_span", "debug_span", "warn_span", "error_span", "trace_span",
-            
-            // Error handling crates
-            "color_eyre", "eyre", "failure", "quick_error", "err_derive", "custom_error",
-            "Report", "Context", "WrapErr", "ensure", "bail", "miette", "diagnostic",
-            
-            // Testing frameworks and utilities
-            "rstest", "tokio_test", "serial_test", "tempfile", "assert_matches", "pretty_assertions",
-            "insta", "snapshot_testing", "test_case", "parameterized", "arbitrary", "fake",
-            
-            // CLI and TUI libraries
-            "structopt", "argh", "gumdrop", "pico_args", "clap_derive", "crossterm", "termion",
-            "tui", "cursive", "dialoguer", "indicatif", "console", "colored", "ansi_term",
-            
-            // Parsing and regex
-            "nom", "pest", "lalrpop", "combine", "peg", "regex_syntax", "aho_corasick",
-            "memchr", "pattern", "parser_combinator", "lexer", "tokenizer",
-            
-            // Cryptography and hashing
-            "sha2", "md5", "blake3", "ring", "rustls", "openssl", "aes", "chacha20", "hmac",
-            "pbkdf2", "argon2", "bcrypt", "scrypt", "digest", "signature", "rand_core",
-            
-            // Numeric and math libraries
-            "num", "num_bigint", "num_complex", "num_rational", "decimal", "ordered_float",
-            "approx", "nalgebra", "ndarray", "statrs", "libm", "fast_math",
-            
-            // Graphics and game development
-            "winit", "wgpu", "vulkano", "glium", "kiss3d", "macroquad", "bevy", "amethyst",
-            "piston", "ggez", "tetra", "quicksilver", "pixels", "image", "imageproc",
-            
-            // Platform-specific
-            "windows", "windows_sys", "nix", "libc", "mio", "tokio_uring", "io_uring",
-            "kqueue", "epoll", "inotify", "notify", "sysinfo", "which", "dirs",
         ]
     }
 
@@ -419,68 +327,90 @@ impl LanguageProvider for RustProvider {
             ("benchmarks", "use criterion::{black_box, criterion_group, criterion_main, Criterion};\n\nfn ${1:benchmark_function}(c: &mut Criterion) {\n    c.bench_function(\"${2:test_name}\", |b| {\n        b.iter(|| {\n            // Code to benchmark\n            ${3:expensive_operation}(black_box(${4:input}))\n        })\n    });\n}\n\nfn ${5:comparison_benchmark}(c: &mut Criterion) {\n    let mut group = c.benchmark_group(\"${6:group_name}\");\n    \n    group.bench_function(\"${7:method1}\", |b| {\n        b.iter(|| ${8:method1}(black_box(${4:input})))\n    });\n    \n    group.bench_function(\"${9:method2}\", |b| {\n        b.iter(|| ${10:method2}(black_box(${4:input})))\n    });\n    \n    group.finish();\n}\n\ncriterion_group!(benches, ${1:benchmark_function}, ${5:comparison_benchmark});\ncriterion_main!(benches);"),
             
             ("profiling", "use std::time::Instant;\n\nfn ${1:timed_function}<T, F>(f: F) -> (T, std::time::Duration)\nwhere\n    F: FnOnce() -> T,\n{\n    let start = Instant::now();\n    let result = f();\n    let duration = start.elapsed();\n    (result, duration)\n}\n\n// Usage example\nlet (result, duration) = ${1:timed_function}(|| {\n    ${2:expensive_operation}()\n});\n\nprintln!(\"Operation took: {:?}\", duration);"),
-            
-            // Additional advanced Rust patterns
-            ("const_generics", "struct ${1:Array}<T, const N: usize> {\n    data: [T; N],\n}\n\nimpl<T, const N: usize> ${1:Array}<T, N> {\n    pub fn new(data: [T; N]) -> Self {\n        Self { data }\n    }\n    \n    pub fn len(&self) -> usize {\n        N\n    }\n    \n    pub fn get(&self, index: usize) -> Option<&T> {\n        self.data.get(index)\n    }\n}\n\n// Usage: Array<i32, 5>::new([1, 2, 3, 4, 5])"),
-            
-            ("phantom_data", "use std::marker::PhantomData;\n\nstruct ${1:TypedId}<T> {\n    id: u64,\n    _phantom: PhantomData<T>,\n}\n\nimpl<T> ${1:TypedId}<T> {\n    pub fn new(id: u64) -> Self {\n        Self {\n            id,\n            _phantom: PhantomData,\n        }\n    }\n    \n    pub fn value(&self) -> u64 {\n        self.id\n    }\n}\n\n// Type-safe IDs: TypedId<User>, TypedId<Post>"),
-            
-            ("pin_projection", "use std::pin::Pin;\nuse std::marker::PhantomPinned;\n\nstruct ${1:SelfReferential} {\n    ${2:data}: String,\n    ${3:pointer}: *const String,\n    _pin: PhantomPinned,\n}\n\nimpl ${1:SelfReferential} {\n    pub fn new(${2:data}: String) -> Pin<Box<Self>> {\n        let mut boxed = Box::pin(${1:SelfReferential} {\n            ${2:data},\n            ${3:pointer}: std::ptr::null(),\n            _pin: PhantomPinned,\n        });\n        \n        let ptr = &boxed.${2:data} as *const String;\n        unsafe {\n            let mut_ref = Pin::as_mut(&mut boxed);\n            Pin::get_unchecked_mut(mut_ref).${3:pointer} = ptr;\n        }\n        \n        boxed\n    }\n}"),
-            
-            ("zero_cost_abstraction", "pub struct ${1:Kilometers}(pub f64);\npub struct ${2:Miles}(pub f64);\n\nimpl From<${2:Miles}> for ${1:Kilometers} {\n    fn from(miles: ${2:Miles}) -> Self {\n        ${1:Kilometers}(miles.0 * 1.609344)\n    }\n}\n\nimpl From<${1:Kilometers}> for ${2:Miles} {\n    fn from(km: ${1:Kilometers}) -> Self {\n        ${2:Miles}(km.0 / 1.609344)\n    }\n}\n\n// Zero-cost conversions at compile time"),
-            
-            ("type_state", "mod ${1:type_state} {\n    pub struct ${2:Locked};\n    pub struct ${3:Unlocked};\n    \n    pub struct ${4:Door}<State> {\n        state: std::marker::PhantomData<State>,\n    }\n    \n    impl ${4:Door}<${3:Unlocked}> {\n        pub fn new() -> Self {\n            Self { state: std::marker::PhantomData }\n        }\n        \n        pub fn lock(self) -> ${4:Door}<${2:Locked}> {\n            ${4:Door} { state: std::marker::PhantomData }\n        }\n    }\n    \n    impl ${4:Door}<${2:Locked}> {\n        pub fn unlock(self) -> ${4:Door}<${3:Unlocked}> {\n            ${4:Door} { state: std::marker::PhantomData }\n        }\n    }\n}"),
-            
-            ("procedural_macro", "use proc_macro::TokenStream;\nuse quote::quote;\nuse syn::{parse_macro_input, DeriveInput};\n\n#[proc_macro_derive(${1:MyTrait})]\npub fn ${2:derive_my_trait}(input: TokenStream) -> TokenStream {\n    let input = parse_macro_input!(input as DeriveInput);\n    let name = &input.ident;\n    \n    let expanded = quote! {\n        impl ${1:MyTrait} for #name {\n            fn ${3:method_name}(&self) -> String {\n                format!(\"${4:Hello from {}}!\", stringify!(#name))\n            }\n        }\n    };\n    \n    TokenStream::from(expanded)\n}"),
-            
-            ("attribute_macro", "use proc_macro::TokenStream;\nuse quote::quote;\nuse syn::{parse_macro_input, ItemFn};\n\n#[proc_macro_attribute]\npub fn ${1:timed}(_args: TokenStream, input: TokenStream) -> TokenStream {\n    let input_fn = parse_macro_input!(input as ItemFn);\n    let fn_name = &input_fn.sig.ident;\n    let fn_block = &input_fn.block;\n    let fn_vis = &input_fn.vis;\n    let fn_sig = &input_fn.sig;\n    \n    let output = quote! {\n        #fn_vis #fn_sig {\n            let _start = std::time::Instant::now();\n            let result = #fn_block;\n            println!(\"{}() took {:?}\", stringify!(#fn_name), _start.elapsed());\n            result\n        }\n    };\n    \n    TokenStream::from(output)\n}"),
-            
-            ("workspace_member", "# Cargo.toml\n[workspace]\nmembers = [\n    \"${1:crate_name}\",\n    \"${2:another_crate}\",\n]\nresolver = \"2\"\n\n[workspace.dependencies]\n${3:common_dep} = \"${4:1.0}\"\n\n# In member Cargo.toml:\n[dependencies]\n${3:common_dep} = { workspace = true }\n${2:another_crate} = { path = \"../${2:another_crate}\" }"),
-            
-            ("feature_flags", "# Cargo.toml\n[features]\ndefault = [\"${1:std}\"]\n${1:std} = []\n${2:async} = [\"tokio\"]\n${3:serialize} = [\"serde\"]\n\n[dependencies]\ntokio = { version = \"1.0\", optional = true }\nserde = { version = \"1.0\", optional = true }\n\n# In code:\n#[cfg(feature = \"${1:std}\")]\nuse std::collections::HashMap;\n\n#[cfg(feature = \"${2:async}\")]\nuse tokio::time::sleep;"),
-            
-            ("custom_allocator", "use std::alloc::{GlobalAlloc, Layout, System};\nuse std::sync::atomic::{AtomicUsize, Ordering};\n\nstruct ${1:TrackingAllocator} {\n    allocated: AtomicUsize,\n}\n\nimpl ${1:TrackingAllocator} {\n    pub const fn new() -> Self {\n        Self {\n            allocated: AtomicUsize::new(0),\n        }\n    }\n    \n    pub fn allocated(&self) -> usize {\n        self.allocated.load(Ordering::Relaxed)\n    }\n}\n\nunsafe impl GlobalAlloc for ${1:TrackingAllocator} {\n    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {\n        let ptr = System.alloc(layout);\n        if !ptr.is_null() {\n            self.allocated.fetch_add(layout.size(), Ordering::Relaxed);\n        }\n        ptr\n    }\n    \n    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {\n        System.dealloc(ptr, layout);\n        self.allocated.fetch_sub(layout.size(), Ordering::Relaxed);\n    }\n}\n\n#[global_allocator]\nstatic ALLOCATOR: ${1:TrackingAllocator} = ${1:TrackingAllocator}::new();"),
-            
-            ("no_std_lib", "#![no_std]\n#![no_main]\n\nuse panic_halt as _;\nuse cortex_m_rt::entry;\n\n#[entry]\nfn main() -> ! {\n    ${1:// embedded main logic}\n    loop {\n        ${2:// main loop}\n    }\n}\n\n// For panic handler (if not using panic_halt)\n// #[panic_handler]\n// fn panic(_info: &PanicInfo) -> ! {\n//     loop {}\n// }"),
-            
-            ("atomic_operations", "use std::sync::atomic::{AtomicU64, Ordering};\nuse std::sync::Arc;\nuse std::thread;\n\nstruct ${1:Counter} {\n    value: AtomicU64,\n}\n\nimpl ${1:Counter} {\n    pub fn new() -> Self {\n        Self {\n            value: AtomicU64::new(0),\n        }\n    }\n    \n    pub fn increment(&self) -> u64 {\n        self.value.fetch_add(1, Ordering::Relaxed)\n    }\n    \n    pub fn get(&self) -> u64 {\n        self.value.load(Ordering::Relaxed)\n    }\n    \n    pub fn compare_and_swap(&self, current: u64, new: u64) -> Result<u64, u64> {\n        self.value.compare_exchange(\n            current,\n            new,\n            Ordering::Acquire,\n            Ordering::Relaxed,\n        )\n    }\n}"),
-            
-            ("lock_free_queue", "use std::sync::atomic::{AtomicPtr, Ordering};\nuse std::ptr;\n\nstruct ${1:Node}<T> {\n    data: T,\n    next: AtomicPtr<${1:Node}<T>>,\n}\n\npub struct ${2:LockFreeQueue}<T> {\n    head: AtomicPtr<${1:Node}<T>>,\n    tail: AtomicPtr<${1:Node}<T>>,\n}\n\nimpl<T> ${2:LockFreeQueue}<T> {\n    pub fn new() -> Self {\n        let dummy = Box::into_raw(Box::new(${1:Node} {\n            data: unsafe { std::mem::MaybeUninit::uninit().assume_init() },\n            next: AtomicPtr::new(ptr::null_mut()),\n        }));\n        \n        Self {\n            head: AtomicPtr::new(dummy),\n            tail: AtomicPtr::new(dummy),\n        }\n    }\n    \n    pub fn enqueue(&self, data: T) {\n        let new_node = Box::into_raw(Box::new(${1:Node} {\n            data,\n            next: AtomicPtr::new(ptr::null_mut()),\n        }));\n        \n        loop {\n            let tail = self.tail.load(Ordering::Acquire);\n            let next = unsafe { (*tail).next.load(Ordering::Acquire) };\n            \n            if tail == self.tail.load(Ordering::Acquire) {\n                if next.is_null() {\n                    if unsafe { (*tail).next.compare_exchange_weak(\n                        ptr::null_mut(),\n                        new_node,\n                        Ordering::Release,\n                        Ordering::Relaxed,\n                    ).is_ok() } {\n                        break;\n                    }\n                } else {\n                    let _ = self.tail.compare_exchange_weak(\n                        tail,\n                        next,\n                        Ordering::Release,\n                        Ordering::Relaxed,\n                    );\n                }\n            }\n        }\n        \n        let _ = self.tail.compare_exchange_weak(\n            self.tail.load(Ordering::Acquire),\n            new_node,\n            Ordering::Release,\n            Ordering::Relaxed,\n        );\n    }\n}"),
-            
-            ("simd_operations", "use std::simd::{f32x4, Simd};\n\nfn ${1:simd_dot_product}(a: &[f32], b: &[f32]) -> f32 {\n    assert_eq!(a.len(), b.len());\n    assert_eq!(a.len() % 4, 0);\n    \n    let mut sum = f32x4::splat(0.0);\n    \n    for i in (0..a.len()).step_by(4) {\n        let va = f32x4::from_slice(&a[i..i+4]);\n        let vb = f32x4::from_slice(&b[i..i+4]);\n        sum += va * vb;\n    }\n    \n    sum.reduce_sum()\n}\n\n// Example usage:\n// let a = [1.0, 2.0, 3.0, 4.0];\n// let b = [5.0, 6.0, 7.0, 8.0];\n// let result = simd_dot_product(&a, &b);"),
-            
-            ("intrinsics", "use std::intrinsics;\n\n// Note: Intrinsics are unstable and require nightly\n#![feature(core_intrinsics)]\n\npub unsafe fn ${1:fast_sqrt}(x: f64) -> f64 {\n    intrinsics::sqrtf64(x)\n}\n\npub unsafe fn ${2:count_leading_zeros}(x: u32) -> u32 {\n    intrinsics::ctlz(x)\n}\n\npub unsafe fn ${3:unlikely_branch}(condition: bool) -> bool {\n    intrinsics::unlikely(condition)\n}\n\n// Prefer using stable alternatives when available:\n// f64::sqrt() for square root\n// u32::leading_zeros() for counting leading zeros"),
-            
-            ("wasm_bindgen", "use wasm_bindgen::prelude::*;\n\n// Import JS functions\n#[wasm_bindgen]\nextern \"C\" {\n    fn alert(s: &str);\n    \n    #[wasm_bindgen(js_namespace = console)]\n    fn log(s: &str);\n}\n\n// Export Rust functions to JS\n#[wasm_bindgen]\npub fn ${1:greet}(name: &str) {\n    alert(&format!(\"Hello, {}!\", name));\n}\n\n#[wasm_bindgen]\npub struct ${2:Calculator} {\n    value: f64,\n}\n\n#[wasm_bindgen]\nimpl ${2:Calculator} {\n    #[wasm_bindgen(constructor)]\n    pub fn new() -> ${2:Calculator} {\n        ${2:Calculator} { value: 0.0 }\n    }\n    \n    #[wasm_bindgen(getter)]\n    pub fn value(&self) -> f64 {\n        self.value\n    }\n    \n    pub fn add(&mut self, other: f64) {\n        self.value += other;\n    }\n}"),
-            
-            ("gamedev_ecs", "// Entity Component System pattern\nuse std::collections::HashMap;\nuse std::any::{Any, TypeId};\n\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]\npub struct Entity(u32);\n\npub trait Component: Any + Send + Sync {}\n\npub struct ${1:World} {\n    entities: Vec<Entity>,\n    components: HashMap<TypeId, Box<dyn Any + Send + Sync>>,\n    next_entity_id: u32,\n}\n\nimpl ${1:World} {\n    pub fn new() -> Self {\n        Self {\n            entities: Vec::new(),\n            components: HashMap::new(),\n            next_entity_id: 0,\n        }\n    }\n    \n    pub fn spawn(&mut self) -> Entity {\n        let entity = Entity(self.next_entity_id);\n        self.next_entity_id += 1;\n        self.entities.push(entity);\n        entity\n    }\n    \n    pub fn add_component<T: Component>(&mut self, entity: Entity, component: T) {\n        let type_id = TypeId::of::<T>();\n        let storage = self.components\n            .entry(type_id)\n            .or_insert_with(|| Box::new(HashMap::<Entity, T>::new()));\n        \n        let storage = storage.downcast_mut::<HashMap<Entity, T>>().unwrap();\n        storage.insert(entity, component);\n    }\n    \n    pub fn get_component<T: Component>(&self, entity: Entity) -> Option<&T> {\n        let type_id = TypeId::of::<T>();\n        let storage = self.components.get(&type_id)?;\n        let storage = storage.downcast_ref::<HashMap<Entity, T>>()?;\n        storage.get(&entity)\n    }\n}"),
-            
-            ("distributed_systems", "use std::net::SocketAddr;\nuse tokio::net::{TcpListener, TcpStream};\nuse serde::{Serialize, Deserialize};\n\n#[derive(Serialize, Deserialize, Debug)]\npub enum ${1:Message} {\n    ${2:Ping} { id: u64 },\n    ${3:Pong} { id: u64 },\n    ${4:Data} { payload: Vec<u8> },\n    ${5:Heartbeat} { timestamp: u64 },\n}\n\npub struct ${6:Node} {\n    id: u64,\n    addr: SocketAddr,\n    peers: Vec<SocketAddr>,\n}\n\nimpl ${6:Node} {\n    pub fn new(id: u64, addr: SocketAddr) -> Self {\n        Self {\n            id,\n            addr,\n            peers: Vec::new(),\n        }\n    }\n    \n    pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {\n        let listener = TcpListener::bind(self.addr).await?;\n        println!(\"Node {} listening on {}\", self.id, self.addr);\n        \n        while let Ok((stream, peer_addr)) = listener.accept().await {\n            println!(\"Connection from {}\", peer_addr);\n            tokio::spawn(self.handle_connection(stream));\n        }\n        \n        Ok(())\n    }\n    \n    async fn handle_connection(&self, stream: TcpStream) -> Result<(), Box<dyn std::error::Error>> {\n        // Handle incoming messages\n        ${7:// Implementation here}\n        Ok(())\n    }\n    \n    pub async fn send_message(&self, addr: SocketAddr, msg: ${1:Message}) -> Result<(), Box<dyn std::error::Error>> {\n        let stream = TcpStream::connect(addr).await?;\n        ${8:// Serialize and send message}\n        Ok(())\n    }\n}"),
         ]
     }
 
     fn get_documentation(&self, keyword: &str) -> String {
         match keyword {
-            "fn" => "fn keyword - Define a function\n\nSyntax: fn name(params) -> return_type { body }".to_string(),
-            "struct" => "struct keyword - Define a structure\n\nSyntax: struct Name { field: Type }".to_string(),
-            "enum" => "enum keyword - Define an enumeration\n\nSyntax: enum Name { Variant1, Variant2 }".to_string(),
-            "impl" => "impl keyword - Implement methods for a type\n\nSyntax: impl Type { fn method(&self) {} }".to_string(),
-            "match" => "match keyword - Pattern matching\n\nSyntax: match expr { pattern => result }".to_string(),
-            "Vec" => "Vec<T> - A growable array type\n\nExample: let v = Vec::new(); v.push(1);".to_string(),
-            "Option" => "Option<T> - Represents optional values\n\nVariants: Some(T), None".to_string(),
-            "Result" => "Result<T, E> - Error handling type\n\nVariants: Ok(T), Err(E)".to_string(),
-            "let" => "let keyword - Variable binding\n\nSyntax: let variable = value; or let mut variable = value;".to_string(),
-            "mut" => "mut keyword - Mutable variable modifier\n\nUsage: let mut x = 5; x = 10;".to_string(),
-            "trait" => "trait keyword - Define a trait (interface)\n\nSyntax: trait Name { fn method(&self); }".to_string(),
-            "use" => "use keyword - Import items into scope\n\nSyntax: use crate::module::item;".to_string(),
-            "mod" => "mod keyword - Define a module\n\nSyntax: mod name { /* contents */ }".to_string(),
-            "async" => "async keyword - Define asynchronous function\n\nSyntax: async fn name() { await expr; }".to_string(),
-            "await" => "await keyword - Wait for async operation\n\nSyntax: let result = async_fn().await;".to_string(),
-            "Box" => "Box<T> - Heap-allocated smart pointer\n\nUsage: let boxed = Box::new(value);".to_string(),
-            "Arc" => "Arc<T> - Atomic reference counter for shared ownership\n\nUsage: let shared = Arc::new(value);".to_string(),
-            "Rc" => "Rc<T> - Reference counter for shared ownership (single-threaded)\n\nUsage: let shared = Rc::new(value);".to_string(),
-            "RefCell" => "RefCell<T> - Interior mutability with runtime borrow checking\n\nUsage: let cell = RefCell::new(value);".to_string(),
-            "Mutex" => "Mutex<T> - Mutual exclusion primitive for thread safety\n\nUsage: let mutex = Mutex::new(value);".to_string(),
+            // Control flow keywords
+            "if" => "if keyword - Conditional execution\n\nExecutes code blocks based on boolean conditions. Forms the foundation of program logic.\n\nExample: if condition { /* true branch */ } else { /* false branch */ }".to_string(),
+            "else" => "else keyword - Alternative execution path\n\nProvides alternative code to execute when if condition is false.\n\nExample: if x > 0 { positive() } else { not_positive() }".to_string(),
+            "for" => "for keyword - Iterator-based loop\n\nIterates over collections or ranges. Rust's preferred looping construct for traversing data.\n\nExample: for item in collection { process(item); }".to_string(),
+            "while" => "while keyword - Conditional loop\n\nRepeats code while a condition remains true. Useful for indefinite iteration.\n\nExample: while condition { /* loop body */ }".to_string(),
+            "loop" => "loop keyword - Infinite loop\n\nCreates an unconditional loop that runs forever unless explicitly broken.\n\nExample: loop { if done { break; } /* work */ }".to_string(),
+            "break" => "break keyword - Exit loop\n\nImmediately exits the nearest enclosing loop, optionally returning a value.\n\nExample: break; or break result_value;".to_string(),
+            "continue" => "continue keyword - Skip iteration\n\nSkips the rest of the current loop iteration and moves to the next one.\n\nExample: for i in 0..10 { if i % 2 == 0 { continue; } /* odd numbers only */ }".to_string(),
+            "return" => "return keyword - Function exit\n\nImmediately exits a function and optionally returns a value.\n\nExample: return result; or just return; for unit return".to_string(),
+            
+            // Variable and memory keywords
+            "let" => "let keyword - Variable binding\n\nCreates a new variable binding, immutable by default for safety.\n\nExample: let x = 5; or let mut y = 10; for mutable variables".to_string(),
+            "const" => "const keyword - Compile-time constant\n\nDefines values computed at compile time and embedded in the binary.\n\nExample: const MAX_SIZE: usize = 1000;".to_string(),
+            "static" => "static keyword - Global variable\n\nCreates variables that live for the entire program duration with 'static lifetime.\n\nExample: static COUNTER: AtomicUsize = AtomicUsize::new(0);".to_string(),
+            "mut" => "mut keyword - Mutability modifier\n\nAllows modification of variables and references. Rust is immutable by default.\n\nExample: let mut counter = 0; counter += 1;".to_string(),
+            "ref" => "ref keyword - Reference pattern\n\nCreates references in pattern matching instead of moving values.\n\nExample: match value { ref x => use_reference(x) }".to_string(),
+            
+            // Visibility and modules
+            "pub" => "pub keyword - Public visibility\n\nMakes items visible outside their module. Essential for creating APIs and interfaces.\n\nExample: pub fn public_function() {} or pub struct PublicStruct {}".to_string(),
+            "mod" => "mod keyword - Module declaration\n\nOrganizes code into logical units and controls scope and privacy.\n\nExample: mod utils { pub fn helper() {} }".to_string(),
+            "use" => "use keyword - Import declaration\n\nBrings items from other modules into scope for easier access.\n\nExample: use std::collections::HashMap; or use crate::module::item;".to_string(),
+            "crate" => "crate keyword - Crate root reference\n\nRefers to the root of the current crate in module paths.\n\nExample: use crate::my_module::function;".to_string(),
+            "super" => "super keyword - Parent module reference\n\nRefers to the parent module in module hierarchy navigation.\n\nExample: use super::parent_function;".to_string(),
+            "self" => "self keyword - Current instance reference\n\nRefers to the current instance in method implementations.\n\nExample: fn method(&self) { self.field }".to_string(),
+            "Self" => "Self keyword - Current type alias\n\nRefers to the type being implemented, useful in trait implementations.\n\nExample: impl MyStruct { fn new() -> Self { Self { ... } } }".to_string(),
+            
+            // Type system keywords
+            "type" => "type keyword - Type alias\n\nCreates a new name for an existing type, improving code readability.\n\nExample: type UserId = u64; or type Result<T> = std::result::Result<T, MyError>;".to_string(),
+            "where" => "where keyword - Trait bound clauses\n\nSpecifies trait bounds separately from generic parameter declarations.\n\nExample: fn func<T>() where T: Clone + Debug { ... }".to_string(),
+            "dyn" => "dyn keyword - Dynamic trait objects\n\nCreates trait objects for runtime polymorphism and dynamic dispatch.\n\nExample: let object: Box<dyn Display> = Box::new(42);".to_string(),
+            "impl" => "impl keyword - Implementation block\n\nImplements methods for types or traits, defining behavior and functionality.\n\nExample: impl MyStruct { fn method(&self) {} } or impl Trait for Type {}".to_string(),
+            "trait" => "trait keyword - Define a trait (interface)\n\nDefines shared behavior that types can implement. Enables polymorphism and code reuse.\n\nExample: trait Display { fn fmt(&self) -> String; }".to_string(),
+            "struct" => "struct keyword - Define a structure\n\nDefines custom data types with named fields. The foundation of Rust's type system.\n\nExample: struct Person { name: String, age: u32 }".to_string(),
+            "enum" => "enum keyword - Define an enumeration\n\nDefines types that can be one of several variants. Powerful for modeling state and data.\n\nExample: enum Option<T> { Some(T), None }".to_string(),
+            "fn" => "fn keyword - Define a function\n\nDeclares functions that perform operations and may return values.\n\nExample: fn add(a: i32, b: i32) -> i32 { a + b }".to_string(),
+            
+            // Safety and foreign functions
+            "unsafe" => "unsafe keyword - Unsafe code block\n\nAllows operations that bypass Rust's safety guarantees. Use with extreme caution.\n\nExample: unsafe { *raw_pointer = value; }".to_string(),
+            "extern" => "extern keyword - Foreign function interface\n\nDeclares external functions or specifies calling conventions for FFI.\n\nExample: extern \"C\" { fn c_function(x: i32) -> i32; }".to_string(),
+            
+            // Advanced control flow
+            "move" => "move keyword - Ownership transfer\n\nForces closures to take ownership of captured variables instead of borrowing.\n\nExample: let closure = move |x| { owned_value + x };".to_string(),
+            "in" => "in keyword - Iterator context\n\nUsed in for loops to specify the iterator being traversed.\n\nExample: for item in iterator { process(item); }".to_string(),
+            "match" => "match keyword - Pattern matching\n\nExhaustively matches values against patterns, ensuring all cases are handled.\n\nExample: match option { Some(x) => handle(x), None => default() }".to_string(),
+            
+            // Boolean literals
+            "true" => "true literal - Boolean true value\n\nRepresents logical truth in boolean expressions and conditions.\n\nExample: let is_valid = true; if true { always_executed(); }".to_string(),
+            "false" => "false literal - Boolean false value\n\nRepresents logical falsehood in boolean expressions and conditions.\n\nExample: let is_invalid = false; if false { never_executed(); }".to_string(),
+            
+            // Async programming
+            "async" => "async keyword - Asynchronous function\n\nMarks functions as asynchronous, returning futures for non-blocking execution.\n\nExample: async fn fetch_data() -> Result<Data, Error> { ... }".to_string(),
+            "await" => "await keyword - Await future completion\n\nPauses async function execution until a future completes, yielding control.\n\nExample: let result = async_operation().await?;".to_string(),
+            
+            // Memory management and smart pointers
+            "Box" => "Box<T> - Owned heap allocation\n\nAllocates values on the heap and provides single ownership. Useful for large data or recursive types.\n\nExample: let boxed = Box::new(large_struct);".to_string(),
+            "Arc" => "Arc<T> - Atomic reference counter\n\nEnables shared ownership across threads with atomic reference counting.\n\nExample: let shared = Arc::new(data); let clone = Arc::clone(&shared);".to_string(),
+            "Rc" => "Rc<T> - Reference counter (single-threaded)\n\nEnables shared ownership within a single thread using reference counting.\n\nExample: let shared = Rc::new(data); let clone = Rc::clone(&shared);".to_string(),
+            "RefCell" => "RefCell<T> - Interior mutability with runtime borrow checking\n\nProvides mutable access to data through immutable references with runtime checks.\n\nExample: let cell = RefCell::new(value); *cell.borrow_mut() = new_value;".to_string(),
+            "Cell" => "Cell<T> - Interior mutability for Copy types\n\nAllows mutation of Copy types through shared references without borrowing.\n\nExample: let cell = Cell::new(42); cell.set(100);".to_string(),
+            "Mutex" => "Mutex<T> - Mutual exclusion primitive\n\nProvides thread-safe access to data by ensuring exclusive access through locking.\n\nExample: let mutex = Mutex::new(data); let guard = mutex.lock().unwrap();".to_string(),
+            "RwLock" => "RwLock<T> - Reader-writer lock\n\nAllows multiple readers or single writer access for better concurrency performance.\n\nExample: let lock = RwLock::new(data); let reader = lock.read().unwrap();".to_string(),
+            "Weak" => "Weak<T> - Non-owning reference\n\nProvides weak references to Arc/Rc data to break reference cycles.\n\nExample: let weak = Arc::downgrade(&arc_ref);".to_string(),
+            "Pin" => "Pin<P> - Prevents moving pinned data\n\nEnsures data cannot be moved in memory, required for self-referential types.\n\nExample: let pinned = Pin::new(Box::new(data));".to_string(),
+            
+            // Core collections
+            "Vec" => "Vec<T> - Growable array\n\nDynamic array that can grow and shrink at runtime. The most common collection type.\n\nExample: let mut v = Vec::new(); v.push(42); v.extend([1, 2, 3]);".to_string(),
+            "HashMap" => "HashMap<K, V> - Hash table\n\nProvides fast key-value lookups using hashing. Unordered collection.\n\nExample: let mut map = HashMap::new(); map.insert(\"key\", \"value\");".to_string(),
+            "HashSet" => "HashSet<T> - Set based on HashMap\n\nStores unique elements with fast lookups. No duplicates allowed.\n\nExample: let mut set = HashSet::new(); set.insert(42);".to_string(),
+            "BTreeMap" => "BTreeMap<K, V> - Sorted map\n\nOrdered map that maintains keys in sorted order. Slower but ordered iteration.\n\nExample: let mut map = BTreeMap::new(); map.insert(1, \"one\");".to_string(),
+            "BTreeSet" => "BTreeSet<T> - Sorted set\n\nOrdered set that maintains elements in sorted order.\n\nExample: let mut set = BTreeSet::new(); set.insert(42);".to_string(),
+            "VecDeque" => "VecDeque<T> - Double-ended queue\n\nDeque allowing efficient insertion and removal from both ends.\n\nExample: let mut deque = VecDeque::new(); deque.push_front(1); deque.push_back(2);".to_string(),
+            
+            // Option and Result
+            "Option" => "Option<T> - Optional values\n\nRepresents values that may or may not exist. Prevents null pointer errors.\n\nVariants: Some(T) contains a value, None represents absence.\n\nExample: let maybe_value: Option<i32> = Some(42);".to_string(),
+            "Some" => "Option::Some - Contains a value\n\nWrapper for present values in the Option enum. Used for safe nullable types.\n\nExample: let value = Some(42); match value { Some(x) => println!(\"Got {}\", x), None => {} }".to_string(),
+            "None" => "Option::None - No value present\n\nRepresents the absence of a value in the Option enum. Safe alternative to null.\n\nExample: let empty: Option<i32> = None; if empty.is_none() { /* handle empty case */ }".to_string(),
+            "Result" => "Result<T, E> - Error handling\n\nRepresents operations that can succeed (Ok) or fail (Err). Central to Rust error handling.\n\nExample: fn divide(a: f64, b: f64) -> Result<f64, &'static str> { ... }".to_string(),
+            "Ok" => "Result::Ok - Success variant\n\nContains the successful result value in Result enum.\n\nExample: let success = Ok(42); match success { Ok(x) => use_value(x), Err(_) => {} }".to_string(),
+            "Err" => "Result::Err - Error variant\n\nContains the error value when an operation fails in Result enum.\n\nExample: let failure = Err(\"operation failed\"); if let Err(e) = failure { handle_error(e); }".to_string(),
             "RwLock" => "RwLock<T> - Reader-writer lock for concurrent access\n\nUsage: let lock = RwLock::new(value);".to_string(),
             "println!" => "println! macro - Print to stdout with newline\n\nSyntax: println!(\"format {}\", args);".to_string(),
             "format!" => "format! macro - Create formatted string\n\nSyntax: let s = format!(\"format {}\", args);".to_string(),
@@ -499,6 +429,7 @@ impl LanguageProvider for RustProvider {
             "stream" => "Async Stream - Process sequences asynchronously\n\nStream-based data processing with async/await".to_string(),
             "custom_error" => "Custom Error Type - Define application-specific errors\n\nImplements Error trait for better error handling".to_string(),
             "anyhow_error" => "Anyhow Error Handling - Simplified error management\n\nProvides easy error handling with context".to_string(),
+            "thiserror" => "ThisError Derive - Automatic Error implementation\n\nDerive macro for Error trait implementation".to_string(),
             "axum_handler" => "Axum Web Handler - HTTP request handler function\n\nAsync web handler with extractors and response".to_string(),
             "reqwest_client" => "HTTP Client - Make HTTP requests with reqwest\n\nAsync HTTP client for API communication".to_string(),
             "sqlx_query" => "SQLx Database Query - Type-safe database operations\n\nAsync database queries with compile-time verification".to_string(),
@@ -530,6 +461,7 @@ impl LanguageProvider for RustProvider {
             "HashSet" => "HashSet<T> - Set based on HashMap\n\nUnique elements with fast lookups".to_string(),
             "BTreeMap" => "BTreeMap<K, V> - Sorted map\n\nMaintains keys in sorted order".to_string(),
             "BTreeSet" => "BTreeSet<T> - Sorted set\n\nMaintains elements in sorted order".to_string(),
+            "VecDeque" => "VecDeque<T> - Double-ended queue\n\nEfficient push/pop from both ends".to_string(),
             
             // Important traits
             "Iterator" => "Iterator trait - Provides iteration capabilities\n\nDefines next() method for sequential access".to_string(),
@@ -597,135 +529,63 @@ impl LanguageProvider for RustProvider {
             "is_ok" => "is_ok() - Check if Result is success\n\nReturns boolean".to_string(),
             "is_err" => "is_err() - Check if Result is error\n\nReturns boolean".to_string(),
             
-            // Documentation for new advanced keywords
-            "PhantomData" => "PhantomData<T> - Zero-sized marker type\n\nUsed to indicate ownership of type T without storing it".to_string(),
-            "const_generics" => "Const Generics - Generic parameters that are values\n\nExample: struct Array<T, const N: usize>".to_string(),
-            "phantom_data" => "Phantom Data Pattern - Type-level programming\n\nUsed for type safety without runtime overhead".to_string(),
-            "pin_projection" => "Pin Projection - Safe self-referential structs\n\nPrevents moving of pinned data in memory".to_string(),
-            "zero_cost_abstraction" => "Zero-Cost Abstraction - No runtime overhead\n\nAbstractions that compile to the same code as hand-optimized".to_string(),
-            "type_state" => "Type State Pattern - Encode state in types\n\nPrevents invalid state transitions at compile time".to_string(),
-            "procedural_macro" => "Procedural Macro - Code generation\n\nMetaprogramming that generates Rust code at compile time".to_string(),
-            "attribute_macro" => "Attribute Macro - Function transformation\n\nTransforms functions with custom attributes".to_string(),
-            "workspace_member" => "Cargo Workspace - Multi-crate projects\n\nManage multiple related crates together".to_string(),
-            "feature_flags" => "Feature Flags - Conditional compilation\n\nEnable/disable code sections based on features".to_string(),
-            "custom_allocator" => "Custom Allocator - Memory management\n\nImplement GlobalAlloc for custom memory allocation".to_string(),
-            "no_std_lib" => "No Standard Library - Bare metal programming\n\nFor embedded systems without std library".to_string(),
-            "atomic_operations" => "Atomic Operations - Lock-free programming\n\nThread-safe operations without explicit locking".to_string(),
-            "lock_free_queue" => "Lock-Free Data Structure - Concurrent programming\n\nData structures without blocking synchronization".to_string(),
-            "simd_operations" => "SIMD Operations - Parallel processing\n\nSingle Instruction Multiple Data for performance".to_string(),
-            "intrinsics" => "Compiler Intrinsics - Low-level operations\n\nDirect access to processor instructions".to_string(),
-            "wasm_bindgen" => "WebAssembly Bindings - Web integration\n\nInterface between Rust and JavaScript".to_string(),
-            "gamedev_ecs" => "Entity Component System - Game architecture\n\nData-oriented design pattern for games".to_string(),
-            "distributed_systems" => "Distributed Systems - Network programming\n\nPatterns for building distributed applications".to_string(),
-            
-            // New collection types
-            "LinkedList" => "LinkedList<T> - Doubly-linked list\n\nEfficient insertion/removal but poor cache locality".to_string(),
-            "BinaryHeap" => "BinaryHeap<T> - Priority queue\n\nMax-heap implementation for priority-based access".to_string(),
-            "VecDeque" => "VecDeque<T> - Double-ended queue\n\nEfficient push/pop from both ends".to_string(),
-            "Range" => "Range<T> - Half-open range\n\nRepresents a..b (excluding b)".to_string(),
-            "RangeInclusive" => "RangeInclusive<T> - Closed range\n\nRepresents a..=b (including b)".to_string(),
-            "Cow" => "Cow<T> - Clone-on-write smart pointer\n\nBorrowed or owned data with lazy cloning".to_string(),
-            
-            // Async ecosystem
-            "LocalSet" => "LocalSet - Single-threaded async runtime\n\nRun !Send futures on current thread".to_string(),
-            "JoinSet" => "JoinSet<T> - Manage multiple tasks\n\nSpawn and await multiple async tasks".to_string(),
-            "spawn_blocking" => "spawn_blocking() - Run blocking code in async\n\nRun CPU-intensive work without blocking runtime".to_string(),
-            "yield_now" => "yield_now() - Cooperative yielding\n\nYield control to other tasks voluntarily".to_string(),
-            
-            // Iterator types
-            "Enumerate" => "Enumerate<I> - Iterator with indices\n\nPairs each element with its index".to_string(),
-            "FilterMap" => "FilterMap<I> - Filter and transform\n\nCombines filter and map operations".to_string(),
-            "FlatMap" => "FlatMap<I> - Flatten mapped results\n\nMaps to iterators and flattens the result".to_string(),
-            "Peekable" => "Peekable<I> - Look ahead iterator\n\nPeek at next element without consuming".to_string(),
-            "StepBy" => "StepBy<I> - Step iterator\n\nTake every nth element".to_string(),
-            
-            // Concurrency
-            "mpsc" => "Multi-producer single-consumer channel\n\nAsync message passing primitive".to_string(),
-            "oneshot" => "One-shot channel\n\nSend single value between tasks".to_string(),
-            "broadcast" => "Broadcast channel\n\nSend to multiple receivers".to_string(),
-            "watch" => "Watch channel\n\nSingle-producer multi-consumer with latest value".to_string(),
-            "Semaphore" => "Semaphore - Counting semaphore\n\nLimits concurrent access to resources".to_string(),
-            "Notify" => "Notify - Async notification\n\nWake up waiting tasks".to_string(),
-            
-            // FFI and unsafe
-            "extern_C" => "extern \"C\" - C-compatible ABI\n\nUse C calling convention".to_string(),
-            "repr_C" => "#[repr(C)] - C-compatible layout\n\nUse C memory layout for structs".to_string(),
-            "repr_transparent" => "#[repr(transparent)] - Newtype wrapper\n\nSame layout as inner type".to_string(),
-            "NonZero" => "NonZero types - Non-zero integers\n\nOptimized Option<NonZero> layout".to_string(),
-            
-            // Memory layout
-            "align" => "Memory alignment\n\nSpecify minimum alignment for types".to_string(),
-            "packed" => "Packed layout\n\nRemove padding between fields".to_string(),
-            "offset_of" => "Field offset calculation\n\nGet byte offset of struct field".to_string(),
-            
-            // Web frameworks
-            "axum" => "Axum - Modern web framework\n\nAsync web framework built on hyper and tower".to_string(),
-            "warp" => "Warp - Composable web framework\n\nFilter-based web framework".to_string(),
-            "actix_web" => "Actix Web - Actor-based web framework\n\nHigh-performance web framework".to_string(),
-            "extract" => "Axum extractors\n\nExtract data from HTTP requests".to_string(),
-            "middleware" => "Web middleware\n\nRequest/response processing layers".to_string(),
-            
-            // Database
-            "sqlx" => "SQLx - Async SQL toolkit\n\nCompile-time checked SQL queries".to_string(),
-            "diesel" => "Diesel - Safe ORM\n\nType-safe SQL query builder".to_string(),
-            "Pool" => "Connection pool\n\nManage database connections".to_string(),
-            "Transaction" => "Database transaction\n\nAtomic database operations".to_string(),
-            
-            // Serialization
-            "serde_json" => "Serde JSON - JSON serialization\n\nSerialize/deserialize JSON data".to_string(),
-            "toml" => "TOML format\n\nConfiguration file format".to_string(),
-            "bincode" => "Binary serialization\n\nEfficient binary encoding".to_string(),
-            "flatten" => "Serde flatten\n\nFlatten nested structures".to_string(),
-            
-            // Logging and tracing
-            "tracing_subscriber" => "Tracing subscriber\n\nCollect and format tracing data".to_string(),
-            "instrument" => "Tracing instrument\n\nAdd spans to async functions".to_string(),
-            "span" => "Tracing span\n\nRepresent period of time with context".to_string(),
-            "event" => "Tracing event\n\nPoint-in-time occurrence".to_string(),
-            
-            // Error handling
-            "anyhow" => "Anyhow - Easy error handling\n\nSimplified error propagation and context".to_string(),
-            "thiserror" => "ThisError - Error derive macro\n\nAutomatic Error trait implementation".to_string(),
-            "color_eyre" => "Color Eyre - Pretty error reports\n\nBeautiful error messages with context".to_string(),
-            "bail" => "Early return with error\n\nReturn error immediately".to_string(),
-            "ensure" => "Conditional error\n\nReturn error if condition fails".to_string(),
-            
-            // Testing
-            "rstest" => "RsTest - Parameterized tests\n\nTable-driven and parameterized testing".to_string(),
-            "proptest" => "Property-based testing\n\nGenerate test cases automatically".to_string(),
-            "insta" => "Snapshot testing\n\nCompare outputs against saved snapshots".to_string(),
-            "arbitrary" => "Arbitrary data generation\n\nGenerate random test data".to_string(),
-            
-            // CLI and TUI
-            "crossterm" => "Cross-platform terminal\n\nTerminal manipulation library".to_string(),
-            "dialoguer" => "Interactive CLI prompts\n\nUser input and confirmation dialogs".to_string(),
-            "indicatif" => "Progress bars\n\nProgress indicators for CLI apps".to_string(),
-            "colored" => "Terminal colors\n\nColorize terminal output".to_string(),
-            
-            // Parsing
-            "nom" => "Nom parser combinator\n\nFast parser combinator library".to_string(),
-            "pest" => "PEG parser generator\n\nParsingExpression Grammar parser".to_string(),
-            "regex" => "Regular expressions\n\nPattern matching and text search".to_string(),
-            
-            // Cryptography
-            "ring" => "Cryptographic primitives\n\nSafe, fast, small crypto library".to_string(),
-            "rustls" => "Pure Rust TLS implementation\n\nMemory-safe TLS library".to_string(),
-            "sha2" => "SHA-2 hash functions\n\nSecure hash algorithms".to_string(),
-            "rand" => "Random number generation\n\nCryptographically secure randomness".to_string(),
-            
-            // Math and numerics
-            "num" => "Numeric traits and types\n\nGeneric mathematics library".to_string(),
-            "nalgebra" => "Linear algebra\n\nMath library for 3D graphics and simulations".to_string(),
-            "ndarray" => "N-dimensional arrays\n\nNumPy-like arrays for Rust".to_string(),
-            "approx" => "Approximate floating point\n\nCompare floats with tolerance".to_string(),
-            
-            // Platform-specific
-            "windows" => "Windows API bindings\n\nAccess Windows system APIs".to_string(),
-            "nix" => "Unix API bindings\n\nSafe wrappers for POSIX APIs".to_string(),
-            "mio" => "Metal I/O\n\nLow-level I/O primitives".to_string(),
-            "notify" => "File system notifications\n\nWatch file system changes".to_string(),
-            
-            _ => format!("{} - Rust keyword/identifier", keyword),
+            _ => {
+                // Provide educational, context-aware documentation for any Rust element
+                if keyword.chars().next().map_or(false, |c| c.is_uppercase()) {
+                    if keyword.ends_with("Error") {
+                        format!("{} - Rust error type\n\nRepresents a specific kind of error in Rust's error handling system. Used with Result<T, E> for recoverable errors.\n\nExample: fn parse_data() -> Result<Data, {}> {{ ... }}", keyword, keyword)
+                    } else if keyword.starts_with("Arc") || keyword.starts_with("Rc") || keyword.starts_with("Box") {
+                        format!("{} - Rust smart pointer\n\nA wrapper type that provides additional capabilities for memory management and ownership.\n\nExample: let shared = {}::new(value);", keyword, keyword)
+                    } else if keyword.contains("Iterator") || keyword.contains("Iter") {
+                        format!("{} - Rust iterator type\n\nPart of Rust's powerful iterator system for processing sequences of data efficiently.\n\nExample: let results: Vec<_> = data.{}().map(|x| transform(x)).collect();", keyword, keyword.to_lowercase())
+                    } else if keyword.contains("Future") || keyword.contains("Stream") {
+                        format!("{} - Rust async type\n\nUsed in asynchronous programming for non-blocking operations and concurrent execution.\n\nExample: let result = {}.await;", keyword, keyword.to_lowercase())
+                    } else if keyword.contains("Builder") {
+                        format!("{} - Rust builder pattern type\n\nProvides a fluent interface for constructing complex objects step-by-step.\n\nExample: let obj = {}::new().field1(val1).field2(val2).build();", keyword, keyword)
+                    } else if keyword.len() <= 5 && keyword.chars().all(|c| c.is_alphanumeric()) {
+                        format!("{} - Rust type or trait\n\nA fundamental type, trait, or commonly used struct in Rust programming.\n\nUsage: Defines data structures or shared behavior patterns.", keyword)
+                    } else {
+                        format!("{} - Rust type or trait\n\nA custom type, struct, enum, or trait that defines data structures or behavior in Rust.\n\nUsed for: Creating abstractions, organizing code, and implementing functionality.", keyword)
+                    }
+                } else if keyword.ends_with('!') {
+                    let base_name = &keyword[..keyword.len()-1];
+                    if base_name.contains("assert") {
+                        format!("{} - Rust assertion macro\n\nVerifies conditions at runtime and panics if they fail. Essential for debugging and testing.\n\nExample: {}(x > 0, \"x must be positive\");", keyword, keyword)
+                    } else if base_name.contains("print") || base_name.contains("write") {
+                        format!("{} - Rust formatting macro\n\nOutputs formatted text using Rust's powerful format string system.\n\nExample: {}!(\"Value: {{}}\", variable);", keyword, keyword)
+                    } else if base_name == "vec" {
+                        format!("{} - Vector creation macro\n\nCreates a Vec<T> with initial elements. More concise than Vec::new() followed by push calls.\n\nExample: let numbers = vec![1, 2, 3, 4];", keyword)
+                    } else if base_name == "format" {
+                        format!("{} - String formatting macro\n\nCreates formatted strings without printing them. Returns a String value.\n\nExample: let message = format!(\"Hello, {{}}!\", name);", keyword)
+                    } else {
+                        format!("{} - Rust macro\n\nA metaprogramming tool that generates code at compile time. Enables powerful abstractions and reduces boilerplate.\n\nUsage: {}!(macro_arguments);", keyword, keyword)
+                    }
+                } else if keyword.len() <= 6 && keyword.chars().all(|c| c.is_lowercase() || c.is_numeric() || c == '_') {
+                    if keyword.starts_with("i") && keyword[1..].chars().all(|c| c.is_numeric()) {
+                        format!("{} - Signed integer type\n\nStores signed integers with {} bits. Range: {} to {}.\n\nExample: let number: {} = -42;", 
+                            keyword, &keyword[1..], 
+                            format!("-2^{}", keyword[1..].parse::<u32>().unwrap_or(31) - 1),
+                            format!("2^{} - 1", keyword[1..].parse::<u32>().unwrap_or(31) - 1),
+                            keyword)
+                    } else if keyword.starts_with("u") && keyword[1..].chars().all(|c| c.is_numeric()) {
+                        format!("{} - Unsigned integer type\n\nStores non-negative integers with {} bits. Range: 0 to {}.\n\nExample: let count: {} = 42;", 
+                            keyword, &keyword[1..], 
+                            format!("2^{} - 1", keyword[1..].parse::<u32>().unwrap_or(32)),
+                            keyword)
+                    } else if keyword.starts_with("f") && keyword[1..].chars().all(|c| c.is_numeric()) {
+                        format!("{} - Floating-point type\n\nStores decimal numbers with {} bits of precision. IEEE 754 standard.\n\nExample: let pi: {} = 3.14159;", 
+                            keyword, &keyword[1..], keyword)
+                    } else if keyword == "str" {
+                        format!("{} - String slice type\n\nRefers to a sequence of UTF-8 bytes. Usually seen as &str (borrowed string slice).\n\nExample: let text: &str = \"Hello, world!\";", keyword)
+                    } else if keyword.contains("_") {
+                        format!("{} - Rust function or method\n\nA function following Rust's snake_case naming convention. Performs operations and may return values.\n\nExample: let result = {}(arguments);", keyword, keyword)
+                    } else {
+                        format!("{} - Rust language element\n\nA keyword, type, or identifier with specific meaning in Rust programming.\n\nUsed for: Language constructs, type definitions, or control flow.", keyword)
+                    }
+                } else {
+                    format!("{} - Rust identifier\n\nA name defined in your Rust code - could be a variable, function, module, or custom type.\n\nFollows Rust naming conventions and ownership rules for safe, efficient programming.", keyword)
+                }
+            }
         }
     }
 }

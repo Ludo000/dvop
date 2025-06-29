@@ -95,7 +95,7 @@ impl LanguageProvider for CppProvider {
             "inline" => "inline keyword - Suggest function inlining\n\nUsage: inline int func() { return value; }".to_string(),
             "extern" => "extern keyword - External linkage\n\nUsage: extern \"C\" { declarations }".to_string(),
             "static" => "static keyword - Internal linkage or class member\n\nUsage: static int var; or static void func();".to_string(),
-            _ => format!("{} - C++ keyword/identifier", keyword),
+            _ => format!("{} - C++ language element for object-oriented and system programming", keyword),
         }
     }
 }

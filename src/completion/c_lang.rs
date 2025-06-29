@@ -76,7 +76,7 @@ impl LanguageProvider for CProvider {
             "fread" => "fread() - Read from file\n\nSyntax: size_t fread(void* ptr, size_t size, size_t count, FILE* stream)".to_string(),
             "fwrite" => "fwrite() - Write to file\n\nSyntax: size_t fwrite(const void* ptr, size_t size, size_t count, FILE* stream)".to_string(),
             "fprintf" => "fprintf() - Print formatted to file\n\nSyntax: int fprintf(FILE* stream, const char* format, ...)".to_string(),
-            _ => format!("{} - C keyword/identifier", keyword),
+            _ => format!("{} - C language element for system and application programming", keyword),
         }
     }
 }

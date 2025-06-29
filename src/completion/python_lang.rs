@@ -73,7 +73,7 @@ impl LanguageProvider for PythonProvider {
             "__repr__" => "__repr__() - Developer string representation\n\nUsage: def __repr__(self): return string".to_string(),
             "async" => "async keyword - Define asynchronous function\n\nUsage: async def func(): await expression".to_string(),
             "await" => "await keyword - Wait for coroutine\n\nUsage: result = await coroutine()".to_string(),
-            _ => format!("{} - Python keyword/identifier", keyword),
+            _ => format!("{} - Python language element for building applications and scripts", keyword),
         }
     }
 }

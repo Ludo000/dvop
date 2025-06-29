@@ -68,7 +68,7 @@ impl LanguageProvider for JavaScriptProvider {
             "setInterval" => "setInterval() - Execute repeatedly\n\nSyntax: setInterval(callback, milliseconds)".to_string(),
             "document" => "document object - DOM interface\n\nMethods: getElementById(), querySelector(), createElement()".to_string(),
             "window" => "window object - Global browser object\n\nProperties: location, history, localStorage".to_string(),
-            _ => format!("{} - JavaScript keyword/identifier", keyword),
+            _ => format!("{} - JavaScript language element for building dynamic web applications", keyword),
         }
     }
 }

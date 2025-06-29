@@ -53,11 +53,8 @@ pub fn get_language_snippets(language: &str) -> Vec<(&'static str, &'static str)
 
 /// Get documentation for a specific keyword in a language
 pub fn get_keyword_documentation(language: &str, keyword: &str) -> String {
-    if let Some(provider) = get_language_provider(language) {
-        provider.get_documentation(keyword)
-    } else {
-        format!("{} - {} keyword/identifier", keyword, language)
-    }
+    // Forward to the enhanced documentation system in ui.rs
+    ui::get_completion_documentation(keyword, language)
 }
 
 /// Get all supported languages

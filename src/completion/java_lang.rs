@@ -115,7 +115,7 @@ impl LanguageProvider for JavaProvider {
             "float" => "float type - 32-bit floating point\n\nPrecision: ~7 decimal digits".to_string(),
             "double" => "double type - 64-bit floating point\n\nPrecision: ~15 decimal digits".to_string(),
             "char" => "char type - 16-bit Unicode character\n\nRange: '\\u0000' to '\\uFFFF'".to_string(),
-            _ => format!("{} - Java keyword/identifier", keyword),
+            _ => format!("{} - Java language element for enterprise and application development", keyword),
         }
     }
 }
