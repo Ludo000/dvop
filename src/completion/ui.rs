@@ -370,10 +370,10 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     
     // Create scrolled window for suggestions
     let scrolled = ScrolledWindow::builder()
-        .max_content_height(350)  // Slightly increased height
-        .max_content_width(1000)  // Much wider for extensive documentation display
-        .min_content_height(200)
-        .min_content_width(800)   // Significantly increased minimum width for documentation
+        .max_content_height(500)  // Significantly increased height for more visible items
+        .max_content_width(1400)  // Much wider for extensive documentation display
+        .min_content_height(300)  // Increased minimum height
+        .min_content_width(1200)  // Significantly increased minimum width for documentation
         .propagate_natural_height(false)
         .propagate_natural_width(false)
         .hscrollbar_policy(gtk4::PolicyType::Never)
@@ -389,7 +389,7 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
         .build();
     
     // Ensure the list box can be scrolled
-    list_box.set_size_request(800, -1);  // Much wider for extensive documentation
+    list_box.set_size_request(1200, -1);  // Much wider for extensive documentation
     
     println!("ListBox created");
     
@@ -398,11 +398,11 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
         println!("Adding suggestion {}: {}", i, display_text);
         
         // Create a horizontal box to hold icon, text, and documentation
-        let item_box = GtkBox::new(Orientation::Horizontal, 12);  // Increased spacing
-        item_box.set_margin_start(12);   // Increased margins
-        item_box.set_margin_end(12);
-        item_box.set_margin_top(6);      // Increased vertical spacing
-        item_box.set_margin_bottom(6);
+        let item_box = GtkBox::new(Orientation::Horizontal, 16);  // Increased spacing for larger popup
+        item_box.set_margin_start(16);   // Increased margins for better visual hierarchy
+        item_box.set_margin_end(16);
+        item_box.set_margin_top(8);      // Increased vertical spacing for taller popup
+        item_box.set_margin_bottom(8);
         
         // Create appropriate icon based on completion type
         let icon = match completion_item {
@@ -431,6 +431,9 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
             .width_chars(20)  // Reduced width to give more room to documentation
             .build();
         
+        // Add CSS class for bold styling
+        label.add_css_class("completion-label");
+        
         // Get and add enhanced documentation
         let doc_text = match completion_item {
             CompletionItem::Keyword(keyword) => {
@@ -451,7 +454,7 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
             .hexpand(true)
             .wrap(true)                              // Enable wrapping for long documentation
             .wrap_mode(pango::WrapMode::Word)        // Wrap at word boundaries
-            .max_width_chars(80)                     // Much more characters for extensive documentation
+            .max_width_chars(120)                    // Much more characters for extensive documentation in larger popup
             .build();
         
         // Style the documentation label to be smaller and dimmed
@@ -460,12 +463,20 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
         // Add some CSS styling for better appearance with more spacing
         let css_provider = gtk4::CssProvider::new();
         css_provider.load_from_data(
-            ".completion-doc { 
-                font-size: 0.9em; 
-                color: alpha(@theme_fg_color, 0.65); 
-                margin-left: 30px;
-                line-height: 1.3;
-                padding-right: 10px;
+            ".completion-label { 
+                font-weight: bold;
+                font-size: 1.0em;
+                color: @theme_fg_color;
+            }
+            .completion-doc { 
+                font-size: 0.95em; 
+                font-weight: 700;
+                color: alpha(@theme_fg_color, 0.75); 
+                margin-left: 40px;
+                line-height: 1.4;
+                padding-right: 20px;
+                padding-top: 2px;
+                padding-bottom: 2px;
             }"
         );
         
