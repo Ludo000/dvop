@@ -1283,5 +1283,1377 @@
       "content": "import os\nimport json\nimport yaml\nfrom pathlib import Path\nfrom typing import Dict, Any, Union\nfrom dataclasses import dataclass, field\n\n@dataclass\nclass ${1:AppConfig}:\n    \"\"\"${2:Application configuration}.\"\"\"\n    \n    # Database settings\n    database_url: str = field(default=\"sqlite:///app.db\")\n    database_echo: bool = field(default=False)\n    \n    # Server settings\n    host: str = field(default=\"0.0.0.0\")\n    port: int = field(default=8000)\n    debug: bool = field(default=False)\n    \n    # Logging\n    log_level: str = field(default=\"INFO\")\n    log_file: str = field(default=None)\n    \n    # API settings\n    api_key: str = field(default=\"\")\n    rate_limit: int = field(default=100)\n    \n    @classmethod\n    def from_file(cls, config_path: Union[str, Path]) -> '${1:AppConfig}':\n        \"\"\"Load configuration from file.\"\"\"\n        config_path = Path(config_path)\n        \n        if not config_path.exists():\n            raise FileNotFoundError(f\"Config file not found: {config_path}\")\n        \n        if config_path.suffix.lower() == '.json':\n            with open(config_path) as f:\n                data = json.load(f)\n        elif config_path.suffix.lower() in ['.yml', '.yaml']:\n            with open(config_path) as f:\n                data = yaml.safe_load(f)\n        else:\n            raise ValueError(f\"Unsupported config format: {config_path.suffix}\")\n        \n        return cls(**data)\n    \n    @classmethod\n    def from_env(cls, prefix: str = \"APP_\") -> '${1:AppConfig}':\n        \"\"\"Load configuration from environment variables.\"\"\"\n        config = cls()\n        \n        for field_name in config.__dataclass_fields__:\n            env_name = f\"{prefix}{field_name.upper()}\"\n            env_value = os.getenv(env_name)\n            \n            if env_value is not None:\n                field_type = config.__dataclass_fields__[field_name].type\n                \n                if field_type == bool:\n                    value = env_value.lower() in ('true', '1', 'yes', 'on')\n                elif field_type == int:\n                    value = int(env_value)\n                else:\n                    value = env_value\n                \n                setattr(config, field_name, value)\n        \n        return config\n    \n    def to_dict(self) -> Dict[str, Any]:\n        \"\"\"Convert config to dictionary.\"\"\"\n        return {\n            field.name: getattr(self, field.name)\n            for field in self.__dataclass_fields__.values()\n        }\n    \n    def save_to_file(self, config_path: Union[str, Path]):\n        \"\"\"Save configuration to file.\"\"\"\n        config_path = Path(config_path)\n        config_path.parent.mkdir(parents=True, exist_ok=True)\n        \n        data = self.to_dict()\n        \n        if config_path.suffix.lower() == '.json':\n            with open(config_path, 'w') as f:\n                json.dump(data, f, indent=2)\n        elif config_path.suffix.lower() in ['.yml', '.yaml']:\n            with open(config_path, 'w') as f:\n                yaml.dump(data, f, default_flow_style=False)\n        else:\n            raise ValueError(f\"Unsupported config format: {config_path.suffix}\")\n\n# Usage example\nif __name__ == \"__main__\":\n    # Load from file\n    try:\n        config = ${1:AppConfig}.from_file(\"config.yaml\")\n    except FileNotFoundError:\n        # Use environment variables or defaults\n        config = ${1:AppConfig}.from_env()\n    \n    print(f\"Config: {config}\")\n    \n    # Save current config\n    config.save_to_file(\"current_config.yaml\")",
       "category": "configuration"
     }
-  ]
+  ],
+  "imports": {
+    "modules": [
+      {
+        "path": "os",
+        "items": [
+          {
+            "name": "path",
+            "item_type": "module",
+            "description": "OS path utilities"
+          },
+          {
+            "name": "environ",
+            "item_type": "dict",
+            "description": "Environment variables dictionary"
+          },
+          {
+            "name": "getcwd",
+            "item_type": "function",
+            "description": "Get current working directory"
+          },
+          {
+            "name": "listdir",
+            "item_type": "function",
+            "description": "List directory contents"
+          },
+          {
+            "name": "makedirs",
+            "item_type": "function",
+            "description": "Create directories recursively"
+          },
+          {
+            "name": "remove",
+            "item_type": "function",
+            "description": "Remove a file"
+          }
+        ],
+        "submodules": [
+          "path"
+        ]
+      },
+      {
+        "path": "os.path",
+        "items": [
+          {
+            "name": "join",
+            "item_type": "function",
+            "description": "Join path components"
+          },
+          {
+            "name": "exists",
+            "item_type": "function",
+            "description": "Check if path exists"
+          },
+          {
+            "name": "isfile",
+            "item_type": "function",
+            "description": "Check if path is a file"
+          },
+          {
+            "name": "isdir",
+            "item_type": "function",
+            "description": "Check if path is a directory"
+          },
+          {
+            "name": "basename",
+            "item_type": "function",
+            "description": "Get filename from path"
+          },
+          {
+            "name": "dirname",
+            "item_type": "function",
+            "description": "Get directory name from path"
+          },
+          {
+            "name": "splitext",
+            "item_type": "function",
+            "description": "Split path into name and extension"
+          },
+          {
+            "name": "abspath",
+            "item_type": "function",
+            "description": "Get absolute path"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "sys",
+        "items": [
+          {
+            "name": "argv",
+            "item_type": "list",
+            "description": "Command line arguments"
+          },
+          {
+            "name": "path",
+            "item_type": "list",
+            "description": "Module search path"
+          },
+          {
+            "name": "exit",
+            "item_type": "function",
+            "description": "Exit the program"
+          },
+          {
+            "name": "version",
+            "item_type": "str",
+            "description": "Python version string"
+          },
+          {
+            "name": "platform",
+            "item_type": "str",
+            "description": "Platform identifier"
+          },
+          {
+            "name": "stdin",
+            "item_type": "file",
+            "description": "Standard input stream"
+          },
+          {
+            "name": "stdout",
+            "item_type": "file",
+            "description": "Standard output stream"
+          },
+          {
+            "name": "stderr",
+            "item_type": "file",
+            "description": "Standard error stream"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "json",
+        "items": [
+          {
+            "name": "loads",
+            "item_type": "function",
+            "description": "Parse JSON string"
+          },
+          {
+            "name": "dumps",
+            "item_type": "function",
+            "description": "Serialize object to JSON string"
+          },
+          {
+            "name": "load",
+            "item_type": "function",
+            "description": "Parse JSON from file"
+          },
+          {
+            "name": "dump",
+            "item_type": "function",
+            "description": "Serialize object to JSON file"
+          },
+          {
+            "name": "JSONDecodeError",
+            "item_type": "exception",
+            "description": "JSON parsing error"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "datetime",
+        "items": [
+          {
+            "name": "datetime",
+            "item_type": "class",
+            "description": "Date and time class"
+          },
+          {
+            "name": "date",
+            "item_type": "class",
+            "description": "Date class"
+          },
+          {
+            "name": "time",
+            "item_type": "class",
+            "description": "Time class"
+          },
+          {
+            "name": "timedelta",
+            "item_type": "class",
+            "description": "Time duration class"
+          },
+          {
+            "name": "timezone",
+            "item_type": "class",
+            "description": "Timezone information class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "time",
+        "items": [
+          {
+            "name": "sleep",
+            "item_type": "function",
+            "description": "Suspend execution for given seconds"
+          },
+          {
+            "name": "time",
+            "item_type": "function",
+            "description": "Get current timestamp"
+          },
+          {
+            "name": "strftime",
+            "item_type": "function",
+            "description": "Format time as string"
+          },
+          {
+            "name": "strptime",
+            "item_type": "function",
+            "description": "Parse time string"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "re",
+        "items": [
+          {
+            "name": "match",
+            "item_type": "function",
+            "description": "Match pattern at string beginning"
+          },
+          {
+            "name": "search",
+            "item_type": "function",
+            "description": "Search for pattern in string"
+          },
+          {
+            "name": "findall",
+            "item_type": "function",
+            "description": "Find all pattern matches"
+          },
+          {
+            "name": "sub",
+            "item_type": "function",
+            "description": "Replace pattern matches"
+          },
+          {
+            "name": "split",
+            "item_type": "function",
+            "description": "Split string by pattern"
+          },
+          {
+            "name": "compile",
+            "item_type": "function",
+            "description": "Compile regular expression"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "pathlib",
+        "items": [
+          {
+            "name": "Path",
+            "item_type": "class",
+            "description": "Object-oriented filesystem paths"
+          },
+          {
+            "name": "PurePath",
+            "item_type": "class",
+            "description": "Pure path without filesystem access"
+          },
+          {
+            "name": "WindowsPath",
+            "item_type": "class",
+            "description": "Windows-specific path"
+          },
+          {
+            "name": "PosixPath",
+            "item_type": "class",
+            "description": "POSIX-specific path"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "logging",
+        "items": [
+          {
+            "name": "getLogger",
+            "item_type": "function",
+            "description": "Get logger instance"
+          },
+          {
+            "name": "basicConfig",
+            "item_type": "function",
+            "description": "Configure logging"
+          },
+          {
+            "name": "debug",
+            "item_type": "function",
+            "description": "Log debug message"
+          },
+          {
+            "name": "info",
+            "item_type": "function",
+            "description": "Log info message"
+          },
+          {
+            "name": "warning",
+            "item_type": "function",
+            "description": "Log warning message"
+          },
+          {
+            "name": "error",
+            "item_type": "function",
+            "description": "Log error message"
+          },
+          {
+            "name": "critical",
+            "item_type": "function",
+            "description": "Log critical message"
+          },
+          {
+            "name": "Logger",
+            "item_type": "class",
+            "description": "Logger class"
+          }
+        ],
+        "submodules": [
+          "handlers"
+        ]
+      },
+      {
+        "path": "argparse",
+        "items": [
+          {
+            "name": "ArgumentParser",
+            "item_type": "class",
+            "description": "Command line argument parser"
+          },
+          {
+            "name": "Namespace",
+            "item_type": "class",
+            "description": "Argument namespace"
+          },
+          {
+            "name": "Action",
+            "item_type": "class",
+            "description": "Base action class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "collections",
+        "items": [
+          {
+            "name": "defaultdict",
+            "item_type": "class",
+            "description": "Dictionary with default values"
+          },
+          {
+            "name": "Counter",
+            "item_type": "class",
+            "description": "Dictionary for counting objects"
+          },
+          {
+            "name": "deque",
+            "item_type": "class",
+            "description": "Double-ended queue"
+          },
+          {
+            "name": "OrderedDict",
+            "item_type": "class",
+            "description": "Dictionary preserving insertion order"
+          },
+          {
+            "name": "namedtuple",
+            "item_type": "function",
+            "description": "Factory for tuple subclasses"
+          }
+        ],
+        "submodules": [
+          "abc"
+        ]
+      },
+      {
+        "path": "itertools",
+        "items": [
+          {
+            "name": "count",
+            "item_type": "function",
+            "description": "Count from start value"
+          },
+          {
+            "name": "cycle",
+            "item_type": "function",
+            "description": "Cycle through iterable"
+          },
+          {
+            "name": "repeat",
+            "item_type": "function",
+            "description": "Repeat value"
+          },
+          {
+            "name": "chain",
+            "item_type": "function",
+            "description": "Chain iterables together"
+          },
+          {
+            "name": "combinations",
+            "item_type": "function",
+            "description": "Generate combinations"
+          },
+          {
+            "name": "permutations",
+            "item_type": "function",
+            "description": "Generate permutations"
+          },
+          {
+            "name": "product",
+            "item_type": "function",
+            "description": "Cartesian product"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "functools",
+        "items": [
+          {
+            "name": "partial",
+            "item_type": "function",
+            "description": "Partial function application"
+          },
+          {
+            "name": "reduce",
+            "item_type": "function",
+            "description": "Apply function cumulatively"
+          },
+          {
+            "name": "wraps",
+            "item_type": "function",
+            "description": "Update wrapper function"
+          },
+          {
+            "name": "lru_cache",
+            "item_type": "function",
+            "description": "Least-recently-used cache decorator"
+          },
+          {
+            "name": "cache",
+            "item_type": "function",
+            "description": "Simple caching decorator"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "typing",
+        "items": [
+          {
+            "name": "List",
+            "item_type": "type",
+            "description": "List type hint"
+          },
+          {
+            "name": "Dict",
+            "item_type": "type",
+            "description": "Dictionary type hint"
+          },
+          {
+            "name": "Tuple",
+            "item_type": "type",
+            "description": "Tuple type hint"
+          },
+          {
+            "name": "Set",
+            "item_type": "type",
+            "description": "Set type hint"
+          },
+          {
+            "name": "Optional",
+            "item_type": "type",
+            "description": "Optional type hint"
+          },
+          {
+            "name": "Union",
+            "item_type": "type",
+            "description": "Union type hint"
+          },
+          {
+            "name": "Callable",
+            "item_type": "type",
+            "description": "Callable type hint"
+          },
+          {
+            "name": "Any",
+            "item_type": "type",
+            "description": "Any type hint"
+          },
+          {
+            "name": "TypeVar",
+            "item_type": "function",
+            "description": "Type variable"
+          },
+          {
+            "name": "Generic",
+            "item_type": "class",
+            "description": "Generic type base class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "dataclasses",
+        "items": [
+          {
+            "name": "dataclass",
+            "item_type": "decorator",
+            "description": "Dataclass decorator"
+          },
+          {
+            "name": "field",
+            "item_type": "function",
+            "description": "Dataclass field configuration"
+          },
+          {
+            "name": "asdict",
+            "item_type": "function",
+            "description": "Convert dataclass to dictionary"
+          },
+          {
+            "name": "astuple",
+            "item_type": "function",
+            "description": "Convert dataclass to tuple"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "enum",
+        "items": [
+          {
+            "name": "Enum",
+            "item_type": "class",
+            "description": "Enumeration base class"
+          },
+          {
+            "name": "IntEnum",
+            "item_type": "class",
+            "description": "Integer enumeration"
+          },
+          {
+            "name": "Flag",
+            "item_type": "class",
+            "description": "Flag enumeration"
+          },
+          {
+            "name": "auto",
+            "item_type": "function",
+            "description": "Automatic enum value"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "random",
+        "items": [
+          {
+            "name": "randint",
+            "item_type": "function",
+            "description": "Random integer in range"
+          },
+          {
+            "name": "random",
+            "item_type": "function",
+            "description": "Random float [0.0, 1.0)"
+          },
+          {
+            "name": "choice",
+            "item_type": "function",
+            "description": "Random choice from sequence"
+          },
+          {
+            "name": "choices",
+            "item_type": "function",
+            "description": "Random choices with replacement"
+          },
+          {
+            "name": "sample",
+            "item_type": "function",
+            "description": "Random sample without replacement"
+          },
+          {
+            "name": "shuffle",
+            "item_type": "function",
+            "description": "Shuffle sequence in place"
+          },
+          {
+            "name": "seed",
+            "item_type": "function",
+            "description": "Initialize random number generator"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "math",
+        "items": [
+          {
+            "name": "sqrt",
+            "item_type": "function",
+            "description": "Square root"
+          },
+          {
+            "name": "pow",
+            "item_type": "function",
+            "description": "Power function"
+          },
+          {
+            "name": "floor",
+            "item_type": "function",
+            "description": "Floor function"
+          },
+          {
+            "name": "ceil",
+            "item_type": "function",
+            "description": "Ceiling function"
+          },
+          {
+            "name": "sin",
+            "item_type": "function",
+            "description": "Sine function"
+          },
+          {
+            "name": "cos",
+            "item_type": "function",
+            "description": "Cosine function"
+          },
+          {
+            "name": "tan",
+            "item_type": "function",
+            "description": "Tangent function"
+          },
+          {
+            "name": "pi",
+            "item_type": "constant",
+            "description": "Pi constant"
+          },
+          {
+            "name": "e",
+            "item_type": "constant",
+            "description": "Euler's number"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "statistics",
+        "items": [
+          {
+            "name": "mean",
+            "item_type": "function",
+            "description": "Arithmetic mean"
+          },
+          {
+            "name": "median",
+            "item_type": "function",
+            "description": "Median value"
+          },
+          {
+            "name": "mode",
+            "item_type": "function",
+            "description": "Most common value"
+          },
+          {
+            "name": "stdev",
+            "item_type": "function",
+            "description": "Standard deviation"
+          },
+          {
+            "name": "variance",
+            "item_type": "function",
+            "description": "Sample variance"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "urllib",
+        "items": [
+          {
+            "name": "request",
+            "item_type": "module",
+            "description": "URL request handling"
+          },
+          {
+            "name": "parse",
+            "item_type": "module",
+            "description": "URL parsing utilities"
+          },
+          {
+            "name": "error",
+            "item_type": "module",
+            "description": "URL error exceptions"
+          }
+        ],
+        "submodules": [
+          "request",
+          "parse",
+          "error"
+        ]
+      },
+      {
+        "path": "urllib.request",
+        "items": [
+          {
+            "name": "urlopen",
+            "item_type": "function",
+            "description": "Open URL"
+          },
+          {
+            "name": "urlretrieve",
+            "item_type": "function",
+            "description": "Retrieve URL to file"
+          },
+          {
+            "name": "Request",
+            "item_type": "class",
+            "description": "HTTP request class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "urllib.parse",
+        "items": [
+          {
+            "name": "urlparse",
+            "item_type": "function",
+            "description": "Parse URL into components"
+          },
+          {
+            "name": "urljoin",
+            "item_type": "function",
+            "description": "Join URL components"
+          },
+          {
+            "name": "quote",
+            "item_type": "function",
+            "description": "URL encode string"
+          },
+          {
+            "name": "unquote",
+            "item_type": "function",
+            "description": "URL decode string"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "http",
+        "items": [
+          {
+            "name": "client",
+            "item_type": "module",
+            "description": "HTTP client"
+          },
+          {
+            "name": "server",
+            "item_type": "module",
+            "description": "HTTP server"
+          }
+        ],
+        "submodules": [
+          "client",
+          "server"
+        ]
+      },
+      {
+        "path": "http.client",
+        "items": [
+          {
+            "name": "HTTPConnection",
+            "item_type": "class",
+            "description": "HTTP connection class"
+          },
+          {
+            "name": "HTTPSConnection",
+            "item_type": "class",
+            "description": "HTTPS connection class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "csv",
+        "items": [
+          {
+            "name": "reader",
+            "item_type": "function",
+            "description": "CSV reader"
+          },
+          {
+            "name": "writer",
+            "item_type": "function",
+            "description": "CSV writer"
+          },
+          {
+            "name": "DictReader",
+            "item_type": "class",
+            "description": "Dictionary CSV reader"
+          },
+          {
+            "name": "DictWriter",
+            "item_type": "class",
+            "description": "Dictionary CSV writer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "sqlite3",
+        "items": [
+          {
+            "name": "connect",
+            "item_type": "function",
+            "description": "Connect to SQLite database"
+          },
+          {
+            "name": "Cursor",
+            "item_type": "class",
+            "description": "Database cursor"
+          },
+          {
+            "name": "Connection",
+            "item_type": "class",
+            "description": "Database connection"
+          },
+          {
+            "name": "Row",
+            "item_type": "class",
+            "description": "Database row"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "threading",
+        "items": [
+          {
+            "name": "Thread",
+            "item_type": "class",
+            "description": "Thread class"
+          },
+          {
+            "name": "Lock",
+            "item_type": "class",
+            "description": "Thread lock"
+          },
+          {
+            "name": "Event",
+            "item_type": "class",
+            "description": "Thread event"
+          },
+          {
+            "name": "Semaphore",
+            "item_type": "class",
+            "description": "Thread semaphore"
+          },
+          {
+            "name": "Timer",
+            "item_type": "class",
+            "description": "Timer thread"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "multiprocessing",
+        "items": [
+          {
+            "name": "Process",
+            "item_type": "class",
+            "description": "Process class"
+          },
+          {
+            "name": "Pool",
+            "item_type": "class",
+            "description": "Process pool"
+          },
+          {
+            "name": "Queue",
+            "item_type": "class",
+            "description": "Process-safe queue"
+          },
+          {
+            "name": "Manager",
+            "item_type": "function",
+            "description": "Shared object manager"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "asyncio",
+        "items": [
+          {
+            "name": "run",
+            "item_type": "function",
+            "description": "Run async function"
+          },
+          {
+            "name": "create_task",
+            "item_type": "function",
+            "description": "Create async task"
+          },
+          {
+            "name": "gather",
+            "item_type": "function",
+            "description": "Gather async results"
+          },
+          {
+            "name": "sleep",
+            "item_type": "function",
+            "description": "Async sleep"
+          },
+          {
+            "name": "Event",
+            "item_type": "class",
+            "description": "Async event"
+          },
+          {
+            "name": "Queue",
+            "item_type": "class",
+            "description": "Async queue"
+          },
+          {
+            "name": "Semaphore",
+            "item_type": "class",
+            "description": "Async semaphore"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "concurrent.futures",
+        "items": [
+          {
+            "name": "ThreadPoolExecutor",
+            "item_type": "class",
+            "description": "Thread pool executor"
+          },
+          {
+            "name": "ProcessPoolExecutor",
+            "item_type": "class",
+            "description": "Process pool executor"
+          },
+          {
+            "name": "as_completed",
+            "item_type": "function",
+            "description": "Iterator for completed futures"
+          },
+          {
+            "name": "wait",
+            "item_type": "function",
+            "description": "Wait for futures completion"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "unittest",
+        "items": [
+          {
+            "name": "TestCase",
+            "item_type": "class",
+            "description": "Unit test case"
+          },
+          {
+            "name": "TestSuite",
+            "item_type": "class",
+            "description": "Test suite"
+          },
+          {
+            "name": "TextTestRunner",
+            "item_type": "class",
+            "description": "Text test runner"
+          },
+          {
+            "name": "mock",
+            "item_type": "module",
+            "description": "Mock objects for testing"
+          }
+        ],
+        "submodules": [
+          "mock"
+        ]
+      },
+      {
+        "path": "requests",
+        "items": [
+          {
+            "name": "get",
+            "item_type": "function",
+            "description": "HTTP GET request"
+          },
+          {
+            "name": "post",
+            "item_type": "function",
+            "description": "HTTP POST request"
+          },
+          {
+            "name": "put",
+            "item_type": "function",
+            "description": "HTTP PUT request"
+          },
+          {
+            "name": "delete",
+            "item_type": "function",
+            "description": "HTTP DELETE request"
+          },
+          {
+            "name": "Session",
+            "item_type": "class",
+            "description": "HTTP session class"
+          },
+          {
+            "name": "Response",
+            "item_type": "class",
+            "description": "HTTP response class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "flask",
+        "items": [
+          {
+            "name": "Flask",
+            "item_type": "class",
+            "description": "Flask application class"
+          },
+          {
+            "name": "request",
+            "item_type": "object",
+            "description": "Current request object"
+          },
+          {
+            "name": "jsonify",
+            "item_type": "function",
+            "description": "Create JSON response"
+          },
+          {
+            "name": "render_template",
+            "item_type": "function",
+            "description": "Render Jinja2 template"
+          },
+          {
+            "name": "redirect",
+            "item_type": "function",
+            "description": "Create redirect response"
+          },
+          {
+            "name": "url_for",
+            "item_type": "function",
+            "description": "Generate URL for endpoint"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "django",
+        "items": [
+          {
+            "name": "settings",
+            "item_type": "module",
+            "description": "Django settings"
+          },
+          {
+            "name": "apps",
+            "item_type": "module",
+            "description": "Django app registry"
+          }
+        ],
+        "submodules": [
+          "contrib",
+          "db",
+          "http",
+          "shortcuts",
+          "urls"
+        ]
+      },
+      {
+        "path": "django.shortcuts",
+        "items": [
+          {
+            "name": "render",
+            "item_type": "function",
+            "description": "Render template to HttpResponse"
+          },
+          {
+            "name": "redirect",
+            "item_type": "function",
+            "description": "Return HttpResponseRedirect"
+          },
+          {
+            "name": "get_object_or_404",
+            "item_type": "function",
+            "description": "Get object or raise Http404"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "django.db",
+        "items": [
+          {
+            "name": "models",
+            "item_type": "module",
+            "description": "Django model classes"
+          },
+          {
+            "name": "connection",
+            "item_type": "object",
+            "description": "Database connection"
+          }
+        ],
+        "submodules": [
+          "models"
+        ]
+      },
+      {
+        "path": "numpy",
+        "items": [
+          {
+            "name": "array",
+            "item_type": "function",
+            "description": "Create numpy array"
+          },
+          {
+            "name": "zeros",
+            "item_type": "function",
+            "description": "Array of zeros"
+          },
+          {
+            "name": "ones",
+            "item_type": "function",
+            "description": "Array of ones"
+          },
+          {
+            "name": "arange",
+            "item_type": "function",
+            "description": "Range array"
+          },
+          {
+            "name": "linspace",
+            "item_type": "function",
+            "description": "Linear space array"
+          },
+          {
+            "name": "sum",
+            "item_type": "function",
+            "description": "Sum array elements"
+          },
+          {
+            "name": "mean",
+            "item_type": "function",
+            "description": "Mean of array elements"
+          },
+          {
+            "name": "std",
+            "item_type": "function",
+            "description": "Standard deviation"
+          }
+        ],
+        "submodules": [
+          "random",
+          "linalg"
+        ]
+      },
+      {
+        "path": "pandas",
+        "items": [
+          {
+            "name": "DataFrame",
+            "item_type": "class",
+            "description": "2D labeled data structure"
+          },
+          {
+            "name": "Series",
+            "item_type": "class",
+            "description": "1D labeled array"
+          },
+          {
+            "name": "read_csv",
+            "item_type": "function",
+            "description": "Read CSV file"
+          },
+          {
+            "name": "read_json",
+            "item_type": "function",
+            "description": "Read JSON file"
+          },
+          {
+            "name": "read_excel",
+            "item_type": "function",
+            "description": "Read Excel file"
+          },
+          {
+            "name": "concat",
+            "item_type": "function",
+            "description": "Concatenate pandas objects"
+          },
+          {
+            "name": "merge",
+            "item_type": "function",
+            "description": "Merge DataFrame objects"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "matplotlib",
+        "items": [
+          {
+            "name": "pyplot",
+            "item_type": "module",
+            "description": "MATLAB-like plotting interface"
+          }
+        ],
+        "submodules": [
+          "pyplot"
+        ]
+      },
+      {
+        "path": "matplotlib.pyplot",
+        "items": [
+          {
+            "name": "plot",
+            "item_type": "function",
+            "description": "Plot lines and/or markers"
+          },
+          {
+            "name": "scatter",
+            "item_type": "function",
+            "description": "Scatter plot"
+          },
+          {
+            "name": "bar",
+            "item_type": "function",
+            "description": "Bar chart"
+          },
+          {
+            "name": "hist",
+            "item_type": "function",
+            "description": "Histogram"
+          },
+          {
+            "name": "show",
+            "item_type": "function",
+            "description": "Display plot"
+          },
+          {
+            "name": "savefig",
+            "item_type": "function",
+            "description": "Save figure"
+          },
+          {
+            "name": "xlabel",
+            "item_type": "function",
+            "description": "Set x-axis label"
+          },
+          {
+            "name": "ylabel",
+            "item_type": "function",
+            "description": "Set y-axis label"
+          },
+          {
+            "name": "title",
+            "item_type": "function",
+            "description": "Set plot title"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "PIL",
+        "items": [
+          {
+            "name": "Image",
+            "item_type": "module",
+            "description": "Image processing module"
+          },
+          {
+            "name": "ImageDraw",
+            "item_type": "module",
+            "description": "Image drawing module"
+          },
+          {
+            "name": "ImageFilter",
+            "item_type": "module",
+            "description": "Image filtering module"
+          }
+        ],
+        "submodules": [
+          "Image",
+          "ImageDraw",
+          "ImageFilter"
+        ]
+      },
+      {
+        "path": "PIL.Image",
+        "items": [
+          {
+            "name": "open",
+            "item_type": "function",
+            "description": "Open image file"
+          },
+          {
+            "name": "new",
+            "item_type": "function",
+            "description": "Create new image"
+          },
+          {
+            "name": "fromarray",
+            "item_type": "function",
+            "description": "Create image from array"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "psycopg2",
+        "items": [
+          {
+            "name": "connect",
+            "item_type": "function",
+            "description": "Connect to PostgreSQL database"
+          },
+          {
+            "name": "extras",
+            "item_type": "module",
+            "description": "PostgreSQL extras module"
+          }
+        ],
+        "submodules": [
+          "extras"
+        ]
+      },
+      {
+        "path": "pymongo",
+        "items": [
+          {
+            "name": "MongoClient",
+            "item_type": "class",
+            "description": "MongoDB client"
+          },
+          {
+            "name": "Collection",
+            "item_type": "class",
+            "description": "MongoDB collection"
+          },
+          {
+            "name": "Database",
+            "item_type": "class",
+            "description": "MongoDB database"
+          }
+        ],
+        "submodules": []
+      }
+    ]
+  }
 }

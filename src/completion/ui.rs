@@ -842,9 +842,20 @@ fn detect_import_context(context: &str) -> bool {
     let current_line = trimmed.lines().last().unwrap_or("");
     let current_line_trimmed = current_line.trim();
     
-    // Only detect import context if the CURRENT line starts with "use" and contains "::"
-    // This prevents false positives from previous use statements in the file
+    // Rust: "use module::" syntax
     if current_line_trimmed.starts_with("use ") && current_line_trimmed.contains("::") {
+        return true;
+    }
+    
+    // JavaScript/TypeScript: "import { } from 'module'" or "import module from 'module'" or "const module = require('module')"
+    if (current_line_trimmed.starts_with("import ") && current_line_trimmed.contains("from")) 
+       || (current_line_trimmed.contains("require(")) {
+        return true;
+    }
+    
+    // Python: "from module import" or "import module"
+    if (current_line_trimmed.starts_with("from ") && current_line_trimmed.contains(" import"))
+       || (current_line_trimmed.starts_with("import ") && !current_line_trimmed.contains("from")) {
         return true;
     }
     
@@ -859,9 +870,9 @@ fn extract_import_path(context: &str) -> Option<String> {
     let current_line = trimmed.lines().last().unwrap_or("");
     let current_line_trimmed = current_line.trim();
     
-    // Check if current line starts with "use"
+    // Rust: "use module::" syntax
     if let Some(stripped) = current_line_trimmed.strip_prefix("use ") {
-        let after_use = &stripped.trim(); // Skip "use "
+        let after_use = &stripped.trim();
         
         // Find the last :: to get the module path before it
         if let Some(last_double_colon) = after_use.rfind("::") {
@@ -869,6 +880,54 @@ fn extract_import_path(context: &str) -> Option<String> {
             return Some(module_path.to_string());
         } else if after_use.is_empty() || after_use.chars().all(|c| c.is_whitespace()) {
             // Just "use " with nothing after - show root modules
+            return Some(String::new());
+        }
+    }
+    
+    // JavaScript: "import { } from 'module'" or "import module from 'module'"
+    if current_line_trimmed.starts_with("import ") && current_line_trimmed.contains("from") {
+        // Extract module name from 'module' or "module"
+        if let Some(from_pos) = current_line_trimmed.rfind("from") {
+            let after_from = &current_line_trimmed[from_pos + 4..].trim();
+            if let Some(quote_start) = after_from.find(|c| c == '\'' || c == '"') {
+                let quote_char = after_from.chars().nth(quote_start).unwrap();
+                let module_part = &after_from[quote_start + 1..];
+                if let Some(quote_end) = module_part.find(quote_char) {
+                    return Some(module_part[..quote_end].to_string());
+                }
+            }
+        }
+    }
+    
+    // JavaScript: "const module = require('module')" or "import('module')"
+    if let Some(require_pos) = current_line_trimmed.find("require(") {
+        let after_require = &current_line_trimmed[require_pos + 8..];
+        if let Some(quote_start) = after_require.find(|c| c == '\'' || c == '"') {
+            let quote_char = after_require.chars().nth(quote_start).unwrap();
+            let module_part = &after_require[quote_start + 1..];
+            if let Some(quote_end) = module_part.find(quote_char) {
+                return Some(module_part[..quote_end].to_string());
+            }
+        }
+    }
+    
+    // Python: "from module import" - extract the module before "import"
+    if let Some(stripped) = current_line_trimmed.strip_prefix("from ") {
+        if let Some(import_pos) = stripped.find(" import") {
+            let module_path = &stripped[..import_pos].trim();
+            return Some(module_path.to_string());
+        }
+    }
+    
+    // Python: "import module" - show available modules
+    if let Some(stripped) = current_line_trimmed.strip_prefix("import ") {
+        let module_part = stripped.trim();
+        // If there's a dot, extract the base module
+        if let Some(dot_pos) = module_part.rfind('.') {
+            let base_module = &module_part[..dot_pos];
+            return Some(base_module.to_string());
+        } else if module_part.is_empty() {
+            // Just "import " - show root modules
             return Some(String::new());
         }
     }

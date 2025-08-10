@@ -903,5 +903,869 @@
       "content": "// Debounce function - delays execution until after delay has passed since last call\nfunction debounce(func, delay) {\n    let timeoutId;\n    \n    return function debounced(...args) {\n        const context = this;\n        \n        clearTimeout(timeoutId);\n        timeoutId = setTimeout(() => {\n            func.apply(context, args);\n        }, delay);\n    };\n}\n\n// Throttle function - limits execution to at most once per delay period\nfunction throttle(func, delay) {\n    let lastCallTime = 0;\n    let timeoutId;\n    \n    return function throttled(...args) {\n        const context = this;\n        const now = Date.now();\n        \n        if (now - lastCallTime >= delay) {\n            // Execute immediately if enough time has passed\n            lastCallTime = now;\n            func.apply(context, args);\n        } else {\n            // Schedule execution at the end of the current period\n            clearTimeout(timeoutId);\n            timeoutId = setTimeout(() => {\n                lastCallTime = Date.now();\n                func.apply(context, args);\n            }, delay - (now - lastCallTime));\n        }\n    };\n}\n\n// Enhanced debounce with immediate option\nfunction debounceAdvanced(func, delay, immediate = false) {\n    let timeoutId;\n    \n    return function debouncedAdvanced(...args) {\n        const context = this;\n        const callNow = immediate && !timeoutId;\n        \n        clearTimeout(timeoutId);\n        timeoutId = setTimeout(() => {\n            timeoutId = null;\n            if (!immediate) func.apply(context, args);\n        }, delay);\n        \n        if (callNow) func.apply(context, args);\n    };\n}\n\n// Usage examples:\n// const debouncedSearch = debounce((query) => {\n//     console.log('Searching for:', query);\n// }, 300);\n// \n// const throttledScroll = throttle(() => {\n//     console.log('Scroll event handled');\n// }, 100);",
       "category": "utilities"
     }
-  ]
+  ],
+  "imports": {
+    "modules": [
+      {
+        "path": "react",
+        "items": [
+          {
+            "name": "useState",
+            "item_type": "hook",
+            "description": "Hook for managing state in functional components"
+          },
+          {
+            "name": "useEffect",
+            "item_type": "hook",
+            "description": "Hook for side effects in functional components"
+          },
+          {
+            "name": "useContext",
+            "item_type": "hook",
+            "description": "Hook for consuming context values"
+          },
+          {
+            "name": "Component",
+            "item_type": "class",
+            "description": "Base class for React components"
+          },
+          {
+            "name": "Fragment",
+            "item_type": "component",
+            "description": "React fragment for grouping elements"
+          },
+          {
+            "name": "createElement",
+            "item_type": "function",
+            "description": "Create React elements programmatically"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "react-dom",
+        "items": [
+          {
+            "name": "render",
+            "item_type": "function",
+            "description": "Render React elements to DOM"
+          },
+          {
+            "name": "createRoot",
+            "item_type": "function",
+            "description": "Create React 18 root for rendering"
+          },
+          {
+            "name": "hydrate",
+            "item_type": "function",
+            "description": "Hydrate server-rendered markup"
+          }
+        ],
+        "submodules": [
+          "client",
+          "server"
+        ]
+      },
+      {
+        "path": "react-router-dom",
+        "items": [
+          {
+            "name": "BrowserRouter",
+            "item_type": "component",
+            "description": "Router using HTML5 history API"
+          },
+          {
+            "name": "Route",
+            "item_type": "component",
+            "description": "Render component based on URL"
+          },
+          {
+            "name": "Link",
+            "item_type": "component",
+            "description": "Navigation link component"
+          },
+          {
+            "name": "useNavigate",
+            "item_type": "hook",
+            "description": "Hook for programmatic navigation"
+          },
+          {
+            "name": "useParams",
+            "item_type": "hook",
+            "description": "Hook for accessing URL parameters"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "lodash",
+        "items": [
+          {
+            "name": "debounce",
+            "item_type": "function",
+            "description": "Debounce function execution"
+          },
+          {
+            "name": "throttle",
+            "item_type": "function",
+            "description": "Throttle function execution"
+          },
+          {
+            "name": "cloneDeep",
+            "item_type": "function",
+            "description": "Deep clone objects and arrays"
+          },
+          {
+            "name": "isEqual",
+            "item_type": "function",
+            "description": "Deep equality comparison"
+          },
+          {
+            "name": "merge",
+            "item_type": "function",
+            "description": "Deep merge objects"
+          },
+          {
+            "name": "pick",
+            "item_type": "function",
+            "description": "Create object with selected properties"
+          },
+          {
+            "name": "omit",
+            "item_type": "function",
+            "description": "Create object without specified properties"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "axios",
+        "items": [
+          {
+            "name": "get",
+            "item_type": "function",
+            "description": "HTTP GET request"
+          },
+          {
+            "name": "post",
+            "item_type": "function",
+            "description": "HTTP POST request"
+          },
+          {
+            "name": "put",
+            "item_type": "function",
+            "description": "HTTP PUT request"
+          },
+          {
+            "name": "delete",
+            "item_type": "function",
+            "description": "HTTP DELETE request"
+          },
+          {
+            "name": "create",
+            "item_type": "function",
+            "description": "Create axios instance with config"
+          },
+          {
+            "name": "interceptors",
+            "item_type": "object",
+            "description": "Request/response interceptors"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "express",
+        "items": [
+          {
+            "name": "Router",
+            "item_type": "function",
+            "description": "Create Express router"
+          },
+          {
+            "name": "static",
+            "item_type": "function",
+            "description": "Serve static files"
+          },
+          {
+            "name": "json",
+            "item_type": "function",
+            "description": "Parse JSON request bodies"
+          },
+          {
+            "name": "urlencoded",
+            "item_type": "function",
+            "description": "Parse URL-encoded bodies"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "fs",
+        "items": [
+          {
+            "name": "readFile",
+            "item_type": "function",
+            "description": "Read file asynchronously"
+          },
+          {
+            "name": "writeFile",
+            "item_type": "function",
+            "description": "Write file asynchronously"
+          },
+          {
+            "name": "readFileSync",
+            "item_type": "function",
+            "description": "Read file synchronously"
+          },
+          {
+            "name": "writeFileSync",
+            "item_type": "function",
+            "description": "Write file synchronously"
+          },
+          {
+            "name": "existsSync",
+            "item_type": "function",
+            "description": "Check if file exists synchronously"
+          },
+          {
+            "name": "mkdir",
+            "item_type": "function",
+            "description": "Create directory"
+          },
+          {
+            "name": "readdir",
+            "item_type": "function",
+            "description": "Read directory contents"
+          }
+        ],
+        "submodules": [
+          "promises"
+        ]
+      },
+      {
+        "path": "fs/promises",
+        "items": [
+          {
+            "name": "readFile",
+            "item_type": "function",
+            "description": "Read file with promises"
+          },
+          {
+            "name": "writeFile",
+            "item_type": "function",
+            "description": "Write file with promises"
+          },
+          {
+            "name": "mkdir",
+            "item_type": "function",
+            "description": "Create directory with promises"
+          },
+          {
+            "name": "readdir",
+            "item_type": "function",
+            "description": "Read directory with promises"
+          },
+          {
+            "name": "stat",
+            "item_type": "function",
+            "description": "Get file stats with promises"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "path",
+        "items": [
+          {
+            "name": "join",
+            "item_type": "function",
+            "description": "Join path segments"
+          },
+          {
+            "name": "resolve",
+            "item_type": "function",
+            "description": "Resolve absolute path"
+          },
+          {
+            "name": "dirname",
+            "item_type": "function",
+            "description": "Get directory name"
+          },
+          {
+            "name": "basename",
+            "item_type": "function",
+            "description": "Get file name"
+          },
+          {
+            "name": "extname",
+            "item_type": "function",
+            "description": "Get file extension"
+          },
+          {
+            "name": "normalize",
+            "item_type": "function",
+            "description": "Normalize path"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "http",
+        "items": [
+          {
+            "name": "createServer",
+            "item_type": "function",
+            "description": "Create HTTP server"
+          },
+          {
+            "name": "request",
+            "item_type": "function",
+            "description": "Make HTTP request"
+          },
+          {
+            "name": "get",
+            "item_type": "function",
+            "description": "Make HTTP GET request"
+          },
+          {
+            "name": "Server",
+            "item_type": "class",
+            "description": "HTTP server class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "https",
+        "items": [
+          {
+            "name": "createServer",
+            "item_type": "function",
+            "description": "Create HTTPS server"
+          },
+          {
+            "name": "request",
+            "item_type": "function",
+            "description": "Make HTTPS request"
+          },
+          {
+            "name": "get",
+            "item_type": "function",
+            "description": "Make HTTPS GET request"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "url",
+        "items": [
+          {
+            "name": "parse",
+            "item_type": "function",
+            "description": "Parse URL string"
+          },
+          {
+            "name": "format",
+            "item_type": "function",
+            "description": "Format URL object"
+          },
+          {
+            "name": "resolve",
+            "item_type": "function",
+            "description": "Resolve relative URL"
+          },
+          {
+            "name": "URL",
+            "item_type": "class",
+            "description": "URL constructor class"
+          },
+          {
+            "name": "URLSearchParams",
+            "item_type": "class",
+            "description": "URL search parameters class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "util",
+        "items": [
+          {
+            "name": "promisify",
+            "item_type": "function",
+            "description": "Convert callback to promise"
+          },
+          {
+            "name": "inspect",
+            "item_type": "function",
+            "description": "Return string representation of object"
+          },
+          {
+            "name": "format",
+            "item_type": "function",
+            "description": "Format string with placeholders"
+          },
+          {
+            "name": "inherits",
+            "item_type": "function",
+            "description": "Inherit prototype methods"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "crypto",
+        "items": [
+          {
+            "name": "randomBytes",
+            "item_type": "function",
+            "description": "Generate random bytes"
+          },
+          {
+            "name": "createHash",
+            "item_type": "function",
+            "description": "Create hash instance"
+          },
+          {
+            "name": "createHmac",
+            "item_type": "function",
+            "description": "Create HMAC instance"
+          },
+          {
+            "name": "pbkdf2",
+            "item_type": "function",
+            "description": "Password-based key derivation"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "events",
+        "items": [
+          {
+            "name": "EventEmitter",
+            "item_type": "class",
+            "description": "Event emitter class"
+          },
+          {
+            "name": "once",
+            "item_type": "function",
+            "description": "Create promise for single event"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "stream",
+        "items": [
+          {
+            "name": "Readable",
+            "item_type": "class",
+            "description": "Readable stream class"
+          },
+          {
+            "name": "Writable",
+            "item_type": "class",
+            "description": "Writable stream class"
+          },
+          {
+            "name": "Transform",
+            "item_type": "class",
+            "description": "Transform stream class"
+          },
+          {
+            "name": "pipeline",
+            "item_type": "function",
+            "description": "Pipe streams with error handling"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "os",
+        "items": [
+          {
+            "name": "platform",
+            "item_type": "function",
+            "description": "Get operating system platform"
+          },
+          {
+            "name": "arch",
+            "item_type": "function",
+            "description": "Get CPU architecture"
+          },
+          {
+            "name": "cpus",
+            "item_type": "function",
+            "description": "Get CPU information"
+          },
+          {
+            "name": "totalmem",
+            "item_type": "function",
+            "description": "Get total system memory"
+          },
+          {
+            "name": "homedir",
+            "item_type": "function",
+            "description": "Get user home directory"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "moment",
+        "items": [
+          {
+            "name": "format",
+            "item_type": "function",
+            "description": "Format date/time"
+          },
+          {
+            "name": "parse",
+            "item_type": "function",
+            "description": "Parse date string"
+          },
+          {
+            "name": "utc",
+            "item_type": "function",
+            "description": "Create UTC moment"
+          },
+          {
+            "name": "duration",
+            "item_type": "function",
+            "description": "Create duration object"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "dayjs",
+        "items": [
+          {
+            "name": "format",
+            "item_type": "function",
+            "description": "Format date/time"
+          },
+          {
+            "name": "parse",
+            "item_type": "function",
+            "description": "Parse date string"
+          },
+          {
+            "name": "utc",
+            "item_type": "function",
+            "description": "Create UTC dayjs object"
+          },
+          {
+            "name": "duration",
+            "item_type": "function",
+            "description": "Create duration object"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "date-fns",
+        "items": [
+          {
+            "name": "format",
+            "item_type": "function",
+            "description": "Format date"
+          },
+          {
+            "name": "parse",
+            "item_type": "function",
+            "description": "Parse date string"
+          },
+          {
+            "name": "addDays",
+            "item_type": "function",
+            "description": "Add days to date"
+          },
+          {
+            "name": "subDays",
+            "item_type": "function",
+            "description": "Subtract days from date"
+          },
+          {
+            "name": "isAfter",
+            "item_type": "function",
+            "description": "Check if date is after another"
+          },
+          {
+            "name": "isBefore",
+            "item_type": "function",
+            "description": "Check if date is before another"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "next",
+        "items": [
+          {
+            "name": "Image",
+            "item_type": "component",
+            "description": "Next.js optimized image component"
+          },
+          {
+            "name": "Link",
+            "item_type": "component",
+            "description": "Next.js link component"
+          },
+          {
+            "name": "Head",
+            "item_type": "component",
+            "description": "Next.js head component"
+          },
+          {
+            "name": "Script",
+            "item_type": "component",
+            "description": "Next.js script component"
+          }
+        ],
+        "submodules": [
+          "router",
+          "server",
+          "image"
+        ]
+      },
+      {
+        "path": "next/router",
+        "items": [
+          {
+            "name": "useRouter",
+            "item_type": "hook",
+            "description": "Next.js router hook"
+          },
+          {
+            "name": "withRouter",
+            "item_type": "function",
+            "description": "Higher-order component for router"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "styled-components",
+        "items": [
+          {
+            "name": "styled",
+            "item_type": "function",
+            "description": "Create styled components"
+          },
+          {
+            "name": "css",
+            "item_type": "function",
+            "description": "CSS template literal"
+          },
+          {
+            "name": "ThemeProvider",
+            "item_type": "component",
+            "description": "Theme context provider"
+          },
+          {
+            "name": "createGlobalStyle",
+            "item_type": "function",
+            "description": "Create global styles"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "@emotion/react",
+        "items": [
+          {
+            "name": "css",
+            "item_type": "function",
+            "description": "CSS-in-JS styling"
+          },
+          {
+            "name": "jsx",
+            "item_type": "function",
+            "description": "JSX pragma with css prop"
+          },
+          {
+            "name": "ThemeProvider",
+            "item_type": "component",
+            "description": "Emotion theme provider"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "@emotion/styled",
+        "items": [
+          {
+            "name": "default",
+            "item_type": "function",
+            "description": "Create styled components with Emotion"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "@mui/material",
+        "items": [
+          {
+            "name": "Button",
+            "item_type": "component",
+            "description": "Material-UI button component"
+          },
+          {
+            "name": "TextField",
+            "item_type": "component",
+            "description": "Material-UI text field"
+          },
+          {
+            "name": "Typography",
+            "item_type": "component",
+            "description": "Material-UI typography"
+          },
+          {
+            "name": "Box",
+            "item_type": "component",
+            "description": "Material-UI box component"
+          },
+          {
+            "name": "Container",
+            "item_type": "component",
+            "description": "Material-UI container"
+          },
+          {
+            "name": "Grid",
+            "item_type": "component",
+            "description": "Material-UI grid system"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "antd",
+        "items": [
+          {
+            "name": "Button",
+            "item_type": "component",
+            "description": "Ant Design button"
+          },
+          {
+            "name": "Input",
+            "item_type": "component",
+            "description": "Ant Design input"
+          },
+          {
+            "name": "Form",
+            "item_type": "component",
+            "description": "Ant Design form"
+          },
+          {
+            "name": "Table",
+            "item_type": "component",
+            "description": "Ant Design table"
+          },
+          {
+            "name": "Modal",
+            "item_type": "component",
+            "description": "Ant Design modal"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "redux",
+        "items": [
+          {
+            "name": "createStore",
+            "item_type": "function",
+            "description": "Create Redux store"
+          },
+          {
+            "name": "combineReducers",
+            "item_type": "function",
+            "description": "Combine multiple reducers"
+          },
+          {
+            "name": "applyMiddleware",
+            "item_type": "function",
+            "description": "Apply middleware to store"
+          },
+          {
+            "name": "bindActionCreators",
+            "item_type": "function",
+            "description": "Bind action creators"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "react-redux",
+        "items": [
+          {
+            "name": "useSelector",
+            "item_type": "hook",
+            "description": "Select state from Redux store"
+          },
+          {
+            "name": "useDispatch",
+            "item_type": "hook",
+            "description": "Get dispatch function"
+          },
+          {
+            "name": "connect",
+            "item_type": "function",
+            "description": "Connect component to Redux"
+          },
+          {
+            "name": "Provider",
+            "item_type": "component",
+            "description": "Redux store provider"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "@reduxjs/toolkit",
+        "items": [
+          {
+            "name": "configureStore",
+            "item_type": "function",
+            "description": "Configure Redux toolkit store"
+          },
+          {
+            "name": "createSlice",
+            "item_type": "function",
+            "description": "Create Redux slice"
+          },
+          {
+            "name": "createAsyncThunk",
+            "item_type": "function",
+            "description": "Create async thunk action"
+          },
+          {
+            "name": "createReducer",
+            "item_type": "function",
+            "description": "Create reducer with Immer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "zustand",
+        "items": [
+          {
+            "name": "create",
+            "item_type": "function",
+            "description": "Create Zustand store"
+          },
+          {
+            "name": "subscribeWithSelector",
+            "item_type": "function",
+            "description": "Subscribe with selector middleware"
+          }
+        ],
+        "submodules": []
+      }
+    ]
+  }
 }
