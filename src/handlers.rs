@@ -1537,84 +1537,218 @@ pub fn handle_file_deletion(
         .map(|name| name.to_string_lossy().to_string())
         .unwrap_or_else(|| "Unknown file".to_string());
     
-    // Create confirmation dialog
-    let dialog = MessageDialog::new(
-        Some(window),
-        DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
-        MessageType::Warning,
-        ButtonsType::None,
-        &format!("Are you sure you want to delete '{}'?\n\nThis action cannot be undone.", file_name)
-    );
-    
-    dialog.add_buttons(&[
-        ("Cancel", ResponseType::Cancel),
-        ("Delete", ResponseType::Accept),
-    ]);
-    
-    dialog.set_default_response(ResponseType::Cancel);
-    
-    // Clone variables for the closure
+    // First, check if the file is open in a tab and handle it properly
+    // Clone variables for the closure that will be called after tab handling
     let file_path_clone = file_path.clone();
     let file_list_box_clone = file_list_box.clone();
     let current_dir_clone = current_dir.clone();
     let active_tab_path_clone = active_tab_path.clone();
-    let editor_notebook_clone = editor_notebook.clone();
-    let file_path_manager_clone = file_path_manager.clone();
     let window_clone = window.clone();
+    let file_name_clone = file_name.clone();
     
-    dialog.connect_response(move |d, response| {
-        if response == ResponseType::Accept {
-            // User confirmed deletion
-            match std::fs::remove_file(&file_path_clone) {
-                Ok(()) => {
-                    println!("Successfully deleted file: {:?}", file_path_clone);
-                    
-                    // Check if the deleted file was open in any tab and close it
-                    close_tab_if_file_open(&editor_notebook_clone, &file_path_clone, &file_path_manager_clone, &active_tab_path_clone);
-                    
-                    // Refresh the file list
-                    utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_clone.borrow(), utils::FileSelectionSource::TabSwitch);
-                }
-                Err(e) => {
-                    eprintln!("Failed to delete file: {:?}, error: {}", file_path_clone, e);
-                    
-                    // Show error dialog
-                    let error_dialog = MessageDialog::new(
-                        Some(&window_clone),
-                        DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
-                        MessageType::Error,
-                        ButtonsType::Ok,
-                        &format!("Failed to delete file: {}", e)
-                    );
-                    error_dialog.show();
-                }
+    close_tab_if_file_open_with_save_prompt(
+        editor_notebook,
+        file_path,
+        file_path_manager,
+        active_tab_path,
+        window,
+        current_dir,
+        file_list_box,
+        move |tab_handled_successfully| {
+            if !tab_handled_successfully {
+                // User canceled the tab close operation, don't proceed with deletion
+                return;
             }
+            
+            // Tab was successfully closed (or wasn't open), proceed with file deletion confirmation
+            let dialog = MessageDialog::new(
+                Some(&window_clone),
+                DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
+                MessageType::Warning,
+                ButtonsType::None,
+                &format!("Are you sure you want to delete '{}'?\n\nThis action cannot be undone.", file_name_clone)
+            );
+            
+            dialog.add_buttons(&[
+                ("Cancel", ResponseType::Cancel),
+                ("Delete", ResponseType::Accept),
+            ]);
+            
+            dialog.set_default_response(ResponseType::Cancel);
+            
+            // Clone variables again for the inner closure
+            let file_path_inner = file_path_clone.clone();
+            let file_list_box_inner = file_list_box_clone.clone();
+            let current_dir_inner = current_dir_clone.clone();
+            let active_tab_path_inner = active_tab_path_clone.clone();
+            let window_inner = window_clone.clone();
+            
+            dialog.connect_response(move |d, response| {
+                if response == ResponseType::Accept {
+                    // User confirmed deletion
+                    match std::fs::remove_file(&file_path_inner) {
+                        Ok(()) => {
+                            println!("Successfully deleted file: {:?}", file_path_inner);
+                            
+                            // Refresh the file list
+                            utils::update_file_list(&file_list_box_inner, &current_dir_inner.borrow(), &active_tab_path_inner.borrow(), utils::FileSelectionSource::TabSwitch);
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to delete file: {:?}, error: {}", file_path_inner, e);
+                            
+                            // Show error dialog
+                            let error_dialog = MessageDialog::new(
+                                Some(&window_inner),
+                                DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
+                                MessageType::Error,
+                                ButtonsType::Ok,
+                                &format!("Failed to delete file: {}", e)
+                            );
+                            error_dialog.show();
+                        }
+                    }
+                }
+                d.close();
+            });
+            
+            dialog.show();
         }
-        d.close();
-    });
-    
-    dialog.show();
+    );
 }
 
-/// Closes a tab if the specified file is currently open
+/// Closes a tab if the specified file is currently open, with proper save handling
 ///
 /// This helper function checks all open tabs to see if any contain the specified file,
-/// and if so, closes that tab without showing save prompts (since the file is being deleted).
-fn close_tab_if_file_open(
+/// and if so, closes that tab with proper save prompts if the file has unsaved changes.
+/// Returns true if the tab was closed (or no tab was open for this file), false if user canceled.
+fn close_tab_if_file_open_with_save_prompt(
     notebook: &Notebook,
     file_path: &PathBuf,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+    window: &ApplicationWindow,
+    _current_dir: &Rc<RefCell<PathBuf>>,
+    _file_list_box: &ListBox,
+    callback: impl Fn(bool) + 'static, // Callback to indicate success/cancellation
 ) {
     let manager = file_path_manager.borrow();
     
     // Find if the file is open in any tab
+    let mut found_page_num = None;
     for (&page_num, path) in manager.iter() {
         if path == file_path {
-            // File is open in this tab, close it without saving prompts
-            drop(manager); // Release the borrow before closing tab
-            actually_close_tab(notebook, page_num, file_path_manager, active_tab_path, None);
+            found_page_num = Some(page_num);
             break;
+        }
+    }
+    
+    drop(manager); // Release the borrow
+    
+    match found_page_num {
+        Some(page_num) => {
+            // File is open in a tab - check if it has unsaved changes
+            if let Some(page_widget) = notebook.nth_page(Some(page_num)) {
+                if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
+                    let mut is_dirty = false;
+                    if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                        if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                            if label.text().starts_with('*') {
+                                is_dirty = true;
+                            }
+                        }
+                    }
+
+                    if !is_dirty {
+                        // Not dirty, close directly and proceed
+                        actually_close_tab(notebook, page_num, file_path_manager, active_tab_path, None);
+                        callback(true);
+                        return;
+                    }
+
+                    // Has unsaved changes - show confirmation dialog
+                    let filename_str = file_path.file_name()
+                        .map(|name| name.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "Unknown file".to_string());
+                        
+                    let dialog = MessageDialog::new(
+                        Some(window),
+                        DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
+                        MessageType::Question,
+                        ButtonsType::None,
+                        &format!("The file '{}' has unsaved changes.\n\nSave changes before closing and deleting?", filename_str)
+                    );
+                    
+                    dialog.add_buttons(&[
+                        ("Cancel", ResponseType::Cancel),
+                        ("Don't Save", ResponseType::No),
+                        ("Save", ResponseType::Yes),
+                    ]);
+                    
+                    dialog.set_default_response(ResponseType::Cancel);
+
+                    // Clone variables for the closure - need to own the path
+                    let notebook_clone = notebook.clone();
+                    let file_path_manager_clone = file_path_manager.clone();
+                    let active_tab_path_clone = active_tab_path.clone();
+                    let file_path_owned = file_path.clone(); // Own the path
+
+                    dialog.connect_response(move |d, response| {
+                        match response {
+                            ResponseType::Yes => {
+                                // Save first, then close
+                                if let Some((_tv, buffer)) = get_text_view_and_buffer_for_page(&notebook_clone, page_num) {
+                                    let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+                                    match File::create(&file_path_owned) {
+                                        Ok(mut file) => {
+                                            if file.write_all(text.as_bytes()).is_ok() {
+                                                // Update tab label to show saved state
+                                                update_tab_label_after_save(&notebook_clone, page_num, Some(&filename_str), false);
+                                                
+                                                // Close the tab
+                                                actually_close_tab(&notebook_clone, page_num, &file_path_manager_clone, &active_tab_path_clone, None);
+                                                callback(true);
+                                            } else {
+                                                eprintln!("Error writing to file: {:?}", file_path_owned);
+                                                callback(false);
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!("Error creating file for writing: {:?}, error: {}", file_path_owned, e);
+                                            callback(false);
+                                        }
+                                    }
+                                } else {
+                                    callback(false);
+                                }
+                            }
+                            ResponseType::No => {
+                                // Don't save, just close
+                                actually_close_tab(&notebook_clone, page_num, &file_path_manager_clone, &active_tab_path_clone, None);
+                                callback(true);
+                            }
+                            ResponseType::Cancel | _ => {
+                                // User canceled
+                                callback(false);
+                            }
+                        }
+                        d.close();
+                    });
+                    
+                    dialog.show();
+                } else {
+                    // Could not get tab label widget, close without prompts
+                    actually_close_tab(notebook, page_num, file_path_manager, active_tab_path, None);
+                    callback(true);
+                }
+            } else {
+                // Could not get page widget, close without prompts
+                actually_close_tab(notebook, page_num, file_path_manager, active_tab_path, None);
+                callback(true);
+            }
+        }
+        None => {
+            // File is not open in any tab, proceed directly
+            callback(true);
         }
     }
 }
