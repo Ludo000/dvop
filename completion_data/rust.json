@@ -11,7 +11,7 @@
     },
     {
       "keyword": "mut",
-      "type": "keyword", 
+      "type": "keyword",
       "description": "mut - Makes a variable mutable so you can change its value after creation. Essential for variables that need to be modified.",
       "example": "let mut score = 0; score += 10;",
       "category": "variable_declaration"
@@ -24,7 +24,7 @@
       "category": "function_declaration"
     },
     {
-      "keyword": "pub", 
+      "keyword": "pub",
       "type": "keyword",
       "description": "pub - Makes items (functions, structs, modules) accessible from outside their current module. Controls code visibility and API design.",
       "example": "pub fn public_api() {}",
@@ -39,7 +39,7 @@
     },
     {
       "keyword": "enum",
-      "type": "keyword", 
+      "type": "keyword",
       "description": "enum - Defines a type that can be one of several different variants. Perfect for representing choices or states.",
       "example": "enum Status { Loading, Success(String), Error }",
       "category": "type_declaration"
@@ -81,7 +81,7 @@
     },
     {
       "keyword": "while",
-      "type": "keyword", 
+      "type": "keyword",
       "description": "while - Repeats code as long as a condition remains true. Perfect for processing until a goal is reached.",
       "example": "while !queue.is_empty() { process(queue.pop()); }",
       "category": "control_flow"
@@ -123,7 +123,7 @@
     },
     {
       "keyword": "mod",
-      "type": "keyword", 
+      "type": "keyword",
       "description": "mod - Organizes code into modules for better structure and namespace management. Helps keep large projects organized.",
       "example": "mod database { pub fn connect() {} }",
       "category": "module_system"
@@ -137,7 +137,7 @@
     },
     {
       "keyword": "await",
-      "type": "keyword", 
+      "type": "keyword",
       "description": "await - Waits for an async operation to complete, yielding control to other tasks while waiting.",
       "example": "let data = fetch_from_server().await?;",
       "category": "async"
@@ -298,7 +298,7 @@
     },
     {
       "keyword": "None",
-      "type": "enum_variant", 
+      "type": "enum_variant",
       "description": "None - Represents the absence of a value in an Option.",
       "example": "if list.is_empty() { None } else { Some(list[0]) }",
       "category": "option_result"
@@ -433,7 +433,7 @@
       "keyword": "char",
       "type": "primitive",
       "description": "char - Stores a single Unicode character (4 bytes). Use for individual characters, emojis.",
-      "example": "let letter: char = 'A'; let emoji: char = '🦀';",
+      "example": "let letter: char = 'A'; let emoji: char = '\ud83e\udd80';",
       "category": "primitive"
     },
     {
@@ -1062,14 +1062,14 @@
   ],
   "snippets": [
     {
-      "trigger": "fn", 
+      "trigger": "fn",
       "description": "Function template - Creates a complete function definition with parameters and return type",
       "content": "fn ${1:function_name}(${2:parameters}) -> ${3:return_type} {\n    ${4:// body}\n}",
       "category": "function"
     },
     {
       "trigger": "struct",
-      "description": "Struct template - Creates a custom data type with named fields", 
+      "description": "Struct template - Creates a custom data type with named fields",
       "content": "struct ${1:Name} {\n    ${2:field}: ${3:Type},\n}",
       "category": "type"
     },
@@ -1189,7 +1189,7 @@
     },
     {
       "trigger": "match_result",
-      "description": "Match Result template - Handle Result with explicit pattern matching", 
+      "description": "Match Result template - Handle Result with explicit pattern matching",
       "content": "match ${1:result} {\n    Ok(${2:value}) => ${3:// handle success},\n    Err(${4:error}) => ${5:// handle error},\n}",
       "category": "error_handling"
     },
@@ -1444,13 +1444,13 @@
             "description": "Hash map implementation providing O(1) average-case lookups"
           },
           {
-            "name": "HashSet", 
+            "name": "HashSet",
             "item_type": "struct",
             "description": "Hash set implementation for storing unique values"
           },
           {
             "name": "BTreeMap",
-            "item_type": "struct", 
+            "item_type": "struct",
             "description": "B-tree map providing ordered key-value storage"
           },
           {
@@ -1506,7 +1506,7 @@
           },
           {
             "name": "create_dir_all",
-            "item_type": "function", 
+            "item_type": "function",
             "description": "Create directory and all parent directories"
           },
           {
@@ -1536,7 +1536,7 @@
             "description": "Trait for types that can read bytes from a source"
           },
           {
-            "name": "Write", 
+            "name": "Write",
             "item_type": "trait",
             "description": "Trait for types that can write bytes to a destination"
           },
@@ -1562,7 +1562,7 @@
           },
           {
             "name": "stdout",
-            "item_type": "function", 
+            "item_type": "function",
             "description": "Get a handle to standard output"
           },
           {
@@ -1614,7 +1614,7 @@
           },
           {
             "name": "RwLock",
-            "item_type": "struct", 
+            "item_type": "struct",
             "description": "Reader-writer lock allowing multiple readers or one writer"
           },
           {
@@ -1644,32 +1644,967 @@
         ]
       },
       {
-        "path": "std::sync::mpsc",
+        "path": "std::sync::atomic",
         "items": [
           {
-            "name": "channel",
+            "name": "AtomicBool",
+            "item_type": "struct",
+            "description": "Lock-free atomic boolean"
+          },
+          {
+            "name": "AtomicI32",
+            "item_type": "struct",
+            "description": "Lock-free atomic 32-bit signed integer"
+          },
+          {
+            "name": "AtomicU32",
+            "item_type": "struct",
+            "description": "Lock-free atomic 32-bit unsigned integer"
+          },
+          {
+            "name": "AtomicI64",
+            "item_type": "struct",
+            "description": "Lock-free atomic 64-bit signed integer"
+          },
+          {
+            "name": "AtomicU64",
+            "item_type": "struct",
+            "description": "Lock-free atomic 64-bit unsigned integer"
+          },
+          {
+            "name": "AtomicUsize",
+            "item_type": "struct",
+            "description": "Lock-free atomic usize"
+          },
+          {
+            "name": "AtomicPtr",
+            "item_type": "struct",
+            "description": "Lock-free atomic pointer"
+          },
+          {
+            "name": "Ordering",
+            "item_type": "enum",
+            "description": "Memory ordering for atomic operations"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::mem",
+        "items": [
+          {
+            "name": "size_of",
             "item_type": "function",
-            "description": "Create unbounded channel for message passing between threads"
+            "description": "Get the size of a type in bytes"
           },
           {
-            "name": "sync_channel",
+            "name": "size_of_val",
             "item_type": "function",
-            "description": "Create bounded channel for message passing between threads"
+            "description": "Get the size of a value in bytes"
           },
           {
-            "name": "Sender",
-            "item_type": "struct",
-            "description": "Sending end of a channel"
+            "name": "align_of",
+            "item_type": "function",
+            "description": "Get the alignment of a type"
           },
           {
-            "name": "Receiver",
-            "item_type": "struct",
-            "description": "Receiving end of a channel"
+            "name": "drop",
+            "item_type": "function",
+            "description": "Explicitly drop a value"
           },
           {
-            "name": "SyncSender",
+            "name": "forget",
+            "item_type": "function",
+            "description": "Forget a value without calling its destructor"
+          },
+          {
+            "name": "replace",
+            "item_type": "function",
+            "description": "Replace a value and return the old one"
+          },
+          {
+            "name": "swap",
+            "item_type": "function",
+            "description": "Swap two values"
+          },
+          {
+            "name": "take",
+            "item_type": "function",
+            "description": "Take a value, leaving Default::default() in its place"
+          },
+          {
+            "name": "transmute",
+            "item_type": "function",
+            "description": "Transmute between types (unsafe)"
+          },
+          {
+            "name": "ManuallyDrop",
             "item_type": "struct",
-            "description": "Sending end of a synchronous channel"
+            "description": "Wrapper to prevent automatic dropping"
+          },
+          {
+            "name": "MaybeUninit",
+            "item_type": "struct",
+            "description": "Wrapper for potentially uninitialized data"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::ptr",
+        "items": [
+          {
+            "name": "null",
+            "item_type": "function",
+            "description": "Create null pointer"
+          },
+          {
+            "name": "null_mut",
+            "item_type": "function",
+            "description": "Create null mutable pointer"
+          },
+          {
+            "name": "NonNull",
+            "item_type": "struct",
+            "description": "Non-null pointer wrapper"
+          },
+          {
+            "name": "read",
+            "item_type": "function",
+            "description": "Read from pointer (unsafe)"
+          },
+          {
+            "name": "write",
+            "item_type": "function",
+            "description": "Write to pointer (unsafe)"
+          },
+          {
+            "name": "copy",
+            "item_type": "function",
+            "description": "Copy memory (unsafe)"
+          },
+          {
+            "name": "eq",
+            "item_type": "function",
+            "description": "Compare pointers for equality"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::slice",
+        "items": [
+          {
+            "name": "from_raw_parts",
+            "item_type": "function",
+            "description": "Create slice from raw pointer and length (unsafe)"
+          },
+          {
+            "name": "from_raw_parts_mut",
+            "item_type": "function",
+            "description": "Create mutable slice from raw pointer and length (unsafe)"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::str",
+        "items": [
+          {
+            "name": "from_utf8",
+            "item_type": "function",
+            "description": "Convert bytes to string slice"
+          },
+          {
+            "name": "from_utf8_unchecked",
+            "item_type": "function",
+            "description": "Convert bytes to string slice (unsafe)"
+          },
+          {
+            "name": "FromStr",
+            "item_type": "trait",
+            "description": "Trait for parsing strings"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::convert",
+        "items": [
+          {
+            "name": "From",
+            "item_type": "trait",
+            "description": "Infallible type conversion trait"
+          },
+          {
+            "name": "Into",
+            "item_type": "trait",
+            "description": "Consuming type conversion trait"
+          },
+          {
+            "name": "TryFrom",
+            "item_type": "trait",
+            "description": "Fallible type conversion trait"
+          },
+          {
+            "name": "TryInto",
+            "item_type": "trait",
+            "description": "Fallible consuming type conversion trait"
+          },
+          {
+            "name": "AsRef",
+            "item_type": "trait",
+            "description": "Reference-to-reference conversion trait"
+          },
+          {
+            "name": "AsMut",
+            "item_type": "trait",
+            "description": "Mutable reference conversion trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::marker",
+        "items": [
+          {
+            "name": "PhantomData",
+            "item_type": "struct",
+            "description": "Zero-sized type for phantom type parameters"
+          },
+          {
+            "name": "Send",
+            "item_type": "trait",
+            "description": "Marker trait for thread-safe transfer"
+          },
+          {
+            "name": "Sync",
+            "item_type": "trait",
+            "description": "Marker trait for thread-safe sharing"
+          },
+          {
+            "name": "Copy",
+            "item_type": "trait",
+            "description": "Marker trait for bitwise copying"
+          },
+          {
+            "name": "Sized",
+            "item_type": "trait",
+            "description": "Marker trait for compile-time known size"
+          },
+          {
+            "name": "Unpin",
+            "item_type": "trait",
+            "description": "Marker trait for types safe to move after pinning"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::ops",
+        "items": [
+          {
+            "name": "Add",
+            "item_type": "trait",
+            "description": "Addition operator trait"
+          },
+          {
+            "name": "Sub",
+            "item_type": "trait",
+            "description": "Subtraction operator trait"
+          },
+          {
+            "name": "Mul",
+            "item_type": "trait",
+            "description": "Multiplication operator trait"
+          },
+          {
+            "name": "Div",
+            "item_type": "trait",
+            "description": "Division operator trait"
+          },
+          {
+            "name": "Rem",
+            "item_type": "trait",
+            "description": "Remainder operator trait"
+          },
+          {
+            "name": "Deref",
+            "item_type": "trait",
+            "description": "Dereference operator trait"
+          },
+          {
+            "name": "DerefMut",
+            "item_type": "trait",
+            "description": "Mutable dereference operator trait"
+          },
+          {
+            "name": "Drop",
+            "item_type": "trait",
+            "description": "Destructor trait"
+          },
+          {
+            "name": "Index",
+            "item_type": "trait",
+            "description": "Index operator trait"
+          },
+          {
+            "name": "IndexMut",
+            "item_type": "trait",
+            "description": "Mutable index operator trait"
+          },
+          {
+            "name": "Range",
+            "item_type": "struct",
+            "description": "Range from start to end (exclusive)"
+          },
+          {
+            "name": "RangeInclusive",
+            "item_type": "struct",
+            "description": "Range from start to end (inclusive)"
+          },
+          {
+            "name": "RangeFrom",
+            "item_type": "struct",
+            "description": "Range from start to infinity"
+          },
+          {
+            "name": "RangeTo",
+            "item_type": "struct",
+            "description": "Range from beginning to end (exclusive)"
+          },
+          {
+            "name": "RangeToInclusive",
+            "item_type": "struct",
+            "description": "Range from beginning to end (inclusive)"
+          },
+          {
+            "name": "RangeFull",
+            "item_type": "struct",
+            "description": "Range covering the entire collection"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::cmp",
+        "items": [
+          {
+            "name": "PartialEq",
+            "item_type": "trait",
+            "description": "Partial equality comparison trait"
+          },
+          {
+            "name": "Eq",
+            "item_type": "trait",
+            "description": "Full equality comparison trait"
+          },
+          {
+            "name": "PartialOrd",
+            "item_type": "trait",
+            "description": "Partial ordering comparison trait"
+          },
+          {
+            "name": "Ord",
+            "item_type": "trait",
+            "description": "Total ordering comparison trait"
+          },
+          {
+            "name": "Ordering",
+            "item_type": "enum",
+            "description": "Result of comparison operations"
+          },
+          {
+            "name": "min",
+            "item_type": "function",
+            "description": "Return the minimum of two values"
+          },
+          {
+            "name": "max",
+            "item_type": "function",
+            "description": "Return the maximum of two values"
+          },
+          {
+            "name": "Reverse",
+            "item_type": "struct",
+            "description": "Wrapper for reverse ordering"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::hash",
+        "items": [
+          {
+            "name": "Hash",
+            "item_type": "trait",
+            "description": "Hashable trait for use in hash maps"
+          },
+          {
+            "name": "Hasher",
+            "item_type": "trait",
+            "description": "Hash function trait"
+          },
+          {
+            "name": "BuildHasher",
+            "item_type": "trait",
+            "description": "Trait for creating hashers"
+          },
+          {
+            "name": "DefaultHasher",
+            "item_type": "struct",
+            "description": "Default hasher implementation"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::borrow",
+        "items": [
+          {
+            "name": "Borrow",
+            "item_type": "trait",
+            "description": "Trait for borrowing data"
+          },
+          {
+            "name": "BorrowMut",
+            "item_type": "trait",
+            "description": "Trait for mutably borrowing data"
+          },
+          {
+            "name": "Cow",
+            "item_type": "enum",
+            "description": "Clone-on-write smart pointer"
+          },
+          {
+            "name": "ToOwned",
+            "item_type": "trait",
+            "description": "Trait for converting borrowed data to owned"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::cell",
+        "items": [
+          {
+            "name": "Cell",
+            "item_type": "struct",
+            "description": "Interior mutability for Copy types"
+          },
+          {
+            "name": "RefCell",
+            "item_type": "struct",
+            "description": "Interior mutability with runtime borrow checking"
+          },
+          {
+            "name": "Ref",
+            "item_type": "struct",
+            "description": "Immutable borrow from RefCell"
+          },
+          {
+            "name": "RefMut",
+            "item_type": "struct",
+            "description": "Mutable borrow from RefCell"
+          },
+          {
+            "name": "OnceCell",
+            "item_type": "struct",
+            "description": "Cell that can be written to only once"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::rc",
+        "items": [
+          {
+            "name": "Rc",
+            "item_type": "struct",
+            "description": "Reference-counted smart pointer for single-threaded use"
+          },
+          {
+            "name": "Weak",
+            "item_type": "struct",
+            "description": "Weak reference to Rc"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::pin",
+        "items": [
+          {
+            "name": "Pin",
+            "item_type": "struct",
+            "description": "Pointer that prevents moving of the pointed-to value"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::task",
+        "items": [
+          {
+            "name": "Context",
+            "item_type": "struct",
+            "description": "Execution context for async tasks"
+          },
+          {
+            "name": "Poll",
+            "item_type": "enum",
+            "description": "Represents whether async computation is ready"
+          },
+          {
+            "name": "Waker",
+            "item_type": "struct",
+            "description": "Handle for waking up async tasks"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::any",
+        "items": [
+          {
+            "name": "Any",
+            "item_type": "trait",
+            "description": "Trait for runtime type information"
+          },
+          {
+            "name": "TypeId",
+            "item_type": "struct",
+            "description": "Unique identifier for a type"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::ffi",
+        "items": [
+          {
+            "name": "CString",
+            "item_type": "struct",
+            "description": "Owned C-compatible string"
+          },
+          {
+            "name": "CStr",
+            "item_type": "struct",
+            "description": "Borrowed C-compatible string"
+          },
+          {
+            "name": "OsString",
+            "item_type": "struct",
+            "description": "Owned platform string"
+          },
+          {
+            "name": "OsStr",
+            "item_type": "struct",
+            "description": "Borrowed platform string"
+          },
+          {
+            "name": "c_void",
+            "item_type": "type",
+            "description": "C void type"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::alloc",
+        "items": [
+          {
+            "name": "alloc",
+            "item_type": "function",
+            "description": "Allocate memory"
+          },
+          {
+            "name": "dealloc",
+            "item_type": "function",
+            "description": "Deallocate memory"
+          },
+          {
+            "name": "Layout",
+            "item_type": "struct",
+            "description": "Memory layout specification"
+          },
+          {
+            "name": "GlobalAlloc",
+            "item_type": "trait",
+            "description": "Global memory allocator trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::panic",
+        "items": [
+          {
+            "name": "catch_unwind",
+            "item_type": "function",
+            "description": "Catch panics and convert to Result"
+          },
+          {
+            "name": "panic_any",
+            "item_type": "function",
+            "description": "Panic with any payload"
+          },
+          {
+            "name": "set_hook",
+            "item_type": "function",
+            "description": "Set custom panic hook"
+          },
+          {
+            "name": "take_hook",
+            "item_type": "function",
+            "description": "Take current panic hook"
+          },
+          {
+            "name": "PanicInfo",
+            "item_type": "struct",
+            "description": "Information about a panic"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::backtrace",
+        "items": [
+          {
+            "name": "Backtrace",
+            "item_type": "struct",
+            "description": "Stack backtrace capture"
+          },
+          {
+            "name": "BacktraceStatus",
+            "item_type": "enum",
+            "description": "Status of backtrace capture"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::hint",
+        "items": [
+          {
+            "name": "black_box",
+            "item_type": "function",
+            "description": "Prevent compiler optimizations"
+          },
+          {
+            "name": "spin_loop",
+            "item_type": "function",
+            "description": "Hint for busy-wait loops"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::intrinsics",
+        "items": [
+          {
+            "name": "abort",
+            "item_type": "function",
+            "description": "Abort program execution"
+          },
+          {
+            "name": "unreachable",
+            "item_type": "function",
+            "description": "Mark code as unreachable"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::arch",
+        "items": [],
+        "submodules": [
+          "x86_64",
+          "aarch64"
+        ]
+      },
+      {
+        "path": "std::arch::x86_64",
+        "items": [
+          {
+            "name": "_mm_add_ps",
+            "item_type": "function",
+            "description": "SIMD add operation for packed floats"
+          },
+          {
+            "name": "_mm256_add_ps",
+            "item_type": "function",
+            "description": "AVX SIMD add operation for packed floats"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::simd",
+        "items": [
+          {
+            "name": "Simd",
+            "item_type": "struct",
+            "description": "SIMD vector type"
+          },
+          {
+            "name": "LaneCount",
+            "item_type": "struct",
+            "description": "SIMD lane count"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::ascii",
+        "items": [
+          {
+            "name": "escape_default",
+            "item_type": "function",
+            "description": "Escape ASCII characters for display"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::char",
+        "items": [
+          {
+            "name": "decode_utf16",
+            "item_type": "function",
+            "description": "Decode UTF-16 encoded characters"
+          },
+          {
+            "name": "from_u32",
+            "item_type": "function",
+            "description": "Convert u32 to char"
+          },
+          {
+            "name": "from_digit",
+            "item_type": "function",
+            "description": "Convert digit to char"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::primitive",
+        "items": [
+          {
+            "name": "bool",
+            "item_type": "type",
+            "description": "Boolean type"
+          },
+          {
+            "name": "char",
+            "item_type": "type",
+            "description": "Unicode character type"
+          },
+          {
+            "name": "str",
+            "item_type": "type",
+            "description": "String slice type"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::array",
+        "items": [
+          {
+            "name": "from_fn",
+            "item_type": "function",
+            "description": "Create array from generator function"
+          },
+          {
+            "name": "IntoIter",
+            "item_type": "struct",
+            "description": "Iterator over array elements"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::vec",
+        "items": [
+          {
+            "name": "Vec",
+            "item_type": "struct",
+            "description": "Growable array type"
+          },
+          {
+            "name": "IntoIter",
+            "item_type": "struct",
+            "description": "Iterator that moves out of vector"
+          },
+          {
+            "name": "Drain",
+            "item_type": "struct",
+            "description": "Draining iterator for vector"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::boxed",
+        "items": [
+          {
+            "name": "Box",
+            "item_type": "struct",
+            "description": "Heap-allocated smart pointer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::string",
+        "items": [
+          {
+            "name": "String",
+            "item_type": "struct",
+            "description": "Growable UTF-8 string"
+          },
+          {
+            "name": "FromUtf8Error",
+            "item_type": "struct",
+            "description": "Error from invalid UTF-8"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::option",
+        "items": [
+          {
+            "name": "Option",
+            "item_type": "enum",
+            "description": "Optional value type"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::result",
+        "items": [
+          {
+            "name": "Result",
+            "item_type": "enum",
+            "description": "Result type for error handling"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::iter",
+        "items": [
+          {
+            "name": "Iterator",
+            "item_type": "trait",
+            "description": "Iterator trait"
+          },
+          {
+            "name": "IntoIterator",
+            "item_type": "trait",
+            "description": "Convert to iterator trait"
+          },
+          {
+            "name": "FromIterator",
+            "item_type": "trait",
+            "description": "Build collection from iterator"
+          },
+          {
+            "name": "Extend",
+            "item_type": "trait",
+            "description": "Extend collection with iterator"
+          },
+          {
+            "name": "once",
+            "item_type": "function",
+            "description": "Create single-element iterator"
+          },
+          {
+            "name": "empty",
+            "item_type": "function",
+            "description": "Create empty iterator"
+          },
+          {
+            "name": "repeat",
+            "item_type": "function",
+            "description": "Create repeating iterator"
+          },
+          {
+            "name": "zip",
+            "item_type": "function",
+            "description": "Zip two iterators together"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::default",
+        "items": [
+          {
+            "name": "Default",
+            "item_type": "trait",
+            "description": "Default value trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::clone",
+        "items": [
+          {
+            "name": "Clone",
+            "item_type": "trait",
+            "description": "Clone trait for explicit duplication"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::fmt",
+        "items": [
+          {
+            "name": "Debug",
+            "item_type": "trait",
+            "description": "Debug formatting trait"
+          },
+          {
+            "name": "Display",
+            "item_type": "trait",
+            "description": "User-facing display trait"
+          },
+          {
+            "name": "Formatter",
+            "item_type": "struct",
+            "description": "Formatting context"
+          },
+          {
+            "name": "Arguments",
+            "item_type": "struct",
+            "description": "Format arguments"
+          },
+          {
+            "name": "Result",
+            "item_type": "type",
+            "description": "Formatting result type"
+          },
+          {
+            "name": "Write",
+            "item_type": "trait",
+            "description": "Write formatted text trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::error",
+        "items": [
+          {
+            "name": "Error",
+            "item_type": "trait",
+            "description": "Standard error trait"
           }
         ],
         "submodules": []
@@ -1705,7 +2640,7 @@
         "items": [],
         "submodules": [
           "prelude",
-          "gdk", 
+          "gdk",
           "glib",
           "gio"
         ]
@@ -1724,7 +2659,7 @@
             "description": "Manual extensions for GTK applications"
           },
           {
-            "name": "ApplicationWindowExt", 
+            "name": "ApplicationWindowExt",
             "item_type": "trait",
             "description": "Extension trait for application windows"
           },
@@ -1776,7 +2711,7 @@
           },
           {
             "name": "Buffer",
-            "item_type": "struct", 
+            "item_type": "struct",
             "description": "Text buffer for source code with language support"
           },
           {
@@ -1813,7 +2748,7 @@
             "description": "Extension trait for SourceView widgets"
           },
           {
-            "name": "BufferExt", 
+            "name": "BufferExt",
             "item_type": "trait",
             "description": "Extension trait for SourceView buffers"
           },
@@ -1854,7 +2789,7 @@
         "items": [
           {
             "name": "Serialize",
-            "item_type": "trait", 
+            "item_type": "trait",
             "description": "Trait for types that can be serialized"
           },
           {
@@ -1887,6 +2822,4278 @@
             "name": "Response",
             "item_type": "struct",
             "description": "HTTP response from a request"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "vte4",
+        "items": [
+          {
+            "name": "Terminal",
+            "item_type": "struct",
+            "description": "VTE terminal widget for embedding terminal emulators"
+          },
+          {
+            "name": "TerminalExt",
+            "item_type": "trait",
+            "description": "Extension trait for VTE terminal functionality"
+          },
+          {
+            "name": "TerminalExtManual",
+            "item_type": "trait",
+            "description": "Manual extension trait for advanced VTE terminal operations"
+          },
+          {
+            "name": "PtyFlags",
+            "item_type": "enum",
+            "description": "Flags for configuring pseudo-terminal behavior"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "clap",
+        "items": [
+          {
+            "name": "Parser",
+            "item_type": "trait",
+            "description": "Main trait for parsing command-line arguments"
+          },
+          {
+            "name": "Command",
+            "item_type": "struct",
+            "description": "Command builder for CLI applications"
+          },
+          {
+            "name": "Arg",
+            "item_type": "struct",
+            "description": "Command line argument builder"
+          },
+          {
+            "name": "ArgMatches",
+            "item_type": "struct",
+            "description": "Container for parsed command line arguments"
+          },
+          {
+            "name": "value_parser",
+            "item_type": "function",
+            "description": "Create value parsers for arguments"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "regex",
+        "items": [
+          {
+            "name": "Regex",
+            "item_type": "struct",
+            "description": "Compiled regular expression for pattern matching"
+          },
+          {
+            "name": "RegexBuilder",
+            "item_type": "struct",
+            "description": "Builder for configuring regular expressions"
+          },
+          {
+            "name": "Captures",
+            "item_type": "struct",
+            "description": "Captured groups from a regex match"
+          },
+          {
+            "name": "Match",
+            "item_type": "struct",
+            "description": "Single match from a regex search"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "anyhow",
+        "items": [
+          {
+            "name": "Result",
+            "item_type": "type",
+            "description": "Type alias for Result with anyhow::Error"
+          },
+          {
+            "name": "Error",
+            "item_type": "struct",
+            "description": "Flexible error type for applications"
+          },
+          {
+            "name": "Context",
+            "item_type": "trait",
+            "description": "Trait for adding context to errors"
+          },
+          {
+            "name": "bail",
+            "item_type": "macro",
+            "description": "Return early with an error"
+          },
+          {
+            "name": "ensure",
+            "item_type": "macro",
+            "description": "Ensure a condition is true or return an error"
+          },
+          {
+            "name": "anyhow",
+            "item_type": "macro",
+            "description": "Create an anyhow::Error from a format string"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "thiserror",
+        "items": [
+          {
+            "name": "Error",
+            "item_type": "derive",
+            "description": "Derive macro for implementing std::error::Error"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "log",
+        "items": [
+          {
+            "name": "trace",
+            "item_type": "macro",
+            "description": "Log a message at the trace level"
+          },
+          {
+            "name": "debug",
+            "item_type": "macro",
+            "description": "Log a message at the debug level"
+          },
+          {
+            "name": "info",
+            "item_type": "macro",
+            "description": "Log a message at the info level"
+          },
+          {
+            "name": "warn",
+            "item_type": "macro",
+            "description": "Log a message at the warn level"
+          },
+          {
+            "name": "error",
+            "item_type": "macro",
+            "description": "Log a message at the error level"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "env_logger",
+        "items": [
+          {
+            "name": "init",
+            "item_type": "function",
+            "description": "Initialize the logger with default settings"
+          },
+          {
+            "name": "Builder",
+            "item_type": "struct",
+            "description": "Builder for configuring the environment logger"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "uuid",
+        "items": [
+          {
+            "name": "Uuid",
+            "item_type": "struct",
+            "description": "Universally unique identifier"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "chrono",
+        "items": [
+          {
+            "name": "DateTime",
+            "item_type": "struct",
+            "description": "Date and time with timezone"
+          },
+          {
+            "name": "NaiveDateTime",
+            "item_type": "struct",
+            "description": "Date and time without timezone"
+          },
+          {
+            "name": "NaiveDate",
+            "item_type": "struct",
+            "description": "Date without timezone"
+          },
+          {
+            "name": "NaiveTime",
+            "item_type": "struct",
+            "description": "Time without timezone"
+          },
+          {
+            "name": "Utc",
+            "item_type": "struct",
+            "description": "UTC timezone"
+          },
+          {
+            "name": "Local",
+            "item_type": "struct",
+            "description": "Local timezone"
+          },
+          {
+            "name": "Duration",
+            "item_type": "struct",
+            "description": "Time duration"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "rand",
+        "items": [
+          {
+            "name": "random",
+            "item_type": "function",
+            "description": "Generate a random value"
+          },
+          {
+            "name": "thread_rng",
+            "item_type": "function",
+            "description": "Get thread-local random number generator"
+          },
+          {
+            "name": "Rng",
+            "item_type": "trait",
+            "description": "Random number generator trait"
+          }
+        ],
+        "submodules": [
+          "prelude"
+        ]
+      },
+      {
+        "path": "rand::prelude",
+        "items": [
+          {
+            "name": "Rng",
+            "item_type": "trait",
+            "description": "Random number generator trait"
+          },
+          {
+            "name": "SliceRandom",
+            "item_type": "trait",
+            "description": "Extension trait for random slice operations"
+          },
+          {
+            "name": "thread_rng",
+            "item_type": "function",
+            "description": "Get thread-local random number generator"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "lazy_static",
+        "items": [
+          {
+            "name": "lazy_static",
+            "item_type": "macro",
+            "description": "Define lazily initialized static variables"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "once_cell",
+        "items": [
+          {
+            "name": "sync",
+            "item_type": "module",
+            "description": "Thread-safe lazy initialization"
+          }
+        ],
+        "submodules": [
+          "sync"
+        ]
+      },
+      {
+        "path": "once_cell::sync",
+        "items": [
+          {
+            "name": "Lazy",
+            "item_type": "struct",
+            "description": "Lazy initialized value using closure"
+          },
+          {
+            "name": "OnceCell",
+            "item_type": "struct",
+            "description": "Thread-safe cell that can be written to only once"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "parking_lot",
+        "items": [
+          {
+            "name": "Mutex",
+            "item_type": "struct",
+            "description": "More efficient mutex implementation"
+          },
+          {
+            "name": "RwLock",
+            "item_type": "struct",
+            "description": "More efficient reader-writer lock"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "rayon",
+        "items": [],
+        "submodules": [
+          "prelude"
+        ]
+      },
+      {
+        "path": "rayon::prelude",
+        "items": [
+          {
+            "name": "IntoParallelIterator",
+            "item_type": "trait",
+            "description": "Trait for converting to parallel iterator"
+          },
+          {
+            "name": "ParallelIterator",
+            "item_type": "trait",
+            "description": "Parallel iterator trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "crossbeam",
+        "items": [],
+        "submodules": [
+          "channel",
+          "utils"
+        ]
+      },
+      {
+        "path": "crossbeam::channel",
+        "items": [
+          {
+            "name": "unbounded",
+            "item_type": "function",
+            "description": "Create unbounded channel"
+          },
+          {
+            "name": "bounded",
+            "item_type": "function",
+            "description": "Create bounded channel"
+          },
+          {
+            "name": "Sender",
+            "item_type": "struct",
+            "description": "Channel sender"
+          },
+          {
+            "name": "Receiver",
+            "item_type": "struct",
+            "description": "Channel receiver"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "futures",
+        "items": [
+          {
+            "name": "Future",
+            "item_type": "trait",
+            "description": "Asynchronous computation trait"
+          }
+        ],
+        "submodules": [
+          "prelude",
+          "stream",
+          "executor"
+        ]
+      },
+      {
+        "path": "futures::prelude",
+        "items": [
+          {
+            "name": "Future",
+            "item_type": "trait",
+            "description": "Asynchronous computation trait"
+          },
+          {
+            "name": "Stream",
+            "item_type": "trait",
+            "description": "Asynchronous iterator trait"
+          },
+          {
+            "name": "FutureExt",
+            "item_type": "trait",
+            "description": "Extension methods for Future"
+          },
+          {
+            "name": "StreamExt",
+            "item_type": "trait",
+            "description": "Extension methods for Stream"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "async_std",
+        "items": [
+          {
+            "name": "task",
+            "item_type": "module",
+            "description": "Async task utilities"
+          }
+        ],
+        "submodules": [
+          "fs",
+          "net",
+          "task",
+          "prelude"
+        ]
+      },
+      {
+        "path": "async_std::prelude",
+        "items": [
+          {
+            "name": "Future",
+            "item_type": "trait",
+            "description": "Async computation trait"
+          },
+          {
+            "name": "Stream",
+            "item_type": "trait",
+            "description": "Async stream trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "hyper",
+        "items": [
+          {
+            "name": "Client",
+            "item_type": "struct",
+            "description": "HTTP client"
+          },
+          {
+            "name": "Server",
+            "item_type": "struct",
+            "description": "HTTP server"
+          },
+          {
+            "name": "Request",
+            "item_type": "struct",
+            "description": "HTTP request"
+          },
+          {
+            "name": "Response",
+            "item_type": "struct",
+            "description": "HTTP response"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "axum",
+        "items": [
+          {
+            "name": "Router",
+            "item_type": "struct",
+            "description": "HTTP router for building web applications"
+          },
+          {
+            "name": "Json",
+            "item_type": "struct",
+            "description": "JSON extractor and response"
+          },
+          {
+            "name": "Form",
+            "item_type": "struct",
+            "description": "Form data extractor"
+          }
+        ],
+        "submodules": [
+          "extract",
+          "response",
+          "routing",
+          "http"
+        ]
+      },
+      {
+        "path": "axum::extract",
+        "items": [
+          {
+            "name": "Path",
+            "item_type": "struct",
+            "description": "Extract path parameters"
+          },
+          {
+            "name": "Query",
+            "item_type": "struct",
+            "description": "Extract query parameters"
+          },
+          {
+            "name": "State",
+            "item_type": "struct",
+            "description": "Extract application state"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "axum::response",
+        "items": [
+          {
+            "name": "Json",
+            "item_type": "struct",
+            "description": "JSON response"
+          },
+          {
+            "name": "Html",
+            "item_type": "struct",
+            "description": "HTML response"
+          },
+          {
+            "name": "Redirect",
+            "item_type": "struct",
+            "description": "HTTP redirect response"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "axum::routing",
+        "items": [
+          {
+            "name": "get",
+            "item_type": "function",
+            "description": "Create GET route handler"
+          },
+          {
+            "name": "post",
+            "item_type": "function",
+            "description": "Create POST route handler"
+          },
+          {
+            "name": "put",
+            "item_type": "function",
+            "description": "Create PUT route handler"
+          },
+          {
+            "name": "delete",
+            "item_type": "function",
+            "description": "Create DELETE route handler"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "diesel",
+        "items": [
+          {
+            "name": "Queryable",
+            "item_type": "trait",
+            "description": "Trait for types that can be loaded from database"
+          },
+          {
+            "name": "Insertable",
+            "item_type": "trait",
+            "description": "Trait for types that can be inserted into database"
+          },
+          {
+            "name": "AsChangeset",
+            "item_type": "trait",
+            "description": "Trait for types that can be used to update database records"
+          }
+        ],
+        "submodules": [
+          "prelude"
+        ]
+      },
+      {
+        "path": "diesel::prelude",
+        "items": [
+          {
+            "name": "Queryable",
+            "item_type": "trait",
+            "description": "Trait for database-loadable types"
+          },
+          {
+            "name": "Insertable",
+            "item_type": "trait",
+            "description": "Trait for database-insertable types"
+          },
+          {
+            "name": "RunQueryDsl",
+            "item_type": "trait",
+            "description": "Trait for running database queries"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "sqlx",
+        "items": [
+          {
+            "name": "query",
+            "item_type": "function",
+            "description": "Create SQL query"
+          },
+          {
+            "name": "query_as",
+            "item_type": "function",
+            "description": "Create typed SQL query"
+          },
+          {
+            "name": "Pool",
+            "item_type": "struct",
+            "description": "Database connection pool"
+          },
+          {
+            "name": "Row",
+            "item_type": "trait",
+            "description": "Database row trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "tracing",
+        "items": [
+          {
+            "name": "trace",
+            "item_type": "macro",
+            "description": "Record trace-level event"
+          },
+          {
+            "name": "debug",
+            "item_type": "macro",
+            "description": "Record debug-level event"
+          },
+          {
+            "name": "info",
+            "item_type": "macro",
+            "description": "Record info-level event"
+          },
+          {
+            "name": "warn",
+            "item_type": "macro",
+            "description": "Record warn-level event"
+          },
+          {
+            "name": "error",
+            "item_type": "macro",
+            "description": "Record error-level event"
+          },
+          {
+            "name": "instrument",
+            "item_type": "macro",
+            "description": "Instrument a function with a tracing span"
+          },
+          {
+            "name": "span",
+            "item_type": "macro",
+            "description": "Create a new tracing span"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "tracing_subscriber",
+        "items": [
+          {
+            "name": "fmt",
+            "item_type": "function",
+            "description": "Create a formatting subscriber"
+          },
+          {
+            "name": "init",
+            "item_type": "function",
+            "description": "Initialize default tracing subscriber"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "bytes",
+        "items": [
+          {
+            "name": "Bytes",
+            "item_type": "struct",
+            "description": "Reference-counted byte buffer"
+          },
+          {
+            "name": "BytesMut",
+            "item_type": "struct",
+            "description": "Mutable byte buffer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "base64",
+        "items": [
+          {
+            "name": "encode",
+            "item_type": "function",
+            "description": "Encode bytes to base64 string"
+          },
+          {
+            "name": "decode",
+            "item_type": "function",
+            "description": "Decode base64 string to bytes"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "url",
+        "items": [
+          {
+            "name": "Url",
+            "item_type": "struct",
+            "description": "URL parser and builder"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "mime",
+        "items": [
+          {
+            "name": "Mime",
+            "item_type": "struct",
+            "description": "MIME type representation"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "config",
+        "items": [
+          {
+            "name": "Config",
+            "item_type": "struct",
+            "description": "Configuration management"
+          },
+          {
+            "name": "ConfigBuilder",
+            "item_type": "struct",
+            "description": "Configuration builder"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "dotenv",
+        "items": [
+          {
+            "name": "dotenv",
+            "item_type": "function",
+            "description": "Load environment variables from .env file"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "tempfile",
+        "items": [
+          {
+            "name": "NamedTempFile",
+            "item_type": "struct",
+            "description": "Named temporary file"
+          },
+          {
+            "name": "tempdir",
+            "item_type": "function",
+            "description": "Create temporary directory"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "walkdir",
+        "items": [
+          {
+            "name": "WalkDir",
+            "item_type": "struct",
+            "description": "Recursive directory iterator"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "flate2",
+        "items": [
+          {
+            "name": "Compression",
+            "item_type": "struct",
+            "description": "Compression level setting"
+          }
+        ],
+        "submodules": [
+          "read",
+          "write"
+        ]
+      },
+      {
+        "path": "tar",
+        "items": [
+          {
+            "name": "Archive",
+            "item_type": "struct",
+            "description": "TAR archive reader"
+          },
+          {
+            "name": "Builder",
+            "item_type": "struct",
+            "description": "TAR archive builder"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "zip",
+        "items": [
+          {
+            "name": "ZipArchive",
+            "item_type": "struct",
+            "description": "ZIP archive reader"
+          },
+          {
+            "name": "ZipWriter",
+            "item_type": "struct",
+            "description": "ZIP archive writer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "image",
+        "items": [
+          {
+            "name": "ImageBuffer",
+            "item_type": "struct",
+            "description": "Generic image buffer"
+          },
+          {
+            "name": "DynamicImage",
+            "item_type": "enum",
+            "description": "Dynamically typed image"
+          },
+          {
+            "name": "ImageFormat",
+            "item_type": "enum",
+            "description": "Image format enumeration"
+          },
+          {
+            "name": "open",
+            "item_type": "function",
+            "description": "Open and decode an image file"
+          },
+          {
+            "name": "save_buffer",
+            "item_type": "function",
+            "description": "Save image buffer to file"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "csv",
+        "items": [
+          {
+            "name": "Reader",
+            "item_type": "struct",
+            "description": "CSV file reader"
+          },
+          {
+            "name": "Writer",
+            "item_type": "struct",
+            "description": "CSV file writer"
+          },
+          {
+            "name": "ReaderBuilder",
+            "item_type": "struct",
+            "description": "Builder for CSV reader configuration"
+          },
+          {
+            "name": "WriterBuilder",
+            "item_type": "struct",
+            "description": "Builder for CSV writer configuration"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "json",
+        "items": [
+          {
+            "name": "parse",
+            "item_type": "function",
+            "description": "Parse JSON string into Value"
+          },
+          {
+            "name": "Value",
+            "item_type": "enum",
+            "description": "JSON value representation"
+          },
+          {
+            "name": "Map",
+            "item_type": "type",
+            "description": "JSON object map type"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "toml",
+        "items": [
+          {
+            "name": "from_str",
+            "item_type": "function",
+            "description": "Parse TOML from string"
+          },
+          {
+            "name": "to_string",
+            "item_type": "function",
+            "description": "Serialize to TOML string"
+          },
+          {
+            "name": "Value",
+            "item_type": "enum",
+            "description": "TOML value representation"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "yaml_rust",
+        "items": [
+          {
+            "name": "YamlLoader",
+            "item_type": "struct",
+            "description": "YAML document loader"
+          },
+          {
+            "name": "Yaml",
+            "item_type": "enum",
+            "description": "YAML value representation"
+          },
+          {
+            "name": "YamlEmitter",
+            "item_type": "struct",
+            "description": "YAML document emitter"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "bincode",
+        "items": [
+          {
+            "name": "serialize",
+            "item_type": "function",
+            "description": "Serialize to binary format"
+          },
+          {
+            "name": "deserialize",
+            "item_type": "function",
+            "description": "Deserialize from binary format"
+          },
+          {
+            "name": "config",
+            "item_type": "function",
+            "description": "Create configuration for serialization"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "indicatif",
+        "items": [
+          {
+            "name": "ProgressBar",
+            "item_type": "struct",
+            "description": "Progress bar for terminal output"
+          },
+          {
+            "name": "MultiProgress",
+            "item_type": "struct",
+            "description": "Multiple progress bars manager"
+          },
+          {
+            "name": "ProgressStyle",
+            "item_type": "struct",
+            "description": "Progress bar styling options"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "console",
+        "items": [
+          {
+            "name": "style",
+            "item_type": "function",
+            "description": "Apply styling to text"
+          },
+          {
+            "name": "Term",
+            "item_type": "struct",
+            "description": "Terminal interface"
+          },
+          {
+            "name": "Key",
+            "item_type": "enum",
+            "description": "Keyboard key representation"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "colored",
+        "items": [
+          {
+            "name": "Colorize",
+            "item_type": "trait",
+            "description": "Trait for coloring text output"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "notify",
+        "items": [
+          {
+            "name": "Watcher",
+            "item_type": "trait",
+            "description": "File system watcher trait"
+          },
+          {
+            "name": "recommended_watcher",
+            "item_type": "function",
+            "description": "Create recommended file system watcher"
+          },
+          {
+            "name": "Event",
+            "item_type": "struct",
+            "description": "File system event"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "glob",
+        "items": [
+          {
+            "name": "glob",
+            "item_type": "function",
+            "description": "Find files matching a glob pattern"
+          },
+          {
+            "name": "Pattern",
+            "item_type": "struct",
+            "description": "Compiled glob pattern"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "memmap2",
+        "items": [
+          {
+            "name": "Mmap",
+            "item_type": "struct",
+            "description": "Memory-mapped file (read-only)"
+          },
+          {
+            "name": "MmapMut",
+            "item_type": "struct",
+            "description": "Memory-mapped file (mutable)"
+          },
+          {
+            "name": "MmapOptions",
+            "item_type": "struct",
+            "description": "Memory map configuration options"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "num_cpus",
+        "items": [
+          {
+            "name": "get",
+            "item_type": "function",
+            "description": "Get number of CPU cores"
+          },
+          {
+            "name": "get_physical",
+            "item_type": "function",
+            "description": "Get number of physical CPU cores"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "which",
+        "items": [
+          {
+            "name": "which",
+            "item_type": "function",
+            "description": "Find executable in PATH"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "dirs",
+        "items": [
+          {
+            "name": "home_dir",
+            "item_type": "function",
+            "description": "Get user home directory"
+          },
+          {
+            "name": "config_dir",
+            "item_type": "function",
+            "description": "Get user configuration directory"
+          },
+          {
+            "name": "data_dir",
+            "item_type": "function",
+            "description": "Get user data directory"
+          },
+          {
+            "name": "cache_dir",
+            "item_type": "function",
+            "description": "Get user cache directory"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "semver",
+        "items": [
+          {
+            "name": "Version",
+            "item_type": "struct",
+            "description": "Semantic version number"
+          },
+          {
+            "name": "VersionReq",
+            "item_type": "struct",
+            "description": "Version requirement specification"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "itertools",
+        "items": [
+          {
+            "name": "Itertools",
+            "item_type": "trait",
+            "description": "Extension trait for iterators with additional methods"
+          },
+          {
+            "name": "join",
+            "item_type": "function",
+            "description": "Join iterator elements into string"
+          },
+          {
+            "name": "sorted",
+            "item_type": "function",
+            "description": "Sort iterator elements"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "indexmap",
+        "items": [
+          {
+            "name": "IndexMap",
+            "item_type": "struct",
+            "description": "Hash map that preserves insertion order"
+          },
+          {
+            "name": "IndexSet",
+            "item_type": "struct",
+            "description": "Hash set that preserves insertion order"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "smallvec",
+        "items": [
+          {
+            "name": "SmallVec",
+            "item_type": "struct",
+            "description": "Vector that stores small arrays on stack"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "bitflags",
+        "items": [
+          {
+            "name": "bitflags",
+            "item_type": "macro",
+            "description": "Generate bitflag struct from enum-like input"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "num_traits",
+        "items": [
+          {
+            "name": "Zero",
+            "item_type": "trait",
+            "description": "Trait for zero element in numeric types"
+          },
+          {
+            "name": "One",
+            "item_type": "trait",
+            "description": "Trait for one element in numeric types"
+          },
+          {
+            "name": "Num",
+            "item_type": "trait",
+            "description": "General numeric trait"
+          },
+          {
+            "name": "Float",
+            "item_type": "trait",
+            "description": "Floating point number trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "num_bigint",
+        "items": [
+          {
+            "name": "BigInt",
+            "item_type": "struct",
+            "description": "Arbitrary precision signed integer"
+          },
+          {
+            "name": "BigUint",
+            "item_type": "struct",
+            "description": "Arbitrary precision unsigned integer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "num_rational",
+        "items": [
+          {
+            "name": "Ratio",
+            "item_type": "struct",
+            "description": "Rational number representation"
+          },
+          {
+            "name": "BigRational",
+            "item_type": "type",
+            "description": "Rational number with arbitrary precision"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "num_complex",
+        "items": [
+          {
+            "name": "Complex",
+            "item_type": "struct",
+            "description": "Complex number representation"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "parking",
+        "items": [
+          {
+            "name": "Parker",
+            "item_type": "struct",
+            "description": "Thread parking primitive"
+          },
+          {
+            "name": "Unparker",
+            "item_type": "struct",
+            "description": "Thread unparking handle"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "crossterm",
+        "items": [
+          {
+            "name": "cursor",
+            "item_type": "function",
+            "description": "Cursor manipulation functions"
+          },
+          {
+            "name": "terminal",
+            "item_type": "function",
+            "description": "Terminal manipulation functions"
+          },
+          {
+            "name": "style",
+            "item_type": "function",
+            "description": "Text styling functions"
+          },
+          {
+            "name": "event",
+            "item_type": "function",
+            "description": "Event handling functions"
+          }
+        ],
+        "submodules": [
+          "cursor",
+          "terminal",
+          "style",
+          "event"
+        ]
+      },
+      {
+        "path": "rusqlite",
+        "items": [
+          {
+            "name": "Connection",
+            "item_type": "struct",
+            "description": "SQLite database connection"
+          },
+          {
+            "name": "Statement",
+            "item_type": "struct",
+            "description": "Prepared SQL statement"
+          },
+          {
+            "name": "Row",
+            "item_type": "struct",
+            "description": "Database query result row"
+          },
+          {
+            "name": "Transaction",
+            "item_type": "struct",
+            "description": "Database transaction"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "redis",
+        "items": [
+          {
+            "name": "Client",
+            "item_type": "struct",
+            "description": "Redis client"
+          },
+          {
+            "name": "Connection",
+            "item_type": "struct",
+            "description": "Redis connection"
+          },
+          {
+            "name": "Commands",
+            "item_type": "trait",
+            "description": "Redis command trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "mongodb",
+        "items": [
+          {
+            "name": "Client",
+            "item_type": "struct",
+            "description": "MongoDB client"
+          },
+          {
+            "name": "Database",
+            "item_type": "struct",
+            "description": "MongoDB database handle"
+          },
+          {
+            "name": "Collection",
+            "item_type": "struct",
+            "description": "MongoDB collection handle"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "tonic",
+        "items": [
+          {
+            "name": "Request",
+            "item_type": "struct",
+            "description": "gRPC request wrapper"
+          },
+          {
+            "name": "Response",
+            "item_type": "struct",
+            "description": "gRPC response wrapper"
+          },
+          {
+            "name": "Status",
+            "item_type": "struct",
+            "description": "gRPC status code"
+          }
+        ],
+        "submodules": [
+          "transport"
+        ]
+      },
+      {
+        "path": "prost",
+        "items": [
+          {
+            "name": "Message",
+            "item_type": "trait",
+            "description": "Protocol Buffers message trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "warp",
+        "items": [
+          {
+            "name": "Filter",
+            "item_type": "trait",
+            "description": "Request filter trait for web routing"
+          },
+          {
+            "name": "serve",
+            "item_type": "function",
+            "description": "Start HTTP server"
+          },
+          {
+            "name": "reply",
+            "item_type": "function",
+            "description": "Create HTTP response"
+          }
+        ],
+        "submodules": [
+          "filters"
+        ]
+      },
+      {
+        "path": "tide",
+        "items": [
+          {
+            "name": "Server",
+            "item_type": "struct",
+            "description": "HTTP server application"
+          },
+          {
+            "name": "Request",
+            "item_type": "struct",
+            "description": "HTTP request"
+          },
+          {
+            "name": "Response",
+            "item_type": "struct",
+            "description": "HTTP response"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "actix_web",
+        "items": [
+          {
+            "name": "App",
+            "item_type": "struct",
+            "description": "Actix web application"
+          },
+          {
+            "name": "HttpServer",
+            "item_type": "struct",
+            "description": "HTTP server"
+          },
+          {
+            "name": "HttpRequest",
+            "item_type": "struct",
+            "description": "HTTP request"
+          },
+          {
+            "name": "HttpResponse",
+            "item_type": "struct",
+            "description": "HTTP response builder"
+          },
+          {
+            "name": "web",
+            "item_type": "module",
+            "description": "Web utilities and extractors"
+          }
+        ],
+        "submodules": [
+          "web"
+        ]
+      },
+      {
+        "path": "rocket",
+        "items": [
+          {
+            "name": "Rocket",
+            "item_type": "struct",
+            "description": "Rocket web application"
+          },
+          {
+            "name": "launch",
+            "item_type": "function",
+            "description": "Launch Rocket application"
+          },
+          {
+            "name": "routes",
+            "item_type": "macro",
+            "description": "Define application routes"
+          },
+          {
+            "name": "get",
+            "item_type": "attribute",
+            "description": "HTTP GET route attribute"
+          },
+          {
+            "name": "post",
+            "item_type": "attribute",
+            "description": "HTTP POST route attribute"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "serde_derive",
+        "items": [
+          {
+            "name": "Serialize",
+            "item_type": "derive",
+            "description": "Derive macro for Serialize trait"
+          },
+          {
+            "name": "Deserialize",
+            "item_type": "derive",
+            "description": "Derive macro for Deserialize trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "syn",
+        "items": [
+          {
+            "name": "parse_macro_input",
+            "item_type": "macro",
+            "description": "Parse macro input tokens"
+          },
+          {
+            "name": "DeriveInput",
+            "item_type": "struct",
+            "description": "Input to a derive macro"
+          },
+          {
+            "name": "ItemFn",
+            "item_type": "struct",
+            "description": "Function item"
+          },
+          {
+            "name": "ItemStruct",
+            "item_type": "struct",
+            "description": "Struct item"
+          },
+          {
+            "name": "parse",
+            "item_type": "function",
+            "description": "Parse tokens into syntax tree"
+          },
+          {
+            "name": "Error",
+            "item_type": "struct",
+            "description": "Parse error"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "quote",
+        "items": [
+          {
+            "name": "quote",
+            "item_type": "macro",
+            "description": "Generate Rust code"
+          },
+          {
+            "name": "format_ident",
+            "item_type": "macro",
+            "description": "Create identifier from format string"
+          },
+          {
+            "name": "ToTokens",
+            "item_type": "trait",
+            "description": "Convert to token stream"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "proc_macro",
+        "items": [
+          {
+            "name": "TokenStream",
+            "item_type": "struct",
+            "description": "Stream of tokens for proc macros"
+          },
+          {
+            "name": "Span",
+            "item_type": "struct",
+            "description": "Source location for tokens"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "proc_macro2",
+        "items": [
+          {
+            "name": "TokenStream",
+            "item_type": "struct",
+            "description": "Stable token stream for proc macros"
+          },
+          {
+            "name": "Span",
+            "item_type": "struct",
+            "description": "Source span for tokens"
+          },
+          {
+            "name": "Ident",
+            "item_type": "struct",
+            "description": "Rust identifier"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "eyre",
+        "items": [
+          {
+            "name": "Result",
+            "item_type": "type",
+            "description": "Result type with eyre error"
+          },
+          {
+            "name": "Report",
+            "item_type": "struct",
+            "description": "Error report with context"
+          },
+          {
+            "name": "eyre",
+            "item_type": "macro",
+            "description": "Create error report"
+          },
+          {
+            "name": "bail",
+            "item_type": "macro",
+            "description": "Return early with error"
+          },
+          {
+            "name": "ensure",
+            "item_type": "macro",
+            "description": "Ensure condition or error"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "miette",
+        "items": [
+          {
+            "name": "Result",
+            "item_type": "type",
+            "description": "Result with diagnostic error"
+          },
+          {
+            "name": "Report",
+            "item_type": "struct",
+            "description": "Diagnostic error report"
+          },
+          {
+            "name": "Diagnostic",
+            "item_type": "trait",
+            "description": "Trait for diagnostic errors"
+          },
+          {
+            "name": "miette",
+            "item_type": "macro",
+            "description": "Create diagnostic error"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "color_eyre",
+        "items": [
+          {
+            "name": "Result",
+            "item_type": "type",
+            "description": "Result with colored error reports"
+          },
+          {
+            "name": "Report",
+            "item_type": "struct",
+            "description": "Colored error report"
+          },
+          {
+            "name": "install",
+            "item_type": "function",
+            "description": "Install color-eyre hook"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "nom",
+        "items": [
+          {
+            "name": "IResult",
+            "item_type": "type",
+            "description": "Parser result type"
+          },
+          {
+            "name": "Parser",
+            "item_type": "trait",
+            "description": "Parser trait"
+          },
+          {
+            "name": "combinator",
+            "item_type": "module",
+            "description": "Parser combinators"
+          },
+          {
+            "name": "character",
+            "item_type": "module",
+            "description": "Character parsing"
+          },
+          {
+            "name": "bytes",
+            "item_type": "module",
+            "description": "Byte parsing"
+          },
+          {
+            "name": "sequence",
+            "item_type": "module",
+            "description": "Sequence combinators"
+          },
+          {
+            "name": "branch",
+            "item_type": "module",
+            "description": "Branching combinators"
+          },
+          {
+            "name": "multi",
+            "item_type": "module",
+            "description": "Multiple element parsers"
+          }
+        ],
+        "submodules": [
+          "combinator",
+          "character",
+          "bytes",
+          "sequence",
+          "branch",
+          "multi"
+        ]
+      },
+      {
+        "path": "pest",
+        "items": [
+          {
+            "name": "Parser",
+            "item_type": "trait",
+            "description": "PEG parser trait"
+          },
+          {
+            "name": "iterators",
+            "item_type": "module",
+            "description": "Parse result iterators"
+          }
+        ],
+        "submodules": [
+          "iterators"
+        ]
+      },
+      {
+        "path": "pest_derive",
+        "items": [
+          {
+            "name": "Parser",
+            "item_type": "derive",
+            "description": "Derive PEG parser"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "structopt",
+        "items": [
+          {
+            "name": "StructOpt",
+            "item_type": "derive",
+            "description": "Derive command line parsing"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "argh",
+        "items": [
+          {
+            "name": "FromArgs",
+            "item_type": "derive",
+            "description": "Derive argument parsing"
+          },
+          {
+            "name": "from_env",
+            "item_type": "function",
+            "description": "Parse from environment"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "rusty_machine",
+        "items": [
+          {
+            "name": "learning",
+            "item_type": "module",
+            "description": "Machine learning algorithms"
+          },
+          {
+            "name": "linalg",
+            "item_type": "module",
+            "description": "Linear algebra"
+          }
+        ],
+        "submodules": [
+          "learning",
+          "linalg"
+        ]
+      },
+      {
+        "path": "candle_core",
+        "items": [
+          {
+            "name": "Tensor",
+            "item_type": "struct",
+            "description": "Multi-dimensional array for ML"
+          },
+          {
+            "name": "Device",
+            "item_type": "enum",
+            "description": "Computation device (CPU/GPU)"
+          },
+          {
+            "name": "DType",
+            "item_type": "enum",
+            "description": "Data type for tensors"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "ndarray",
+        "items": [
+          {
+            "name": "Array",
+            "item_type": "type",
+            "description": "N-dimensional array"
+          },
+          {
+            "name": "Array1",
+            "item_type": "type",
+            "description": "1-dimensional array"
+          },
+          {
+            "name": "Array2",
+            "item_type": "type",
+            "description": "2-dimensional array"
+          },
+          {
+            "name": "ArrayView",
+            "item_type": "type",
+            "description": "Array view"
+          },
+          {
+            "name": "Axis",
+            "item_type": "struct",
+            "description": "Array axis identifier"
+          },
+          {
+            "name": "arr1",
+            "item_type": "macro",
+            "description": "Create 1D array"
+          },
+          {
+            "name": "arr2",
+            "item_type": "macro",
+            "description": "Create 2D array"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "nalgebra",
+        "items": [
+          {
+            "name": "Vector3",
+            "item_type": "type",
+            "description": "3D vector"
+          },
+          {
+            "name": "Matrix3",
+            "item_type": "type",
+            "description": "3x3 matrix"
+          },
+          {
+            "name": "Matrix4",
+            "item_type": "type",
+            "description": "4x4 matrix"
+          },
+          {
+            "name": "Point3",
+            "item_type": "type",
+            "description": "3D point"
+          },
+          {
+            "name": "Rotation3",
+            "item_type": "type",
+            "description": "3D rotation"
+          },
+          {
+            "name": "Translation3",
+            "item_type": "type",
+            "description": "3D translation"
+          },
+          {
+            "name": "Isometry3",
+            "item_type": "type",
+            "description": "3D rigid transformation"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "cgmath",
+        "items": [
+          {
+            "name": "Vector3",
+            "item_type": "struct",
+            "description": "3D vector for computer graphics"
+          },
+          {
+            "name": "Matrix4",
+            "item_type": "struct",
+            "description": "4x4 matrix for 3D transforms"
+          },
+          {
+            "name": "Point3",
+            "item_type": "struct",
+            "description": "3D point"
+          },
+          {
+            "name": "Quaternion",
+            "item_type": "struct",
+            "description": "Quaternion for rotations"
+          },
+          {
+            "name": "Rad",
+            "item_type": "struct",
+            "description": "Angle in radians"
+          },
+          {
+            "name": "Deg",
+            "item_type": "struct",
+            "description": "Angle in degrees"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "winit",
+        "items": [
+          {
+            "name": "event_loop",
+            "item_type": "module",
+            "description": "Event loop for windowing"
+          },
+          {
+            "name": "window",
+            "item_type": "module",
+            "description": "Window creation and management"
+          },
+          {
+            "name": "event",
+            "item_type": "module",
+            "description": "Window and input events"
+          }
+        ],
+        "submodules": [
+          "event_loop",
+          "window",
+          "event"
+        ]
+      },
+      {
+        "path": "wgpu",
+        "items": [
+          {
+            "name": "Device",
+            "item_type": "struct",
+            "description": "GPU device for rendering"
+          },
+          {
+            "name": "Queue",
+            "item_type": "struct",
+            "description": "Command queue for GPU"
+          },
+          {
+            "name": "Surface",
+            "item_type": "struct",
+            "description": "Rendering surface"
+          },
+          {
+            "name": "Adapter",
+            "item_type": "struct",
+            "description": "GPU adapter"
+          },
+          {
+            "name": "Buffer",
+            "item_type": "struct",
+            "description": "GPU buffer"
+          },
+          {
+            "name": "Texture",
+            "item_type": "struct",
+            "description": "GPU texture"
+          },
+          {
+            "name": "RenderPipeline",
+            "item_type": "struct",
+            "description": "Graphics rendering pipeline"
+          },
+          {
+            "name": "ComputePipeline",
+            "item_type": "struct",
+            "description": "Compute shader pipeline"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "bevy",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "Bevy game engine prelude"
+          },
+          {
+            "name": "App",
+            "item_type": "struct",
+            "description": "Bevy application"
+          }
+        ],
+        "submodules": [
+          "prelude",
+          "ecs",
+          "render",
+          "asset",
+          "input",
+          "math",
+          "transform"
+        ]
+      },
+      {
+        "path": "bevy::prelude",
+        "items": [
+          {
+            "name": "App",
+            "item_type": "struct",
+            "description": "Bevy application builder"
+          },
+          {
+            "name": "World",
+            "item_type": "struct",
+            "description": "ECS world container"
+          },
+          {
+            "name": "Entity",
+            "item_type": "struct",
+            "description": "ECS entity identifier"
+          },
+          {
+            "name": "Component",
+            "item_type": "trait",
+            "description": "ECS component trait"
+          },
+          {
+            "name": "System",
+            "item_type": "trait",
+            "description": "ECS system trait"
+          },
+          {
+            "name": "Query",
+            "item_type": "struct",
+            "description": "ECS query for components"
+          },
+          {
+            "name": "Commands",
+            "item_type": "struct",
+            "description": "ECS commands for entity manipulation"
+          },
+          {
+            "name": "Transform",
+            "item_type": "struct",
+            "description": "3D transformation component"
+          },
+          {
+            "name": "Vec3",
+            "item_type": "struct",
+            "description": "3D vector"
+          },
+          {
+            "name": "Quat",
+            "item_type": "struct",
+            "description": "Quaternion for rotations"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "ggez",
+        "items": [
+          {
+            "name": "Context",
+            "item_type": "struct",
+            "description": "Game context"
+          },
+          {
+            "name": "GameResult",
+            "item_type": "type",
+            "description": "Result type for game operations"
+          },
+          {
+            "name": "event",
+            "item_type": "module",
+            "description": "Event handling"
+          },
+          {
+            "name": "graphics",
+            "item_type": "module",
+            "description": "Graphics rendering"
+          },
+          {
+            "name": "audio",
+            "item_type": "module",
+            "description": "Audio playback"
+          }
+        ],
+        "submodules": [
+          "event",
+          "graphics",
+          "audio"
+        ]
+      },
+      {
+        "path": "macroquad",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "Macroquad game framework prelude"
+          },
+          {
+            "name": "draw_rectangle",
+            "item_type": "function",
+            "description": "Draw a rectangle"
+          },
+          {
+            "name": "draw_circle",
+            "item_type": "function",
+            "description": "Draw a circle"
+          },
+          {
+            "name": "clear_background",
+            "item_type": "function",
+            "description": "Clear screen with color"
+          },
+          {
+            "name": "next_frame",
+            "item_type": "function",
+            "description": "Wait for next frame"
+          },
+          {
+            "name": "Color",
+            "item_type": "struct",
+            "description": "RGBA color"
+          }
+        ],
+        "submodules": [
+          "prelude"
+        ]
+      },
+      {
+        "path": "gilrs",
+        "items": [
+          {
+            "name": "Gilrs",
+            "item_type": "struct",
+            "description": "Gamepad input system"
+          },
+          {
+            "name": "Gamepad",
+            "item_type": "struct",
+            "description": "Individual gamepad"
+          },
+          {
+            "name": "Event",
+            "item_type": "enum",
+            "description": "Gamepad event"
+          },
+          {
+            "name": "Button",
+            "item_type": "enum",
+            "description": "Gamepad button"
+          },
+          {
+            "name": "Axis",
+            "item_type": "enum",
+            "description": "Gamepad axis"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "cpal",
+        "items": [
+          {
+            "name": "Host",
+            "item_type": "struct",
+            "description": "Audio host"
+          },
+          {
+            "name": "Device",
+            "item_type": "struct",
+            "description": "Audio device"
+          },
+          {
+            "name": "Stream",
+            "item_type": "struct",
+            "description": "Audio stream"
+          },
+          {
+            "name": "SampleFormat",
+            "item_type": "enum",
+            "description": "Audio sample format"
+          },
+          {
+            "name": "StreamConfig",
+            "item_type": "struct",
+            "description": "Audio stream configuration"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "rodio",
+        "items": [
+          {
+            "name": "OutputStream",
+            "item_type": "struct",
+            "description": "Audio output stream"
+          },
+          {
+            "name": "Sink",
+            "item_type": "struct",
+            "description": "Audio playback sink"
+          },
+          {
+            "name": "Decoder",
+            "item_type": "struct",
+            "description": "Audio format decoder"
+          },
+          {
+            "name": "Source",
+            "item_type": "trait",
+            "description": "Audio source trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "symphonia",
+        "items": [
+          {
+            "name": "core",
+            "item_type": "module",
+            "description": "Core audio types"
+          },
+          {
+            "name": "default",
+            "item_type": "module",
+            "description": "Default audio codecs"
+          }
+        ],
+        "submodules": [
+          "core",
+          "default"
+        ]
+      },
+      {
+        "path": "ratatui",
+        "items": [
+          {
+            "name": "Terminal",
+            "item_type": "struct",
+            "description": "Terminal user interface"
+          },
+          {
+            "name": "Frame",
+            "item_type": "struct",
+            "description": "Terminal frame for rendering"
+          },
+          {
+            "name": "widgets",
+            "item_type": "module",
+            "description": "UI widgets"
+          },
+          {
+            "name": "layout",
+            "item_type": "module",
+            "description": "Layout management"
+          },
+          {
+            "name": "style",
+            "item_type": "module",
+            "description": "Text styling"
+          }
+        ],
+        "submodules": [
+          "widgets",
+          "layout",
+          "style"
+        ]
+      },
+      {
+        "path": "cursive",
+        "items": [
+          {
+            "name": "Cursive",
+            "item_type": "struct",
+            "description": "TUI application root"
+          },
+          {
+            "name": "views",
+            "item_type": "module",
+            "description": "UI views and widgets"
+          },
+          {
+            "name": "event",
+            "item_type": "module",
+            "description": "Event handling"
+          }
+        ],
+        "submodules": [
+          "views",
+          "event"
+        ]
+      },
+      {
+        "path": "tui",
+        "items": [
+          {
+            "name": "Terminal",
+            "item_type": "struct",
+            "description": "Terminal interface"
+          },
+          {
+            "name": "Frame",
+            "item_type": "struct",
+            "description": "Rendering frame"
+          },
+          {
+            "name": "widgets",
+            "item_type": "module",
+            "description": "Terminal widgets"
+          },
+          {
+            "name": "layout",
+            "item_type": "module",
+            "description": "Layout system"
+          }
+        ],
+        "submodules": [
+          "widgets",
+          "layout"
+        ]
+      },
+      {
+        "path": "egui",
+        "items": [
+          {
+            "name": "Context",
+            "item_type": "struct",
+            "description": "egui rendering context"
+          },
+          {
+            "name": "Ui",
+            "item_type": "struct",
+            "description": "UI building context"
+          },
+          {
+            "name": "Window",
+            "item_type": "struct",
+            "description": "egui window"
+          },
+          {
+            "name": "Frame",
+            "item_type": "struct",
+            "description": "UI frame"
+          },
+          {
+            "name": "Response",
+            "item_type": "struct",
+            "description": "UI interaction response"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "iced",
+        "items": [
+          {
+            "name": "Application",
+            "item_type": "trait",
+            "description": "Iced application trait"
+          },
+          {
+            "name": "Element",
+            "item_type": "type",
+            "description": "UI element"
+          },
+          {
+            "name": "Command",
+            "item_type": "struct",
+            "description": "Async command"
+          },
+          {
+            "name": "widget",
+            "item_type": "module",
+            "description": "UI widgets"
+          }
+        ],
+        "submodules": [
+          "widget"
+        ]
+      },
+      {
+        "path": "slint",
+        "items": [
+          {
+            "name": "ComponentHandle",
+            "item_type": "trait",
+            "description": "Slint component handle"
+          },
+          {
+            "name": "SharedString",
+            "item_type": "struct",
+            "description": "Shared string type"
+          },
+          {
+            "name": "Timer",
+            "item_type": "struct",
+            "description": "UI timer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "tauri",
+        "items": [
+          {
+            "name": "Builder",
+            "item_type": "struct",
+            "description": "Tauri app builder"
+          },
+          {
+            "name": "App",
+            "item_type": "struct",
+            "description": "Tauri application"
+          },
+          {
+            "name": "Window",
+            "item_type": "struct",
+            "description": "Tauri window"
+          },
+          {
+            "name": "command",
+            "item_type": "attribute",
+            "description": "Tauri command attribute"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "wry",
+        "items": [
+          {
+            "name": "WebView",
+            "item_type": "struct",
+            "description": "WebView component"
+          },
+          {
+            "name": "WebViewBuilder",
+            "item_type": "struct",
+            "description": "WebView builder"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "dioxus",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "Dioxus framework prelude"
+          },
+          {
+            "name": "rsx",
+            "item_type": "macro",
+            "description": "RSX macro for UI"
+          }
+        ],
+        "submodules": [
+          "prelude"
+        ]
+      },
+      {
+        "path": "yew",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "Yew framework prelude"
+          },
+          {
+            "name": "Component",
+            "item_type": "trait",
+            "description": "Yew component trait"
+          },
+          {
+            "name": "html",
+            "item_type": "macro",
+            "description": "HTML macro"
+          }
+        ],
+        "submodules": [
+          "prelude"
+        ]
+      },
+      {
+        "path": "leptos",
+        "items": [
+          {
+            "name": "component",
+            "item_type": "attribute",
+            "description": "Leptos component attribute"
+          },
+          {
+            "name": "view",
+            "item_type": "macro",
+            "description": "Leptos view macro"
+          },
+          {
+            "name": "IntoView",
+            "item_type": "trait",
+            "description": "Convert to view trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::os",
+        "items": [],
+        "submodules": [
+          "unix",
+          "windows"
+        ]
+      },
+      {
+        "path": "std::os::unix",
+        "items": [
+          {
+            "name": "fs",
+            "item_type": "module",
+            "description": "Unix filesystem extensions"
+          },
+          {
+            "name": "io",
+            "item_type": "module",
+            "description": "Unix I/O extensions"
+          },
+          {
+            "name": "process",
+            "item_type": "module",
+            "description": "Unix process extensions"
+          }
+        ],
+        "submodules": [
+          "fs",
+          "io",
+          "process"
+        ]
+      },
+      {
+        "path": "std::os::windows",
+        "items": [
+          {
+            "name": "fs",
+            "item_type": "module",
+            "description": "Windows filesystem extensions"
+          },
+          {
+            "name": "io",
+            "item_type": "module",
+            "description": "Windows I/O extensions"
+          },
+          {
+            "name": "process",
+            "item_type": "module",
+            "description": "Windows process extensions"
+          }
+        ],
+        "submodules": [
+          "fs",
+          "io",
+          "process"
+        ]
+      },
+      {
+        "path": "std::future",
+        "items": [
+          {
+            "name": "Future",
+            "item_type": "trait",
+            "description": "Asynchronous computation trait"
+          },
+          {
+            "name": "ready",
+            "item_type": "function",
+            "description": "Create immediately ready future"
+          },
+          {
+            "name": "pending",
+            "item_type": "function",
+            "description": "Create never-resolving future"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::lazy",
+        "items": [
+          {
+            "name": "SyncLazy",
+            "item_type": "struct",
+            "description": "Thread-safe lazy initialization"
+          },
+          {
+            "name": "SyncOnceCell",
+            "item_type": "struct",
+            "description": "Thread-safe once cell"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "sea_orm",
+        "items": [
+          {
+            "name": "Database",
+            "item_type": "struct",
+            "description": "Database connection"
+          },
+          {
+            "name": "EntityTrait",
+            "item_type": "trait",
+            "description": "Entity trait for models"
+          },
+          {
+            "name": "ActiveModelTrait",
+            "item_type": "trait",
+            "description": "Active model trait"
+          },
+          {
+            "name": "DatabaseConnection",
+            "item_type": "type",
+            "description": "Database connection type"
+          },
+          {
+            "name": "Select",
+            "item_type": "struct",
+            "description": "Select query builder"
+          },
+          {
+            "name": "Insert",
+            "item_type": "struct",
+            "description": "Insert query builder"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "simplelog",
+        "items": [
+          {
+            "name": "SimpleLogger",
+            "item_type": "struct",
+            "description": "Simple logger implementation"
+          },
+          {
+            "name": "TermLogger",
+            "item_type": "struct",
+            "description": "Terminal logger"
+          },
+          {
+            "name": "WriteLogger",
+            "item_type": "struct",
+            "description": "File write logger"
+          },
+          {
+            "name": "Config",
+            "item_type": "struct",
+            "description": "Logger configuration"
+          },
+          {
+            "name": "LevelFilter",
+            "item_type": "enum",
+            "description": "Log level filter"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "figment",
+        "items": [
+          {
+            "name": "Figment",
+            "item_type": "struct",
+            "description": "Configuration aggregator"
+          },
+          {
+            "name": "Profile",
+            "item_type": "struct",
+            "description": "Configuration profile"
+          },
+          {
+            "name": "providers",
+            "item_type": "module",
+            "description": "Configuration providers"
+          },
+          {
+            "name": "Provider",
+            "item_type": "trait",
+            "description": "Configuration provider trait"
+          }
+        ],
+        "submodules": [
+          "providers"
+        ]
+      },
+      {
+        "path": "clap_derive",
+        "items": [
+          {
+            "name": "Parser",
+            "item_type": "derive",
+            "description": "Derive command line parser"
+          },
+          {
+            "name": "Subcommand",
+            "item_type": "derive",
+            "description": "Derive subcommand enum"
+          },
+          {
+            "name": "Args",
+            "item_type": "derive",
+            "description": "Derive arguments struct"
+          },
+          {
+            "name": "ValueEnum",
+            "item_type": "derive",
+            "description": "Derive value enum"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "criterion",
+        "items": [
+          {
+            "name": "Criterion",
+            "item_type": "struct",
+            "description": "Benchmarking framework"
+          },
+          {
+            "name": "BenchmarkId",
+            "item_type": "struct",
+            "description": "Benchmark identifier"
+          },
+          {
+            "name": "BatchSize",
+            "item_type": "enum",
+            "description": "Benchmark batch size"
+          },
+          {
+            "name": "black_box",
+            "item_type": "function",
+            "description": "Prevent compiler optimization"
+          },
+          {
+            "name": "criterion_group",
+            "item_type": "macro",
+            "description": "Define benchmark group"
+          },
+          {
+            "name": "criterion_main",
+            "item_type": "macro",
+            "description": "Main benchmark entry point"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "bencher",
+        "items": [
+          {
+            "name": "Bencher",
+            "item_type": "struct",
+            "description": "Simple benchmarker"
+          },
+          {
+            "name": "benchmark_group",
+            "item_type": "macro",
+            "description": "Define benchmark group"
+          },
+          {
+            "name": "benchmark_main",
+            "item_type": "macro",
+            "description": "Benchmark main function"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "proptest",
+        "items": [
+          {
+            "name": "proptest",
+            "item_type": "macro",
+            "description": "Property-based test macro"
+          },
+          {
+            "name": "Strategy",
+            "item_type": "trait",
+            "description": "Value generation strategy"
+          },
+          {
+            "name": "TestCaseError",
+            "item_type": "struct",
+            "description": "Test case error"
+          },
+          {
+            "name": "arbitrary",
+            "item_type": "module",
+            "description": "Arbitrary value generation"
+          },
+          {
+            "name": "collection",
+            "item_type": "module",
+            "description": "Collection strategies"
+          }
+        ],
+        "submodules": [
+          "arbitrary",
+          "collection"
+        ]
+      },
+      {
+        "path": "quickcheck",
+        "items": [
+          {
+            "name": "quickcheck",
+            "item_type": "function",
+            "description": "Run quickcheck test"
+          },
+          {
+            "name": "Arbitrary",
+            "item_type": "trait",
+            "description": "Arbitrary value generation"
+          },
+          {
+            "name": "Gen",
+            "item_type": "struct",
+            "description": "Random value generator"
+          },
+          {
+            "name": "TestResult",
+            "item_type": "enum",
+            "description": "Test result type"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "mockall",
+        "items": [
+          {
+            "name": "automock",
+            "item_type": "attribute",
+            "description": "Auto-generate mock"
+          },
+          {
+            "name": "predicate",
+            "item_type": "module",
+            "description": "Mock predicates"
+          },
+          {
+            "name": "Sequence",
+            "item_type": "struct",
+            "description": "Mock call sequence"
+          }
+        ],
+        "submodules": [
+          "predicate"
+        ]
+      },
+      {
+        "path": "wiremock",
+        "items": [
+          {
+            "name": "MockServer",
+            "item_type": "struct",
+            "description": "HTTP mock server"
+          },
+          {
+            "name": "Mock",
+            "item_type": "struct",
+            "description": "HTTP mock"
+          },
+          {
+            "name": "When",
+            "item_type": "struct",
+            "description": "Mock condition"
+          },
+          {
+            "name": "Respond",
+            "item_type": "struct",
+            "description": "Mock response"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "assert_matches",
+        "items": [
+          {
+            "name": "assert_matches",
+            "item_type": "macro",
+            "description": "Assert pattern matching"
+          },
+          {
+            "name": "debug_assert_matches",
+            "item_type": "macro",
+            "description": "Debug assert pattern matching"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "pretty_assertions",
+        "items": [
+          {
+            "name": "assert_eq",
+            "item_type": "macro",
+            "description": "Pretty assert equality"
+          },
+          {
+            "name": "assert_ne",
+            "item_type": "macro",
+            "description": "Pretty assert inequality"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "insta",
+        "items": [
+          {
+            "name": "assert_snapshot",
+            "item_type": "macro",
+            "description": "Assert snapshot test"
+          },
+          {
+            "name": "assert_debug_snapshot",
+            "item_type": "macro",
+            "description": "Assert debug snapshot"
+          },
+          {
+            "name": "with_settings",
+            "item_type": "macro",
+            "description": "Configure snapshot settings"
+          },
+          {
+            "name": "Settings",
+            "item_type": "struct",
+            "description": "Snapshot test settings"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "crossbeam_channel",
+        "items": [
+          {
+            "name": "bounded",
+            "item_type": "function",
+            "description": "Create bounded channel"
+          },
+          {
+            "name": "unbounded",
+            "item_type": "function",
+            "description": "Create unbounded channel"
+          },
+          {
+            "name": "select",
+            "item_type": "macro",
+            "description": "Select over channels"
+          },
+          {
+            "name": "Sender",
+            "item_type": "struct",
+            "description": "Channel sender"
+          },
+          {
+            "name": "Receiver",
+            "item_type": "struct",
+            "description": "Channel receiver"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "dashmap",
+        "items": [
+          {
+            "name": "DashMap",
+            "item_type": "struct",
+            "description": "Concurrent hash map"
+          },
+          {
+            "name": "DashSet",
+            "item_type": "struct",
+            "description": "Concurrent hash set"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "flume",
+        "items": [
+          {
+            "name": "bounded",
+            "item_type": "function",
+            "description": "Create bounded channel"
+          },
+          {
+            "name": "unbounded",
+            "item_type": "function",
+            "description": "Create unbounded channel"
+          },
+          {
+            "name": "Sender",
+            "item_type": "struct",
+            "description": "Channel sender"
+          },
+          {
+            "name": "Receiver",
+            "item_type": "struct",
+            "description": "Channel receiver"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "time",
+        "items": [
+          {
+            "name": "OffsetDateTime",
+            "item_type": "struct",
+            "description": "Date and time with UTC offset"
+          },
+          {
+            "name": "PrimitiveDateTime",
+            "item_type": "struct",
+            "description": "Date and time without offset"
+          },
+          {
+            "name": "Date",
+            "item_type": "struct",
+            "description": "Calendar date"
+          },
+          {
+            "name": "Time",
+            "item_type": "struct",
+            "description": "Clock time"
+          },
+          {
+            "name": "Duration",
+            "item_type": "struct",
+            "description": "Time span"
+          },
+          {
+            "name": "Instant",
+            "item_type": "struct",
+            "description": "Monotonic timestamp"
+          },
+          {
+            "name": "UtcOffset",
+            "item_type": "struct",
+            "description": "UTC time offset"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "humantime",
+        "items": [
+          {
+            "name": "parse_duration",
+            "item_type": "function",
+            "description": "Parse human-readable duration"
+          },
+          {
+            "name": "parse_rfc3339",
+            "item_type": "function",
+            "description": "Parse RFC3339 timestamp"
+          },
+          {
+            "name": "format_duration",
+            "item_type": "function",
+            "description": "Format duration as human-readable"
+          },
+          {
+            "name": "format_rfc3339",
+            "item_type": "function",
+            "description": "Format as RFC3339 timestamp"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "hex",
+        "items": [
+          {
+            "name": "encode",
+            "item_type": "function",
+            "description": "Encode data as hexadecimal"
+          },
+          {
+            "name": "decode",
+            "item_type": "function",
+            "description": "Decode hexadecimal data"
+          },
+          {
+            "name": "FromHex",
+            "item_type": "trait",
+            "description": "Convert from hex string"
+          },
+          {
+            "name": "ToHex",
+            "item_type": "trait",
+            "description": "Convert to hex string"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "sha2",
+        "items": [
+          {
+            "name": "Sha256",
+            "item_type": "struct",
+            "description": "SHA-256 hasher"
+          },
+          {
+            "name": "Sha512",
+            "item_type": "struct",
+            "description": "SHA-512 hasher"
+          },
+          {
+            "name": "Digest",
+            "item_type": "trait",
+            "description": "Cryptographic digest trait"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "md5",
+        "items": [
+          {
+            "name": "Md5",
+            "item_type": "struct",
+            "description": "MD5 hasher"
+          },
+          {
+            "name": "compute",
+            "item_type": "function",
+            "description": "Compute MD5 hash"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "ring",
+        "items": [
+          {
+            "name": "digest",
+            "item_type": "module",
+            "description": "Cryptographic digest algorithms"
+          },
+          {
+            "name": "hmac",
+            "item_type": "module",
+            "description": "HMAC authentication"
+          },
+          {
+            "name": "rand",
+            "item_type": "module",
+            "description": "Cryptographic random number generation"
+          },
+          {
+            "name": "aead",
+            "item_type": "module",
+            "description": "Authenticated encryption"
+          }
+        ],
+        "submodules": [
+          "digest",
+          "hmac",
+          "rand",
+          "aead"
+        ]
+      },
+      {
+        "path": "rustls",
+        "items": [
+          {
+            "name": "ClientConfig",
+            "item_type": "struct",
+            "description": "TLS client configuration"
+          },
+          {
+            "name": "ServerConfig",
+            "item_type": "struct",
+            "description": "TLS server configuration"
+          },
+          {
+            "name": "Certificate",
+            "item_type": "struct",
+            "description": "X.509 certificate"
+          },
+          {
+            "name": "PrivateKey",
+            "item_type": "struct",
+            "description": "Private key"
+          },
+          {
+            "name": "Stream",
+            "item_type": "struct",
+            "description": "TLS stream"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "openssl",
+        "items": [
+          {
+            "name": "ssl",
+            "item_type": "module",
+            "description": "SSL/TLS functionality"
+          },
+          {
+            "name": "hash",
+            "item_type": "module",
+            "description": "Cryptographic hashing"
+          },
+          {
+            "name": "rsa",
+            "item_type": "module",
+            "description": "RSA cryptography"
+          },
+          {
+            "name": "aes",
+            "item_type": "module",
+            "description": "AES encryption"
+          },
+          {
+            "name": "rand",
+            "item_type": "module",
+            "description": "Random number generation"
+          }
+        ],
+        "submodules": [
+          "ssl",
+          "hash",
+          "rsa",
+          "aes",
+          "rand"
+        ]
+      },
+      {
+        "path": "imageproc",
+        "items": [
+          {
+            "name": "drawing",
+            "item_type": "module",
+            "description": "Image drawing operations"
+          },
+          {
+            "name": "filter",
+            "item_type": "module",
+            "description": "Image filtering"
+          },
+          {
+            "name": "geometric_transformations",
+            "item_type": "module",
+            "description": "Geometric image transformations"
+          },
+          {
+            "name": "morphology",
+            "item_type": "module",
+            "description": "Morphological operations"
+          }
+        ],
+        "submodules": [
+          "drawing",
+          "filter",
+          "geometric_transformations",
+          "morphology"
+        ]
+      },
+      {
+        "path": "embedded_hal",
+        "items": [
+          {
+            "name": "digital",
+            "item_type": "module",
+            "description": "Digital I/O traits"
+          },
+          {
+            "name": "spi",
+            "item_type": "module",
+            "description": "SPI bus traits"
+          },
+          {
+            "name": "i2c",
+            "item_type": "module",
+            "description": "I2C bus traits"
+          },
+          {
+            "name": "serial",
+            "item_type": "module",
+            "description": "Serial communication traits"
+          },
+          {
+            "name": "adc",
+            "item_type": "module",
+            "description": "Analog-to-digital converter traits"
+          },
+          {
+            "name": "pwm",
+            "item_type": "module",
+            "description": "Pulse-width modulation traits"
+          }
+        ],
+        "submodules": [
+          "digital",
+          "spi",
+          "i2c",
+          "serial",
+          "adc",
+          "pwm"
+        ]
+      },
+      {
+        "path": "nb",
+        "items": [
+          {
+            "name": "Result",
+            "item_type": "type",
+            "description": "Non-blocking result type"
+          },
+          {
+            "name": "Error",
+            "item_type": "enum",
+            "description": "Non-blocking error"
+          },
+          {
+            "name": "block",
+            "item_type": "macro",
+            "description": "Block on non-blocking operation"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "cortex_m",
+        "items": [
+          {
+            "name": "interrupt",
+            "item_type": "module",
+            "description": "Interrupt management"
+          },
+          {
+            "name": "peripheral",
+            "item_type": "module",
+            "description": "Core peripherals"
+          },
+          {
+            "name": "delay",
+            "item_type": "module",
+            "description": "Delay functionality"
+          },
+          {
+            "name": "asm",
+            "item_type": "module",
+            "description": "Assembly instructions"
+          }
+        ],
+        "submodules": [
+          "interrupt",
+          "peripheral",
+          "delay",
+          "asm"
+        ]
+      },
+      {
+        "path": "wasm_bindgen",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "WebAssembly bindings prelude"
+          },
+          {
+            "name": "JsValue",
+            "item_type": "struct",
+            "description": "JavaScript value wrapper"
+          },
+          {
+            "name": "JsCast",
+            "item_type": "trait",
+            "description": "JavaScript casting operations"
+          },
+          {
+            "name": "closure",
+            "item_type": "module",
+            "description": "JavaScript closures"
+          }
+        ],
+        "submodules": [
+          "prelude",
+          "closure"
+        ]
+      },
+      {
+        "path": "js_sys",
+        "items": [
+          {
+            "name": "Object",
+            "item_type": "struct",
+            "description": "JavaScript Object"
+          },
+          {
+            "name": "Array",
+            "item_type": "struct",
+            "description": "JavaScript Array"
+          },
+          {
+            "name": "Function",
+            "item_type": "struct",
+            "description": "JavaScript Function"
+          },
+          {
+            "name": "Promise",
+            "item_type": "struct",
+            "description": "JavaScript Promise"
+          },
+          {
+            "name": "JSON",
+            "item_type": "struct",
+            "description": "JavaScript JSON object"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "web_sys",
+        "items": [
+          {
+            "name": "window",
+            "item_type": "function",
+            "description": "Get browser window object"
+          },
+          {
+            "name": "console",
+            "item_type": "module",
+            "description": "Browser console API"
+          },
+          {
+            "name": "Document",
+            "item_type": "struct",
+            "description": "DOM Document interface"
+          },
+          {
+            "name": "Element",
+            "item_type": "struct",
+            "description": "DOM Element interface"
+          },
+          {
+            "name": "Window",
+            "item_type": "struct",
+            "description": "Browser Window interface"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "wasmer",
+        "items": [
+          {
+            "name": "Instance",
+            "item_type": "struct",
+            "description": "WebAssembly instance"
+          },
+          {
+            "name": "Module",
+            "item_type": "struct",
+            "description": "WebAssembly module"
+          },
+          {
+            "name": "Store",
+            "item_type": "struct",
+            "description": "WebAssembly store"
+          },
+          {
+            "name": "Engine",
+            "item_type": "struct",
+            "description": "WebAssembly engine"
+          },
+          {
+            "name": "Function",
+            "item_type": "struct",
+            "description": "WebAssembly function"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "wasmtime",
+        "items": [
+          {
+            "name": "Engine",
+            "item_type": "struct",
+            "description": "WebAssembly runtime engine"
+          },
+          {
+            "name": "Module",
+            "item_type": "struct",
+            "description": "Compiled WebAssembly module"
+          },
+          {
+            "name": "Instance",
+            "item_type": "struct",
+            "description": "WebAssembly instance"
+          },
+          {
+            "name": "Store",
+            "item_type": "struct",
+            "description": "WebAssembly store"
+          },
+          {
+            "name": "Linker",
+            "item_type": "struct",
+            "description": "WebAssembly linker"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "polars",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "Polars dataframe prelude"
+          },
+          {
+            "name": "DataFrame",
+            "item_type": "struct",
+            "description": "Polars dataframe"
+          },
+          {
+            "name": "LazyFrame",
+            "item_type": "struct",
+            "description": "Lazy dataframe evaluation"
+          },
+          {
+            "name": "Series",
+            "item_type": "struct",
+            "description": "Data series"
+          }
+        ],
+        "submodules": [
+          "prelude"
+        ]
+      },
+      {
+        "path": "arrow",
+        "items": [
+          {
+            "name": "array",
+            "item_type": "module",
+            "description": "Arrow array types"
+          },
+          {
+            "name": "datatypes",
+            "item_type": "module",
+            "description": "Arrow data types"
+          },
+          {
+            "name": "record_batch",
+            "item_type": "module",
+            "description": "Arrow record batches"
+          },
+          {
+            "name": "csv",
+            "item_type": "module",
+            "description": "CSV reading and writing"
+          }
+        ],
+        "submodules": [
+          "array",
+          "datatypes",
+          "record_batch",
+          "csv"
+        ]
+      },
+      {
+        "path": "datafusion",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "DataFusion query engine prelude"
+          },
+          {
+            "name": "execution",
+            "item_type": "module",
+            "description": "Query execution context"
+          },
+          {
+            "name": "logical_plan",
+            "item_type": "module",
+            "description": "Logical query plans"
+          }
+        ],
+        "submodules": [
+          "prelude",
+          "execution",
+          "logical_plan"
+        ]
+      },
+      {
+        "path": "numpy",
+        "items": [
+          {
+            "name": "PyArray",
+            "item_type": "struct",
+            "description": "NumPy array wrapper"
+          },
+          {
+            "name": "IntoPyArray",
+            "item_type": "trait",
+            "description": "Convert to NumPy array"
+          },
+          {
+            "name": "ToPyArray",
+            "item_type": "trait",
+            "description": "Convert to NumPy array"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "pyo3",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "Python extension prelude"
+          },
+          {
+            "name": "Python",
+            "item_type": "struct",
+            "description": "Python interpreter token"
+          },
+          {
+            "name": "PyObject",
+            "item_type": "struct",
+            "description": "Python object reference"
+          },
+          {
+            "name": "PyResult",
+            "item_type": "type",
+            "description": "Python result type"
+          },
+          {
+            "name": "pymodule",
+            "item_type": "attribute",
+            "description": "Define Python module"
+          },
+          {
+            "name": "pyfunction",
+            "item_type": "attribute",
+            "description": "Define Python function"
+          },
+          {
+            "name": "pyclass",
+            "item_type": "attribute",
+            "description": "Define Python class"
+          }
+        ],
+        "submodules": [
+          "prelude",
+          "types"
+        ]
+      },
+      {
+        "path": "opencv",
+        "items": [
+          {
+            "name": "core",
+            "item_type": "module",
+            "description": "OpenCV core functionality"
+          },
+          {
+            "name": "imgproc",
+            "item_type": "module",
+            "description": "Image processing functions"
+          },
+          {
+            "name": "highgui",
+            "item_type": "module",
+            "description": "High-level GUI functions"
+          },
+          {
+            "name": "imgcodecs",
+            "item_type": "module",
+            "description": "Image codecs"
+          },
+          {
+            "name": "videoio",
+            "item_type": "module",
+            "description": "Video I/O functions"
+          }
+        ],
+        "submodules": [
+          "core",
+          "imgproc",
+          "highgui",
+          "imgcodecs",
+          "videoio"
+        ]
+      },
+      {
+        "path": "rerun",
+        "items": [
+          {
+            "name": "RecordingStream",
+            "item_type": "struct",
+            "description": "Rerun recording stream"
+          },
+          {
+            "name": "log",
+            "item_type": "function",
+            "description": "Log data to Rerun"
+          },
+          {
+            "name": "spawn",
+            "item_type": "function",
+            "description": "Spawn Rerun viewer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "plotters",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "Plotters plotting library prelude"
+          },
+          {
+            "name": "style",
+            "item_type": "module",
+            "description": "Plotting styles"
+          },
+          {
+            "name": "coord",
+            "item_type": "module",
+            "description": "Coordinate systems"
+          },
+          {
+            "name": "series",
+            "item_type": "module",
+            "description": "Data series"
+          }
+        ],
+        "submodules": [
+          "prelude",
+          "style",
+          "coord",
+          "series"
+        ]
+      },
+      {
+        "path": "eframe",
+        "items": [
+          {
+            "name": "App",
+            "item_type": "trait",
+            "description": "eframe application trait"
+          },
+          {
+            "name": "NativeOptions",
+            "item_type": "struct",
+            "description": "Native app options"
+          },
+          {
+            "name": "run_native",
+            "item_type": "function",
+            "description": "Run native eframe app"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "egui_extras",
+        "items": [
+          {
+            "name": "TableBuilder",
+            "item_type": "struct",
+            "description": "Table builder widget"
+          },
+          {
+            "name": "DatePickerButton",
+            "item_type": "struct",
+            "description": "Date picker widget"
+          },
+          {
+            "name": "ColorPicker",
+            "item_type": "struct",
+            "description": "Color picker widget"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "druid",
+        "items": [
+          {
+            "name": "Widget",
+            "item_type": "trait",
+            "description": "Druid widget trait"
+          },
+          {
+            "name": "Data",
+            "item_type": "trait",
+            "description": "Druid data trait"
+          },
+          {
+            "name": "AppLauncher",
+            "item_type": "struct",
+            "description": "Druid app launcher"
+          },
+          {
+            "name": "WindowDesc",
+            "item_type": "struct",
+            "description": "Window description"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "fltk",
+        "items": [
+          {
+            "name": "prelude",
+            "item_type": "module",
+            "description": "FLTK GUI prelude"
+          },
+          {
+            "name": "app",
+            "item_type": "module",
+            "description": "FLTK application"
+          },
+          {
+            "name": "window",
+            "item_type": "module",
+            "description": "FLTK windows"
+          },
+          {
+            "name": "button",
+            "item_type": "module",
+            "description": "FLTK buttons"
+          }
+        ],
+        "submodules": [
+          "prelude",
+          "app",
+          "window",
+          "button"
+        ]
+      },
+      {
+        "path": "relm4",
+        "items": [
+          {
+            "name": "Component",
+            "item_type": "trait",
+            "description": "Relm4 component trait"
+          },
+          {
+            "name": "ComponentParts",
+            "item_type": "struct",
+            "description": "Component parts"
+          },
+          {
+            "name": "RelmApp",
+            "item_type": "struct",
+            "description": "Relm4 application"
+          },
+          {
+            "name": "ComponentSender",
+            "item_type": "struct",
+            "description": "Component message sender"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "notify_rust",
+        "items": [
+          {
+            "name": "Notification",
+            "item_type": "struct",
+            "description": "Desktop notification"
+          },
+          {
+            "name": "show",
+            "item_type": "function",
+            "description": "Show desktop notification"
+          },
+          {
+            "name": "Timeout",
+            "item_type": "enum",
+            "description": "Notification timeout"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "directories",
+        "items": [
+          {
+            "name": "ProjectDirs",
+            "item_type": "struct",
+            "description": "Project-specific directories"
+          },
+          {
+            "name": "UserDirs",
+            "item_type": "struct",
+            "description": "User directories"
+          },
+          {
+            "name": "BaseDirs",
+            "item_type": "struct",
+            "description": "Base directories"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "ignore",
+        "items": [
+          {
+            "name": "Walk",
+            "item_type": "struct",
+            "description": "Parallel directory walker"
+          },
+          {
+            "name": "WalkBuilder",
+            "item_type": "struct",
+            "description": "Walk builder with gitignore support"
+          },
+          {
+            "name": "DirEntry",
+            "item_type": "struct",
+            "description": "Directory entry with ignore support"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "globset",
+        "items": [
+          {
+            "name": "Glob",
+            "item_type": "struct",
+            "description": "Single glob pattern"
+          },
+          {
+            "name": "GlobSet",
+            "item_type": "struct",
+            "description": "Set of glob patterns"
+          },
+          {
+            "name": "GlobBuilder",
+            "item_type": "struct",
+            "description": "Glob pattern builder"
+          },
+          {
+            "name": "GlobSetBuilder",
+            "item_type": "struct",
+            "description": "Glob set builder"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "lz4",
+        "items": [
+          {
+            "name": "compress",
+            "item_type": "function",
+            "description": "LZ4 compression"
+          },
+          {
+            "name": "decompress",
+            "item_type": "function",
+            "description": "LZ4 decompression"
+          },
+          {
+            "name": "Encoder",
+            "item_type": "struct",
+            "description": "LZ4 encoder"
+          },
+          {
+            "name": "Decoder",
+            "item_type": "struct",
+            "description": "LZ4 decoder"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "zstd",
+        "items": [
+          {
+            "name": "encode_all",
+            "item_type": "function",
+            "description": "Zstandard compression"
+          },
+          {
+            "name": "decode_all",
+            "item_type": "function",
+            "description": "Zstandard decompression"
+          },
+          {
+            "name": "Encoder",
+            "item_type": "struct",
+            "description": "Zstandard encoder"
+          },
+          {
+            "name": "Decoder",
+            "item_type": "struct",
+            "description": "Zstandard decoder"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "postcard",
+        "items": [
+          {
+            "name": "to_vec",
+            "item_type": "function",
+            "description": "Serialize to vector"
+          },
+          {
+            "name": "from_bytes",
+            "item_type": "function",
+            "description": "Deserialize from bytes"
+          },
+          {
+            "name": "to_slice",
+            "item_type": "function",
+            "description": "Serialize to slice"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "rmp",
+        "items": [
+          {
+            "name": "encode",
+            "item_type": "module",
+            "description": "MessagePack encoding"
+          },
+          {
+            "name": "decode",
+            "item_type": "module",
+            "description": "MessagePack decoding"
+          },
+          {
+            "name": "Marker",
+            "item_type": "enum",
+            "description": "MessagePack type markers"
+          }
+        ],
+        "submodules": [
+          "encode",
+          "decode"
+        ]
+      },
+      {
+        "path": "rmp_serde",
+        "items": [
+          {
+            "name": "to_vec",
+            "item_type": "function",
+            "description": "Serialize to MessagePack"
+          },
+          {
+            "name": "from_slice",
+            "item_type": "function",
+            "description": "Deserialize from MessagePack"
+          },
+          {
+            "name": "Serializer",
+            "item_type": "struct",
+            "description": "MessagePack serializer"
+          },
+          {
+            "name": "Deserializer",
+            "item_type": "struct",
+            "description": "MessagePack deserializer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "toml_edit",
+        "items": [
+          {
+            "name": "Document",
+            "item_type": "struct",
+            "description": "TOML document"
+          },
+          {
+            "name": "Item",
+            "item_type": "enum",
+            "description": "TOML item"
+          },
+          {
+            "name": "Table",
+            "item_type": "struct",
+            "description": "TOML table"
+          },
+          {
+            "name": "Array",
+            "item_type": "struct",
+            "description": "TOML array"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "serde_yaml",
+        "items": [
+          {
+            "name": "to_string",
+            "item_type": "function",
+            "description": "Serialize to YAML string"
+          },
+          {
+            "name": "from_str",
+            "item_type": "function",
+            "description": "Deserialize from YAML string"
+          },
+          {
+            "name": "Value",
+            "item_type": "enum",
+            "description": "YAML value"
+          },
+          {
+            "name": "Serializer",
+            "item_type": "struct",
+            "description": "YAML serializer"
           }
         ],
         "submodules": []
