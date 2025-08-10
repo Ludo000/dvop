@@ -308,9 +308,9 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     let scrolled = ScrolledWindow::builder()
         .max_content_height(500)  // Significantly increased height for more visible items
         .max_content_width(1400)  // Much wider for extensive documentation display
-        .min_content_height(300)  // Increased minimum height
+        // Removed min_content_height to allow popup to size naturally based on content
         .min_content_width(1200)  // Significantly increased minimum width for documentation
-        .propagate_natural_height(false)
+        .propagate_natural_height(true)  // Changed to true to allow natural sizing
         .propagate_natural_width(false)
         .hscrollbar_policy(gtk4::PolicyType::Never)
         .vscrollbar_policy(gtk4::PolicyType::Automatic)
