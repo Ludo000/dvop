@@ -112,7 +112,7 @@ pub struct NewTabDependencies {
 ///
 /// This function is used to create a new tab for a new document,
 /// setting up all the necessary UI components and state tracking.
-fn create_new_empty_tab(deps: &NewTabDependencies) {
+pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     // Create a new source view with syntax highlighting capabilities
     let (source_view, source_buffer) = crate::syntax::create_source_view();
     source_buffer.set_text(""); // Start with empty content

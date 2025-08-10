@@ -297,7 +297,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         editor_notebook,          // Tabbed container for managing multiple open files
         _initial_tab_widget,      // Container for custom tab label components
         initial_tab_actual_label, // Text label showing the file name in the tab
-        initial_tab_close_button  // Button for closing the tab
+        initial_tab_close_button, // Button for closing the tab
+        add_file_button           // Button for adding new file tabs
     ) = ui::create_text_view();
     
     // Debug theme detection at startup
@@ -579,10 +580,13 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Initialize the path box with clickable buttons for each directory segment
     utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
     
+    // Create the editor notebook container with add button
+    let editor_notebook_box = ui::create_editor_notebook_box(&editor_notebook, &add_file_button);
+    
     // Create the main paned layout that contains:
     // - The file manager sidebar on the left
     // - The editor notebook and terminal in a vertical split on the right
-    let paned_content = ui::create_paned(&file_manager_panel, &editor_notebook, &terminal_notebook_box);
+    let paned_content = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
     
     // Add click-outside detection for file manager to switch from DirectClick to TabSwitch styling
     // This allows the file manager to revert to subtle highlighting when focus is lost
@@ -792,6 +796,34 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     terminal_button.connect_clicked(move |_| {
         // Add a new terminal tab in the current directory
         ui::add_terminal_tab(&terminal_notebook_clone_for_terminal_button, Some(current_dir_clone_for_terminal_button.borrow().clone()));
+    });
+
+    // Set up the add file button handler to create a new file (same as new button functionality)
+    let editor_notebook_clone_for_add_file = editor_notebook.clone();
+    let active_tab_path_clone_for_add_file = active_tab_path.clone();
+    let file_path_manager_clone_for_add_file = file_path_manager.clone();
+    let file_list_box_clone_for_add_file = file_list_box.clone();
+    let current_dir_clone_for_add_file = current_dir.clone();
+    let save_button_clone_for_add_file = save_button.clone();
+    let save_as_button_clone_for_add_file = save_as_button.clone();
+    let window_clone_for_add_file = window.clone();
+    
+    add_file_button.connect_clicked(move |_| {
+        // Use the same logic as the new button - create a new empty tab
+        let deps_for_new_tab_creation = handlers::NewTabDependencies {
+            editor_notebook: editor_notebook_clone_for_add_file.clone(),
+            active_tab_path: active_tab_path_clone_for_add_file.clone(),
+            file_path_manager: file_path_manager_clone_for_add_file.clone(),
+            window: window_clone_for_add_file.clone(),
+            file_list_box: file_list_box_clone_for_add_file.clone(),
+            current_dir: current_dir_clone_for_add_file.clone(),
+            save_button: save_button_clone_for_add_file.clone(),
+            save_as_button: save_as_button_clone_for_add_file.clone(),
+            _save_menu_button: None, // We don't need the menu button for this handler
+        };
+        
+        // Create the new tab using the same system as the new button
+        handlers::create_new_empty_tab(&deps_for_new_tab_creation);
     });
 
     // Handle file opening from command line arguments

@@ -72,17 +72,6 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     settings_button.set_tooltip_text(Some("Editor Settings"));
     header.pack_start(&settings_button);
 
-    // Create the New File button with icon and label
-    let new_button = Button::new();
-    let new_button_icon = Image::from_icon_name("document-new-symbolic");
-    let new_button_label = Label::new(Some("New"));
-    let new_button_box = GtkBox::new(Orientation::Horizontal, 5);
-    new_button_box.append(&new_button_icon);
-    new_button_box.append(&new_button_label);
-    new_button.set_child(Some(&new_button_box));
-    new_button.set_tooltip_text(Some("Create a new file"));
-    header.pack_start(&new_button);
-
     // Create the Open File button with icon and label
     let open_button = Button::new();
     let open_button_icon = Image::from_icon_name("document-open-symbolic");
@@ -155,7 +144,11 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     let save_button = Button::new();
     save_button.set_visible(false);
 
-    // Return the header and all action buttons
+    // Create a hidden new button for backward compatibility with existing handler code
+    let new_button = Button::new();
+    new_button.set_visible(false);
+
+    // Return the header and all action buttons (new_button is now hidden for compatibility)
     (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button)
 }
 
@@ -173,6 +166,7 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
 /// - GtkBox: Custom tab widget for the initial tab
 /// - Label: Text label for the initial tab
 /// - Button: Close button for the initial tab
+/// - Button: Add new file tab button
 pub fn create_text_view() -> (
     gtk4::ScrolledWindow,
     gtk4::TextView,
@@ -184,7 +178,8 @@ pub fn create_text_view() -> (
     Notebook,                     // editor_notebook
     GtkBox,                       // tab_widget for the initial tab
     Label,                        // tab_label for the initial tab
-    Button                        // tab_close_button for the initial tab
+    Button,                       // tab_close_button for the initial tab
+    Button                        // add_file_button for creating new tabs
 ) {
     // Create the tabbed notebook container with scrollable tabs
     let editor_notebook = Notebook::new();
@@ -193,6 +188,11 @@ pub fn create_text_view() -> (
     
     // Add CSS class for better tab styling
     editor_notebook.add_css_class("basado-notebook");
+
+    // Create an "Add File" button similar to the terminal's add button
+    let add_file_button = Button::from_icon_name("list-add-symbolic");
+    add_file_button.set_tooltip_text(Some("Create a new file"));
+    add_file_button.set_margin_end(8); // Add right padding
 
     // Create the first "Untitled" tab
     let (tab_widget, tab_label, tab_close_button) = create_tab_widget("Untitled");
@@ -231,7 +231,8 @@ pub fn create_text_view() -> (
         editor_notebook,   // Main tabbed container for multiple documents
         tab_widget,        // Container for tab components
         tab_label,         // Label showing filename in tab
-        tab_close_button   // Button to close the tab
+        tab_close_button,  // Button to close the tab
+        add_file_button    // Button to add new file tabs
     )
 }
 
@@ -338,7 +339,7 @@ pub fn create_file_manager_panel_container(file_list_scrolled_window: ScrolledWi
 /// - The right side has a vertical split between editor (top) and terminal (bottom)
 pub fn create_paned(
     file_manager_panel: &GtkBox,     // File browser sidebar
-    editor_notebook: &Notebook,      // Editor tabs container
+    editor_notebook_box: &GtkBox,    // Editor notebook container with add button
     terminal_box: &impl IsA<gtk4::Widget>,  // Terminal container (either ScrolledWindow or GtkBox)
 ) -> gtk4::Paned {
     // Create the main horizontal split pane
@@ -350,8 +351,8 @@ pub fn create_paned(
     let editor_paned = gtk4::Paned::new(Orientation::Vertical);
     editor_paned.set_wide_handle(true);
     
-    // Place editor notebook at the top of the vertical split
-    editor_paned.set_start_child(Some(editor_notebook));
+    // Place editor notebook box at the top of the vertical split
+    editor_paned.set_start_child(Some(editor_notebook_box));
     
     // Place terminal at the bottom of the vertical split
     editor_paned.set_end_child(Some(terminal_box));
@@ -523,6 +524,29 @@ pub fn create_terminal_notebook_box(terminal_notebook: &Notebook, add_terminal_b
     terminal_box.set_vexpand(true);
     
     terminal_box
+}
+
+/// Creates a container box for the editor notebook with the add button
+/// 
+/// The editor notebook is placed in a box and the add button is placed as an action button
+/// in the notebook's tab bar area using the notebook's action widget feature
+pub fn create_editor_notebook_box(editor_notebook: &Notebook, add_file_button: &Button) -> GtkBox {
+    let editor_box = GtkBox::new(Orientation::Vertical, 0);
+    
+    // Add the add button to the tab bar via the action widget feature
+    // This places the button in the same row as the tabs
+    editor_notebook.set_action_widget(add_file_button, gtk4::PackType::End);
+    
+    // Set the editor notebook to expand vertically
+    editor_notebook.set_vexpand(true);
+    
+    // Pack just the notebook into the container box
+    editor_box.append(editor_notebook);
+    
+    // Make the entire container expand vertically
+    editor_box.set_vexpand(true);
+    
+    editor_box
 }
 
 /// Creates a status bar for the bottom of the application
