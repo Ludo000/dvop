@@ -1415,5 +1415,482 @@
       "content": "use rayon::prelude::*;\nuse std::time::Instant;\n\nfn ${1:parallel_computation}() {\n    let data: Vec<i32> = (0..1_000_000).collect();\n    \n    let start = Instant::now();\n    \n    // Sequential processing\n    let sequential_result: i32 = data.iter().map(|&x| x * x).sum();\n    let sequential_time = start.elapsed();\n    \n    let start = Instant::now();\n    \n    // Parallel processing\n    let parallel_result: i32 = data.par_iter().map(|&x| x * x).sum();\n    let parallel_time = start.elapsed();\n    \n    println!(\"Sequential result: {}, time: {:?}\", sequential_result, sequential_time);\n    println!(\"Parallel result: {}, time: {:?}\", parallel_result, parallel_time);\n    \n    assert_eq!(sequential_result, parallel_result);\n}\n\nfn ${2:parallel_sort}() {\n    let mut data: Vec<i32> = (0..100_000).rev().collect();\n    \n    let start = Instant::now();\n    data.par_sort();\n    let sort_time = start.elapsed();\n    \n    println!(\"Parallel sort completed in {:?}\", sort_time);\n    println!(\"First 10 elements: {:?}\", &data[..10]);\n}\n\nfn ${3:parallel_search}() {\n    let data: Vec<i32> = (0..1_000_000).collect();\n    let target = 999_999;\n    \n    let result = data.par_iter().position_any(|&x| x == target);\n    \n    match result {\n        Some(pos) => println!(\"Found {} at position {}\", target, pos),\n        None => println!(\"Target not found\"),\n    }\n}\n\nfn main() {\n    ${1:parallel_computation}();\n    ${2:parallel_sort}();\n    ${3:parallel_search}();\n}",
       "category": "concurrency"
     }
-  ]
+  ],
+  "imports": {
+    "modules": [
+      {
+        "path": "std",
+        "items": [],
+        "submodules": [
+          "collections",
+          "fs",
+          "io",
+          "thread",
+          "sync",
+          "path",
+          "env",
+          "process",
+          "time",
+          "net",
+          "fmt"
+        ]
+      },
+      {
+        "path": "std::collections",
+        "items": [
+          {
+            "name": "HashMap",
+            "item_type": "struct",
+            "description": "Hash map implementation providing O(1) average-case lookups"
+          },
+          {
+            "name": "HashSet", 
+            "item_type": "struct",
+            "description": "Hash set implementation for storing unique values"
+          },
+          {
+            "name": "BTreeMap",
+            "item_type": "struct", 
+            "description": "B-tree map providing ordered key-value storage"
+          },
+          {
+            "name": "BTreeSet",
+            "item_type": "struct",
+            "description": "B-tree set providing ordered unique value storage"
+          },
+          {
+            "name": "VecDeque",
+            "item_type": "struct",
+            "description": "Double-ended queue allowing efficient push/pop at both ends"
+          },
+          {
+            "name": "LinkedList",
+            "item_type": "struct",
+            "description": "Doubly-linked list for dynamic insertion/removal"
+          },
+          {
+            "name": "BinaryHeap",
+            "item_type": "struct",
+            "description": "Priority queue implemented as binary heap"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::fs",
+        "items": [
+          {
+            "name": "File",
+            "item_type": "struct",
+            "description": "Represents a file handle for reading and writing"
+          },
+          {
+            "name": "OpenOptions",
+            "item_type": "struct",
+            "description": "Builder for configuring how to open a file"
+          },
+          {
+            "name": "read_to_string",
+            "item_type": "function",
+            "description": "Read entire file contents into a string"
+          },
+          {
+            "name": "write",
+            "item_type": "function",
+            "description": "Write data to a file, creating it if necessary"
+          },
+          {
+            "name": "create_dir",
+            "item_type": "function",
+            "description": "Create a new directory"
+          },
+          {
+            "name": "create_dir_all",
+            "item_type": "function", 
+            "description": "Create directory and all parent directories"
+          },
+          {
+            "name": "remove_file",
+            "item_type": "function",
+            "description": "Remove a file from the filesystem"
+          },
+          {
+            "name": "remove_dir",
+            "item_type": "function",
+            "description": "Remove an empty directory"
+          },
+          {
+            "name": "remove_dir_all",
+            "item_type": "function",
+            "description": "Remove directory and all its contents recursively"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::io",
+        "items": [
+          {
+            "name": "Read",
+            "item_type": "trait",
+            "description": "Trait for types that can read bytes from a source"
+          },
+          {
+            "name": "Write", 
+            "item_type": "trait",
+            "description": "Trait for types that can write bytes to a destination"
+          },
+          {
+            "name": "BufReader",
+            "item_type": "struct",
+            "description": "Buffered reader for efficient reading operations"
+          },
+          {
+            "name": "BufWriter",
+            "item_type": "struct",
+            "description": "Buffered writer for efficient writing operations"
+          },
+          {
+            "name": "Cursor",
+            "item_type": "struct",
+            "description": "In-memory buffer that implements Read and Write"
+          },
+          {
+            "name": "stdin",
+            "item_type": "function",
+            "description": "Get a handle to standard input"
+          },
+          {
+            "name": "stdout",
+            "item_type": "function", 
+            "description": "Get a handle to standard output"
+          },
+          {
+            "name": "stderr",
+            "item_type": "function",
+            "description": "Get a handle to standard error"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::thread",
+        "items": [
+          {
+            "name": "spawn",
+            "item_type": "function",
+            "description": "Spawn a new thread and return a handle to it"
+          },
+          {
+            "name": "sleep",
+            "item_type": "function",
+            "description": "Put the current thread to sleep for a duration"
+          },
+          {
+            "name": "yield_now",
+            "item_type": "function",
+            "description": "Yield execution to other threads"
+          },
+          {
+            "name": "current",
+            "item_type": "function",
+            "description": "Get a handle to the current thread"
+          },
+          {
+            "name": "JoinHandle",
+            "item_type": "struct",
+            "description": "Handle to a spawned thread for joining"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::sync",
+        "items": [
+          {
+            "name": "Mutex",
+            "item_type": "struct",
+            "description": "Mutual exclusion primitive for thread-safe data access"
+          },
+          {
+            "name": "RwLock",
+            "item_type": "struct", 
+            "description": "Reader-writer lock allowing multiple readers or one writer"
+          },
+          {
+            "name": "Arc",
+            "item_type": "struct",
+            "description": "Atomically reference-counted shared pointer for thread-safe sharing"
+          },
+          {
+            "name": "Condvar",
+            "item_type": "struct",
+            "description": "Condition variable for thread synchronization"
+          },
+          {
+            "name": "Once",
+            "item_type": "struct",
+            "description": "Synchronization primitive for one-time initialization"
+          },
+          {
+            "name": "Barrier",
+            "item_type": "struct",
+            "description": "Synchronization primitive to coordinate multiple threads"
+          }
+        ],
+        "submodules": [
+          "mpsc",
+          "atomic"
+        ]
+      },
+      {
+        "path": "std::sync::mpsc",
+        "items": [
+          {
+            "name": "channel",
+            "item_type": "function",
+            "description": "Create unbounded channel for message passing between threads"
+          },
+          {
+            "name": "sync_channel",
+            "item_type": "function",
+            "description": "Create bounded channel for message passing between threads"
+          },
+          {
+            "name": "Sender",
+            "item_type": "struct",
+            "description": "Sending end of a channel"
+          },
+          {
+            "name": "Receiver",
+            "item_type": "struct",
+            "description": "Receiving end of a channel"
+          },
+          {
+            "name": "SyncSender",
+            "item_type": "struct",
+            "description": "Sending end of a synchronous channel"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::path",
+        "items": [
+          {
+            "name": "Path",
+            "item_type": "struct",
+            "description": "Slice of a path for cross-platform path manipulation"
+          },
+          {
+            "name": "PathBuf",
+            "item_type": "struct",
+            "description": "Owned, mutable path for building and manipulating paths"
+          },
+          {
+            "name": "Component",
+            "item_type": "enum",
+            "description": "Component of a file path"
+          },
+          {
+            "name": "Components",
+            "item_type": "struct",
+            "description": "Iterator over path components"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "gtk4",
+        "items": [],
+        "submodules": [
+          "prelude",
+          "gdk", 
+          "glib",
+          "gio"
+        ]
+      },
+      {
+        "path": "gtk4::prelude",
+        "items": [
+          {
+            "name": "ApplicationExt",
+            "item_type": "trait",
+            "description": "Extension trait for GTK applications"
+          },
+          {
+            "name": "ApplicationExtManual",
+            "item_type": "trait",
+            "description": "Manual extensions for GTK applications"
+          },
+          {
+            "name": "ApplicationWindowExt", 
+            "item_type": "trait",
+            "description": "Extension trait for application windows"
+          },
+          {
+            "name": "BoxExt",
+            "item_type": "trait",
+            "description": "Extension trait for GTK boxes"
+          },
+          {
+            "name": "ButtonExt",
+            "item_type": "trait",
+            "description": "Extension trait for GTK buttons"
+          },
+          {
+            "name": "ContainerExt",
+            "item_type": "trait",
+            "description": "Extension trait for GTK containers"
+          },
+          {
+            "name": "EntryExt",
+            "item_type": "trait",
+            "description": "Extension trait for GTK entries"
+          },
+          {
+            "name": "LabelExt",
+            "item_type": "trait",
+            "description": "Extension trait for GTK labels"
+          },
+          {
+            "name": "WidgetExt",
+            "item_type": "trait",
+            "description": "Extension trait for all GTK widgets"
+          },
+          {
+            "name": "WindowExt",
+            "item_type": "trait",
+            "description": "Extension trait for GTK windows"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "sourceview5",
+        "items": [
+          {
+            "name": "View",
+            "item_type": "struct",
+            "description": "Source code editor widget with syntax highlighting"
+          },
+          {
+            "name": "Buffer",
+            "item_type": "struct", 
+            "description": "Text buffer for source code with language support"
+          },
+          {
+            "name": "Language",
+            "item_type": "struct",
+            "description": "Language specification for syntax highlighting"
+          },
+          {
+            "name": "LanguageManager",
+            "item_type": "struct",
+            "description": "Manager for available programming languages"
+          },
+          {
+            "name": "StyleScheme",
+            "item_type": "struct",
+            "description": "Color scheme for syntax highlighting"
+          },
+          {
+            "name": "StyleSchemeManager",
+            "item_type": "struct",
+            "description": "Manager for available color schemes"
+          }
+        ],
+        "submodules": [
+          "prelude"
+        ]
+      },
+      {
+        "path": "sourceview5::prelude",
+        "items": [
+          {
+            "name": "ViewExt",
+            "item_type": "trait",
+            "description": "Extension trait for SourceView widgets"
+          },
+          {
+            "name": "BufferExt", 
+            "item_type": "trait",
+            "description": "Extension trait for SourceView buffers"
+          },
+          {
+            "name": "LanguageExt",
+            "item_type": "trait",
+            "description": "Extension trait for language objects"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "tokio",
+        "items": [
+          {
+            "name": "spawn",
+            "item_type": "function",
+            "description": "Spawn an asynchronous task"
+          },
+          {
+            "name": "main",
+            "item_type": "macro",
+            "description": "Attribute macro for async main function"
+          }
+        ],
+        "submodules": [
+          "fs",
+          "net",
+          "sync",
+          "time",
+          "io",
+          "process",
+          "signal"
+        ]
+      },
+      {
+        "path": "serde",
+        "items": [
+          {
+            "name": "Serialize",
+            "item_type": "trait", 
+            "description": "Trait for types that can be serialized"
+          },
+          {
+            "name": "Deserialize",
+            "item_type": "trait",
+            "description": "Trait for types that can be deserialized"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "reqwest",
+        "items": [
+          {
+            "name": "get",
+            "item_type": "function",
+            "description": "Send a GET request to a URL"
+          },
+          {
+            "name": "post",
+            "item_type": "function",
+            "description": "Send a POST request to a URL"
+          },
+          {
+            "name": "Client",
+            "item_type": "struct",
+            "description": "HTTP client for making requests"
+          },
+          {
+            "name": "Response",
+            "item_type": "struct",
+            "description": "HTTP response from a request"
+          }
+        ],
+        "submodules": []
+      }
+    ]
+  }
 }

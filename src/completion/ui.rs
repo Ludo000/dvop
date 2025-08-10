@@ -7,7 +7,7 @@ use glib;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use super::{get_language_keywords_owned, get_language_snippets_owned, get_keyword_documentation, get_snippet_documentation};
+use super::{get_language_keywords_owned, get_language_snippets_owned, get_keyword_documentation, get_snippet_documentation, get_import_completions, get_available_submodules, find_modules_by_prefix, ImportItem};
 
 // Static flag to prevent recursive completion triggering
 static COMPLETION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
@@ -18,6 +18,8 @@ enum CompletionItem {
     Keyword(String),
     Snippet(String, String), // (trigger, content)
     BufferWord(String),
+    ImportItem(ImportItem),
+    ImportModule(String), // Module path
 }
 
 /// Extract the programming language from buffer language setting
@@ -34,10 +36,10 @@ fn get_buffer_language(buffer: &Buffer) -> String {
             "java" => "java".to_string(),
             "html" => "html".to_string(),
             "css" => "css".to_string(),
-            _ => "generic".to_string(),
+            _ => "rust".to_string(), // Default to rust instead of generic
         }
     } else {
-        "generic".to_string()
+        "rust".to_string() // Default to rust when no language is detected
     }
 }
 
@@ -123,13 +125,25 @@ pub fn trigger_completion(source_view: &View) {
     
     // Get text around cursor for context
     let mut start_iter = cursor_iter;
-    for _ in 0..10 {
+    for _ in 0..50 {  // Look back further for import context
         if start_iter.is_start() { break; }
         start_iter.backward_char();
     }
     
     let context_text = buffer.text(&start_iter, &cursor_iter, false);
     println!("Context around cursor: '{}'", context_text);
+    
+    // Check if we're in an import statement
+    let is_import_context = detect_import_context(&context_text);
+    println!("Import context detected: {}", is_import_context);
+    
+    let import_path = if is_import_context {
+        extract_import_path(&context_text)
+    } else {
+        None
+    };
+    
+    println!("Import path: {:?}", import_path);
     
     // Find the word prefix being typed - improved algorithm
     let mut word_start = cursor_iter;
@@ -196,50 +210,98 @@ pub fn trigger_completion(source_view: &View) {
     let mut completion_items = Vec::new();
     let prefix_lower = prefix.to_lowercase();
     
-    // Add language keywords that match the prefix
-    let keywords = get_language_keywords_owned(&language);
-    if !keywords.is_empty() {
-        println!("Found {} keywords for language {}", keywords.len(), language);
-        for keyword in keywords {
-            if prefix.is_empty() || keyword.to_lowercase().starts_with(&prefix_lower) {
-                completion_items.push(CompletionItem::Keyword(keyword));
-            }
-        }
-    } else {
-        println!("No keywords found for language: {}", language);
-    }
-    
-    // Add language snippets that match the prefix
-    let snippets = get_language_snippets_owned(&language);
-    if !snippets.is_empty() {
-        println!("Found {} snippets for language {}", snippets.len(), language);
-        for (trigger, content) in snippets {
-            if prefix.is_empty() || trigger.to_lowercase().starts_with(&prefix_lower) {
-                completion_items.push(CompletionItem::Snippet(trigger, content));
-            }
-        }
-    } else {
-        println!("No snippets found for language: {}", language);
-    }
-    
-    // Add buffer words that match the prefix
-    let buffer_text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
-    let words: Vec<&str> = buffer_text.split_whitespace().collect();
-    println!("Buffer contains {} words", words.len());
-    
-    for word in words {
-        let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
-        if clean_word.len() > 2 
-            && clean_word != prefix  // Don't suggest the same word being typed
-            && (prefix.is_empty() || clean_word.to_lowercase().starts_with(&prefix_lower)) 
-            && !completion_items.iter().any(|item| {
-                match item {
-                    CompletionItem::Keyword(k) => k == clean_word,
-                    CompletionItem::Snippet(s, _) => s == clean_word,
-                    CompletionItem::BufferWord(w) => w == clean_word,
+    if is_import_context {
+        // Handle import completions
+        println!("Processing import completions...");
+        
+        if let Some(module_path) = import_path {
+            // Get items available in the specified module
+            let import_items = get_import_completions(&language, &module_path);
+            println!("Found {} import items for module '{}'", import_items.len(), module_path);
+            
+            for item in import_items {
+                if prefix.is_empty() || item.name.to_lowercase().starts_with(&prefix_lower) {
+                    completion_items.push(CompletionItem::ImportItem(item));
                 }
-            }) {
-            completion_items.push(CompletionItem::BufferWord(clean_word.to_string()));
+            }
+            
+            // Get available submodules
+            let submodules = get_available_submodules(&language, &module_path);
+            println!("Found {} submodules for module '{}'", submodules.len(), module_path);
+            
+            for submodule in submodules {
+                let full_path = if module_path.is_empty() {
+                    submodule.clone()
+                } else {
+                    format!("{}::{}", module_path, submodule)
+                };
+                
+                if prefix.is_empty() || submodule.to_lowercase().starts_with(&prefix_lower) {
+                    completion_items.push(CompletionItem::ImportModule(full_path));
+                }
+            }
+        } else {
+            // No specific module path, show root modules
+            let root_modules = find_modules_by_prefix(&language, "");
+            println!("Found {} root modules", root_modules.len());
+            
+            for module in root_modules {
+                if prefix.is_empty() || module.to_lowercase().starts_with(&prefix_lower) {
+                    completion_items.push(CompletionItem::ImportModule(module));
+                }
+            }
+        }
+    } else {
+        // Regular completion (keywords, snippets, buffer words)
+        println!("Processing regular completions...");
+        
+        // Add language keywords that match the prefix
+        let keywords = get_language_keywords_owned(&language);
+        if !keywords.is_empty() {
+            println!("Found {} keywords for language {}", keywords.len(), language);
+            for keyword in keywords {
+                if prefix.is_empty() || keyword.to_lowercase().starts_with(&prefix_lower) {
+                    completion_items.push(CompletionItem::Keyword(keyword));
+                }
+            }
+        } else {
+            println!("No keywords found for language: {}", language);
+        }
+        
+        // Add language snippets that match the prefix
+        let snippets = get_language_snippets_owned(&language);
+        if !snippets.is_empty() {
+            println!("Found {} snippets for language {}", snippets.len(), language);
+            for (trigger, content) in snippets {
+                if prefix.is_empty() || trigger.to_lowercase().starts_with(&prefix_lower) {
+                    completion_items.push(CompletionItem::Snippet(trigger, content));
+                }
+            }
+        } else {
+            println!("No snippets found for language: {}", language);
+        }
+        
+        // Add buffer words that match the prefix
+        let buffer_text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+        let words: Vec<&str> = buffer_text.split_whitespace().collect();
+        println!("Buffer contains {} words", words.len());
+        
+        for word in words {
+            let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
+            if clean_word.len() > 2 
+                && clean_word != prefix  // Don't suggest the same word being typed
+                && (prefix.is_empty() || clean_word.to_lowercase().starts_with(&prefix_lower)) 
+                && !completion_items.iter().any(|item| {
+                    match item {
+                        CompletionItem::Keyword(k) => k == clean_word,
+                        CompletionItem::Snippet(s, _) => s == clean_word,
+                        CompletionItem::BufferWord(w) => w == clean_word,
+                        CompletionItem::ImportItem(i) => i.name == clean_word,
+                        CompletionItem::ImportModule(m) => m == clean_word,
+                    }
+                }) {
+                completion_items.push(CompletionItem::BufferWord(clean_word.to_string()));
+            }
         }
     }
     
@@ -251,6 +313,11 @@ pub fn trigger_completion(source_view: &View) {
             CompletionItem::Keyword(k) => format!("{} (keyword)", k),
             CompletionItem::Snippet(trigger, _) => format!("{} (snippet)", trigger),
             CompletionItem::BufferWord(w) => w.clone(),
+            CompletionItem::ImportItem(import_item) => format!("{} ({})", import_item.name, import_item.item_type),
+            CompletionItem::ImportModule(module) => {
+                let module_name = module.split("::").last().unwrap_or(module);
+                format!("{} (module)", module_name)
+            },
         };
         suggestions_with_content.push((display_text, item));
     }
@@ -354,6 +421,21 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                 // Use a text file icon for words from the current buffer
                 Image::from_icon_name("text-x-generic-symbolic")
             },
+            CompletionItem::ImportItem(import_item) => {
+                // Use different icons based on import item type
+                match import_item.item_type.as_str() {
+                    "function" => Image::from_icon_name("applications-utilities-symbolic"),
+                    "struct" | "enum" => Image::from_icon_name("document-properties-symbolic"),
+                    "trait" => Image::from_icon_name("preferences-system-symbolic"),
+                    "module" => Image::from_icon_name("folder-symbolic"),
+                    "const" => Image::from_icon_name("dialog-information-symbolic"),
+                    _ => Image::from_icon_name("insert-object-symbolic"),
+                }
+            },
+            CompletionItem::ImportModule(_) => {
+                // Use folder icon for modules
+                Image::from_icon_name("folder-symbolic")
+            },
         };
         
         // Set icon size
@@ -375,12 +457,18 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
             CompletionItem::Keyword(keyword) => {
                 get_keyword_documentation(&language, keyword)
             },
-            CompletionItem::Snippet(trigger, content) => {
+            CompletionItem::Snippet(trigger, _content) => {
                 get_snippet_documentation(&language, trigger)
             },
             CompletionItem::BufferWord(word) => {
                 format!("{} - Word found in current buffer. This identifier is already used elsewhere in your code.", word)
-            }
+            },
+            CompletionItem::ImportItem(import_item) => {
+                format!("{} ({}) - {}", import_item.name, import_item.item_type, import_item.description)
+            },
+            CompletionItem::ImportModule(module) => {
+                format!("{} - Module available for import", module)
+            },
         };
         
         // Create documentation label with much more horizontal space
@@ -465,7 +553,14 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                 CompletionItem::Snippet(_, content) => {
                     // Process snippet - remove placeholders for now and replace with simple text
                     expand_snippet_content(content)
-                }
+                },
+                CompletionItem::ImportItem(import_item) => {
+                    import_item.name.clone()
+                },
+                CompletionItem::ImportModule(module) => {
+                    // For modules, just insert the module name (last component)
+                    module.split("::").last().unwrap_or(module).to_string()
+                },
             };
             
             // Replace the prefix with the selected suggestion/snippet
@@ -725,4 +820,46 @@ fn expand_snippet_content(content: &str) -> String {
     }
     
     result
+}
+
+/// Detect if we're currently in an import context
+fn detect_import_context(context: &str) -> bool {
+    let trimmed = context.trim();
+    
+    // Find the current line (the last line in the context)
+    let current_line = trimmed.lines().last().unwrap_or("");
+    let current_line_trimmed = current_line.trim();
+    
+    // Only detect import context if the CURRENT line starts with "use" and contains "::"
+    // This prevents false positives from previous use statements in the file
+    if current_line_trimmed.starts_with("use ") && current_line_trimmed.contains("::") {
+        return true;
+    }
+    
+    false
+}
+
+/// Extract the module path from import context
+fn extract_import_path(context: &str) -> Option<String> {
+    let trimmed = context.trim();
+    
+    // Get the current line (the last line in the context)
+    let current_line = trimmed.lines().last().unwrap_or("");
+    let current_line_trimmed = current_line.trim();
+    
+    // Check if current line starts with "use"
+    if current_line_trimmed.starts_with("use ") {
+        let after_use = &current_line_trimmed[4..].trim(); // Skip "use "
+        
+        // Find the last :: to get the module path before it
+        if let Some(last_double_colon) = after_use.rfind("::") {
+            let module_path = &after_use[..last_double_colon];
+            return Some(module_path.to_string());
+        } else if after_use.is_empty() || after_use.chars().all(|c| c.is_whitespace()) {
+            // Just "use " with nothing after - show root modules
+            return Some(String::new());
+        }
+    }
+    
+    None
 }

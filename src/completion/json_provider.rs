@@ -25,6 +25,36 @@ pub struct SnippetData {
     pub category: String,
 }
 
+/// Represents import completion data for a module path
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportData {
+    pub module_path: String,
+    pub items: Vec<ImportItem>,
+    pub description: String,
+}
+
+/// Represents an importable item from a module
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportItem {
+    pub name: String,
+    pub item_type: String, // "function", "struct", "enum", "trait", "const", "module"
+    pub description: String,
+}
+
+/// Represents module hierarchy for import suggestions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModuleHierarchy {
+    pub modules: Vec<ModuleData>,
+}
+
+/// Represents a module and its available items
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModuleData {
+    pub path: String,
+    pub items: Vec<ImportItem>,
+    pub submodules: Vec<String>,
+}
+
 /// Represents the complete completion data for a language
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LanguageCompletionData {
@@ -32,6 +62,7 @@ pub struct LanguageCompletionData {
     pub description: String,
     pub keywords: Vec<KeywordData>,
     pub snippets: Vec<SnippetData>,
+    pub imports: Option<ModuleHierarchy>, // Import data for the language
 }
 
 /// JSON-based completion provider
@@ -168,6 +199,53 @@ impl JsonCompletionProvider {
             .collect();
         categories.sort();
         categories
+    }
+    
+    /// Get import suggestions for a given module path
+    pub fn get_import_suggestions(&self, module_path: &str) -> Vec<ImportItem> {
+        if let Some(imports) = &self.language_data.imports {
+            for module in &imports.modules {
+                if module.path == module_path {
+                    return module.items.clone();
+                }
+            }
+        }
+        Vec::new()
+    }
+    
+    /// Get available submodules for a given module path
+    pub fn get_submodules(&self, module_path: &str) -> Vec<String> {
+        if let Some(imports) = &self.language_data.imports {
+            for module in &imports.modules {
+                if module.path == module_path {
+                    return module.submodules.clone();
+                }
+            }
+        }
+        Vec::new()
+    }
+    
+    /// Get all available root modules
+    pub fn get_root_modules(&self) -> Vec<String> {
+        if let Some(imports) = &self.language_data.imports {
+            return imports.modules.iter()
+                .filter(|module| !module.path.contains("::"))
+                .map(|module| module.path.clone())
+                .collect();
+        }
+        Vec::new()
+    }
+    
+    /// Find best matching module path for partial import
+    pub fn find_matching_modules(&self, partial_path: &str) -> Vec<String> {
+        if let Some(imports) = &self.language_data.imports {
+            return imports.modules.iter()
+                .map(|module| &module.path)
+                .filter(|path| path.starts_with(partial_path))
+                .map(|path| path.clone())
+                .collect();
+        }
+        Vec::new()
     }
 }
 
@@ -358,6 +436,39 @@ pub fn get_json_snippet_documentation(language: &str, trigger: &str) -> String {
 pub fn initialize_completion_data() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut manager = get_completion_manager();
     manager.load_all_languages()
+}
+
+/// Get import suggestions for a language and module path
+pub fn get_import_suggestions(language: &str, module_path: &str) -> Vec<ImportItem> {
+    let mut manager = get_completion_manager();
+    
+    if let Some(provider) = manager.get_provider(language) {
+        provider.get_import_suggestions(module_path)
+    } else {
+        Vec::new()
+    }
+}
+
+/// Get submodules for a language and module path
+pub fn get_submodules(language: &str, module_path: &str) -> Vec<String> {
+    let mut manager = get_completion_manager();
+    
+    if let Some(provider) = manager.get_provider(language) {
+        provider.get_submodules(module_path)
+    } else {
+        Vec::new()
+    }
+}
+
+/// Find matching modules for partial import path
+pub fn find_matching_modules(language: &str, partial_path: &str) -> Vec<String> {
+    let mut manager = get_completion_manager();
+    
+    if let Some(provider) = manager.get_provider(language) {
+        provider.find_matching_modules(partial_path)
+    } else {
+        Vec::new()
+    }
 }
 
 #[cfg(test)]

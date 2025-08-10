@@ -4,7 +4,7 @@
 pub mod ui;
 pub mod json_provider;
 
-use json_provider::{get_json_keywords, get_json_snippets, get_json_keyword_documentation, get_json_snippet_documentation, initialize_completion_data};
+use json_provider::{get_json_keywords, get_json_snippets, get_json_keyword_documentation, get_json_snippet_documentation, initialize_completion_data, get_import_suggestions, get_submodules, find_matching_modules, ImportItem};
 
 /// Initialize completion system - loads JSON data and sets up providers
 pub fn initialize_completion() {
@@ -58,6 +58,21 @@ pub fn get_supported_languages() -> Vec<String> {
             ]
         }
     }
+}
+
+/// Get import suggestions for a specific module path
+pub fn get_import_completions(language: &str, module_path: &str) -> Vec<ImportItem> {
+    get_import_suggestions(language, module_path)
+}
+
+/// Get available submodules for a module path
+pub fn get_available_submodules(language: &str, module_path: &str) -> Vec<String> {
+    get_submodules(language, module_path)
+}
+
+/// Find modules that match a partial import path
+pub fn find_modules_by_prefix(language: &str, partial_path: &str) -> Vec<String> {
+    find_matching_modules(language, partial_path)
 }
 
 // Re-export UI functions for external use
