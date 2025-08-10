@@ -198,6 +198,12 @@ pub fn create_source_view() -> (View, Buffer) {
     source_view.set_tab_width(4);
     source_view.set_auto_indent(true);
     
+    // Enable code completion
+    crate::completion::setup_completion(&source_view);
+    
+    // Setup keyboard shortcuts for completion (Ctrl+Space)
+    crate::completion::setup_completion_shortcuts(&source_view);
+    
     (source_view, buffer)
 }
 

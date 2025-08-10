@@ -4,6 +4,7 @@ mod handlers;  // Event handlers and business logic
 mod utils;     // Utility functions used across the application
 mod syntax;    // Syntax highlighting functionality
 mod settings;  // User settings and preferences
+mod completion; // Code completion functionality
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
@@ -80,6 +81,9 @@ fn main() {
                 settings.notify("gtk-application-prefer-dark-theme");
             }
         }
+        
+        // Initialize completion system with JSON data loading
+        completion::initialize_completion();
     });
     
     // Connect the activate signal to the build_ui function with file argument

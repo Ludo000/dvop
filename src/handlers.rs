@@ -522,6 +522,12 @@ pub fn open_or_focus_tab(
             // Apply syntax highlighting based on file extension
             crate::syntax::set_language_for_file(&source_buffer, file_to_open);
             
+            // Setup completion for the specific file type
+            crate::completion::setup_completion_for_file(&source_view, Some(file_to_open));
+            
+            // Setup keyboard shortcuts for completion
+            crate::completion::setup_completion_shortcuts(&source_view);
+            
             // Get TextBuffer interfaces for compatibility with the rest of the code
             // Clone source_view to avoid ownership move
             let new_text_buffer = source_buffer.upcast::<TextBuffer>();

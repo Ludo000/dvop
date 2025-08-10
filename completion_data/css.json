@@ -1,0 +1,1114 @@
+{
+  "language": "css",
+  "description": "CSS styling language completion data for web design",
+  "keywords": [
+    {
+      "keyword": "color",
+      "type": "keyword",
+      "description": "color - Sets the text color of an element. Accepts various formats: named colors, hex codes, RGB, HSL, and more.",
+      "example": "color: #ff0000; /* red */ color: rgb(255, 0, 0); color: blue;",
+      "category": "color_properties"
+    },
+    {
+      "keyword": "background-color",
+      "type": "keyword", 
+      "description": "background-color - Sets the background color of an element. Part of the background shorthand property.",
+      "example": "background-color: #f0f0f0; background-color: rgba(255, 255, 255, 0.8);",
+      "category": "background_properties"
+    },
+    {
+      "keyword": "margin",
+      "type": "keyword",
+      "description": "margin - Sets the outer spacing around an element. Can be set for all sides or individually (top, right, bottom, left).",
+      "example": "margin: 10px; margin: 10px 20px; margin-top: 5px;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "padding", 
+      "type": "keyword",
+      "description": "padding - Sets the inner spacing within an element between the content and border. Follows same syntax as margin.",
+      "example": "padding: 15px; padding: 10px 5px; padding-left: 20px;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "border",
+      "type": "keyword",
+      "description": "border - Shorthand property for setting border width, style, and color. Can be applied to all sides or individually.",
+      "example": "border: 1px solid black; border-top: 2px dashed red;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "width",
+      "type": "keyword",
+      "description": "width - Sets the width of an element. Can use pixels, percentages, viewport units, or other CSS units.",
+      "example": "width: 100px; width: 50%; width: 100vw; width: auto;",
+      "category": "sizing"
+    },
+    {
+      "keyword": "height",
+      "type": "keyword",
+      "description": "height - Sets the height of an element. Similar units to width, but also supports min-height and max-height.",
+      "example": "height: 200px; height: 100vh; height: auto; min-height: 300px;",
+      "category": "sizing"
+    },
+    {
+      "keyword": "display",
+      "type": "keyword",
+      "description": "display - Controls how an element is displayed and its layout behavior. Key property for modern CSS layouts.",
+      "example": "display: block; display: inline; display: flex; display: grid; display: none;",
+      "category": "layout"
+    },
+    {
+      "keyword": "position",
+      "type": "keyword",
+      "description": "position - Sets the positioning method for an element. Works with top, right, bottom, left properties.",
+      "example": "position: relative; position: absolute; position: fixed; position: sticky;",
+      "category": "positioning"
+    },
+    {
+      "keyword": "flex",
+      "type": "keyword",
+      "description": "flex - Shorthand for flex-grow, flex-shrink, and flex-basis. Used in flexbox layouts for flexible sizing.",
+      "example": "flex: 1; flex: 0 0 auto; flex: 1 1 200px;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "grid",
+      "type": "keyword", 
+      "description": "grid - Shorthand for grid-template properties. Defines grid template areas, rows, and columns.",
+      "example": "grid: 1fr 1fr / auto 1fr; grid-template-columns: repeat(3, 1fr);",
+      "category": "grid"
+    },
+    {
+      "keyword": "font-size",
+      "type": "keyword",
+      "description": "font-size - Sets the size of the font. Can use absolute units (px, pt) or relative units (em, rem, %).",
+      "example": "font-size: 16px; font-size: 1.2em; font-size: 100%; font-size: 1.5rem;",
+      "category": "typography"
+    },
+    {
+      "keyword": "font-family",
+      "type": "keyword",
+      "description": "font-family - Specifies font family for text. Provide fallbacks for better cross-platform compatibility.",
+      "example": "font-family: 'Helvetica Neue', Arial, sans-serif; font-family: 'Times New Roman', serif;",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-align",
+      "type": "keyword",
+      "description": "text-align - Sets horizontal alignment of text content within its container.",
+      "example": "text-align: left; text-align: center; text-align: right; text-align: justify;",
+      "category": "typography"
+    },
+    {
+      "keyword": "opacity",
+      "type": "keyword",
+      "description": "opacity - Sets the transparency level of an element. Value between 0 (fully transparent) and 1 (fully opaque).",
+      "example": "opacity: 0.5; opacity: 0; opacity: 1;",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "z-index",
+      "type": "keyword",
+      "description": "z-index - Controls the vertical stacking order of elements. Higher values appear in front.",
+      "example": "z-index: 1; z-index: 999; z-index: -1;",
+      "category": "positioning"
+    },
+    {
+      "keyword": "top",
+      "type": "keyword",
+      "description": "top - Sets the top edge position of a positioned element relative to its containing block.",
+      "example": "top: 0; top: 50px; top: 10%;",
+      "category": "positioning"
+    },
+    {
+      "keyword": "right",
+      "type": "keyword",
+      "description": "right - Sets the right edge position of a positioned element relative to its containing block.",
+      "example": "right: 0; right: 20px; right: 5%;",
+      "category": "positioning"
+    },
+    {
+      "keyword": "bottom",
+      "type": "keyword",
+      "description": "bottom - Sets the bottom edge position of a positioned element relative to its containing block.",
+      "example": "bottom: 0; bottom: 30px; bottom: 15%;",
+      "category": "positioning"
+    },
+    {
+      "keyword": "left",
+      "type": "keyword",
+      "description": "left - Sets the left edge position of a positioned element relative to its containing block.",
+      "example": "left: 0; left: 40px; left: 25%;",
+      "category": "positioning"
+    },
+    {
+      "keyword": "float",
+      "type": "keyword",
+      "description": "float - Places an element on the left or right side of its container, allowing text to wrap around it.",
+      "example": "float: left; float: right; float: none;",
+      "category": "layout"
+    },
+    {
+      "keyword": "clear",
+      "type": "keyword",
+      "description": "clear - Specifies which sides of an element where floating elements are not allowed.",
+      "example": "clear: both; clear: left; clear: right; clear: none;",
+      "category": "layout"
+    },
+    {
+      "keyword": "overflow",
+      "type": "keyword",
+      "description": "overflow - Controls what happens when content overflows an element's box.",
+      "example": "overflow: hidden; overflow: scroll; overflow: auto; overflow: visible;",
+      "category": "layout"
+    },
+    {
+      "keyword": "overflow-x",
+      "type": "keyword",
+      "description": "overflow-x - Controls horizontal overflow behavior specifically.",
+      "example": "overflow-x: hidden; overflow-x: scroll; overflow-x: auto;",
+      "category": "layout"
+    },
+    {
+      "keyword": "overflow-y",
+      "type": "keyword",
+      "description": "overflow-y - Controls vertical overflow behavior specifically.",
+      "example": "overflow-y: hidden; overflow-y: scroll; overflow-y: auto;",
+      "category": "layout"
+    },
+    {
+      "keyword": "visibility",
+      "type": "keyword",
+      "description": "visibility - Controls whether an element is visible or hidden while maintaining its layout space.",
+      "example": "visibility: visible; visibility: hidden; visibility: collapse;",
+      "category": "layout"
+    },
+    {
+      "keyword": "clip-path",
+      "type": "keyword",
+      "description": "clip-path - Creates a clipping region to show only part of an element.",
+      "example": "clip-path: circle(50%); clip-path: polygon(50% 0%, 0% 100%, 100% 100%);",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "transform",
+      "type": "keyword",
+      "description": "transform - Applies 2D or 3D transformations to elements like rotation, scaling, translation.",
+      "example": "transform: rotate(45deg); transform: scale(1.2); transform: translate(10px, 20px);",
+      "category": "transforms"
+    },
+    {
+      "keyword": "transform-origin",
+      "type": "keyword",
+      "description": "transform-origin - Sets the origin point for transformations.",
+      "example": "transform-origin: center; transform-origin: top left; transform-origin: 50% 50%;",
+      "category": "transforms"
+    },
+    {
+      "keyword": "transition",
+      "type": "keyword",
+      "description": "transition - Shorthand for transition properties to create smooth animations between property changes.",
+      "example": "transition: all 0.3s ease; transition: opacity 1s linear;",
+      "category": "animations"
+    },
+    {
+      "keyword": "transition-property",
+      "type": "keyword",
+      "description": "transition-property - Specifies which CSS properties should transition.",
+      "example": "transition-property: opacity; transition-property: all;",
+      "category": "animations"
+    },
+    {
+      "keyword": "transition-duration",
+      "type": "keyword",
+      "description": "transition-duration - Sets the duration of transition effects.",
+      "example": "transition-duration: 0.3s; transition-duration: 500ms;",
+      "category": "animations"
+    },
+    {
+      "keyword": "transition-timing-function",
+      "type": "keyword",
+      "description": "transition-timing-function - Sets the speed curve of transition effects.",
+      "example": "transition-timing-function: ease; transition-timing-function: cubic-bezier(0.1, 0.7, 1.0, 0.1);",
+      "category": "animations"
+    },
+    {
+      "keyword": "transition-delay",
+      "type": "keyword",
+      "description": "transition-delay - Sets when the transition effect starts.",
+      "example": "transition-delay: 0.1s; transition-delay: 200ms;",
+      "category": "animations"
+    },
+    {
+      "keyword": "animation",
+      "type": "keyword",
+      "description": "animation - Shorthand for animation properties to create keyframe animations.",
+      "example": "animation: slideIn 1s ease-in-out; animation: spin 2s linear infinite;",
+      "category": "animations"
+    },
+    {
+      "keyword": "animation-name",
+      "type": "keyword",
+      "description": "animation-name - Specifies the name of the @keyframes rule to use.",
+      "example": "animation-name: fadeIn; animation-name: slideUp;",
+      "category": "animations"
+    },
+    {
+      "keyword": "animation-duration",
+      "type": "keyword",
+      "description": "animation-duration - Sets how long an animation takes to complete.",
+      "example": "animation-duration: 2s; animation-duration: 500ms;",
+      "category": "animations"
+    },
+    {
+      "keyword": "animation-timing-function",
+      "type": "keyword",
+      "description": "animation-timing-function - Sets the speed curve of the animation.",
+      "example": "animation-timing-function: ease-in-out; animation-timing-function: steps(4, end);",
+      "category": "animations"
+    },
+    {
+      "keyword": "animation-delay",
+      "type": "keyword",
+      "description": "animation-delay - Sets when the animation starts.",
+      "example": "animation-delay: 0.5s; animation-delay: 100ms;",
+      "category": "animations"
+    },
+    {
+      "keyword": "animation-iteration-count",
+      "type": "keyword",
+      "description": "animation-iteration-count - Sets how many times an animation repeats.",
+      "example": "animation-iteration-count: infinite; animation-iteration-count: 3;",
+      "category": "animations"
+    },
+    {
+      "keyword": "animation-direction",
+      "type": "keyword",
+      "description": "animation-direction - Sets whether an animation plays forward, backward, or alternates.",
+      "example": "animation-direction: normal; animation-direction: reverse; animation-direction: alternate;",
+      "category": "animations"
+    },
+    {
+      "keyword": "animation-fill-mode",
+      "type": "keyword",
+      "description": "animation-fill-mode - Sets what styles are applied before/after the animation executes.",
+      "example": "animation-fill-mode: forwards; animation-fill-mode: backwards; animation-fill-mode: both;",
+      "category": "animations"
+    },
+    {
+      "keyword": "animation-play-state",
+      "type": "keyword",
+      "description": "animation-play-state - Sets whether an animation is running or paused.",
+      "example": "animation-play-state: running; animation-play-state: paused;",
+      "category": "animations"
+    },
+    {
+      "keyword": "font-weight",
+      "type": "keyword",
+      "description": "font-weight - Sets the weight (boldness) of the font.",
+      "example": "font-weight: normal; font-weight: bold; font-weight: 400; font-weight: 700;",
+      "category": "typography"
+    },
+    {
+      "keyword": "font-style",
+      "type": "keyword",
+      "description": "font-style - Sets the style of the font (normal, italic, oblique).",
+      "example": "font-style: normal; font-style: italic; font-style: oblique;",
+      "category": "typography"
+    },
+    {
+      "keyword": "font-variant",
+      "type": "keyword",
+      "description": "font-variant - Sets whether to display text in small caps or normal.",
+      "example": "font-variant: normal; font-variant: small-caps;",
+      "category": "typography"
+    },
+    {
+      "keyword": "line-height",
+      "type": "keyword",
+      "description": "line-height - Sets the height of lines of text, controlling vertical spacing.",
+      "example": "line-height: 1.5; line-height: 24px; line-height: 150%;",
+      "category": "typography"
+    },
+    {
+      "keyword": "letter-spacing",
+      "type": "keyword",
+      "description": "letter-spacing - Sets the spacing between characters in text.",
+      "example": "letter-spacing: normal; letter-spacing: 2px; letter-spacing: 0.1em;",
+      "category": "typography"
+    },
+    {
+      "keyword": "word-spacing",
+      "type": "keyword",
+      "description": "word-spacing - Sets the spacing between words in text.",
+      "example": "word-spacing: normal; word-spacing: 5px; word-spacing: 0.2em;",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-decoration",
+      "type": "keyword",
+      "description": "text-decoration - Sets decorations on text like underline, overline, line-through.",
+      "example": "text-decoration: none; text-decoration: underline; text-decoration: line-through;",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-transform",
+      "type": "keyword",
+      "description": "text-transform - Controls capitalization of text.",
+      "example": "text-transform: uppercase; text-transform: lowercase; text-transform: capitalize;",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-indent",
+      "type": "keyword",
+      "description": "text-indent - Sets the indentation of the first line of text in a block.",
+      "example": "text-indent: 2em; text-indent: 30px; text-indent: 5%;",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-shadow",
+      "type": "keyword",
+      "description": "text-shadow - Adds shadow effects to text.",
+      "example": "text-shadow: 2px 2px 4px rgba(0,0,0,0.5); text-shadow: 1px 1px 2px black;",
+      "category": "typography"
+    },
+    {
+      "keyword": "white-space",
+      "type": "keyword",
+      "description": "white-space - Controls how white space inside an element is handled.",
+      "example": "white-space: normal; white-space: nowrap; white-space: pre; white-space: pre-wrap;",
+      "category": "typography"
+    },
+    {
+      "keyword": "word-wrap",
+      "type": "keyword",
+      "description": "word-wrap - Allows long words to be broken and wrapped to the next line.",
+      "example": "word-wrap: normal; word-wrap: break-word;",
+      "category": "typography"
+    },
+    {
+      "keyword": "word-break",
+      "type": "keyword",
+      "description": "word-break - Sets how words should break when reaching the end of a line.",
+      "example": "word-break: normal; word-break: break-all; word-break: keep-all;",
+      "category": "typography"
+    },
+    {
+      "keyword": "background",
+      "type": "keyword",
+      "description": "background - Shorthand property for all background properties.",
+      "example": "background: url('image.jpg') no-repeat center/cover; background: linear-gradient(45deg, red, blue);",
+      "category": "background_properties"
+    },
+    {
+      "keyword": "background-image",
+      "type": "keyword",
+      "description": "background-image - Sets background images for an element.",
+      "example": "background-image: url('bg.jpg'); background-image: linear-gradient(to right, red, blue);",
+      "category": "background_properties"
+    },
+    {
+      "keyword": "background-repeat",
+      "type": "keyword",
+      "description": "background-repeat - Sets how background images are repeated.",
+      "example": "background-repeat: no-repeat; background-repeat: repeat-x; background-repeat: repeat-y;",
+      "category": "background_properties"
+    },
+    {
+      "keyword": "background-position",
+      "type": "keyword",
+      "description": "background-position - Sets the starting position of background images.",
+      "example": "background-position: center; background-position: top right; background-position: 50% 25%;",
+      "category": "background_properties"
+    },
+    {
+      "keyword": "background-size",
+      "type": "keyword",
+      "description": "background-size - Sets the size of background images.",
+      "example": "background-size: cover; background-size: contain; background-size: 100px 200px;",
+      "category": "background_properties"
+    },
+    {
+      "keyword": "background-attachment",
+      "type": "keyword",
+      "description": "background-attachment - Sets whether background images are fixed or scroll with the page.",
+      "example": "background-attachment: scroll; background-attachment: fixed; background-attachment: local;",
+      "category": "background_properties"
+    },
+    {
+      "keyword": "background-origin",
+      "type": "keyword",
+      "description": "background-origin - Sets the origin of the background positioning area.",
+      "example": "background-origin: border-box; background-origin: padding-box; background-origin: content-box;",
+      "category": "background_properties"
+    },
+    {
+      "keyword": "background-clip",
+      "type": "keyword",
+      "description": "background-clip - Sets the painting area of the background.",
+      "example": "background-clip: border-box; background-clip: padding-box; background-clip: content-box;",
+      "category": "background_properties"
+    },
+    {
+      "keyword": "border-width",
+      "type": "keyword",
+      "description": "border-width - Sets the width of borders. Can be set for all sides or individually.",
+      "example": "border-width: 1px; border-width: 2px 4px; border-top-width: 3px;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "border-style",
+      "type": "keyword",
+      "description": "border-style - Sets the style of borders (solid, dashed, dotted, etc.).",
+      "example": "border-style: solid; border-style: dashed; border-style: dotted; border-style: double;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "border-color",
+      "type": "keyword",
+      "description": "border-color - Sets the color of borders. Can be set for all sides or individually.",
+      "example": "border-color: red; border-color: #ff0000; border-top-color: blue;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "border-radius",
+      "type": "keyword",
+      "description": "border-radius - Sets rounded corners on elements. Can create circles and complex shapes.",
+      "example": "border-radius: 5px; border-radius: 50%; border-radius: 10px 20px;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "border-top",
+      "type": "keyword",
+      "description": "border-top - Shorthand for top border width, style, and color.",
+      "example": "border-top: 2px solid red; border-top: 1px dashed blue;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "border-right",
+      "type": "keyword",
+      "description": "border-right - Shorthand for right border width, style, and color.",
+      "example": "border-right: 2px solid green; border-right: 1px dotted yellow;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "border-bottom",
+      "type": "keyword",
+      "description": "border-bottom - Shorthand for bottom border width, style, and color.",
+      "example": "border-bottom: 2px solid purple; border-bottom: 1px groove orange;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "border-left",
+      "type": "keyword",
+      "description": "border-left - Shorthand for left border width, style, and color.",
+      "example": "border-left: 2px solid pink; border-left: 1px ridge cyan;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "outline",
+      "type": "keyword",
+      "description": "outline - Sets outline around elements (outside borders). Used for focus indicators.",
+      "example": "outline: 2px solid blue; outline: none; outline: 1px dotted red;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "outline-offset",
+      "type": "keyword",
+      "description": "outline-offset - Sets space between outline and border/edge of element.",
+      "example": "outline-offset: 2px; outline-offset: -1px;",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "box-shadow",
+      "type": "keyword",
+      "description": "box-shadow - Adds shadow effects around elements. Can create depth and layering.",
+      "example": "box-shadow: 2px 2px 4px rgba(0,0,0,0.3); box-shadow: inset 0 0 10px red;",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "text-overflow",
+      "type": "keyword",
+      "description": "text-overflow - Sets how overflowed content that is not displayed should be signaled.",
+      "example": "text-overflow: ellipsis; text-overflow: clip;",
+      "category": "typography"
+    },
+    {
+      "keyword": "vertical-align",
+      "type": "keyword",
+      "description": "vertical-align - Sets vertical alignment of inline or table-cell elements.",
+      "example": "vertical-align: top; vertical-align: middle; vertical-align: baseline;",
+      "category": "layout"
+    },
+    {
+      "keyword": "list-style",
+      "type": "keyword",
+      "description": "list-style - Shorthand for list-style-type, list-style-position, and list-style-image.",
+      "example": "list-style: none; list-style: disc inside; list-style: square outside;",
+      "category": "lists"
+    },
+    {
+      "keyword": "list-style-type",
+      "type": "keyword",
+      "description": "list-style-type - Sets the type of list-item marker.",
+      "example": "list-style-type: disc; list-style-type: decimal; list-style-type: none;",
+      "category": "lists"
+    },
+    {
+      "keyword": "list-style-position",
+      "type": "keyword",
+      "description": "list-style-position - Sets the position of list-item markers.",
+      "example": "list-style-position: inside; list-style-position: outside;",
+      "category": "lists"
+    },
+    {
+      "keyword": "list-style-image",
+      "type": "keyword",
+      "description": "list-style-image - Sets an image as list-item marker.",
+      "example": "list-style-image: url('bullet.png'); list-style-image: none;",
+      "category": "lists"
+    },
+    {
+      "keyword": "cursor",
+      "type": "keyword",
+      "description": "cursor - Sets the type of cursor to display when hovering over an element.",
+      "example": "cursor: pointer; cursor: grab; cursor: not-allowed; cursor: text;",
+      "category": "interaction"
+    },
+    {
+      "keyword": "pointer-events",
+      "type": "keyword",
+      "description": "pointer-events - Controls whether an element can be the target of pointer events.",
+      "example": "pointer-events: auto; pointer-events: none; pointer-events: all;",
+      "category": "interaction"
+    },
+    {
+      "keyword": "user-select",
+      "type": "keyword",
+      "description": "user-select - Controls whether text can be selected by the user.",
+      "example": "user-select: none; user-select: auto; user-select: text; user-select: all;",
+      "category": "interaction"
+    },
+    {
+      "keyword": "resize",
+      "type": "keyword",
+      "description": "resize - Sets whether an element is resizable by the user.",
+      "example": "resize: none; resize: both; resize: horizontal; resize: vertical;",
+      "category": "interaction"
+    },
+    {
+      "keyword": "min-width",
+      "type": "keyword",
+      "description": "min-width - Sets the minimum width of an element.",
+      "example": "min-width: 100px; min-width: 50%; min-width: max-content;",
+      "category": "sizing"
+    },
+    {
+      "keyword": "max-width",
+      "type": "keyword",
+      "description": "max-width - Sets the maximum width of an element.",
+      "example": "max-width: 500px; max-width: 100%; max-width: min-content;",
+      "category": "sizing"
+    },
+    {
+      "keyword": "min-height",
+      "type": "keyword",
+      "description": "min-height - Sets the minimum height of an element.",
+      "example": "min-height: 200px; min-height: 100vh; min-height: fit-content;",
+      "category": "sizing"
+    },
+    {
+      "keyword": "max-height",
+      "type": "keyword",
+      "description": "max-height - Sets the maximum height of an element.",
+      "example": "max-height: 300px; max-height: 50vh; max-height: none;",
+      "category": "sizing"
+    },
+    {
+      "keyword": "box-sizing",
+      "type": "keyword",
+      "description": "box-sizing - Sets how the total width and height of an element is calculated.",
+      "example": "box-sizing: border-box; box-sizing: content-box;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "margin-top",
+      "type": "keyword",
+      "description": "margin-top - Sets the top margin of an element.",
+      "example": "margin-top: 10px; margin-top: 1em; margin-top: auto;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "margin-right",
+      "type": "keyword",
+      "description": "margin-right - Sets the right margin of an element.",
+      "example": "margin-right: 15px; margin-right: 2rem; margin-right: auto;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "margin-bottom",
+      "type": "keyword",
+      "description": "margin-bottom - Sets the bottom margin of an element.",
+      "example": "margin-bottom: 20px; margin-bottom: 1.5em; margin-bottom: auto;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "margin-left",
+      "type": "keyword",
+      "description": "margin-left - Sets the left margin of an element.",
+      "example": "margin-left: 25px; margin-left: 3rem; margin-left: auto;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "padding-top",
+      "type": "keyword",
+      "description": "padding-top - Sets the top padding of an element.",
+      "example": "padding-top: 10px; padding-top: 1em; padding-top: 5%;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "padding-right",
+      "type": "keyword",
+      "description": "padding-right - Sets the right padding of an element.",
+      "example": "padding-right: 15px; padding-right: 2rem; padding-right: 10%;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "padding-bottom",
+      "type": "keyword",
+      "description": "padding-bottom - Sets the bottom padding of an element.",
+      "example": "padding-bottom: 20px; padding-bottom: 1.5em; padding-bottom: 8%;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "padding-left",
+      "type": "keyword",
+      "description": "padding-left - Sets the left padding of an element.",
+      "example": "padding-left: 25px; padding-left: 3rem; padding-left: 12%;",
+      "category": "box_model"
+    },
+    {
+      "keyword": "flex-direction",
+      "type": "keyword",
+      "description": "flex-direction - Sets the direction of flex items in a flex container.",
+      "example": "flex-direction: row; flex-direction: column; flex-direction: row-reverse;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "flex-wrap",
+      "type": "keyword",
+      "description": "flex-wrap - Sets whether flex items wrap to new lines.",
+      "example": "flex-wrap: nowrap; flex-wrap: wrap; flex-wrap: wrap-reverse;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "flex-flow",
+      "type": "keyword",
+      "description": "flex-flow - Shorthand for flex-direction and flex-wrap.",
+      "example": "flex-flow: row wrap; flex-flow: column nowrap;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "justify-content",
+      "type": "keyword",
+      "description": "justify-content - Aligns flex items along the main axis.",
+      "example": "justify-content: center; justify-content: space-between; justify-content: flex-start;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "align-items",
+      "type": "keyword",
+      "description": "align-items - Aligns flex items along the cross axis.",
+      "example": "align-items: center; align-items: stretch; align-items: flex-end;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "align-content",
+      "type": "keyword",
+      "description": "align-content - Aligns wrapped flex lines.",
+      "example": "align-content: center; align-content: space-around; align-content: stretch;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "align-self",
+      "type": "keyword",
+      "description": "align-self - Overrides align-items for individual flex items.",
+      "example": "align-self: auto; align-self: center; align-self: flex-end;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "flex-grow",
+      "type": "keyword",
+      "description": "flex-grow - Sets how much a flex item should grow relative to others.",
+      "example": "flex-grow: 0; flex-grow: 1; flex-grow: 2;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "flex-shrink",
+      "type": "keyword",
+      "description": "flex-shrink - Sets how much a flex item should shrink relative to others.",
+      "example": "flex-shrink: 1; flex-shrink: 0; flex-shrink: 2;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "flex-basis",
+      "type": "keyword",
+      "description": "flex-basis - Sets the initial main size of a flex item before free space is distributed.",
+      "example": "flex-basis: auto; flex-basis: 100px; flex-basis: 30%;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "order",
+      "type": "keyword",
+      "description": "order - Sets the order of flex or grid items without changing HTML structure.",
+      "example": "order: 0; order: 1; order: -1;",
+      "category": "flexbox"
+    },
+    {
+      "keyword": "gap",
+      "type": "keyword",
+      "description": "gap - Shorthand for row-gap and column-gap in grid and flexbox layouts.",
+      "example": "gap: 1rem; gap: 10px 20px;",
+      "category": "layout"
+    },
+    {
+      "keyword": "row-gap",
+      "type": "keyword",
+      "description": "row-gap - Sets the gap between rows in grid and flexbox layouts.",
+      "example": "row-gap: 1rem; row-gap: 15px;",
+      "category": "layout"
+    },
+    {
+      "keyword": "column-gap",
+      "type": "keyword",
+      "description": "column-gap - Sets the gap between columns in grid and flexbox layouts.",
+      "example": "column-gap: 2rem; column-gap: 20px;",
+      "category": "layout"
+    },
+    {
+      "keyword": "grid-template-columns",
+      "type": "keyword",
+      "description": "grid-template-columns - Defines the size and names of grid columns.",
+      "example": "grid-template-columns: 1fr 2fr 1fr; grid-template-columns: repeat(3, 100px);",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-template-rows",
+      "type": "keyword",
+      "description": "grid-template-rows - Defines the size and names of grid rows.",
+      "example": "grid-template-rows: auto 1fr auto; grid-template-rows: repeat(2, 200px);",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-template-areas",
+      "type": "keyword",
+      "description": "grid-template-areas - Defines grid areas by referencing grid area names.",
+      "example": "grid-template-areas: 'header header' 'sidebar content' 'footer footer';",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-area",
+      "type": "keyword",
+      "description": "grid-area - Shorthand for grid-row-start, grid-column-start, grid-row-end, grid-column-end.",
+      "example": "grid-area: header; grid-area: 1 / 1 / 2 / 3;",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-column",
+      "type": "keyword",
+      "description": "grid-column - Shorthand for grid-column-start and grid-column-end.",
+      "example": "grid-column: 1 / 3; grid-column: span 2;",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-row",
+      "type": "keyword",
+      "description": "grid-row - Shorthand for grid-row-start and grid-row-end.",
+      "example": "grid-row: 1 / 3; grid-row: span 2;",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-auto-columns",
+      "type": "keyword",
+      "description": "grid-auto-columns - Sets the size of implicitly created grid columns.",
+      "example": "grid-auto-columns: 1fr; grid-auto-columns: minmax(100px, auto);",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-auto-rows",
+      "type": "keyword",
+      "description": "grid-auto-rows - Sets the size of implicitly created grid rows.",
+      "example": "grid-auto-rows: 1fr; grid-auto-rows: minmax(50px, auto);",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-auto-flow",
+      "type": "keyword",
+      "description": "grid-auto-flow - Controls how auto-placed items get inserted in the grid.",
+      "example": "grid-auto-flow: row; grid-auto-flow: column; grid-auto-flow: dense;",
+      "category": "grid"
+    },
+    {
+      "keyword": "place-items",
+      "type": "keyword",
+      "description": "place-items - Shorthand for align-items and justify-items in grid layouts.",
+      "example": "place-items: center; place-items: start end;",
+      "category": "grid"
+    },
+    {
+      "keyword": "place-content",
+      "type": "keyword",
+      "description": "place-content - Shorthand for align-content and justify-content in grid layouts.",
+      "example": "place-content: center; place-content: space-between start;",
+      "category": "grid"
+    },
+    {
+      "keyword": "place-self",
+      "type": "keyword",
+      "description": "place-self - Shorthand for align-self and justify-self in grid layouts.",
+      "example": "place-self: center; place-self: end start;",
+      "category": "grid"
+    },
+    {
+      "keyword": "filter",
+      "type": "keyword",
+      "description": "filter - Applies graphical effects like blur, brightness, contrast to elements.",
+      "example": "filter: blur(5px); filter: brightness(150%); filter: drop-shadow(2px 2px 4px black);",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "backdrop-filter",
+      "type": "keyword",
+      "description": "backdrop-filter - Applies graphical effects to the area behind an element.",
+      "example": "backdrop-filter: blur(10px); backdrop-filter: brightness(40%);",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "will-change",
+      "type": "keyword",
+      "description": "will-change - Hints to browsers about what properties will change to optimize performance.",
+      "example": "will-change: transform; will-change: opacity; will-change: auto;",
+      "category": "performance"
+    },
+    {
+      "keyword": "content",
+      "type": "keyword",
+      "description": "content - Used with ::before and ::after pseudo-elements to insert content.",
+      "example": "content: 'Hello'; content: counter(chapter); content: url('icon.png');",
+      "category": "pseudo_elements"
+    },
+    {
+      "keyword": "counter-increment",
+      "type": "keyword",
+      "description": "counter-increment - Increments one or more CSS counters.",
+      "example": "counter-increment: chapter; counter-increment: section 2;",
+      "category": "counters"
+    },
+    {
+      "keyword": "counter-reset",
+      "type": "keyword",
+      "description": "counter-reset - Creates or resets one or more CSS counters.",
+      "example": "counter-reset: chapter; counter-reset: section 1;",
+      "category": "counters"
+    },
+    {
+      "keyword": "quotes",
+      "type": "keyword",
+      "description": "quotes - Sets quotation marks for different levels of nested quotations.",
+      "example": "quotes: '\"' '\"' \"'\" \"'\"; quotes: none;",
+      "category": "typography"
+    },
+    {
+      "keyword": "object-fit",
+      "type": "keyword",
+      "description": "object-fit - Sets how replaced elements (img, video) should be resized to fit their container.",
+      "example": "object-fit: cover; object-fit: contain; object-fit: fill;",
+      "category": "media"
+    },
+    {
+      "keyword": "object-position",
+      "type": "keyword",
+      "description": "object-position - Sets the position of replaced elements within their container.",
+      "example": "object-position: center; object-position: top right; object-position: 25% 75%;",
+      "category": "media"
+    },
+    {
+      "keyword": "aspect-ratio",
+      "type": "keyword",
+      "description": "aspect-ratio - Sets a preferred aspect ratio for the box.",
+      "example": "aspect-ratio: 16/9; aspect-ratio: 1; aspect-ratio: auto;",
+      "category": "sizing"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "flexbox",
+      "description": "Flexbox container template with common properties for modern layouts",
+      "content": ".${1:flex-container} {\n    display: flex;\n    flex-direction: ${2:row};\n    justify-content: ${3:center};\n    align-items: ${4:center};\n    gap: ${5:1rem};\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "grid",
+      "description": "CSS Grid container template with responsive grid layout",
+      "content": ".${1:grid-container} {\n    display: grid;\n    grid-template-columns: ${2:repeat(auto-fit, minmax(250px, 1fr))};\n    gap: ${3:1rem};\n    padding: ${4:1rem};\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "center",
+      "description": "Center element template using flexbox for perfect centering",
+      "content": ".${1:center} {\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    height: ${2:100vh};\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "card",
+      "description": "Card component template with shadow and hover effects",
+      "content": ".${1:card} {\n    background: ${2:#ffffff};\n    border-radius: ${3:8px};\n    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);\n    padding: ${4:1.5rem};\n    transition: transform 0.2s ease, box-shadow 0.2s ease;\n}\n\n.${1:card}:hover {\n    transform: translateY(-4px);\n    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "button",
+      "description": "Button component template with hover and active states",
+      "content": ".${1:btn} {\n    background: ${2:#007bff};\n    color: ${3:white};\n    border: none;\n    padding: ${4:0.75rem 1.5rem};\n    border-radius: ${5:4px};\n    cursor: pointer;\n    transition: all 0.2s ease;\n    font-size: ${6:1rem};\n}\n\n.${1:btn}:hover {\n    background: ${7:#0056b3};\n    transform: translateY(-2px);\n}\n\n.${1:btn}:active {\n    transform: translateY(0);\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "media",
+      "description": "Media query template for responsive design",
+      "content": "@media (${1:max-width}: ${2:768px}) {\n    ${3:/* Mobile styles */}\n}",
+      "category": "responsive"
+    },
+    {
+      "trigger": "keyframes",
+      "description": "CSS animation keyframes template",
+      "content": "@keyframes ${1:animationName} {\n    0% {\n        ${2:/* Initial state */}\n    }\n    100% {\n        ${3:/* Final state */}\n    }\n}\n\n.${4:animated-element} {\n    animation: ${1:animationName} ${5:1s} ${6:ease-in-out} ${7:infinite};\n}",
+      "category": "animations"
+    },
+    {
+      "trigger": "reset",
+      "description": "CSS reset template for consistent cross-browser styling",
+      "content": "* {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n\nbody {\n    font-family: ${1:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif};\n    line-height: ${2:1.6};\n    color: ${3:#333};\n}",
+      "category": "base"
+    },
+    {
+      "trigger": "variables",
+      "description": "CSS custom properties (variables) template for theming",
+      "content": ":root {\n    --primary-color: ${1:#007bff};\n    --secondary-color: ${2:#6c757d};\n    --text-color: ${3:#212529};\n    --background-color: ${4:#ffffff};\n    --border-radius: ${5:4px};\n    --spacing: ${6:1rem};\n}",
+      "category": "variables"
+    },
+    {
+      "trigger": "gradient",
+      "description": "Linear gradient background template",
+      "content": "background: linear-gradient(${1:45deg}, ${2:#ff6b6b} ${3:0%}, ${4:#4ecdc4} ${5:100%});",
+      "category": "backgrounds"
+    },
+    {
+      "trigger": "shadow",
+      "description": "Box shadow template with multiple layers for depth",
+      "content": "box-shadow: \n    0 1px 3px rgba(0, 0, 0, 0.12),\n    0 1px 2px rgba(0, 0, 0, 0.24);",
+      "category": "visual_effects"
+    },
+    {
+      "trigger": "transition",
+      "description": "CSS transition template for smooth animations",
+      "content": "transition: ${1:all} ${2:0.3s} ${3:ease};",
+      "category": "animations"
+    },
+    {
+      "trigger": "font_import",
+      "description": "Google Fonts import template",
+      "content": "@import url('https://fonts.googleapis.com/css2?family=${1:Inter}:wght@${2:300;400;500;600;700}&display=swap');\n\nbody {\n    font-family: '${1:Inter}', sans-serif;\n}",
+      "category": "typography"
+    },
+    {
+      "trigger": "css_reset",
+      "description": "Modern CSS reset with box-sizing and better defaults",
+      "content": "/* Modern CSS Reset */\n*,\n*::before,\n*::after {\n    box-sizing: border-box;\n    margin: 0;\n    padding: 0;\n}\n\nhtml {\n    line-height: 1.15;\n    -webkit-text-size-adjust: 100%;\n}\n\nbody {\n    font-family: ${1:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif};\n    line-height: ${2:1.6};\n    color: ${3:#333333};\n    background-color: ${4:#ffffff};\n}\n\nimg,\npicture,\nvideo,\ncanvas,\nsvg {\n    display: block;\n    max-width: 100%;\n    height: auto;\n}\n\ninput,\nbutton,\ntextarea,\nselect {\n    font: inherit;\n}\n\np,\nh1,\nh2,\nh3,\nh4,\nh5,\nh6 {\n    overflow-wrap: break-word;\n}\n\n#root,\n#__next {\n    isolation: isolate;\n}",
+      "category": "base"
+    },
+    {
+      "trigger": "css_variables_theme",
+      "description": "Comprehensive CSS custom properties theme system",
+      "content": ":root {\n    /* Colors */\n    --color-primary: ${1:#3b82f6};\n    --color-primary-dark: ${2:#1d4ed8};\n    --color-primary-light: ${3:#93c5fd};\n    \n    --color-secondary: ${4:#64748b};\n    --color-accent: ${5:#f59e0b};\n    \n    --color-text: ${6:#0f172a};\n    --color-text-muted: ${7:#64748b};\n    --color-text-inverse: ${8:#ffffff};\n    \n    --color-background: ${9:#ffffff};\n    --color-background-alt: ${10:#f8fafc};\n    --color-surface: ${11:#ffffff};\n    \n    --color-border: ${12:#e2e8f0};\n    --color-border-hover: ${13:#cbd5e1};\n    \n    --color-success: ${14:#10b981};\n    --color-warning: ${15:#f59e0b};\n    --color-error: ${16:#ef4444};\n    --color-info: ${17:#3b82f6};\n    \n    /* Typography */\n    --font-family-base: ${18:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif};\n    --font-family-heading: ${19:var(--font-family-base)};\n    --font-family-mono: ${20:'JetBrains Mono', 'Fira Code', Consolas, monospace};\n    \n    --font-size-xs: ${21:0.75rem};\n    --font-size-sm: ${22:0.875rem};\n    --font-size-base: ${23:1rem};\n    --font-size-lg: ${24:1.125rem};\n    --font-size-xl: ${25:1.25rem};\n    --font-size-2xl: ${26:1.5rem};\n    --font-size-3xl: ${27:1.875rem};\n    --font-size-4xl: ${28:2.25rem};\n    \n    --font-weight-normal: ${29:400};\n    --font-weight-medium: ${30:500};\n    --font-weight-semibold: ${31:600};\n    --font-weight-bold: ${32:700};\n    \n    --line-height-tight: ${33:1.25};\n    --line-height-normal: ${34:1.5};\n    --line-height-relaxed: ${35:1.75};\n    \n    /* Spacing */\n    --spacing-xs: ${36:0.25rem};\n    --spacing-sm: ${37:0.5rem};\n    --spacing-md: ${38:1rem};\n    --spacing-lg: ${39:1.5rem};\n    --spacing-xl: ${40:2rem};\n    --spacing-2xl: ${41:3rem};\n    --spacing-3xl: ${42:4rem};\n    \n    /* Border radius */\n    --radius-sm: ${43:0.25rem};\n    --radius-md: ${44:0.5rem};\n    --radius-lg: ${45:0.75rem};\n    --radius-xl: ${46:1rem};\n    --radius-full: ${47:9999px};\n    \n    /* Shadows */\n    --shadow-sm: ${48:0 1px 2px 0 rgba(0, 0, 0, 0.05)};\n    --shadow-md: ${49:0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)};\n    --shadow-lg: ${50:0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)};\n    --shadow-xl: ${51:0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)};\n    \n    /* Transitions */\n    --transition-fast: ${52:150ms ease};\n    --transition-normal: ${53:300ms ease};\n    --transition-slow: ${54:500ms ease};\n    \n    /* Z-index scale */\n    --z-dropdown: ${55:1000};\n    --z-sticky: ${56:1020};\n    --z-fixed: ${57:1030};\n    --z-modal-backdrop: ${58:1040};\n    --z-modal: ${59:1050};\n    --z-popover: ${60:1060};\n    --z-tooltip: ${61:1070};\n}\n\n/* Dark mode variables */\n@media (prefers-color-scheme: dark) {\n    :root {\n        --color-text: ${62:#f8fafc};\n        --color-text-muted: ${63:#94a3b8};\n        --color-background: ${64:#0f172a};\n        --color-background-alt: ${65:#1e293b};\n        --color-surface: ${66:#334155};\n        --color-border: ${67:#475569};\n        --color-border-hover: ${68:#64748b};\n    }\n}",
+      "category": "variables"
+    },
+    {
+      "trigger": "grid_responsive",
+      "description": "Responsive CSS Grid with auto-fit and minmax",
+      "content": ".${1:grid-responsive} {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(${2:280px}, 1fr));\n    gap: ${3:var(--spacing-lg, 1.5rem)};\n    padding: ${4:var(--spacing-md, 1rem)};\n}\n\n/* Responsive variations */\n@media (max-width: ${5:768px}) {\n    .${1:grid-responsive} {\n        grid-template-columns: 1fr;\n        gap: ${6:var(--spacing-md, 1rem)};\n    }\n}\n\n@media (min-width: ${7:1200px}) {\n    .${1:grid-responsive} {\n        grid-template-columns: repeat(auto-fit, minmax(${8:320px}, 1fr));\n        max-width: ${9:1200px};\n        margin: 0 auto;\n    }\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "flexbox_advanced",
+      "description": "Advanced flexbox layout with responsive behavior",
+      "content": ".${1:flex-container} {\n    display: flex;\n    flex-direction: ${2:row};\n    flex-wrap: ${3:wrap};\n    justify-content: ${4:space-between};\n    align-items: ${5:stretch};\n    gap: ${6:var(--spacing-lg, 1.5rem)};\n}\n\n.${1:flex-container} > * {\n    flex: ${7:1 1 0%};\n    min-width: ${8:0}; /* Prevent flex items from overflowing */\n}\n\n/* Responsive stacking */\n@media (max-width: ${9:768px}) {\n    .${1:flex-container} {\n        flex-direction: column;\n        align-items: stretch;\n    }\n    \n    .${1:flex-container} > * {\n        flex: none;\n    }\n}\n\n/* Flex utilities */\n.flex-grow {\n    flex-grow: 1;\n}\n\n.flex-shrink-0 {\n    flex-shrink: 0;\n}\n\n.flex-basis-auto {\n    flex-basis: auto;\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "sticky_header",
+      "description": "Sticky header with smooth scroll behavior",
+      "content": ".${1:sticky-header} {\n    position: sticky;\n    top: ${2:0};\n    z-index: var(--z-sticky, ${3:1020});\n    background: var(--color-background, ${4:#ffffff});\n    border-bottom: ${5:1px} solid var(--color-border, ${6:#e2e8f0});\n    backdrop-filter: ${7:blur(10px)};\n    -webkit-backdrop-filter: ${7:blur(10px)};\n    transition: ${8:box-shadow 0.3s ease, background-color 0.3s ease};\n}\n\n.${1:sticky-header}.scrolled {\n    box-shadow: var(--shadow-md, ${9:0 4px 6px -1px rgba(0, 0, 0, 0.1)});\n    background: ${10:rgba(255, 255, 255, 0.9)};\n}\n\n/* Smooth scrolling */\nhtml {\n    scroll-behavior: smooth;\n    scroll-padding-top: ${11:80px}; /* Account for sticky header height */\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "card_advanced",
+      "description": "Advanced card component with multiple states",
+      "content": ".${1:card} {\n    background: var(--color-surface, ${2:#ffffff});\n    border-radius: var(--radius-lg, ${3:0.75rem});\n    border: ${4:1px} solid var(--color-border, ${5:#e2e8f0});\n    box-shadow: var(--shadow-sm, ${6:0 1px 2px 0 rgba(0, 0, 0, 0.05)});\n    padding: var(--spacing-lg, ${7:1.5rem});\n    transition: var(--transition-normal, ${8:300ms ease});\n    position: relative;\n    overflow: hidden;\n}\n\n.${1:card}::before {\n    content: '';\n    position: absolute;\n    top: 0;\n    left: -100%;\n    width: 100%;\n    height: 100%;\n    background: linear-gradient(\n        90deg,\n        transparent,\n        rgba(255, 255, 255, 0.4),\n        transparent\n    );\n    transition: left 0.5s ease;\n}\n\n.${1:card}:hover {\n    transform: ${9:translateY(-4px)};\n    box-shadow: var(--shadow-lg, ${10:0 10px 15px -3px rgba(0, 0, 0, 0.1)});\n    border-color: var(--color-border-hover, ${11:#cbd5e1});\n}\n\n.${1:card}:hover::before {\n    left: 100%;\n}\n\n.${1:card}:active {\n    transform: ${12:translateY(-2px)};\n}\n\n/* Card variants */\n.${1:card}--elevated {\n    box-shadow: var(--shadow-md, ${13:0 4px 6px -1px rgba(0, 0, 0, 0.1)});\n}\n\n.${1:card}--outlined {\n    border: ${14:2px} solid var(--color-border, ${5:#e2e8f0});\n    box-shadow: none;\n}\n\n.${1:card}--filled {\n    background: var(--color-background-alt, ${15:#f8fafc});\n    border: none;\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "button_system",
+      "description": "Complete button system with variants and states",
+      "content": ".${1:btn} {\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    gap: ${2:0.5rem};\n    padding: ${3:0.75rem 1.5rem};\n    border: ${4:1px solid transparent};\n    border-radius: var(--radius-md, ${5:0.5rem});\n    font-family: inherit;\n    font-size: var(--font-size-base, ${6:1rem});\n    font-weight: var(--font-weight-medium, ${7:500});\n    line-height: ${8:1.2};\n    text-decoration: none;\n    cursor: pointer;\n    transition: var(--transition-fast, ${9:150ms ease});\n    user-select: none;\n    white-space: nowrap;\n    position: relative;\n    overflow: hidden;\n}\n\n.${1:btn}:focus-visible {\n    outline: ${10:2px} solid var(--color-primary, ${11:#3b82f6});\n    outline-offset: ${12:2px};\n}\n\n.${1:btn}:disabled {\n    opacity: ${13:0.6};\n    cursor: not-allowed;\n    pointer-events: none;\n}\n\n/* Primary button */\n.${1:btn}--primary {\n    background: var(--color-primary, ${11:#3b82f6});\n    color: var(--color-text-inverse, ${14:#ffffff});\n}\n\n.${1:btn}--primary:hover {\n    background: var(--color-primary-dark, ${15:#1d4ed8});\n    transform: ${16:translateY(-1px)};\n}\n\n.${1:btn}--primary:active {\n    transform: ${17:translateY(0)};\n}\n\n/* Secondary button */\n.${1:btn}--secondary {\n    background: transparent;\n    color: var(--color-primary, ${11:#3b82f6});\n    border-color: var(--color-primary, ${11:#3b82f6});\n}\n\n.${1:btn}--secondary:hover {\n    background: var(--color-primary, ${11:#3b82f6});\n    color: var(--color-text-inverse, ${14:#ffffff});\n}\n\n/* Ghost button */\n.${1:btn}--ghost {\n    background: transparent;\n    color: var(--color-text, ${18:#0f172a});\n}\n\n.${1:btn}--ghost:hover {\n    background: var(--color-background-alt, ${19:#f8fafc});\n}\n\n/* Size variants */\n.${1:btn}--sm {\n    padding: ${20:0.5rem 1rem};\n    font-size: var(--font-size-sm, ${21:0.875rem});\n}\n\n.${1:btn}--lg {\n    padding: ${22:1rem 2rem};\n    font-size: var(--font-size-lg, ${23:1.125rem});\n}\n\n/* Icon button */\n.${1:btn}--icon {\n    padding: ${24:0.75rem};\n    aspect-ratio: 1;\n}\n\n/* Loading state */\n.${1:btn}--loading {\n    color: transparent;\n}\n\n.${1:btn}--loading::after {\n    content: '';\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    width: ${25:1rem};\n    height: ${25:1rem};\n    margin: ${26:-0.5rem 0 0 -0.5rem};\n    border: ${27:2px} solid currentColor;\n    border-radius: 50%;\n    border-top-color: transparent;\n    animation: ${28:spin 1s linear infinite};\n}\n\n@keyframes ${28:spin} {\n    to {\n        transform: rotate(360deg);\n    }\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "form_styles",
+      "description": "Modern form styling with focus states",
+      "content": ".${1:form-group} {\n    margin-bottom: var(--spacing-lg, ${2:1.5rem});\n}\n\n.${1:form-label} {\n    display: block;\n    font-size: var(--font-size-sm, ${3:0.875rem});\n    font-weight: var(--font-weight-medium, ${4:500});\n    color: var(--color-text, ${5:#0f172a});\n    margin-bottom: ${6:0.5rem};\n}\n\n.${1:form-input} {\n    display: block;\n    width: 100%;\n    padding: ${7:0.75rem 1rem};\n    border: ${8:1px} solid var(--color-border, ${9:#e2e8f0});\n    border-radius: var(--radius-md, ${10:0.5rem});\n    background: var(--color-background, ${11:#ffffff});\n    font-family: inherit;\n    font-size: var(--font-size-base, ${12:1rem});\n    line-height: ${13:1.5};\n    color: var(--color-text, ${5:#0f172a});\n    transition: var(--transition-fast, ${14:150ms ease});\n}\n\n.${1:form-input}::placeholder {\n    color: var(--color-text-muted, ${15:#64748b});\n}\n\n.${1:form-input}:focus {\n    outline: none;\n    border-color: var(--color-primary, ${16:#3b82f6});\n    box-shadow: ${17:0 0 0 3px rgba(59, 130, 246, 0.1)};\n}\n\n.${1:form-input}:hover {\n    border-color: var(--color-border-hover, ${18:#cbd5e1});\n}\n\n/* Input states */\n.${1:form-input}--error {\n    border-color: var(--color-error, ${19:#ef4444});\n}\n\n.${1:form-input}--error:focus {\n    border-color: var(--color-error, ${19:#ef4444});\n    box-shadow: ${20:0 0 0 3px rgba(239, 68, 68, 0.1)};\n}\n\n.${1:form-input}--success {\n    border-color: var(--color-success, ${21:#10b981});\n}\n\n.${1:form-input}:disabled {\n    background: ${22:#f8fafc};\n    color: ${23:#94a3b8};\n    cursor: not-allowed;\n    opacity: ${24:0.6};\n}\n\n/* Error message */\n.${1:form-error} {\n    display: block;\n    margin-top: ${25:0.25rem};\n    font-size: var(--font-size-xs, ${26:0.75rem});\n    color: var(--color-error, ${19:#ef4444});\n}\n\n/* Help text */\n.${1:form-help} {\n    display: block;\n    margin-top: ${27:0.25rem};\n    font-size: var(--font-size-xs, ${26:0.75rem});\n    color: var(--color-text-muted, ${15:#64748b});\n}",
+      "category": "forms"
+    },
+    {
+      "trigger": "navigation_menu",
+      "description": "Responsive navigation menu with mobile hamburger",
+      "content": ".${1:nav} {\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    padding: var(--spacing-md, ${2:1rem}) var(--spacing-lg, ${3:1.5rem});\n    background: var(--color-background, ${4:#ffffff});\n    border-bottom: ${5:1px} solid var(--color-border, ${6:#e2e8f0});\n}\n\n.${1:nav}__brand {\n    font-size: var(--font-size-xl, ${7:1.25rem});\n    font-weight: var(--font-weight-bold, ${8:700});\n    color: var(--color-text, ${9:#0f172a});\n    text-decoration: none;\n}\n\n.${1:nav}__menu {\n    display: flex;\n    align-items: center;\n    gap: var(--spacing-lg, ${3:1.5rem});\n    list-style: none;\n    margin: 0;\n    padding: 0;\n}\n\n.${1:nav}__link {\n    color: var(--color-text-muted, ${10:#64748b});\n    text-decoration: none;\n    font-weight: var(--font-weight-medium, ${11:500});\n    transition: var(--transition-fast, ${12:150ms ease});\n    position: relative;\n}\n\n.${1:nav}__link:hover,\n.${1:nav}__link--active {\n    color: var(--color-primary, ${13:#3b82f6});\n}\n\n.${1:nav}__link--active::after {\n    content: '';\n    position: absolute;\n    bottom: ${14:-8px};\n    left: 0;\n    right: 0;\n    height: ${15:2px};\n    background: var(--color-primary, ${13:#3b82f6});\n    border-radius: ${16:1px};\n}\n\n/* Mobile menu toggle */\n.${1:nav}__toggle {\n    display: none;\n    background: none;\n    border: none;\n    cursor: pointer;\n    padding: ${17:0.5rem};\n    color: var(--color-text, ${9:#0f172a});\n}\n\n.${1:nav}__toggle-icon {\n    width: ${18:1.5rem};\n    height: ${19:1.5rem};\n    display: flex;\n    flex-direction: column;\n    justify-content: space-between;\n}\n\n.${1:nav}__toggle-icon span {\n    display: block;\n    height: ${20:2px};\n    background: currentColor;\n    transition: var(--transition-fast, ${12:150ms ease});\n    transform-origin: center;\n}\n\n/* Mobile styles */\n@media (max-width: ${21:768px}) {\n    .${1:nav}__toggle {\n        display: block;\n    }\n    \n    .${1:nav}__menu {\n        position: absolute;\n        top: 100%;\n        left: 0;\n        right: 0;\n        background: var(--color-background, ${4:#ffffff});\n        border-top: ${5:1px} solid var(--color-border, ${6:#e2e8f0});\n        flex-direction: column;\n        padding: var(--spacing-md, ${2:1rem});\n        transform: ${22:translateY(-100%)};\n        opacity: ${23:0};\n        visibility: hidden;\n        transition: var(--transition-normal, ${24:300ms ease});\n    }\n    \n    .${1:nav}__menu--open {\n        transform: ${25:translateY(0)};\n        opacity: ${26:1};\n        visibility: visible;\n    }\n    \n    .${1:nav}__link {\n        display: block;\n        padding: var(--spacing-sm, ${27:0.5rem}) 0;\n        border-bottom: ${28:1px} solid var(--color-border, ${6:#e2e8f0});\n    }\n    \n    .${1:nav}__link:last-child {\n        border-bottom: none;\n    }\n    \n    /* Hamburger animation */\n    .${1:nav}__toggle--active .${1:nav}__toggle-icon span:nth-child(1) {\n        transform: ${29:rotate(45deg) translate(5px, 5px)};\n    }\n    \n    .${1:nav}__toggle--active .${1:nav}__toggle-icon span:nth-child(2) {\n        opacity: ${30:0};\n    }\n    \n    .${1:nav}__toggle--active .${1:nav}__toggle-icon span:nth-child(3) {\n        transform: ${31:rotate(-45deg) translate(5px, -5px)};\n    }\n}",
+      "category": "navigation"
+    },
+    {
+      "trigger": "modal_overlay",
+      "description": "Accessible modal with backdrop and animations",
+      "content": ".${1:modal} {\n    position: fixed;\n    top: 0;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    z-index: var(--z-modal, ${2:1050});\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    padding: var(--spacing-lg, ${3:1.5rem});\n    opacity: 0;\n    visibility: hidden;\n    transition: var(--transition-normal, ${4:300ms ease});\n}\n\n.${1:modal}--open {\n    opacity: 1;\n    visibility: visible;\n}\n\n.${1:modal}__backdrop {\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    background: ${5:rgba(0, 0, 0, 0.5)};\n    backdrop-filter: ${6:blur(4px)};\n    -webkit-backdrop-filter: ${6:blur(4px)};\n}\n\n.${1:modal}__content {\n    position: relative;\n    background: var(--color-surface, ${7:#ffffff});\n    border-radius: var(--radius-lg, ${8:0.75rem});\n    box-shadow: var(--shadow-xl, ${9:0 20px 25px -5px rgba(0, 0, 0, 0.1)});\n    width: 100%;\n    max-width: ${10:500px};\n    max-height: ${11:90vh};\n    overflow: hidden;\n    transform: ${12:scale(0.9)};\n    transition: var(--transition-normal, ${4:300ms ease});\n}\n\n.${1:modal}--open .${1:modal}__content {\n    transform: ${13:scale(1)};\n}\n\n.${1:modal}__header {\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    padding: var(--spacing-lg, ${3:1.5rem});\n    border-bottom: ${14:1px} solid var(--color-border, ${15:#e2e8f0});\n}\n\n.${1:modal}__title {\n    margin: 0;\n    font-size: var(--font-size-xl, ${16:1.25rem});\n    font-weight: var(--font-weight-semibold, ${17:600});\n    color: var(--color-text, ${18:#0f172a});\n}\n\n.${1:modal}__close {\n    background: none;\n    border: none;\n    padding: ${19:0.5rem};\n    cursor: pointer;\n    color: var(--color-text-muted, ${20:#64748b});\n    transition: var(--transition-fast, ${21:150ms ease});\n    border-radius: var(--radius-sm, ${22:0.25rem});\n}\n\n.${1:modal}__close:hover {\n    background: var(--color-background-alt, ${23:#f8fafc});\n    color: var(--color-text, ${18:#0f172a});\n}\n\n.${1:modal}__body {\n    padding: var(--spacing-lg, ${3:1.5rem});\n    overflow-y: auto;\n    max-height: ${24:60vh};\n}\n\n.${1:modal}__footer {\n    display: flex;\n    align-items: center;\n    justify-content: flex-end;\n    gap: var(--spacing-md, ${25:1rem});\n    padding: var(--spacing-lg, ${3:1.5rem});\n    border-top: ${14:1px} solid var(--color-border, ${15:#e2e8f0});\n    background: var(--color-background-alt, ${23:#f8fafc});\n}\n\n/* Responsive adjustments */\n@media (max-width: ${26:640px}) {\n    .${1:modal} {\n        padding: var(--spacing-md, ${25:1rem});\n    }\n    \n    .${1:modal}__content {\n        max-width: 100%;\n        margin: 0;\n    }\n    \n    .${1:modal}__header,\n    .${1:modal}__body,\n    .${1:modal}__footer {\n        padding: var(--spacing-md, ${25:1rem});\n    }\n    \n    .${1:modal}__footer {\n        flex-direction: column;\n        align-items: stretch;\n    }\n    \n    .${1:modal}__footer > * {\n        width: 100%;\n    }\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "loading_states",
+      "description": "Loading animations and skeleton screens",
+      "content": "/* Spinner animation */\n.${1:spinner} {\n    display: inline-block;\n    width: ${2:2rem};\n    height: ${2:2rem};\n    border: ${3:3px} solid var(--color-border, ${4:#e2e8f0});\n    border-top: ${3:3px} solid var(--color-primary, ${5:#3b82f6});\n    border-radius: 50%;\n    animation: ${6:spin} ${7:1s} linear infinite;\n}\n\n@keyframes ${6:spin} {\n    0% { transform: rotate(0deg); }\n    100% { transform: rotate(360deg); }\n}\n\n/* Pulse loading */\n.${8:pulse} {\n    animation: ${9:pulse} ${10:2s} ease-in-out infinite;\n}\n\n@keyframes ${9:pulse} {\n    0%, 100% { opacity: 1; }\n    50% { opacity: 0.5; }\n}\n\n/* Skeleton loader */\n.${11:skeleton} {\n    background: ${12:linear-gradient(\n        90deg,\n        #f0f0f0 25%,\n        #e0e0e0 50%,\n        #f0f0f0 75%\n    )};\n    background-size: ${13:200% 100%};\n    animation: ${14:loading} ${15:1.5s} infinite;\n    border-radius: var(--radius-sm, ${16:0.25rem});\n}\n\n@keyframes ${14:loading} {\n    0% { background-position: 200% 0; }\n    100% { background-position: -200% 0; }\n}\n\n.${11:skeleton}--text {\n    height: ${17:1rem};\n    width: 100%;\n    margin-bottom: ${18:0.5rem};\n}\n\n.${11:skeleton}--text:last-child {\n    width: ${19:60%};\n    margin-bottom: 0;\n}\n\n.${11:skeleton}--title {\n    height: ${20:1.5rem};\n    width: ${21:40%};\n    margin-bottom: var(--spacing-md, ${22:1rem});\n}\n\n.${11:skeleton}--avatar {\n    width: ${23:3rem};\n    height: ${23:3rem};\n    border-radius: 50%;\n}\n\n.${11:skeleton}--image {\n    width: 100%;\n    height: ${24:12rem};\n}\n\n/* Loading overlay */\n.${25:loading-overlay} {\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    background: ${26:rgba(255, 255, 255, 0.8)};\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    z-index: ${27:10};\n    backdrop-filter: ${28:blur(2px)};\n}\n\n/* Progress bar */\n.${29:progress} {\n    width: 100%;\n    height: ${30:0.5rem};\n    background: var(--color-background-alt, ${31:#f8fafc});\n    border-radius: var(--radius-full, ${32:9999px});\n    overflow: hidden;\n}\n\n.${29:progress}__bar {\n    height: 100%;\n    background: var(--color-primary, ${5:#3b82f6});\n    border-radius: inherit;\n    transition: width ${33:0.3s} ease;\n    transform-origin: left;\n}\n\n.${29:progress}--animated .${29:progress}__bar {\n    animation: ${34:progress-indeterminate} ${35:2s} ease-in-out infinite;\n}\n\n@keyframes ${34:progress-indeterminate} {\n    0% {\n        transform: scaleX(0) translateX(-100%);\n    }\n    50% {\n        transform: scaleX(0.6) translateX(0%);\n    }\n    100% {\n        transform: scaleX(0) translateX(100%);\n    }\n}",
+      "category": "animations"
+    },
+    {
+      "trigger": "animations_library",
+      "description": "CSS animation library with entrance effects",
+      "content": "/* Fade animations */\n@keyframes ${1:fadeIn} {\n    from { opacity: 0; }\n    to { opacity: 1; }\n}\n\n@keyframes ${2:fadeOut} {\n    from { opacity: 1; }\n    to { opacity: 0; }\n}\n\n@keyframes ${3:fadeInUp} {\n    from {\n        opacity: 0;\n        transform: translateY(${4:20px});\n    }\n    to {\n        opacity: 1;\n        transform: translateY(0);\n    }\n}\n\n@keyframes ${5:fadeInDown} {\n    from {\n        opacity: 0;\n        transform: translateY(${6:-20px});\n    }\n    to {\n        opacity: 1;\n        transform: translateY(0);\n    }\n}\n\n/* Slide animations */\n@keyframes ${7:slideInLeft} {\n    from {\n        opacity: 0;\n        transform: translateX(${8:-100%});\n    }\n    to {\n        opacity: 1;\n        transform: translateX(0);\n    }\n}\n\n@keyframes ${9:slideInRight} {\n    from {\n        opacity: 0;\n        transform: translateX(${10:100%});\n    }\n    to {\n        opacity: 1;\n        transform: translateX(0);\n    }\n}\n\n/* Scale animations */\n@keyframes ${11:scaleIn} {\n    from {\n        opacity: 0;\n        transform: scale(${12:0.8});\n    }\n    to {\n        opacity: 1;\n        transform: scale(1);\n    }\n}\n\n@keyframes ${13:scaleOut} {\n    from {\n        opacity: 1;\n        transform: scale(1);\n    }\n    to {\n        opacity: 0;\n        transform: scale(${14:0.8});\n    }\n}\n\n/* Bounce animation */\n@keyframes ${15:bounceIn} {\n    0% {\n        opacity: 0;\n        transform: scale(0.3);\n    }\n    50% {\n        opacity: 1;\n        transform: scale(1.05);\n    }\n    70% {\n        transform: scale(0.9);\n    }\n    100% {\n        opacity: 1;\n        transform: scale(1);\n    }\n}\n\n/* Utility classes */\n.animate-fade-in {\n    animation: ${1:fadeIn} ${16:0.5s} ease-out;\n}\n\n.animate-fade-in-up {\n    animation: ${3:fadeInUp} ${17:0.6s} ease-out;\n}\n\n.animate-slide-in-left {\n    animation: ${7:slideInLeft} ${18:0.5s} ease-out;\n}\n\n.animate-scale-in {\n    animation: ${11:scaleIn} ${19:0.4s} ease-out;\n}\n\n.animate-bounce-in {\n    animation: ${15:bounceIn} ${20:0.8s} ease-out;\n}\n\n/* Animation delays */\n.animate-delay-100 {\n    animation-delay: ${21:0.1s};\n}\n\n.animate-delay-200 {\n    animation-delay: ${22:0.2s};\n}\n\n.animate-delay-300 {\n    animation-delay: ${23:0.3s};\n}\n\n/* Reduced motion */\n@media (prefers-reduced-motion: reduce) {\n    *,\n    *::before,\n    *::after {\n        animation-duration: ${24:0.01ms} !important;\n        animation-iteration-count: 1 !important;\n        transition-duration: ${24:0.01ms} !important;\n        scroll-behavior: auto !important;\n    }\n}",
+      "category": "animations"
+    },
+    {
+      "trigger": "responsive_utilities",
+      "description": "Responsive utility classes with breakpoints",
+      "content": "/* Breakpoints */\n:root {\n    --breakpoint-sm: ${1:640px};\n    --breakpoint-md: ${2:768px};\n    --breakpoint-lg: ${3:1024px};\n    --breakpoint-xl: ${4:1280px};\n    --breakpoint-2xl: ${5:1536px};\n}\n\n/* Container */\n.container {\n    width: 100%;\n    margin: 0 auto;\n    padding: 0 var(--spacing-lg, ${6:1.5rem});\n}\n\n@media (min-width: ${1:640px}) {\n    .container { max-width: ${7:640px}; }\n}\n\n@media (min-width: ${2:768px}) {\n    .container { max-width: ${8:768px}; }\n}\n\n@media (min-width: ${3:1024px}) {\n    .container { max-width: ${9:1024px}; }\n}\n\n@media (min-width: ${4:1280px}) {\n    .container { max-width: ${10:1280px}; }\n}\n\n@media (min-width: ${5:1536px}) {\n    .container { max-width: ${11:1536px}; }\n}\n\n/* Display utilities */\n.block { display: block; }\n.inline { display: inline; }\n.inline-block { display: inline-block; }\n.flex { display: flex; }\n.inline-flex { display: inline-flex; }\n.grid { display: grid; }\n.hidden { display: none; }\n\n/* Responsive display */\n@media (max-width: ${12:767px}) {\n    .hidden-mobile { display: none !important; }\n    .block-mobile { display: block !important; }\n    .flex-mobile { display: flex !important; }\n}\n\n@media (min-width: ${2:768px}) {\n    .hidden-desktop { display: none !important; }\n    .block-desktop { display: block !important; }\n    .flex-desktop { display: flex !important; }\n}\n\n/* Flexbox utilities */\n.flex-col { flex-direction: column; }\n.flex-row { flex-direction: row; }\n.flex-wrap { flex-wrap: wrap; }\n.flex-nowrap { flex-wrap: nowrap; }\n\n.justify-start { justify-content: flex-start; }\n.justify-center { justify-content: center; }\n.justify-end { justify-content: flex-end; }\n.justify-between { justify-content: space-between; }\n.justify-around { justify-content: space-around; }\n.justify-evenly { justify-content: space-evenly; }\n\n.items-start { align-items: flex-start; }\n.items-center { align-items: center; }\n.items-end { align-items: flex-end; }\n.items-stretch { align-items: stretch; }\n\n/* Spacing utilities */\n.m-0 { margin: 0; }\n.m-1 { margin: var(--spacing-xs, ${13:0.25rem}); }\n.m-2 { margin: var(--spacing-sm, ${14:0.5rem}); }\n.m-3 { margin: var(--spacing-md, ${15:1rem}); }\n.m-4 { margin: var(--spacing-lg, ${6:1.5rem}); }\n.m-auto { margin: auto; }\n\n.p-0 { padding: 0; }\n.p-1 { padding: var(--spacing-xs, ${13:0.25rem}); }\n.p-2 { padding: var(--spacing-sm, ${14:0.5rem}); }\n.p-3 { padding: var(--spacing-md, ${15:1rem}); }\n.p-4 { padding: var(--spacing-lg, ${6:1.5rem}); }\n\n/* Text utilities */\n.text-left { text-align: left; }\n.text-center { text-align: center; }\n.text-right { text-align: right; }\n.text-justify { text-align: justify; }\n\n.text-xs { font-size: var(--font-size-xs, ${16:0.75rem}); }\n.text-sm { font-size: var(--font-size-sm, ${17:0.875rem}); }\n.text-base { font-size: var(--font-size-base, ${18:1rem}); }\n.text-lg { font-size: var(--font-size-lg, ${19:1.125rem}); }\n.text-xl { font-size: var(--font-size-xl, ${20:1.25rem}); }\n.text-2xl { font-size: var(--font-size-2xl, ${21:1.5rem}); }\n\n.font-normal { font-weight: var(--font-weight-normal, ${22:400}); }\n.font-medium { font-weight: var(--font-weight-medium, ${23:500}); }\n.font-semibold { font-weight: var(--font-weight-semibold, ${24:600}); }\n.font-bold { font-weight: var(--font-weight-bold, ${25:700}); }\n\n/* Color utilities */\n.text-primary { color: var(--color-primary, ${26:#3b82f6}); }\n.text-muted { color: var(--color-text-muted, ${27:#64748b}); }\n.text-error { color: var(--color-error, ${28:#ef4444}); }\n.text-success { color: var(--color-success, ${29:#10b981}); }\n\n.bg-primary { background-color: var(--color-primary, ${26:#3b82f6}); }\n.bg-surface { background-color: var(--color-surface, ${30:#ffffff}); }\n.bg-alt { background-color: var(--color-background-alt, ${31:#f8fafc}); }\n\n/* Border utilities */\n.border { border: ${32:1px} solid var(--color-border, ${33:#e2e8f0}); }\n.border-t { border-top: ${32:1px} solid var(--color-border, ${33:#e2e8f0}); }\n.border-r { border-right: ${32:1px} solid var(--color-border, ${33:#e2e8f0}); }\n.border-b { border-bottom: ${32:1px} solid var(--color-border, ${33:#e2e8f0}); }\n.border-l { border-left: ${32:1px} solid var(--color-border, ${33:#e2e8f0}); }\n\n.rounded { border-radius: var(--radius-md, ${34:0.5rem}); }\n.rounded-lg { border-radius: var(--radius-lg, ${35:0.75rem}); }\n.rounded-full { border-radius: var(--radius-full, ${36:9999px}); }\n\n/* Shadow utilities */\n.shadow { box-shadow: var(--shadow-sm, ${37:0 1px 2px 0 rgba(0, 0, 0, 0.05)}); }\n.shadow-md { box-shadow: var(--shadow-md, ${38:0 4px 6px -1px rgba(0, 0, 0, 0.1)}); }\n.shadow-lg { box-shadow: var(--shadow-lg, ${39:0 10px 15px -3px rgba(0, 0, 0, 0.1)}); }\n.shadow-none { box-shadow: none; }",
+      "category": "utilities"
+    },
+    {
+      "trigger": "print_styles",
+      "description": "Print-friendly CSS styles",
+      "content": "@media print {\n    *,\n    *::before,\n    *::after {\n        background: transparent !important;\n        color: ${1:#000} !important;\n        box-shadow: none !important;\n        text-shadow: none !important;\n    }\n    \n    a,\n    a:visited {\n        text-decoration: underline;\n    }\n    \n    a[href]::after {\n        content: \" (\" attr(href) \")\";\n        font-size: ${2:smaller};\n    }\n    \n    abbr[title]::after {\n        content: \" (\" attr(title) \")\";\n    }\n    \n    pre,\n    blockquote {\n        border: ${3:1px} solid ${4:#999};\n        page-break-inside: avoid;\n    }\n    \n    thead {\n        display: table-header-group;\n    }\n    \n    tr,\n    img {\n        page-break-inside: avoid;\n    }\n    \n    img {\n        max-width: 100% !important;\n    }\n    \n    p,\n    h2,\n    h3 {\n        orphans: ${5:3};\n        widows: ${6:3};\n    }\n    \n    h2,\n    h3 {\n        page-break-after: avoid;\n    }\n    \n    /* Hide elements not needed in print */\n    .no-print,\n    .btn,\n    .nav,\n    .modal,\n    .tooltip,\n    .popover {\n        display: none !important;\n    }\n    \n    /* Ensure important content is visible */\n    .print-show {\n        display: block !important;\n    }\n    \n    /* Page margins */\n    @page {\n        margin: ${7:2cm};\n    }\n    \n    /* Typography adjustments */\n    body {\n        font-size: ${8:12pt};\n        line-height: ${9:1.4};\n    }\n    \n    h1 {\n        font-size: ${10:18pt};\n    }\n    \n    h2 {\n        font-size: ${11:16pt};\n    }\n    \n    h3 {\n        font-size: ${12:14pt};\n    }\n}",
+      "category": "media_queries"
+    },
+    {
+      "trigger": "dark_mode",
+      "description": "Dark mode implementation with system preference",
+      "content": "/* Light theme (default) */\n:root {\n    --color-bg: ${1:#ffffff};\n    --color-bg-alt: ${2:#f8fafc};\n    --color-text: ${3:#0f172a};\n    --color-text-muted: ${4:#64748b};\n    --color-border: ${5:#e2e8f0};\n    --color-surface: ${6:#ffffff};\n    --color-primary: ${7:#3b82f6};\n    --color-shadow: ${8:rgba(0, 0, 0, 0.1)};\n}\n\n/* Dark theme */\n@media (prefers-color-scheme: dark) {\n    :root {\n        --color-bg: ${9:#0f172a};\n        --color-bg-alt: ${10:#1e293b};\n        --color-text: ${11:#f8fafc};\n        --color-text-muted: ${12:#94a3b8};\n        --color-border: ${13:#475569};\n        --color-surface: ${14:#1e293b};\n        --color-primary: ${15:#60a5fa};\n        --color-shadow: ${16:rgba(0, 0, 0, 0.3)};\n    }\n}\n\n/* Manual dark mode toggle */\n[data-theme=\"dark\"] {\n    --color-bg: ${9:#0f172a};\n    --color-bg-alt: ${10:#1e293b};\n    --color-text: ${11:#f8fafc};\n    --color-text-muted: ${12:#94a3b8};\n    --color-border: ${13:#475569};\n    --color-surface: ${14:#1e293b};\n    --color-primary: ${15:#60a5fa};\n    --color-shadow: ${16:rgba(0, 0, 0, 0.3)};\n}\n\n[data-theme=\"light\"] {\n    --color-bg: ${1:#ffffff};\n    --color-bg-alt: ${2:#f8fafc};\n    --color-text: ${3:#0f172a};\n    --color-text-muted: ${4:#64748b};\n    --color-border: ${5:#e2e8f0};\n    --color-surface: ${6:#ffffff};\n    --color-primary: ${7:#3b82f6};\n    --color-shadow: ${8:rgba(0, 0, 0, 0.1)};\n}\n\n/* Base styles using CSS variables */\nbody {\n    background-color: var(--color-bg);\n    color: var(--color-text);\n    transition: ${17:background-color 0.3s ease, color 0.3s ease};\n}\n\n/* Dark mode toggle button */\n.${18:theme-toggle} {\n    background: var(--color-surface);\n    border: ${19:1px} solid var(--color-border);\n    color: var(--color-text);\n    padding: ${20:0.5rem};\n    border-radius: ${21:50%};\n    cursor: pointer;\n    transition: ${22:all 0.3s ease};\n    width: ${23:2.5rem};\n    height: ${23:2.5rem};\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.${18:theme-toggle}:hover {\n    background: var(--color-bg-alt);\n    transform: ${24:scale(1.1)};\n}\n\n/* Sun/Moon icons */\n.${18:theme-toggle}__icon {\n    width: ${25:1.25rem};\n    height: ${25:1.25rem};\n    transition: ${26:transform 0.3s ease};\n}\n\n.${18:theme-toggle}__sun {\n    display: block;\n}\n\n.${18:theme-toggle}__moon {\n    display: none;\n}\n\n[data-theme=\"dark\"] .${18:theme-toggle}__sun {\n    display: none;\n}\n\n[data-theme=\"dark\"] .${18:theme-toggle}__moon {\n    display: block;\n}\n\n/* System preference override */\n@media (prefers-color-scheme: dark) {\n    [data-theme=\"auto\"] .${18:theme-toggle}__sun {\n        display: none;\n    }\n    \n    [data-theme=\"auto\"] .${18:theme-toggle}__moon {\n        display: block;\n    }\n}",
+      "category": "theming"
+    }
+  ]
+}
