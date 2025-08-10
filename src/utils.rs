@@ -227,6 +227,7 @@ pub fn update_path_label(path_label: &gtk4::Label, current_dir: &PathBuf) {
 ///
 /// Returns a vector of (display_name, full_path) tuples for each segment of the path
 /// Each tuple contains the segment name and the full path to that segment
+/// Optimized to reduce string allocations
 pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
     let mut components = Vec::new();
     let mut current = PathBuf::new();
@@ -239,19 +240,16 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
         if path.starts_with(home) {
             // Start with home directory
             current = home.clone();
-            components.push(("Home".to_string(), current.clone()));
+            components.push(("Home".to_owned(), current.clone()));
             
             // Skip the parts that are already included in the home path
             let rel_path = path.strip_prefix(home).unwrap_or(path);
             for component in rel_path.components() {
-                match component {
-                    std::path::Component::Normal(os_str) => {
-                        if let Some(name) = os_str.to_str() {
-                            current.push(name);
-                            components.push((name.to_string(), current.clone()));
-                        }
-                    },
-                    _ => {} // Skip other component types
+                if let std::path::Component::Normal(os_str) = component {
+                    if let Some(name) = os_str.to_str() {
+                        current.push(name);
+                        components.push((name.to_owned(), current.clone()));
+                    }
                 }
             }
             
@@ -262,7 +260,7 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
     // For paths not under home, start with root if it's an absolute path
     if path.is_absolute() {
         current.push("/");
-        components.push(("Root".to_string(), current.clone()));
+        components.push(("Root".to_owned(), current.clone()));
     }
     
     // Add each path component with its full path
@@ -271,14 +269,14 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
             std::path::Component::Normal(os_str) => {
                 if let Some(name) = os_str.to_str() {
                     current.push(name);
-                    components.push((name.to_string(), current.clone()));
+                    components.push((name.to_owned(), current.clone()));
                 }
             },
             // Handle other path component types if needed
             std::path::Component::RootDir => {
                 if components.is_empty() { // Only add if not already added
                     current = PathBuf::from("/");
-                    components.push(("/".to_string(), current.clone()));
+                    components.push(("/".to_owned(), current.clone()));
                 }
             },
             std::path::Component::ParentDir => {

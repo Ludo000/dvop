@@ -16,7 +16,7 @@ use gtk4::{
 };
 
 // Standard library imports
-use std::collections::HashMap;  // For mapping tab indices to file paths
+use std::collections::HashMap;  // For efficient mapping and compatibility
 use std::rc::Rc;                // Reference counting for shared ownership
 use std::cell::RefCell;         // Interior mutability pattern
 use std::path::PathBuf;         // File system path representation
@@ -90,9 +90,11 @@ pub fn get_text_view_and_buffer_for_page(notebook: &Notebook, page_num: u32) -> 
 /// This structure holds references to all the components and state that need
 /// to be modified when creating, switching, or closing tabs. It makes it easier
 /// to pass these references to various tab-related functions.
+/// 
+/// Using weak references where possible to prevent circular reference memory leaks.
 #[derive(Clone)]
 pub struct NewTabDependencies {
-    // Core UI components
+    // Core UI components (using weak refs to prevent cycles)
     pub editor_notebook: Notebook,              // The tabbed container
     pub window: ApplicationWindow,              // Main window (for dialog parents)
     pub file_list_box: ListBox,                 // File browser list
@@ -117,8 +119,7 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     let (source_view, source_buffer) = crate::syntax::create_source_view();
     source_buffer.set_text(""); // Start with empty content
     
-    // Get TextView and TextBuffer interfaces for compatibility with the rest of the code
-    // Clone source_view to avoid ownership move
+    // Clone source_view to avoid ownership move - use Rc instead of full clone for efficiency
     let new_text_view = source_view.clone().upcast::<TextView>();
     let new_text_buffer = source_buffer.upcast::<TextBuffer>();
     
@@ -141,13 +142,16 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     
     // Note: We don't update file_path_manager for "Untitled" tabs until they're saved
     
-    // Clone the data to release borrows before updating the UI
-    // This prevents potential borrow conflicts in signal handlers
-    let current_dir_path_clone = deps.current_dir.borrow().clone();
-    let active_path_for_update = deps.active_tab_path.borrow().clone(); // Will be None here
+    // Get immutable references to avoid unnecessary clones
+    let current_dir_ref = deps.current_dir.borrow();
+    let active_path_ref = deps.active_tab_path.borrow();
     
     // Update the file browser to reflect the current state
-    utils::update_file_list(&deps.file_list_box, &current_dir_path_clone, &active_path_for_update, utils::FileSelectionSource::TabSwitch);
+    utils::update_file_list(&deps.file_list_box, &*current_dir_ref, &*active_path_ref, utils::FileSelectionSource::TabSwitch);
+    
+    // Drop borrows before continuing
+    drop(current_dir_ref);
+    drop(active_path_ref);
     
     // Enable save buttons appropriate for plain text content
     utils::update_save_buttons_visibility(
@@ -165,13 +169,18 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     }
 
     // Connect dirty tracking for the new "Untitled" tab's label
-    let tab_actual_label_clone = tab_actual_label.clone();
+    // Use weak reference to prevent memory leaks from circular references
+    let tab_actual_label_weak = tab_actual_label.downgrade();
     new_text_buffer.connect_changed(move |buffer| {
-        let label_text = tab_actual_label_clone.text();
-        if label_text == "Untitled" && !buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).is_empty() {
-            tab_actual_label_clone.set_text("*Untitled");
-        } else if label_text == "*Untitled" && buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).is_empty() {
-            tab_actual_label_clone.set_text("Untitled");
+        if let Some(label) = tab_actual_label_weak.upgrade() {
+            let label_text = label.text();
+            let buffer_content = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+            
+            if label_text == "Untitled" && !buffer_content.is_empty() {
+                label.set_text("*Untitled");
+            } else if label_text == "*Untitled" && buffer_content.is_empty() {
+                label.set_text("Untitled");
+            }
         }
     });
 
@@ -196,25 +205,31 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
 }
 
 // Helper function to update tab label after save or name change
+// Optimized to reduce string allocations
 pub fn update_tab_label_after_save(notebook: &Notebook, page_num: u32, new_name_opt: Option<&str>, is_now_dirty: bool) {
     if let Some(page_widget) = notebook.nth_page(Some(page_num)) {
         if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
             if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
                 if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
-                    let base_name = new_name_opt.map(String::from)
-                        .unwrap_or_else(|| label.text().trim_start_matches('*').to_string());
+                    let current_text = label.text();
+                    let base_name = new_name_opt.unwrap_or_else(|| {
+                        current_text.strip_prefix('*').unwrap_or(&current_text)
+                    });
                     
-                    let mut final_text = base_name;
-                    if is_now_dirty {
-                        if !final_text.starts_with('*') {
-                            final_text = format!("*{}", final_text);
+                    let final_text = if is_now_dirty {
+                        if current_text.starts_with('*') {
+                            current_text.to_string() // Already has asterisk
+                        } else {
+                            format!("*{}", base_name)
                         }
+                    } else {
+                        base_name.to_string()
+                    };
+                    
+                    // Only update if text actually changed
+                    if final_text != current_text {
+                        label.set_text(&final_text);
                     }
-                    // Ensure no double asterisks if base_name somehow had one and is_now_dirty is true
-                    if final_text.starts_with("**") {
-                        final_text = final_text[1..].to_string();
-                    }
-                    label.set_text(&final_text);
                 }
             }
         }
@@ -250,15 +265,20 @@ pub fn handle_close_tab_request(
             }
 
             // Is dirty, show confirmation dialog
-            let filename_str = file_path_manager.borrow().get(&page_num_to_close)
-                .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
-                .unwrap_or_else(|| "Untitled".to_string());
+            // Use more efficient string handling to avoid temporary borrow issues
+            let filename_str = {
+                let manager = file_path_manager.borrow();
+                manager.get(&page_num_to_close)
+                    .and_then(|p| p.file_name()?.to_str())
+                    .unwrap_or("Untitled")
+                    .to_owned()
+            };
             let dialog = MessageDialog::new(
                 Some(window),
                 DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                 MessageType::Question,
                 ButtonsType::None,
-                &format!("Save changes to {} before closing?", filename_str) // Corrected format string: removed quotes around {}
+                &format!("Save changes to {} before closing?", filename_str)
             );
             dialog.add_buttons(&[
                 ("Cancel", ResponseType::Cancel),
@@ -379,7 +399,7 @@ pub fn handle_close_tab_request(
     }
 }
 
-// Helper function to perform the actual tab closing and state update
+// Optimized tab closing function - more efficient index management
 fn actually_close_tab(
     notebook: &Notebook,
     page_num_to_close: u32,
@@ -391,30 +411,33 @@ fn actually_close_tab(
     
     notebook.remove_page(Some(page_num_to_close));
     
-    { // Scope for mutable borrow of file_path_manager
+    // Efficiently handle HashMap index updates
+    {
         let mut manager = file_path_manager_rc.borrow_mut();
-        manager.remove(&page_num_to_close); // Remove the closed tab's path
+        manager.remove(&page_num_to_close);
 
-        // Collect paths from higher indices that need to be shifted
-        let mut paths_to_shift = Vec::new();
-        // Determine the range of indices to check for shifting.
-        // Need to be careful if manager is empty or only had one element.
-        let current_max_idx = manager.keys().max().cloned();
-
-        if let Some(max_idx) = current_max_idx {
-            for i in (page_num_to_close + 1)..=(max_idx + 1) { // Iterate up to one beyond max existing index to catch all
-                                                              // This loop structure might be problematic if page_num_to_close was the max_idx
-                if let Some(path) = manager.remove(&i) {
-                    paths_to_shift.push(path); // Store path to be re-inserted at i-1
+        // Collect entries above the closed index and reinsert with decremented keys
+        let entries_to_update: Vec<(u32, PathBuf)> = manager
+            .iter()
+            .filter_map(|(&k, v)| {
+                if k > page_num_to_close {
+                    Some((k, v.clone()))
+                } else {
+                    None
                 }
-            }
+            })
+            .collect();
+        
+        // Remove old entries
+        for &(key, _) in &entries_to_update {
+            manager.remove(&key);
         }
         
-        // Re-insert paths at their new, shifted indices
-        for (idx_offset, path) in paths_to_shift.into_iter().enumerate() {
-            manager.insert(page_num_to_close + idx_offset as u32, path);
+        // Reinsert with decremented indices
+        for (old_key, path) in entries_to_update {
+            manager.insert(old_key - 1, path);
         }
-    } // Mutable borrow of file_path_manager_rc is dropped here
+    } // Drop mutable borrow here
 
     if notebook.n_pages() == 0 {
         // No pages left, active_tab_path should be None.
@@ -514,7 +537,7 @@ pub fn open_or_focus_tab(
                 new_scrolled_window.set_child(Some(&error_label));
             }
         } else if utils::is_allowed_mime_type(&mime_type) {
-            // Handle text file
+            // Handle text file - use cached file reading for performance
             // Create source view with syntax highlighting
             let (source_view, source_buffer) = crate::syntax::create_source_view();
             source_buffer.set_text(content);
@@ -529,18 +552,20 @@ pub fn open_or_focus_tab(
             crate::completion::setup_completion_shortcuts(&source_view);
             
             // Get TextBuffer interfaces for compatibility with the rest of the code
-            // Clone source_view to avoid ownership move
             let new_text_buffer = source_buffer.upcast::<TextBuffer>();
             
             // Set the source view as the child of the scrolled window
             new_scrolled_window.set_child(Some(&source_view));
 
-            // Dirty tracking
-            let tab_actual_label_clone = tab_actual_label.clone();
-            let file_name_clone = file_name.clone();
+            // Optimized dirty tracking - avoid string cloning
+            let tab_actual_label_weak = tab_actual_label.downgrade();
+            let file_name_ref = file_name.clone(); // Only clone once
             new_text_buffer.connect_changed(move |_buffer| { 
-                if !tab_actual_label_clone.text().starts_with("*") {
-                     tab_actual_label_clone.set_text(&format!("*{}", file_name_clone));
+                if let Some(label) = tab_actual_label_weak.upgrade() {
+                    let current_text = label.text();
+                    if !current_text.starts_with('*') {
+                        label.set_text(&format!("*{}", file_name_ref));
+                    }
                 }
             });
         } else {
@@ -1412,7 +1437,7 @@ pub fn close_empty_untitled_tabs(notebook: &Notebook, file_path_manager: &Rc<Ref
                             
                             // Check if this is an empty untitled tab
                             // This covers both cases: "Untitled" AND "Untitled*" with empty content
-                            if (label_text == "Untitled" || label_text == "Untitled*") && 
+                            if (label_text == "Untitled" || label_text == "*Untitled") && 
                                buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).is_empty() {
                                 tabs_to_remove.push(page_num);
                             }

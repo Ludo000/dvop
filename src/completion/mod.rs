@@ -43,21 +43,27 @@ pub fn get_snippet_documentation(language: &str, trigger: &str) -> String {
 }
 
 /// Get all supported languages based on available JSON files
+/// Cached to avoid repeated filesystem operations
 pub fn get_supported_languages() -> Vec<String> {
-    let mut manager = json_provider::get_completion_manager();
-    match manager.load_all_languages() {
-        Ok(languages) => languages,
-        Err(_) => {
-            // Return default list if loading fails
-            vec![
-                "rust".to_string(),
-                "javascript".to_string(), 
-                "python".to_string(),
-                "html".to_string(),
-                "css".to_string(),
-            ]
+    use std::sync::OnceLock;
+    static SUPPORTED_LANGUAGES: OnceLock<Vec<String>> = OnceLock::new();
+    
+    SUPPORTED_LANGUAGES.get_or_init(|| {
+        let mut manager = json_provider::get_completion_manager();
+        match manager.load_all_languages() {
+            Ok(languages) => languages,
+            Err(_) => {
+                // Return default list if loading fails
+                vec![
+                    "rust".to_owned(),
+                    "javascript".to_owned(), 
+                    "python".to_owned(),
+                    "html".to_owned(),
+                    "css".to_owned(),
+                ]
+            }
         }
-    }
+    }).clone()
 }
 
 /// Get import suggestions for a specific module path

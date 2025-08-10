@@ -41,41 +41,37 @@ impl EditorSettings {
         settings.set_defaults();
         
         // Try to load existing settings
-        settings.load();
+        let _ = settings.load_from_file();
         
         settings
     }
 
     /// Sets up default values for all settings
     fn set_defaults(&mut self) {
-        self.values.insert("light_theme".to_string(), DEFAULT_LIGHT_THEME.to_string());
-        self.values.insert("dark_theme".to_string(), DEFAULT_DARK_THEME.to_string());
+        self.values.insert("light_theme".to_owned(), DEFAULT_LIGHT_THEME.to_owned());
+        self.values.insert("dark_theme".to_owned(), DEFAULT_DARK_THEME.to_owned());
         // Add more default settings here as needed
     }
 
     /// Loads settings from the config file
-    pub fn load(&mut self) {
-        if !self.config_path.exists() {
-            // No config file yet, just use defaults
-            return;
-        }
-
-        // Simple line-based config file format: key=value
-        match fs::read_to_string(&self.config_path) {
-            Ok(contents) => {
-                for line in contents.lines() {
-                    if line.trim().starts_with('#') || line.trim().is_empty() {
-                        continue; // Skip comments and empty lines
-                    }
-
-                    if let Some((key, value)) = line.split_once('=') {
-                        self.values.insert(key.trim().to_string(), value.trim().to_string());
+    fn load_from_file(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        match crate::file_cache::get_cached_file_content(&self.config_path) {
+            Ok(content) => {
+                // Parse the content line by line
+                for line in content.lines() {
+                    if let Some(eq_pos) = line.find('=') {
+                        let key = line[..eq_pos].trim();
+                        let value = line[eq_pos + 1..].trim();
+                        self.values.insert(key.to_owned(), value.to_owned());
                     }
                 }
+                Ok(())
             }
-            Err(e) => {
-                eprintln!("Failed to load settings: {}", e);
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // File doesn't exist, use defaults
+                Ok(())
             }
+            Err(e) => Err(Box::new(e)),
         }
     }
 
@@ -202,7 +198,7 @@ pub fn refresh_settings() {
     let mut settings = SETTINGS_INSTANCE.lock().unwrap();
     
     // Reload settings from disk
-    settings.load();
+    let _ = settings.load_from_file();
     
     // Print some debugging info about the current themes
     println!("Settings refreshed:");

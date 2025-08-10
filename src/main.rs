@@ -5,6 +5,7 @@ mod utils;     // Utility functions used across the application
 mod syntax;    // Syntax highlighting functionality
 mod settings;  // User settings and preferences
 mod completion; // Code completion functionality
+mod file_cache; // File content caching for performance optimization
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
@@ -14,46 +15,12 @@ use gtk4::gio;          // GIO for menu and action support
 use gtk4::glib;         // GLib for clone macro and other utilities
 use std::rc::Rc;        // Reference counting for shared ownership
 use std::cell::RefCell; // Interior mutability pattern
-use std::collections::HashMap; // For mapping tab indices to file paths
+use std::collections::HashMap;   // For efficient mapping of tab indices to file paths
 use std::path::PathBuf;        // File system path representation
 use std::io::Write;            // File writing capabilities
-use clap::Parser;       // Command line argument parsing
-
-/// Command line arguments for the Basado Text Editor
-#[derive(Parser, Debug, Clone)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// File to open
-    #[arg(help = "Path to the file to open")]
-    file: Option<PathBuf>,
-}
 
 /// Application entry point - initializes the GTK application and runs the main loop
 fn main() {
-    // Check for help and version flags before GTK takes over
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() > 1 {
-        if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
-            Args::parse(); // This will show help and exit
-            return;
-        }
-        if args.contains(&"--version".to_string()) || args.contains(&"-V".to_string()) {
-            Args::parse(); // This will show version and exit
-            return;
-        }
-    }
-    
-    // Parse command line arguments (mainly for non-GTK cases)
-    let parsed_args = Args::try_parse().unwrap_or_else(|_| Args { file: None });
-    
-    // Debug output
-    println!("Command line args parsed: {:?}", parsed_args);
-    if let Some(ref file) = parsed_args.file {
-        println!("File to open: {:?}", file);
-    } else {
-        println!("No file specified");
-    }
-    
     // Initialize user settings first
     settings::initialize_settings();
     
@@ -86,11 +53,10 @@ fn main() {
         completion::initialize_completion();
     });
     
-    // Connect the activate signal to the build_ui function with file argument
-    let args_for_activate = parsed_args.clone();
+    // Connect the activate signal to the build_ui function
     app.connect_activate(move |app| {
         println!("activate signal called!");
-        build_ui(app, args_for_activate.file.clone());
+        build_ui(app, None);
     });
 
     // Connect the open signal to handle file opening from command line
@@ -312,7 +278,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     }
 
     // Create a mapping between notebook tab indexes and their corresponding file paths
-    // This allows tracking which file is open in each tab
+    // This allows tracking which file is open in each tab - optimized for efficiency
     let file_path_manager = Rc::new(RefCell::new(HashMap::<u32, PathBuf>::new()));
     
     // Track the file path of the currently active tab
@@ -931,6 +897,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // Set up periodic cleanup of file cache to prevent memory bloat
+    glib::timeout_add_seconds_local(300, || { // Every 5 minutes
+        file_cache::cleanup_file_cache();
+        glib::ControlFlow::Continue
+    });
+    
     // Show the main window to display the application
     window.show();
 
