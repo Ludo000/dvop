@@ -15,6 +15,9 @@ use gtk4::{
     GestureClick, EventControllerKey,
 };
 
+// SourceView specific imports
+use sourceview5;  // For specific types like Buffer and View
+
 // Standard library imports
 use std::collections::HashMap;  // For efficient mapping and compatibility
 use std::rc::Rc;                // Reference counting for shared ownership
@@ -82,6 +85,30 @@ pub fn get_text_view_and_buffer_for_page(notebook: &Notebook, page_num: u32) -> 
             None
         }
     })
+}
+
+/// Helper function to get the SourceView buffer from a TextView
+/// This is needed because we upcast SourceView to TextView for compatibility,
+/// but syntax highlighting needs the original SourceView buffer
+fn get_source_buffer_from_text_view(text_view: &TextView) -> Option<sourceview5::Buffer> {
+    // Try to downcast the TextView back to SourceView
+    if let Ok(source_view) = text_view.clone().downcast::<sourceview5::View>() {
+        // Get the buffer and try to downcast it to SourceView Buffer
+        if let Ok(source_buffer) = source_view.buffer().downcast::<sourceview5::Buffer>() {
+            return Some(source_buffer);
+        }
+    }
+    None
+}
+
+/// Helper function to apply syntax highlighting to a file after save
+/// Gets the source buffer and applies syntax highlighting based on file extension
+fn apply_syntax_highlighting_after_save(notebook: &Notebook, page_num: u32, file_path: &std::path::Path) {
+    if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, page_num) {
+        if let Some(source_buffer) = get_source_buffer_from_text_view(&text_view) {
+            crate::syntax::set_language_for_file(&source_buffer, file_path);
+        }
+    }
 }
 
 
@@ -308,6 +335,10 @@ pub fn handle_close_tab_request(
                                     Ok(mut file) => {
                                         if file.write_all(text.as_bytes()).is_ok() {
                                             update_tab_label_after_save(&notebook_clone, page_num_to_close, Some(&path.file_name().unwrap_or_default().to_string_lossy()), false);
+                                            
+                                            // Apply syntax highlighting based on file extension
+                                            apply_syntax_highlighting_after_save(&notebook_clone, page_num_to_close, &path);
+                                            
                                             actually_close_tab(&notebook_clone, page_num_to_close, &file_path_manager_clone, &active_tab_path_clone, new_tab_deps_clone.as_ref());
                                         } else {
                                             eprintln!("Error writing to file: {:?}", path);
@@ -365,6 +396,10 @@ pub fn handle_close_tab_request(
                                                             *atp_save_as.borrow_mut() = Some(file_to_save.clone());
                                                         }
                                                         update_tab_label_after_save(&nc_save_as, page_num_to_close, Some(&file_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
+                                                        
+                                                        // Apply syntax highlighting based on file extension
+                                                        apply_syntax_highlighting_after_save(&nc_save_as, page_num_to_close, &file_to_save);
+                                                        
                                                         if let Some(parent) = file_to_save.parent() {
                                                             *cd_save_as.borrow_mut() = parent.to_path_buf();
                                                         }
@@ -951,6 +986,9 @@ fn setup_save_button_handler(
                         if file.write_all(text.as_bytes()).is_ok() {
                             // Update tab label (remove *)
                             update_tab_label_after_save(&editor_notebook, current_page_num, Some(&path_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
+                            
+                            // Apply syntax highlighting based on file extension
+                            apply_syntax_highlighting_after_save(&editor_notebook, current_page_num, &path_to_save);
                         }
                     }
                 }
@@ -981,6 +1019,10 @@ fn setup_save_button_handler(
                                     *active_tab_path_ref_clone.borrow_mut() = Some(file.clone());
                                      // Update tab label
                                     update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&file.file_name().unwrap_or_default().to_string_lossy()), false);
+                                    
+                                    // Apply syntax highlighting based on file extension
+                                    apply_syntax_highlighting_after_save(&editor_notebook_clone, current_page_num, &file);
+                                    
                                     // Update main window title potentially
                                     if let Some(parent) = file.parent() {
                                         *current_dir_clone.borrow_mut() = parent.to_path_buf();
@@ -1071,6 +1113,10 @@ fn setup_save_as_button_handler(
 
                                     // Update tab label
                                     update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&file_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
+                                    
+                                    // Apply syntax highlighting based on file extension
+                                    apply_syntax_highlighting_after_save(&editor_notebook_clone, current_page_num, &file_to_save);
+                                    
                                     if let Some(parent) = file_to_save.parent() {
                                         *current_dir_clone.borrow_mut() = parent.to_path_buf();
                                     }
