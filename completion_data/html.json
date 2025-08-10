@@ -1,0 +1,893 @@
+{
+  "language": "html",
+  "description": "HTML markup language completion data for web development",
+  "keywords": [
+    {
+      "keyword": "div",
+      "type": "keyword",
+      "description": "div - Generic container element for grouping other HTML elements. The most commonly used block-level element for layout and styling.",
+      "example": "<div class=\"container\">content</div>",
+      "category": "block_elements"
+    },
+    {
+      "keyword": "span", 
+      "type": "keyword",
+      "description": "span - Inline container element for styling parts of text or small sections of content without affecting layout.",
+      "example": "<span style=\"color: red;\">important text</span>",
+      "category": "inline_elements"
+    },
+    {
+      "keyword": "p",
+      "type": "keyword",
+      "description": "p - Paragraph element for text content. Automatically adds margins above and below for proper text spacing.",
+      "example": "<p>This is a paragraph of text with proper semantic meaning.</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "h1",
+      "type": "keyword", 
+      "description": "h1 - Main heading element, the largest and most important heading. Use only one per page for best SEO and accessibility.",
+      "example": "<h1>Main Page Title</h1>",
+      "category": "heading_elements"
+    },
+    {
+      "keyword": "h2",
+      "type": "keyword",
+      "description": "h2 - Secondary heading element for major sections. Creates a logical document outline hierarchy.",
+      "example": "<h2>Major Section Title</h2>",
+      "category": "heading_elements"
+    },
+    {
+      "keyword": "h3",
+      "type": "keyword",
+      "description": "h3 - Third-level heading for subsections. Part of the document outline for accessibility tools.",
+      "example": "<h3>Subsection Title</h3>",
+      "category": "heading_elements"
+    },
+    {
+      "keyword": "a",
+      "type": "keyword",
+      "description": "a - Anchor element for hyperlinks and navigation. Essential for creating interactive web experiences.",
+      "example": "<a href=\"https://example.com\" target=\"_blank\">Visit Example</a>",
+      "category": "interactive_elements"
+    },
+    {
+      "keyword": "img",
+      "type": "keyword",
+      "description": "img - Image element for displaying pictures and graphics. Always include alt attribute for accessibility.",
+      "example": "<img src=\"photo.jpg\" alt=\"Description of the image\" width=\"300\">",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "button",
+      "type": "keyword", 
+      "description": "button - Interactive button element for user actions. More semantic than styled divs for accessibility.",
+      "example": "<button type=\"button\" onclick=\"handleClick()\">Click Me</button>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "input",
+      "type": "keyword",
+      "description": "input - Form input element for user data entry. Many different types available for various data formats.",
+      "example": "<input type=\"text\" name=\"username\" placeholder=\"Enter your name\" required>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "form",
+      "type": "keyword",
+      "description": "form - Container for form controls like inputs, buttons, and selects. Handles data submission to servers.",
+      "example": "<form action=\"/submit\" method=\"post\" enctype=\"multipart/form-data\">",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "ul",
+      "type": "keyword",
+      "description": "ul - Unordered list container for list items where order doesn't matter. Creates bullet points by default.",
+      "example": "<ul><li>First item</li><li>Second item</li></ul>",
+      "category": "list_elements"
+    },
+    {
+      "keyword": "ol",
+      "type": "keyword",
+      "description": "ol - Ordered list container for numbered or sequenced items where order is important.",
+      "example": "<ol><li>Step one</li><li>Step two</li></ol>", 
+      "category": "list_elements"
+    },
+    {
+      "keyword": "li",
+      "type": "keyword",
+      "description": "li - List item element used inside ul or ol elements. Contains individual list content.",
+      "example": "<li>Individual list item content</li>",
+      "category": "list_elements"
+    },
+    {
+      "keyword": "table",
+      "type": "keyword",
+      "description": "table - Table element for displaying tabular data in rows and columns. Use for actual data, not layout.",
+      "example": "<table><thead><tr><th>Header</th></tr></thead><tbody><tr><td>Data</td></tr></tbody></table>",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "h4",
+      "type": "keyword",
+      "description": "h4 - Fourth-level heading for sub-subsections. Maintains document hierarchy and accessibility structure.",
+      "example": "<h4>Sub-subsection Title</h4>",
+      "category": "heading_elements"
+    },
+    {
+      "keyword": "h5",
+      "type": "keyword",
+      "description": "h5 - Fifth-level heading for detailed subsections. Less commonly used but important for complex documents.",
+      "example": "<h5>Detailed Subsection</h5>",
+      "category": "heading_elements"
+    },
+    {
+      "keyword": "h6",
+      "type": "keyword",
+      "description": "h6 - Sixth and smallest heading level for the most detailed sections.",
+      "example": "<h6>Minor Section</h6>",
+      "category": "heading_elements"
+    },
+    {
+      "keyword": "header",
+      "type": "keyword",
+      "description": "header - Semantic element representing introductory content or navigation aids for a section or page.",
+      "example": "<header><h1>Site Title</h1><nav>Navigation</nav></header>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "footer",
+      "type": "keyword",
+      "description": "footer - Semantic element containing information about its section, such as copyright, links, or author info.",
+      "example": "<footer><p>&copy; 2024 Company Name</p></footer>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "nav",
+      "type": "keyword",
+      "description": "nav - Semantic element representing a section of navigation links.",
+      "example": "<nav><ul><li><a href=\"#home\">Home</a></li></ul></nav>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "main",
+      "type": "keyword",
+      "description": "main - Semantic element representing the dominant content of the document body. Only one per page.",
+      "example": "<main><h1>Page Content</h1><p>Main content here</p></main>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "section",
+      "type": "keyword",
+      "description": "section - Semantic element representing a distinct section of content, typically with a heading.",
+      "example": "<section><h2>Section Title</h2><p>Section content</p></section>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "article",
+      "type": "keyword",
+      "description": "article - Semantic element representing a complete, self-contained composition like blog posts or news articles.",
+      "example": "<article><h2>Article Title</h2><p>Article content</p></article>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "aside",
+      "type": "keyword",
+      "description": "aside - Semantic element for content tangentially related to main content, like sidebars or callout boxes.",
+      "example": "<aside><h3>Related Links</h3><ul><li>Link 1</li></ul></aside>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "figure",
+      "type": "keyword",
+      "description": "figure - Element representing self-contained content, often with a caption, like images, diagrams, or code listings.",
+      "example": "<figure><img src=\"chart.png\" alt=\"Sales Chart\"><figcaption>Q4 Sales Data</figcaption></figure>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "figcaption",
+      "type": "keyword",
+      "description": "figcaption - Caption or legend element for figure content, providing description or title.",
+      "example": "<figcaption>Figure 1: Monthly Revenue Growth</figcaption>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "details",
+      "type": "keyword",
+      "description": "details - Interactive element that users can expand/collapse to show/hide additional information.",
+      "example": "<details><summary>Click to expand</summary><p>Hidden content</p></details>",
+      "category": "interactive_elements"
+    },
+    {
+      "keyword": "summary",
+      "type": "keyword",
+      "description": "summary - Clickable heading for details element, serving as the visible title when collapsed.",
+      "example": "<summary>Expand for more information</summary>",
+      "category": "interactive_elements"
+    },
+    {
+      "keyword": "dialog",
+      "type": "keyword",
+      "description": "dialog - Element representing a dialog box or modal window that users can interact with.",
+      "example": "<dialog open><p>This is a dialog</p><button>Close</button></dialog>",
+      "category": "interactive_elements"
+    },
+    {
+      "keyword": "mark",
+      "type": "keyword",
+      "description": "mark - Element representing text marked or highlighted for reference purposes, like search results.",
+      "example": "<p>Search results for <mark>JavaScript</mark> tutorials</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "strong",
+      "type": "keyword",
+      "description": "strong - Element indicating strong importance, seriousness, or urgency. Typically renders as bold.",
+      "example": "<p><strong>Warning:</strong> This action cannot be undone.</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "em",
+      "type": "keyword",
+      "description": "em - Element indicating stress emphasis, changing the meaning of the sentence. Typically renders as italic.",
+      "example": "<p>I <em>really</em> need to finish this project.</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "small",
+      "type": "keyword",
+      "description": "small - Element representing side comments like copyright, legal text, or fine print.",
+      "example": "<small>&copy; 2024 Company Name. All rights reserved.</small>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "sub",
+      "type": "keyword",
+      "description": "sub - Element for subscript text, typically used in mathematical formulas or chemical notation.",
+      "example": "<p>Water formula: H<sub>2</sub>O</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "sup",
+      "type": "keyword",
+      "description": "sup - Element for superscript text, used for footnotes, mathematical exponents, or ordinal numbers.",
+      "example": "<p>Einstein's E=mc<sup>2</sup> equation</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "code",
+      "type": "keyword",
+      "description": "code - Element representing a fragment of computer code, styled with monospace font.",
+      "example": "<p>Use the <code>console.log()</code> function for debugging.</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "pre",
+      "type": "keyword",
+      "description": "pre - Element for preformatted text that preserves whitespace, line breaks, and spacing.",
+      "example": "<pre><code>function hello() {\n    console.log('Hello World');\n}</code></pre>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "kbd",
+      "type": "keyword",
+      "description": "kbd - Element representing keyboard input or user input from other input devices.",
+      "example": "<p>Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to copy text.</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "var",
+      "type": "keyword",
+      "description": "var - Element representing a variable in mathematical expressions or programming contexts.",
+      "example": "<p>The equation is <var>y</var> = <var>mx</var> + <var>b</var></p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "samp",
+      "type": "keyword",
+      "description": "samp - Element representing sample output from a computer program or system.",
+      "example": "<p>The server returned: <samp>404 Not Found</samp></p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "blockquote",
+      "type": "keyword",
+      "description": "blockquote - Element for extended quotations from other sources, with optional cite attribute.",
+      "example": "<blockquote cite=\"https://example.com\"><p>Quote text here</p></blockquote>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "q",
+      "type": "keyword",
+      "description": "q - Element for short inline quotations, automatically adds appropriate quotation marks.",
+      "example": "<p>She said, <q>Hello world!</q></p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "cite",
+      "type": "keyword",
+      "description": "cite - Element representing the title of a cited work like books, papers, songs, or movies.",
+      "example": "<p>Reference: <cite>The HTML5 Specification</cite></p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "abbr",
+      "type": "keyword",
+      "description": "abbr - Element representing an abbreviation or acronym, with optional title attribute for full form.",
+      "example": "<abbr title=\"HyperText Markup Language\">HTML</abbr>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "dfn",
+      "type": "keyword",
+      "description": "dfn - Element representing the defining instance of a term being defined in the content.",
+      "example": "<p><dfn>HTML</dfn> is the standard markup language for web pages.</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "time",
+      "type": "keyword",
+      "description": "time - Element representing a specific period in time, with optional datetime attribute for machine-readable format.",
+      "example": "<time datetime=\"2024-12-25\">Christmas Day</time>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "address",
+      "type": "keyword",
+      "description": "address - Element providing contact information for its nearest article or body ancestor.",
+      "example": "<address>Contact us at <a href=\"mailto:info@example.com\">info@example.com</a></address>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "del",
+      "type": "keyword",
+      "description": "del - Element representing deleted text, typically shown with strikethrough formatting.",
+      "example": "<p>The price was <del>$100</del> $80.</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "ins",
+      "type": "keyword",
+      "description": "ins - Element representing inserted text, typically shown with underline formatting.",
+      "example": "<p>The meeting is <ins>postponed</ins> until Friday.</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "br",
+      "type": "keyword",
+      "description": "br - Line break element forcing text to continue on the next line. Self-closing tag.",
+      "example": "<p>First line<br>Second line</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "hr",
+      "type": "keyword",
+      "description": "hr - Horizontal rule representing a thematic break between content sections. Self-closing tag.",
+      "example": "<p>Section 1</p><hr><p>Section 2</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "wbr",
+      "type": "keyword",
+      "description": "wbr - Word break opportunity element suggesting where text might break across lines. Self-closing tag.",
+      "example": "<p>super<wbr>cali<wbr>fragi<wbr>listic<wbr>expiali<wbr>docious</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "select",
+      "type": "keyword",
+      "description": "select - Form control for selecting from multiple options, creating dropdown menus.",
+      "example": "<select name=\"country\"><option value=\"us\">United States</option></select>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "option",
+      "type": "keyword",
+      "description": "option - Individual option within select, optgroup, or datalist elements.",
+      "example": "<option value=\"red\" selected>Red</option>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "optgroup",
+      "type": "keyword",
+      "description": "optgroup - Element for grouping related options within a select element.",
+      "example": "<optgroup label=\"Colors\"><option value=\"red\">Red</option></optgroup>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "textarea",
+      "type": "keyword",
+      "description": "textarea - Multi-line text input control for longer text content like comments or messages.",
+      "example": "<textarea name=\"message\" rows=\"4\" cols=\"50\" placeholder=\"Your message\"></textarea>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "label",
+      "type": "keyword",
+      "description": "label - Element providing accessible labels for form controls, improving usability and accessibility.",
+      "example": "<label for=\"username\">Username:</label><input type=\"text\" id=\"username\">",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "fieldset",
+      "type": "keyword",
+      "description": "fieldset - Element for grouping related form controls with an optional legend element.",
+      "example": "<fieldset><legend>Personal Info</legend><input type=\"text\" name=\"name\"></fieldset>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "legend",
+      "type": "keyword",
+      "description": "legend - Caption element for fieldset content, describing the group of form controls.",
+      "example": "<legend>Shipping Address</legend>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "datalist",
+      "type": "keyword",
+      "description": "datalist - Element providing predefined options for input elements with autocomplete functionality.",
+      "example": "<input list=\"browsers\"><datalist id=\"browsers\"><option value=\"Chrome\"></datalist>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "output",
+      "type": "keyword",
+      "description": "output - Element representing the result of a calculation or user action within a form.",
+      "example": "<output name=\"result\" for=\"slider\">50</output>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "progress",
+      "type": "keyword",
+      "description": "progress - Element representing the completion progress of a task with visual progress bar.",
+      "example": "<progress value=\"70\" max=\"100\">70%</progress>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "meter",
+      "type": "keyword",
+      "description": "meter - Element representing a scalar value within a known range or gauge value.",
+      "example": "<meter value=\"6\" min=\"0\" max=\"10\">6 out of 10</meter>",
+      "category": "form_elements"
+    },
+    {
+      "keyword": "video",
+      "type": "keyword",
+      "description": "video - Element for embedding video content with built-in playback controls.",
+      "example": "<video controls width=\"320\" height=\"240\"><source src=\"movie.mp4\" type=\"video/mp4\"></video>",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "audio",
+      "type": "keyword",
+      "description": "audio - Element for embedding audio content with optional playback controls.",
+      "example": "<audio controls><source src=\"audio.mp3\" type=\"audio/mpeg\">Your browser does not support audio.</audio>",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "source",
+      "type": "keyword",
+      "description": "source - Element specifying multiple media resources for video, audio, or picture elements. Self-closing.",
+      "example": "<source src=\"video.webm\" type=\"video/webm\">",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "track",
+      "type": "keyword",
+      "description": "track - Element providing text tracks for video/audio elements like subtitles or captions. Self-closing.",
+      "example": "<track kind=\"subtitles\" src=\"subtitles_en.vtt\" srclang=\"en\" label=\"English\">",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "picture",
+      "type": "keyword",
+      "description": "picture - Element containing multiple source elements for responsive images with different conditions.",
+      "example": "<picture><source media=\"(min-width: 800px)\" srcset=\"large.jpg\"><img src=\"small.jpg\" alt=\"Image\"></picture>",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "canvas",
+      "type": "keyword",
+      "description": "canvas - Element providing a drawing surface for 2D graphics and animations via JavaScript.",
+      "example": "<canvas id=\"myCanvas\" width=\"400\" height=\"300\">Canvas not supported</canvas>",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "svg",
+      "type": "keyword",
+      "description": "svg - Element for embedding Scalable Vector Graphics directly in HTML documents.",
+      "example": "<svg width=\"100\" height=\"100\"><circle cx=\"50\" cy=\"50\" r=\"40\" fill=\"red\"/></svg>",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "iframe",
+      "type": "keyword",
+      "description": "iframe - Element for embedding another HTML document within the current document.",
+      "example": "<iframe src=\"https://example.com\" width=\"600\" height=\"400\" title=\"External Content\"></iframe>",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "embed",
+      "type": "keyword",
+      "description": "embed - Element for embedding external content like plugins or multimedia. Self-closing.",
+      "example": "<embed src=\"document.pdf\" type=\"application/pdf\" width=\"600\" height=\"400\">",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "object",
+      "type": "keyword",
+      "description": "object - Element for embedding external resources like images, videos, or other HTML documents.",
+      "example": "<object data=\"movie.swf\" type=\"application/x-shockwave-flash\" width=\"400\" height=\"300\"></object>",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "param",
+      "type": "keyword",
+      "description": "param - Element defining parameters for object elements. Self-closing.",
+      "example": "<param name=\"autoplay\" value=\"true\">",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "dl",
+      "type": "keyword",
+      "description": "dl - Description list element containing terms and their descriptions.",
+      "example": "<dl><dt>HTML</dt><dd>HyperText Markup Language</dd></dl>",
+      "category": "list_elements"
+    },
+    {
+      "keyword": "dt",
+      "type": "keyword",
+      "description": "dt - Description term element within a description list, defining the term being described.",
+      "example": "<dt>JavaScript</dt>",
+      "category": "list_elements"
+    },
+    {
+      "keyword": "dd",
+      "type": "keyword",
+      "description": "dd - Description details element providing the description or definition for a term.",
+      "example": "<dd>A programming language for web development</dd>",
+      "category": "list_elements"
+    },
+    {
+      "keyword": "thead",
+      "type": "keyword",
+      "description": "thead - Table head element grouping header content in a table.",
+      "example": "<thead><tr><th>Name</th><th>Age</th></tr></thead>",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "tbody",
+      "type": "keyword",
+      "description": "tbody - Table body element grouping the main content rows in a table.",
+      "example": "<tbody><tr><td>John</td><td>30</td></tr></tbody>",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "tfoot",
+      "type": "keyword",
+      "description": "tfoot - Table footer element grouping footer content like totals or summary information.",
+      "example": "<tfoot><tr><td>Total</td><td>150</td></tr></tfoot>",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "tr",
+      "type": "keyword",
+      "description": "tr - Table row element containing table cells (th or td elements).",
+      "example": "<tr><td>Cell 1</td><td>Cell 2</td></tr>",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "th",
+      "type": "keyword",
+      "description": "th - Table header cell element, typically bold and centered, for column or row headers.",
+      "example": "<th scope=\"col\">Column Header</th>",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "td",
+      "type": "keyword",
+      "description": "td - Table data cell element containing the actual table content.",
+      "example": "<td>Cell content</td>",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "caption",
+      "type": "keyword",
+      "description": "caption - Element providing a title or explanation for a table, positioned above the table.",
+      "example": "<caption>Monthly Sales Report</caption>",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "colgroup",
+      "type": "keyword",
+      "description": "colgroup - Element for grouping columns in a table for styling or semantic purposes.",
+      "example": "<colgroup><col style=\"background-color: yellow\"></colgroup>",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "col",
+      "type": "keyword",
+      "description": "col - Element representing one or more columns within a colgroup. Self-closing.",
+      "example": "<col span=\"2\" style=\"background-color: lightblue\">",
+      "category": "table_elements"
+    },
+    {
+      "keyword": "map",
+      "type": "keyword",
+      "description": "map - Element defining an image map with clickable areas on an image.",
+      "example": "<map name=\"workmap\"><area shape=\"rect\" coords=\"34,44,270,350\" href=\"computer.htm\"></map>",
+      "category": "interactive_elements"
+    },
+    {
+      "keyword": "area",
+      "type": "keyword",
+      "description": "area - Element defining clickable areas within an image map. Self-closing.",
+      "example": "<area shape=\"circle\" coords=\"337,300,44\" href=\"coffee.htm\" alt=\"Coffee\">",
+      "category": "interactive_elements"
+    },
+    {
+      "keyword": "noscript",
+      "type": "keyword",
+      "description": "noscript - Element containing content to display when JavaScript is disabled or not supported.",
+      "example": "<noscript><p>This page requires JavaScript to function properly.</p></noscript>",
+      "category": "scripting"
+    },
+    {
+      "keyword": "script",
+      "type": "keyword",
+      "description": "script - Element for embedding or referencing JavaScript code in HTML documents.",
+      "example": "<script src=\"app.js\" defer></script>",
+      "category": "scripting"
+    },
+    {
+      "keyword": "style",
+      "type": "keyword",
+      "description": "style - Element containing CSS style information for the HTML document.",
+      "example": "<style>body { font-family: Arial, sans-serif; }</style>",
+      "category": "styling"
+    },
+    {
+      "keyword": "link",
+      "type": "keyword",
+      "description": "link - Element for linking external resources like stylesheets, icons, or prefetch resources. Self-closing.",
+      "example": "<link rel=\"stylesheet\" href=\"styles.css\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "meta",
+      "type": "keyword",
+      "description": "meta - Element providing metadata about the HTML document like charset, viewport, or description. Self-closing.",
+      "example": "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "base",
+      "type": "keyword",
+      "description": "base - Element specifying base URL for all relative URLs in the document. Self-closing.",
+      "example": "<base href=\"https://example.com/\" target=\"_blank\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "head",
+      "type": "keyword",
+      "description": "head - Container element for metadata and resources that aren't displayed in the document body.",
+      "example": "<head><title>Page Title</title><meta charset=\"UTF-8\"></head>",
+      "category": "document_structure"
+    },
+    {
+      "keyword": "body",
+      "type": "keyword",
+      "description": "body - Container element for all visible content of the HTML document.",
+      "example": "<body><h1>Welcome</h1><p>Page content</p></body>",
+      "category": "document_structure"
+    },
+    {
+      "keyword": "html",
+      "type": "keyword",
+      "description": "html - Root element of an HTML document, containing all other elements.",
+      "example": "<html lang=\"en\"><head></head><body></body></html>",
+      "category": "document_structure"
+    },
+    {
+      "keyword": "title",
+      "type": "keyword",
+      "description": "title - Element defining the document title shown in browser title bar or page tab.",
+      "example": "<title>My Web Page - Company Name</title>",
+      "category": "metadata"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "html5",
+      "description": "Complete HTML5 document template with proper DOCTYPE and meta tags",
+      "content": "<!DOCTYPE html>\n<html lang=\"${1:en}\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>${2:Document Title}</title>\n</head>\n<body>\n    ${3:<!-- Page content -->}\n</body>\n</html>",
+      "category": "document"
+    },
+    {
+      "trigger": "div",
+      "description": "Div container with class and content placeholder for layout structure",
+      "content": "<div class=\"${1:container}\">\n    ${2:<!-- Content -->}\n</div>",
+      "category": "layout"
+    },
+    {
+      "trigger": "form",
+      "description": "Form template with common attributes and input elements for data collection",
+      "content": "<form action=\"${1:/submit}\" method=\"${2:post}\">\n    <label for=\"${3:input-id}\">${4:Label}:</label>\n    <input type=\"${5:text}\" id=\"${3:input-id}\" name=\"${6:field-name}\" required>\n    <button type=\"submit\">${7:Submit}</button>\n</form>",
+      "category": "forms"
+    },
+    {
+      "trigger": "table",
+      "description": "Table template with header and body rows for displaying tabular data",
+      "content": "<table>\n    <thead>\n        <tr>\n            <th>${1:Header 1}</th>\n            <th>${2:Header 2}</th>\n        </tr>\n    </thead>\n    <tbody>\n        <tr>\n            <td>${3:Data 1}</td>\n            <td>${4:Data 2}</td>\n        </tr>\n    </tbody>\n</table>",
+      "category": "tables"
+    },
+    {
+      "trigger": "nav",
+      "description": "Navigation menu template with semantic markup",
+      "content": "<nav>\n    <ul>\n        <li><a href=\"${1:#home}\">${2:Home}</a></li>\n        <li><a href=\"${3:#about}\">${4:About}</a></li>\n        <li><a href=\"${5:#contact}\">${6:Contact}</a></li>\n    </ul>\n</nav>",
+      "category": "navigation"
+    },
+    {
+      "trigger": "article",
+      "description": "Article template with semantic structure for blog posts or content",
+      "content": "<article>\n    <header>\n        <h1>${1:Article Title}</h1>\n        <time datetime=\"${2:2024-01-01}\">${3:January 1, 2024}</time>\n    </header>\n    <main>\n        ${4:<!-- Article content -->}\n    </main>\n</article>",
+      "category": "semantic"
+    },
+    {
+      "trigger": "section",
+      "description": "Section template with heading for content organization",
+      "content": "<section>\n    <h${1:2}>${2:Section Title}</h${1:2}>\n    ${3:<!-- Section content -->}\n</section>",
+      "category": "semantic"
+    },
+    {
+      "trigger": "card",
+      "description": "Card component template for displaying content blocks",
+      "content": "<div class=\"card\">\n    <div class=\"card-header\">\n        <h${1:3}>${2:Card Title}</h${1:3}>\n    </div>\n    <div class=\"card-body\">\n        ${3:<!-- Card content -->}\n    </div>\n    <div class=\"card-footer\">\n        ${4:<!-- Card actions -->}\n    </div>\n</div>",
+      "category": "components"
+    },
+    {
+      "trigger": "meta",
+      "description": "Meta tag template for HTML head section",
+      "content": "<meta name=\"${1:description}\" content=\"${2:Page description}\">",
+      "category": "meta"
+    },
+    {
+      "trigger": "link",
+      "description": "Link element template for external resources",
+      "content": "<link rel=\"${1:stylesheet}\" href=\"${2:styles.css}\">",
+      "category": "meta"
+    },
+    {
+      "trigger": "script",
+      "description": "Script tag template for JavaScript inclusion",
+      "content": "<script src=\"${1:script.js}\"></script>",
+      "category": "meta"
+    },
+    {
+      "trigger": "img_responsive",
+      "description": "Responsive image template with srcset for different screen sizes",
+      "content": "<img src=\"${1:image.jpg}\" \n     srcset=\"${2:image-small.jpg} 480w, ${3:image-medium.jpg} 800w, ${1:image.jpg} 1200w\"\n     sizes=\"${4:(max-width: 480px) 100vw, (max-width: 800px) 50vw, 33vw}\"\n     alt=\"${5:Image description}\">\n",
+      "category": "media"
+    },
+    {
+      "trigger": "html5_complete",
+      "description": "Complete HTML5 document with SEO and accessibility features",
+      "content": "<!DOCTYPE html>\n<html lang=\"${1:en}\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <meta name=\"description\" content=\"${2:Page description for search engines}\">\n    <meta name=\"keywords\" content=\"${3:keyword1, keyword2, keyword3}\">\n    <meta name=\"author\" content=\"${4:Author Name}\">\n    <meta property=\"og:title\" content=\"${5:Page Title}\">\n    <meta property=\"og:description\" content=\"${2:Page description for search engines}\">\n    <meta property=\"og:image\" content=\"${6:https://example.com/image.jpg}\">\n    <meta property=\"og:url\" content=\"${7:https://example.com}\">\n    <meta name=\"twitter:card\" content=\"summary_large_image\">\n    <link rel=\"canonical\" href=\"${7:https://example.com}\">\n    <link rel=\"icon\" type=\"image/x-icon\" href=\"${8:/favicon.ico}\">\n    <title>${5:Page Title}</title>\n    <link rel=\"stylesheet\" href=\"${9:styles.css}\">\n</head>\n<body>\n    <header>\n        <nav aria-label=\"Main navigation\">\n            <ul>\n                <li><a href=\"${10:#home}\">${11:Home}</a></li>\n                <li><a href=\"${12:#about}\">${13:About}</a></li>\n                <li><a href=\"${14:#contact}\">${15:Contact}</a></li>\n            </ul>\n        </nav>\n    </header>\n    \n    <main>\n        <h1>${16:Main Page Heading}</h1>\n        ${17:<!-- Main content goes here -->}\n    </main>\n    \n    <footer>\n        <p>&copy; ${18:2024} ${19:Your Company}. All rights reserved.</p>\n    </footer>\n    \n    <script src=\"${20:script.js}\" defer></script>\n</body>\n</html>",
+      "category": "document"
+    },
+    {
+      "trigger": "semantic_page",
+      "description": "Semantic HTML5 page structure template",
+      "content": "<article>\n    <header>\n        <h1>${1:Article Title}</h1>\n        <p>By <span class=\"author\">${2:Author Name}</span> on <time datetime=\"${3:2024-01-01}\">${4:January 1, 2024}</time></p>\n    </header>\n    \n    <section>\n        <h2>${5:Section Heading}</h2>\n        <p>${6:Section content goes here.}</p>\n    </section>\n    \n    <section>\n        <h2>${7:Another Section}</h2>\n        <p>${8:More content here.}</p>\n    </section>\n    \n    <footer>\n        <p>Tags: \n            <span class=\"tag\">${9:tag1}</span>, \n            <span class=\"tag\">${10:tag2}</span>\n        </p>\n    </footer>\n</article>",
+      "category": "semantic"
+    },
+    {
+      "trigger": "contact_form",
+      "description": "Complete contact form with validation and accessibility",
+      "content": "<form action=\"${1:/contact}\" method=\"post\" novalidate>\n    <fieldset>\n        <legend>Contact Information</legend>\n        \n        <div class=\"form-group\">\n            <label for=\"name\">Full Name *</label>\n            <input type=\"text\" id=\"name\" name=\"name\" required aria-describedby=\"name-error\">\n            <div id=\"name-error\" class=\"error-message\" aria-live=\"polite\"></div>\n        </div>\n        \n        <div class=\"form-group\">\n            <label for=\"email\">Email Address *</label>\n            <input type=\"email\" id=\"email\" name=\"email\" required aria-describedby=\"email-error\">\n            <div id=\"email-error\" class=\"error-message\" aria-live=\"polite\"></div>\n        </div>\n        \n        <div class=\"form-group\">\n            <label for=\"phone\">Phone Number</label>\n            <input type=\"tel\" id=\"phone\" name=\"phone\" aria-describedby=\"phone-help\">\n            <div id=\"phone-help\" class=\"help-text\">Optional: Include area code</div>\n        </div>\n        \n        <div class=\"form-group\">\n            <label for=\"subject\">Subject *</label>\n            <select id=\"subject\" name=\"subject\" required>\n                <option value=\"\">Please select a subject</option>\n                <option value=\"general\">General Inquiry</option>\n                <option value=\"support\">Technical Support</option>\n                <option value=\"sales\">Sales Question</option>\n                <option value=\"feedback\">Feedback</option>\n            </select>\n        </div>\n        \n        <div class=\"form-group\">\n            <label for=\"message\">Message *</label>\n            <textarea id=\"message\" name=\"message\" rows=\"6\" required \n                      placeholder=\"Please describe your inquiry...\" \n                      aria-describedby=\"message-help\"></textarea>\n            <div id=\"message-help\" class=\"help-text\">Maximum 500 characters</div>\n        </div>\n        \n        <div class=\"form-group\">\n            <input type=\"checkbox\" id=\"consent\" name=\"consent\" required>\n            <label for=\"consent\">I agree to the <a href=\"${2:/privacy}\">privacy policy</a> *</label>\n        </div>\n        \n        <div class=\"form-actions\">\n            <button type=\"submit\">Send Message</button>\n            <button type=\"reset\">Clear Form</button>\n        </div>\n    </fieldset>\n</form>",
+      "category": "forms"
+    },
+    {
+      "trigger": "data_table",
+      "description": "Accessible data table with sorting and filtering capabilities",
+      "content": "<div class=\"table-container\">\n    <table class=\"data-table\" aria-label=\"${1:Data table description}\">\n        <caption>${2:Table Caption - Brief description of table content}</caption>\n        <thead>\n            <tr>\n                <th scope=\"col\" aria-sort=\"none\">\n                    <button type=\"button\" class=\"sort-button\">\n                        ${3:Column 1}\n                        <span class=\"sort-icon\" aria-hidden=\"true\"></span>\n                    </button>\n                </th>\n                <th scope=\"col\" aria-sort=\"none\">\n                    <button type=\"button\" class=\"sort-button\">\n                        ${4:Column 2}\n                        <span class=\"sort-icon\" aria-hidden=\"true\"></span>\n                    </button>\n                </th>\n                <th scope=\"col\" aria-sort=\"none\">\n                    <button type=\"button\" class=\"sort-button\">\n                        ${5:Column 3}\n                        <span class=\"sort-icon\" aria-hidden=\"true\"></span>\n                    </button>\n                </th>\n            </tr>\n        </thead>\n        <tbody>\n            <tr>\n                <td>${6:Data 1}</td>\n                <td>${7:Data 2}</td>\n                <td>${8:Data 3}</td>\n            </tr>\n            <tr>\n                <td>${9:Data 4}</td>\n                <td>${10:Data 5}</td>\n                <td>${11:Data 6}</td>\n            </tr>\n        </tbody>\n        <tfoot>\n            <tr>\n                <td colspan=\"3\">\n                    <div class=\"table-summary\">\n                        Showing ${12:2} of ${13:100} entries\n                    </div>\n                </td>\n            </tr>\n        </tfoot>\n    </table>\n</div>",
+      "category": "tables"
+    },
+    {
+      "trigger": "media_player",
+      "description": "Accessible video player with multiple sources and captions",
+      "content": "<figure class=\"video-container\">\n    <video controls preload=\"metadata\" width=\"${1:800}\" height=\"${2:450}\" \n           poster=\"${3:thumbnail.jpg}\" aria-describedby=\"video-description\">\n        <source src=\"${4:video.mp4}\" type=\"video/mp4\">\n        <source src=\"${5:video.webm}\" type=\"video/webm\">\n        <source src=\"${6:video.ogg}\" type=\"video/ogg\">\n        \n        <!-- Captions and subtitles -->\n        <track kind=\"captions\" src=\"${7:captions-en.vtt}\" srclang=\"en\" label=\"English Captions\" default>\n        <track kind=\"subtitles\" src=\"${8:subtitles-es.vtt}\" srclang=\"es\" label=\"Spanish Subtitles\">\n        <track kind=\"descriptions\" src=\"${9:descriptions.vtt}\" srclang=\"en\" label=\"Audio Descriptions\">\n        \n        <!-- Fallback content -->\n        <p>Your browser doesn't support HTML5 video. \n           <a href=\"${4:video.mp4}\">Download the video</a> instead.</p>\n    </video>\n    \n    <figcaption id=\"video-description\">\n        ${10:Video description goes here}\n    </figcaption>\n</figure>",
+      "category": "media"
+    },
+    {
+      "trigger": "audio_player",
+      "description": "Accessible audio player with multiple formats",
+      "content": "<figure class=\"audio-container\">\n    <audio controls preload=\"metadata\" aria-describedby=\"audio-description\">\n        <source src=\"${1:audio.mp3}\" type=\"audio/mpeg\">\n        <source src=\"${2:audio.ogg}\" type=\"audio/ogg\">\n        <source src=\"${3:audio.wav}\" type=\"audio/wav\">\n        \n        <!-- Fallback content -->\n        <p>Your browser doesn't support HTML5 audio. \n           <a href=\"${1:audio.mp3}\">Download the audio</a> instead.</p>\n    </audio>\n    \n    <figcaption id=\"audio-description\">\n        <strong>${4:Audio Title}</strong> - ${5:Audio description or transcript information}\n    </figcaption>\n</figure>",
+      "category": "media"
+    },
+    {
+      "trigger": "picture_responsive",
+      "description": "Responsive picture element with art direction",
+      "content": "<picture>\n    <!-- Desktop: Large landscape image -->\n    <source media=\"(min-width: 1200px)\" \n            srcset=\"${1:hero-desktop.jpg} 1x, ${2:hero-desktop@2x.jpg} 2x\">\n    \n    <!-- Tablet: Medium landscape image -->\n    <source media=\"(min-width: 768px)\" \n            srcset=\"${3:hero-tablet.jpg} 1x, ${4:hero-tablet@2x.jpg} 2x\">\n    \n    <!-- Mobile: Square crop -->\n    <source media=\"(max-width: 767px)\" \n            srcset=\"${5:hero-mobile.jpg} 1x, ${6:hero-mobile@2x.jpg} 2x\">\n    \n    <!-- Fallback image -->\n    <img src=\"${7:hero-fallback.jpg}\" \n         alt=\"${8:Descriptive image text}\" \n         width=\"${9:1200}\" \n         height=\"${10:600}\"\n         loading=\"lazy\">\n</picture>",
+      "category": "media"
+    },
+    {
+      "trigger": "progressive_enhancement",
+      "description": "Progressive enhancement pattern with noscript fallback",
+      "content": "<!-- Enhanced experience with JavaScript -->\n<div class=\"interactive-component\" data-component=\"${1:ComponentName}\">\n    <div class=\"loading\" aria-hidden=\"true\">\n        Loading...\n    </div>\n    <div class=\"content\" style=\"display: none;\">\n        ${2:<!-- Dynamic content will be inserted here -->}\n    </div>\n</div>\n\n<!-- Fallback for users without JavaScript -->\n<noscript>\n    <div class=\"static-content\">\n        <h2>${3:Content Title}</h2>\n        <p>${4:Static content that works without JavaScript}</p>\n        <a href=\"${5:/fallback-page}\" class=\"button\">${6:View More}</a>\n    </div>\n</noscript>",
+      "category": "progressive_enhancement"
+    },
+    {
+      "trigger": "accessibility_skip_links",
+      "description": "Skip navigation links for accessibility",
+      "content": "<!-- Skip links for screen readers and keyboard navigation -->\n<div class=\"skip-links\">\n    <a href=\"#main-content\" class=\"skip-link\">Skip to main content</a>\n    <a href=\"#navigation\" class=\"skip-link\">Skip to navigation</a>\n    <a href=\"#footer\" class=\"skip-link\">Skip to footer</a>\n</div>\n\n<header>\n    <nav id=\"navigation\" aria-label=\"Main navigation\">\n        ${1:<!-- Navigation content -->}\n    </nav>\n</header>\n\n<main id=\"main-content\">\n    <h1>${2:Page Title}</h1>\n    ${3:<!-- Main content -->}\n</main>\n\n<footer id=\"footer\">\n    ${4:<!-- Footer content -->}\n</footer>",
+      "category": "accessibility"
+    },
+    {
+      "trigger": "breadcrumb_navigation",
+      "description": "Semantic breadcrumb navigation with structured data",
+      "content": "<nav aria-label=\"Breadcrumb\" class=\"breadcrumb\">\n    <ol itemscope itemtype=\"https://schema.org/BreadcrumbList\">\n        <li itemprop=\"itemListElement\" itemscope itemtype=\"https://schema.org/ListItem\">\n            <a href=\"${1:/}\" itemprop=\"item\">\n                <span itemprop=\"name\">${2:Home}</span>\n            </a>\n            <meta itemprop=\"position\" content=\"1\" />\n        </li>\n        <li itemprop=\"itemListElement\" itemscope itemtype=\"https://schema.org/ListItem\">\n            <a href=\"${3:/category}\" itemprop=\"item\">\n                <span itemprop=\"name\">${4:Category}</span>\n            </a>\n            <meta itemprop=\"position\" content=\"2\" />\n        </li>\n        <li itemprop=\"itemListElement\" itemscope itemtype=\"https://schema.org/ListItem\">\n            <span itemprop=\"name\">${5:Current Page}</span>\n            <meta itemprop=\"position\" content=\"3\" />\n        </li>\n    </ol>\n</nav>",
+      "category": "navigation"
+    },
+    {
+      "trigger": "mega_menu",
+      "description": "Accessible mega menu navigation",
+      "content": "<nav class=\"main-navigation\" aria-label=\"Main menu\">\n    <ul class=\"nav-list\" role=\"menubar\">\n        <li class=\"nav-item\" role=\"none\">\n            <a href=\"${1:/}\" class=\"nav-link\" role=\"menuitem\">${2:Home}</a>\n        </li>\n        <li class=\"nav-item has-dropdown\" role=\"none\">\n            <button class=\"nav-link dropdown-toggle\" \n                    role=\"menuitem\" \n                    aria-haspopup=\"true\" \n                    aria-expanded=\"false\"\n                    aria-controls=\"products-menu\">${3:Products}</button>\n            <div class=\"mega-menu\" id=\"products-menu\" role=\"menu\">\n                <div class=\"mega-menu-content\">\n                    <div class=\"menu-section\">\n                        <h3 class=\"section-title\">${4:Category 1}</h3>\n                        <ul role=\"none\">\n                            <li role=\"none\">\n                                <a href=\"${5:/product1}\" role=\"menuitem\">${6:Product 1}</a>\n                            </li>\n                            <li role=\"none\">\n                                <a href=\"${7:/product2}\" role=\"menuitem\">${8:Product 2}</a>\n                            </li>\n                        </ul>\n                    </div>\n                    <div class=\"menu-section\">\n                        <h3 class=\"section-title\">${9:Category 2}</h3>\n                        <ul role=\"none\">\n                            <li role=\"none\">\n                                <a href=\"${10:/product3}\" role=\"menuitem\">${11:Product 3}</a>\n                            </li>\n                        </ul>\n                    </div>\n                </div>\n            </div>\n        </li>\n    </ul>\n</nav>",
+      "category": "navigation"
+    },
+    {
+      "trigger": "card_component",
+      "description": "Accessible card component with proper heading structure",
+      "content": "<article class=\"card\" aria-labelledby=\"card-title-${1:1}\">\n    <div class=\"card-image\">\n        <img src=\"${2:image.jpg}\" alt=\"${3:Image description}\" loading=\"lazy\">\n    </div>\n    <div class=\"card-content\">\n        <header class=\"card-header\">\n            <h${4:3} id=\"card-title-${1:1}\" class=\"card-title\">${5:Card Title}</h${4:3}>\n            <p class=\"card-meta\">\n                <time datetime=\"${6:2024-01-01}\">${7:January 1, 2024}</time>\n                <span class=\"card-category\">${8:Category}</span>\n            </p>\n        </header>\n        <div class=\"card-body\">\n            <p class=\"card-excerpt\">${9:Brief description or excerpt of the content...}</p>\n        </div>\n        <footer class=\"card-footer\">\n            <a href=\"${10:/article}\" class=\"card-link\" aria-describedby=\"card-title-${1:1}\">\n                ${11:Read More}\n                <span class=\"sr-only\">about ${5:Card Title}</span>\n            </a>\n            <div class=\"card-actions\">\n                <button type=\"button\" class=\"btn-icon\" aria-label=\"Share ${5:Card Title}\">\n                    ${12:📤}\n                </button>\n                <button type=\"button\" class=\"btn-icon\" aria-label=\"Bookmark ${5:Card Title}\">\n                    ${13:🔖}\n                </button>\n            </div>\n        </footer>\n    </div>\n</article>",
+      "category": "components"
+    },
+    {
+      "trigger": "modal_dialog",
+      "description": "Accessible modal dialog with focus management",
+      "content": "<div class=\"modal-backdrop\" \n     id=\"${1:modal-id}\" \n     role=\"dialog\" \n     aria-modal=\"true\" \n     aria-labelledby=\"modal-title\" \n     aria-describedby=\"modal-description\"\n     style=\"display: none;\">\n    <div class=\"modal-content\">\n        <header class=\"modal-header\">\n            <h2 id=\"modal-title\" class=\"modal-title\">${2:Modal Title}</h2>\n            <button type=\"button\" \n                    class=\"modal-close\" \n                    aria-label=\"Close dialog\"\n                    data-dismiss=\"modal\">\n                <span aria-hidden=\"true\">&times;</span>\n            </button>\n        </header>\n        \n        <div class=\"modal-body\">\n            <p id=\"modal-description\">${3:Modal content description}</p>\n            ${4:<!-- Modal content goes here -->}\n        </div>\n        \n        <footer class=\"modal-footer\">\n            <button type=\"button\" class=\"btn btn-secondary\" data-dismiss=\"modal\">\n                ${5:Cancel}\n            </button>\n            <button type=\"button\" class=\"btn btn-primary\" autofocus>\n                ${6:Confirm}\n            </button>\n        </footer>\n    </div>\n</div>\n\n<!-- Modal trigger -->\n<button type=\"button\" \n        class=\"btn\" \n        data-toggle=\"modal\" \n        data-target=\"#${1:modal-id}\">\n    ${7:Open Modal}\n</button>",
+      "category": "components"
+    },
+    {
+      "trigger": "accordion",
+      "description": "Accessible accordion component with ARIA states",
+      "content": "<div class=\"accordion\" id=\"${1:accordion-id}\">\n    <div class=\"accordion-item\">\n        <h${2:3} class=\"accordion-header\">\n            <button type=\"button\" \n                    class=\"accordion-toggle\"\n                    aria-expanded=\"false\"\n                    aria-controls=\"panel-${3:1}\"\n                    id=\"heading-${3:1}\">\n                ${4:Accordion Item 1}\n            </button>\n        </h${2:3}>\n        <div class=\"accordion-panel\" \n             id=\"panel-${3:1}\" \n             aria-labelledby=\"heading-${3:1}\"\n             role=\"region\">\n            <div class=\"accordion-content\">\n                ${5:Content for the first accordion item goes here.}\n            </div>\n        </div>\n    </div>\n    \n    <div class=\"accordion-item\">\n        <h${2:3} class=\"accordion-header\">\n            <button type=\"button\" \n                    class=\"accordion-toggle\"\n                    aria-expanded=\"false\"\n                    aria-controls=\"panel-${6:2}\"\n                    id=\"heading-${6:2}\">\n                ${7:Accordion Item 2}\n            </button>\n        </h${2:3}>\n        <div class=\"accordion-panel\" \n             id=\"panel-${6:2}\" \n             aria-labelledby=\"heading-${6:2}\"\n             role=\"region\">\n            <div class=\"accordion-content\">\n                ${8:Content for the second accordion item goes here.}\n            </div>\n        </div>\n    </div>\n</div>",
+      "category": "components"
+    },
+    {
+      "trigger": "tabs",
+      "description": "Accessible tabs component with keyboard navigation",
+      "content": "<div class=\"tabs-container\">\n    <div class=\"tab-list\" role=\"tablist\" aria-label=\"${1:Content sections}\">\n        <button type=\"button\" \n                class=\"tab\" \n                role=\"tab\" \n                aria-selected=\"true\" \n                aria-controls=\"panel-${2:1}\" \n                id=\"tab-${2:1}\"\n                tabindex=\"0\">\n            ${3:Tab 1}\n        </button>\n        <button type=\"button\" \n                class=\"tab\" \n                role=\"tab\" \n                aria-selected=\"false\" \n                aria-controls=\"panel-${4:2}\" \n                id=\"tab-${4:2}\"\n                tabindex=\"-1\">\n            ${5:Tab 2}\n        </button>\n        <button type=\"button\" \n                class=\"tab\" \n                role=\"tab\" \n                aria-selected=\"false\" \n                aria-controls=\"panel-${6:3}\" \n                id=\"tab-${6:3}\"\n                tabindex=\"-1\">\n            ${7:Tab 3}\n        </button>\n    </div>\n    \n    <div class=\"tab-panels\">\n        <div class=\"tab-panel\" \n             role=\"tabpanel\" \n             id=\"panel-${2:1}\" \n             aria-labelledby=\"tab-${2:1}\"\n             tabindex=\"0\">\n            ${8:Content for tab 1 goes here.}\n        </div>\n        <div class=\"tab-panel\" \n             role=\"tabpanel\" \n             id=\"panel-${4:2}\" \n             aria-labelledby=\"tab-${4:2}\"\n             tabindex=\"0\"\n             hidden>\n            ${9:Content for tab 2 goes here.}\n        </div>\n        <div class=\"tab-panel\" \n             role=\"tabpanel\" \n             id=\"panel-${6:3}\" \n             aria-labelledby=\"tab-${6:3}\"\n             tabindex=\"0\"\n             hidden>\n            ${10:Content for tab 3 goes here.}\n        </div>\n    </div>\n</div>",
+      "category": "components"
+    },
+    {
+      "trigger": "search_form",
+      "description": "Accessible search form with suggestions",
+      "content": "<form class=\"search-form\" role=\"search\" aria-label=\"Search ${1:site content}\">\n    <div class=\"search-input-group\">\n        <label for=\"search-input\" class=\"sr-only\">Search</label>\n        <input type=\"search\" \n               id=\"search-input\" \n               name=\"q\" \n               placeholder=\"${2:Search...}\" \n               autocomplete=\"off\"\n               aria-expanded=\"false\"\n               aria-owns=\"search-suggestions\"\n               aria-autocomplete=\"list\"\n               aria-describedby=\"search-help\">\n        <button type=\"submit\" class=\"search-button\" aria-label=\"Submit search\">\n            <span aria-hidden=\"true\">🔍</span>\n        </button>\n    </div>\n    \n    <div id=\"search-help\" class=\"help-text\">\n        ${3:Enter keywords to search the site}\n    </div>\n    \n    <!-- Search suggestions dropdown -->\n    <ul id=\"search-suggestions\" \n        class=\"search-suggestions\" \n        role=\"listbox\" \n        aria-label=\"Search suggestions\"\n        style=\"display: none;\">\n        <!-- Suggestions will be populated dynamically -->\n    </ul>\n</form>",
+      "category": "forms"
+    },
+    {
+      "trigger": "loading_states",
+      "description": "Loading states and skeleton screens",
+      "content": "<!-- Loading spinner -->\n<div class=\"loading-spinner\" role=\"status\" aria-label=\"Loading content\">\n    <div class=\"spinner\" aria-hidden=\"true\"></div>\n    <span class=\"sr-only\">Loading...</span>\n</div>\n\n<!-- Skeleton loader -->\n<div class=\"skeleton-loader\" aria-hidden=\"true\">\n    <div class=\"skeleton-header\"></div>\n    <div class=\"skeleton-text\"></div>\n    <div class=\"skeleton-text skeleton-text-short\"></div>\n    <div class=\"skeleton-image\"></div>\n</div>\n\n<!-- Progress indicator -->\n<div class=\"loading-progress\" role=\"status\" aria-label=\"Loading progress\">\n    <div class=\"progress-bar\">\n        <div class=\"progress-fill\" style=\"width: ${1:45}%\" aria-hidden=\"true\"></div>\n    </div>\n    <div class=\"progress-text\">\n        Loading... ${1:45}% complete\n    </div>\n</div>\n\n<!-- Content container -->\n<div class=\"content\" style=\"display: none;\">\n    ${2:<!-- Actual content will be shown after loading -->}\n</div>",
+      "category": "components"
+    },
+    {
+      "trigger": "error_states",
+      "description": "Error handling and user feedback",
+      "content": "<!-- Success message -->\n<div class=\"alert alert-success\" role=\"alert\" aria-live=\"polite\">\n    <strong>Success!</strong> ${1:Your action was completed successfully.}\n    <button type=\"button\" class=\"alert-close\" aria-label=\"Close alert\">\n        <span aria-hidden=\"true\">&times;</span>\n    </button>\n</div>\n\n<!-- Warning message -->\n<div class=\"alert alert-warning\" role=\"alert\" aria-live=\"polite\">\n    <strong>Warning:</strong> ${2:Please review the following information.}\n    <button type=\"button\" class=\"alert-close\" aria-label=\"Close alert\">\n        <span aria-hidden=\"true\">&times;</span>\n    </button>\n</div>\n\n<!-- Error message -->\n<div class=\"alert alert-error\" role=\"alert\" aria-live=\"assertive\">\n    <strong>Error:</strong> ${3:Something went wrong. Please try again.}\n    <button type=\"button\" class=\"alert-close\" aria-label=\"Close alert\">\n        <span aria-hidden=\"true\">&times;</span>\n    </button>\n</div>\n\n<!-- Info message -->\n<div class=\"alert alert-info\" role=\"alert\" aria-live=\"polite\">\n    <strong>Info:</strong> ${4:Here's some helpful information.}\n    <button type=\"button\" class=\"alert-close\" aria-label=\"Close alert\">\n        <span aria-hidden=\"true\">&times;</span>\n    </button>\n</div>\n\n<!-- Form validation errors -->\n<div class=\"form-errors\" role=\"alert\" aria-live=\"assertive\">\n    <h3>Please correct the following errors:</h3>\n    <ul>\n        <li><a href=\"#field1\">${5:Field 1 is required}</a></li>\n        <li><a href=\"#field2\">${6:Field 2 format is invalid}</a></li>\n    </ul>\n</div>",
+      "category": "components"
+    },
+    {
+      "trigger": "schema_markup",
+      "description": "JSON-LD structured data for SEO",
+      "content": "<script type=\"application/ld+json\">\n{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"${1:Article}\",\n  \"headline\": \"${2:Article Title}\",\n  \"description\": \"${3:Article description}\",\n  \"image\": {\n    \"@type\": \"ImageObject\",\n    \"url\": \"${4:https://example.com/image.jpg}\",\n    \"width\": ${5:1200},\n    \"height\": ${6:630}\n  },\n  \"author\": {\n    \"@type\": \"Person\",\n    \"name\": \"${7:Author Name}\",\n    \"url\": \"${8:https://example.com/author}\"\n  },\n  \"publisher\": {\n    \"@type\": \"Organization\",\n    \"name\": \"${9:Publisher Name}\",\n    \"logo\": {\n      \"@type\": \"ImageObject\",\n      \"url\": \"${10:https://example.com/logo.png}\",\n      \"width\": ${11:300},\n      \"height\": ${12:60}\n    }\n  },\n  \"datePublished\": \"${13:2024-01-01T09:00:00+00:00}\",\n  \"dateModified\": \"${14:2024-01-01T09:00:00+00:00}\",\n  \"mainEntityOfPage\": {\n    \"@type\": \"WebPage\",\n    \"@id\": \"${15:https://example.com/article}\"\n  }\n}\n</script>",
+      "category": "seo"
+    },
+    {
+      "trigger": "pwa_manifest",
+      "description": "Progressive Web App manifest and service worker registration",
+      "content": "<!-- PWA Manifest -->\n<link rel=\"manifest\" href=\"${1:/manifest.json}\">\n<meta name=\"theme-color\" content=\"${2:#000000}\">\n<meta name=\"background-color\" content=\"${3:#ffffff}\">\n\n<!-- iOS specific meta tags -->\n<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"${4:default}\">\n<meta name=\"apple-mobile-web-app-title\" content=\"${5:App Name}\">\n<link rel=\"apple-touch-icon\" href=\"${6:/icons/apple-touch-icon.png}\">\n\n<!-- Service Worker Registration -->\n<script>\nif ('serviceWorker' in navigator) {\n    window.addEventListener('load', () => {\n        navigator.serviceWorker.register('${7:/sw.js}')\n            .then(registration => {\n                console.log('SW registered: ', registration);\n            })\n            .catch(registrationError => {\n                console.log('SW registration failed: ', registrationError);\n            });\n    });\n}\n</script>",
+      "category": "pwa"
+    }
+  ]
+}

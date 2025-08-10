@@ -1,0 +1,1287 @@
+{
+  "language": "python",
+  "description": "Python programming language completion data",
+  "keywords": [
+    {
+      "keyword": "def",
+      "type": "keyword",
+      "description": "def - Defines a function. Functions encapsulate reusable code blocks that can accept parameters and return values.",
+      "example": "def greet(name): return f'Hello {name}'",
+      "category": "function_declaration"
+    },
+    {
+      "keyword": "class",
+      "type": "keyword", 
+      "description": "class - Defines a class for object-oriented programming. Classes are blueprints for creating objects with attributes and methods.",
+      "example": "class Person: def __init__(self, name): self.name = name",
+      "category": "class_declaration"
+    },
+    {
+      "keyword": "if",
+      "type": "keyword",
+      "description": "if - Conditional statement that executes code based on a boolean condition. The foundation of decision-making in programs.",
+      "example": "if x > 0: print('positive')",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "else",
+      "type": "keyword",
+      "description": "else - Alternative execution path when the if condition evaluates to False. Handles the 'otherwise' case.",
+      "example": "if x > 0: pass else: print('not positive')",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "elif",
+      "type": "keyword",
+      "description": "elif - Short for 'else if', allows chaining multiple conditions in sequence. More efficient than nested if statements.",
+      "example": "if x > 0: pass elif x < 0: print('negative')",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "for",
+      "type": "keyword",
+      "description": "for - Iterates over sequences like lists, tuples, strings, or any iterable object. Python's primary looping construct.",
+      "example": "for item in my_list: print(item)",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "while",
+      "type": "keyword",
+      "description": "while - Repeats code while a condition remains True. Use when the number of iterations is unknown beforehand.",
+      "example": "while x < 10: x += 1",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "return",
+      "type": "keyword",
+      "description": "return - Returns a value from a function and immediately exits the function execution.",
+      "example": "return x * 2",
+      "category": "function_control"
+    },
+    {
+      "keyword": "import",
+      "type": "keyword",
+      "description": "import - Imports entire modules to access their functions, classes, and variables. Essential for code organization.",
+      "example": "import math; import os",
+      "category": "module_system"
+    },
+    {
+      "keyword": "from",
+      "type": "keyword",
+      "description": "from - Imports specific items from a module, allowing direct access without module prefix.",
+      "example": "from math import sqrt, pi",
+      "category": "module_system"
+    },
+    {
+      "keyword": "try",
+      "type": "keyword",
+      "description": "try - Begins exception handling block. Code that might raise exceptions should be placed in try blocks.",
+      "example": "try: risky_operation()",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "except",
+      "type": "keyword", 
+      "description": "except - Handles specific exceptions raised in try block. Allows graceful error handling and recovery.",
+      "example": "except ValueError as e: print(f'Error: {e}')",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "finally",
+      "type": "keyword",
+      "description": "finally - Code that always runs after try/except blocks, regardless of whether exceptions occurred.",
+      "example": "finally: cleanup_resources()",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "with",
+      "type": "keyword",
+      "description": "with - Context manager for automatic resource management. Ensures proper cleanup even if errors occur.",
+      "example": "with open('file.txt') as f: content = f.read()",
+      "category": "context_management"
+    },
+    {
+      "keyword": "lambda",
+      "type": "keyword",
+      "description": "lambda - Creates anonymous functions for short, simple operations. Alternative to defining named functions.",
+      "example": "square = lambda x: x**2",
+      "category": "function_declaration"
+    },
+    {
+      "keyword": "yield",
+      "type": "keyword",
+      "description": "yield - Creates a generator function that can pause and resume execution, producing values on demand.",
+      "example": "def count(): yield 1; yield 2",
+      "category": "generator"
+    },
+    {
+      "keyword": "async",
+      "type": "keyword",
+      "description": "async - Declares an asynchronous function for concurrent programming. Returns a coroutine object.",
+      "example": "async def fetch_data(): pass",
+      "category": "async"
+    },
+    {
+      "keyword": "await",
+      "type": "keyword",
+      "description": "await - Waits for an asynchronous operation to complete. Can only be used inside async functions.",
+      "example": "result = await fetch_data()",
+      "category": "async"
+    },
+    {
+      "keyword": "break",
+      "type": "keyword",
+      "description": "break - Immediately exits the current loop, skipping any remaining iterations.",
+      "example": "for i in range(10): if i == 5: break",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "continue",
+      "type": "keyword",
+      "description": "continue - Skips the rest of the current loop iteration and jumps to the next one.",
+      "example": "for i in range(10): if i % 2 == 0: continue",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "pass",
+      "type": "keyword",
+      "description": "pass - A null operation placeholder that does nothing. Use when syntax requires a statement.",
+      "example": "if condition: pass  # TODO: implement later",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "raise",
+      "type": "keyword",
+      "description": "raise - Raises an exception. Use to signal errors or re-raise caught exceptions.",
+      "example": "if x < 0: raise ValueError('x must be positive')",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "assert",
+      "type": "keyword",
+      "description": "assert - Tests a condition and raises AssertionError if false. Use for debugging and validation.",
+      "example": "assert x > 0, 'x must be positive'",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "global",
+      "type": "keyword",
+      "description": "global - Declares that a variable refers to a global variable rather than creating a local one.",
+      "example": "global counter; counter += 1",
+      "category": "scope"
+    },
+    {
+      "keyword": "nonlocal",
+      "type": "keyword",
+      "description": "nonlocal - Declares that a variable refers to a previously bound variable in the nearest enclosing scope.",
+      "example": "def outer(): x = 1; def inner(): nonlocal x; x = 2",
+      "category": "scope"
+    },
+    {
+      "keyword": "del",
+      "type": "keyword",
+      "description": "del - Deletes objects, variables, or removes items from collections.",
+      "example": "del my_list[0]; del variable_name",
+      "category": "memory_management"
+    },
+    {
+      "keyword": "in",
+      "type": "operator",
+      "description": "in - Tests membership in sequences, sets, or dictionaries. Returns True if found.",
+      "example": "if 'key' in my_dict: print('found')",
+      "category": "operators"
+    },
+    {
+      "keyword": "not",
+      "type": "operator",
+      "description": "not - Logical negation operator. Returns the opposite boolean value.",
+      "example": "if not condition: do_something()",
+      "category": "operators"
+    },
+    {
+      "keyword": "and",
+      "type": "operator",
+      "description": "and - Logical AND operator. Returns True if both operands are True.",
+      "example": "if x > 0 and y > 0: print('both positive')",
+      "category": "operators"
+    },
+    {
+      "keyword": "or",
+      "type": "operator",
+      "description": "or - Logical OR operator. Returns True if either operand is True.",
+      "example": "if x == 0 or y == 0: print('at least one is zero')",
+      "category": "operators"
+    },
+    {
+      "keyword": "is",
+      "type": "operator",
+      "description": "is - Identity comparison operator. Tests if two variables refer to the same object.",
+      "example": "if x is None: handle_none_case()",
+      "category": "operators"
+    },
+    {
+      "keyword": "True",
+      "type": "constant",
+      "description": "True - Boolean constant representing logical truth. One of Python's built-in constants.",
+      "example": "is_valid = True; if condition is True: pass",
+      "category": "constants"
+    },
+    {
+      "keyword": "False",
+      "type": "constant",
+      "description": "False - Boolean constant representing logical falsehood. One of Python's built-in constants.",
+      "example": "is_valid = False; if condition is False: pass",
+      "category": "constants"
+    },
+    {
+      "keyword": "None",
+      "type": "constant",
+      "description": "None - Represents the absence of a value. Python's null value equivalent.",
+      "example": "result = None; if result is None: handle_empty()",
+      "category": "constants"
+    },
+    {
+      "keyword": "as",
+      "type": "keyword",
+      "description": "as - Creates an alias for modules, exceptions, or context managers.",
+      "example": "import numpy as np; except ValueError as e:",
+      "category": "alias"
+    },
+    {
+      "keyword": "match",
+      "type": "keyword",
+      "description": "match - Structural pattern matching (Python 3.10+). Switch-case like statement for complex matching.",
+      "example": "match value: case 1: print('one'); case _: print('other')",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "case",
+      "type": "keyword",
+      "description": "case - Pattern branch in match statement. Defines what to match and execute.",
+      "example": "match x: case [1, 2]: print('list with 1,2')",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "str",
+      "type": "builtin_type",
+      "description": "str - Immutable string type for text data. Supports Unicode and many string operations.",
+      "example": "text = str(42); name = 'Hello World'.upper()",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "int",
+      "type": "builtin_type",
+      "description": "int - Integer type for whole numbers. Has unlimited precision in Python 3.",
+      "example": "age = int('25'); large_num = 10**100",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "float",
+      "type": "builtin_type",
+      "description": "float - Floating-point number type for decimal numbers. Uses double precision.",
+      "example": "pi = float('3.14159'); result = 10.5 + 2.3",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "complex",
+      "type": "builtin_type",
+      "description": "complex - Complex number type with real and imaginary parts.",
+      "example": "z = complex(3, 4); z = 3+4j",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "bool",
+      "type": "builtin_type",
+      "description": "bool - Boolean type representing True or False. Subclass of int.",
+      "example": "is_valid = bool(1); result = bool('')  # False",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "list",
+      "type": "builtin_type",
+      "description": "list - Mutable sequence type for ordered collections. Most commonly used container.",
+      "example": "items = list([1, 2, 3]); items = [1, 2, 3]",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "tuple",
+      "type": "builtin_type",
+      "description": "tuple - Immutable sequence type for ordered collections. Good for fixed data sets.",
+      "example": "coords = tuple((x, y)); point = (10, 20)",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "dict",
+      "type": "builtin_type",
+      "description": "dict - Mutable mapping type for key-value pairs. Hash table implementation.",
+      "example": "data = dict(name='John', age=30); data = {'key': 'value'}",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "set",
+      "type": "builtin_type",
+      "description": "set - Mutable set type for unique unordered collections. Good for membership testing.",
+      "example": "unique = set([1, 2, 2, 3]); unique = {1, 2, 3}",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "frozenset",
+      "type": "builtin_type",
+      "description": "frozenset - Immutable set type. Can be used as dictionary keys unlike regular sets.",
+      "example": "immutable_set = frozenset([1, 2, 3])",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "bytes",
+      "type": "builtin_type",
+      "description": "bytes - Immutable sequence of integers 0-255. For binary data handling.",
+      "example": "data = bytes([65, 66, 67]); data = b'ABC'",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "bytearray",
+      "type": "builtin_type",
+      "description": "bytearray - Mutable sequence of integers 0-255. Mutable version of bytes.",
+      "example": "data = bytearray(b'Hello'); data[0] = ord('h')",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "range",
+      "type": "builtin_type",
+      "description": "range - Immutable sequence of numbers. Efficient for loops and numeric sequences.",
+      "example": "for i in range(10): pass; numbers = list(range(1, 6))",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "enumerate",
+      "type": "builtin_function",
+      "description": "enumerate - Returns enumerated object with index-value pairs from iterable.",
+      "example": "for i, item in enumerate(my_list): print(f'{i}: {item}')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "zip",
+      "type": "builtin_function",
+      "description": "zip - Combines multiple iterables element-wise into tuples.",
+      "example": "for name, age in zip(names, ages): print(f'{name}: {age}')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "map",
+      "type": "builtin_function",
+      "description": "map - Applies function to every item in iterable and returns iterator.",
+      "example": "squares = list(map(lambda x: x**2, [1, 2, 3, 4]))",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "filter",
+      "type": "builtin_function",
+      "description": "filter - Filters iterable elements for which function returns True.",
+      "example": "evens = list(filter(lambda x: x % 2 == 0, numbers))",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "reduce",
+      "type": "builtin_function",
+      "description": "reduce - Applies function cumulatively to items to reduce to single value. (from functools)",
+      "example": "from functools import reduce; sum_all = reduce(lambda x, y: x + y, numbers)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "len",
+      "type": "builtin_function",
+      "description": "len - Returns the length (number of items) of an object.",
+      "example": "length = len(my_list); size = len('Hello World')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "max",
+      "type": "builtin_function",
+      "description": "max - Returns the largest item in iterable or among arguments.",
+      "example": "largest = max(numbers); biggest = max(a, b, c)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "min",
+      "type": "builtin_function",
+      "description": "min - Returns the smallest item in iterable or among arguments.",
+      "example": "smallest = min(numbers); lowest = min(a, b, c)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "sum",
+      "type": "builtin_function",
+      "description": "sum - Returns sum of iterable's numeric items, optionally with start value.",
+      "example": "total = sum(numbers); total = sum(numbers, start=10)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "sorted",
+      "type": "builtin_function",
+      "description": "sorted - Returns new sorted list from iterable items.",
+      "example": "sorted_items = sorted(my_list); sorted_names = sorted(names, key=str.lower)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "reversed",
+      "type": "builtin_function",
+      "description": "reversed - Returns reverse iterator over sequence.",
+      "example": "for item in reversed(my_list): print(item)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "any",
+      "type": "builtin_function",
+      "description": "any - Returns True if any element of iterable is True.",
+      "example": "has_positive = any(x > 0 for x in numbers)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "all",
+      "type": "builtin_function",
+      "description": "all - Returns True if all elements of iterable are True.",
+      "example": "all_positive = all(x > 0 for x in numbers)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "isinstance",
+      "type": "builtin_function",
+      "description": "isinstance - Checks if object is instance of specified class or classes.",
+      "example": "if isinstance(value, (int, float)): process_number(value)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "issubclass",
+      "type": "builtin_function",
+      "description": "issubclass - Checks if class is subclass of specified class or classes.",
+      "example": "if issubclass(MyClass, BaseClass): process_subclass()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "hasattr",
+      "type": "builtin_function",
+      "description": "hasattr - Checks if object has specified attribute.",
+      "example": "if hasattr(obj, 'method_name'): obj.method_name()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "getattr",
+      "type": "builtin_function",
+      "description": "getattr - Gets attribute value from object, with optional default.",
+      "example": "value = getattr(obj, 'attr', 'default_value')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "setattr",
+      "type": "builtin_function",
+      "description": "setattr - Sets attribute value on object.",
+      "example": "setattr(obj, 'new_attr', 'value')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "delattr",
+      "type": "builtin_function",
+      "description": "delattr - Deletes attribute from object.",
+      "example": "delattr(obj, 'unwanted_attr')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "type",
+      "type": "builtin_function",
+      "description": "type - Returns type of object or creates new type with name, bases, and dict.",
+      "example": "obj_type = type(my_object); MyClass = type('MyClass', (), {})",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "id",
+      "type": "builtin_function",
+      "description": "id - Returns unique identifier of object (memory address in CPython).",
+      "example": "object_id = id(my_object)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "hash",
+      "type": "builtin_function",
+      "description": "hash - Returns hash value of hashable object.",
+      "example": "key_hash = hash('my_string'); dict_key_hash = hash((1, 2, 3))",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "repr",
+      "type": "builtin_function",
+      "description": "repr - Returns string representation of object for developers.",
+      "example": "debug_info = repr(my_object)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "abs",
+      "type": "builtin_function",
+      "description": "abs - Returns absolute value of number.",
+      "example": "distance = abs(x - y); magnitude = abs(-5)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "round",
+      "type": "builtin_function",
+      "description": "round - Rounds number to specified decimal places.",
+      "example": "rounded = round(3.14159, 2); integer = round(3.7)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "pow",
+      "type": "builtin_function",
+      "description": "pow - Returns x to power y, optionally modulo z.",
+      "example": "result = pow(2, 3); modular = pow(2, 3, 5)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "divmod",
+      "type": "builtin_function",
+      "description": "divmod - Returns tuple of quotient and remainder from division.",
+      "example": "quotient, remainder = divmod(17, 5)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "bin",
+      "type": "builtin_function",
+      "description": "bin - Returns binary representation of integer as string.",
+      "example": "binary = bin(42)  # '0b101010'",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "oct",
+      "type": "builtin_function",
+      "description": "oct - Returns octal representation of integer as string.",
+      "example": "octal = oct(42)  # '0o52'",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "hex",
+      "type": "builtin_function",
+      "description": "hex - Returns hexadecimal representation of integer as string.",
+      "example": "hexadecimal = hex(42)  # '0x2a'",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "ord",
+      "type": "builtin_function",
+      "description": "ord - Returns Unicode code point of character.",
+      "example": "code = ord('A')  # 65",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "chr",
+      "type": "builtin_function",
+      "description": "chr - Returns character from Unicode code point.",
+      "example": "char = chr(65)  # 'A'",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "open",
+      "type": "builtin_function",
+      "description": "open - Opens file and returns file object. Essential for file I/O operations.",
+      "example": "with open('file.txt', 'r') as f: content = f.read()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "print",
+      "type": "builtin_function",
+      "description": "print - Outputs objects to text stream, separated by sep, followed by end.",
+      "example": "print('Hello', 'World', sep='-', end='!\\n')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "input",
+      "type": "builtin_function",
+      "description": "input - Reads line from input stream, converts to string (minus trailing newline).",
+      "example": "name = input('Enter your name: ')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "format",
+      "type": "builtin_function",
+      "description": "format - Formats value using format specification.",
+      "example": "formatted = format(3.14159, '.2f')  # '3.14'",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "vars",
+      "type": "builtin_function",
+      "description": "vars - Returns __dict__ attribute of object or local variables.",
+      "example": "attributes = vars(my_object); locals_dict = vars()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "dir",
+      "type": "builtin_function",
+      "description": "dir - Returns list of valid attributes for object.",
+      "example": "methods = dir(my_object); builtins = dir()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "help",
+      "type": "builtin_function",
+      "description": "help - Invokes built-in help system for object or interactive help.",
+      "example": "help(len); help()  # interactive help",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "exec",
+      "type": "builtin_function",
+      "description": "exec - Executes Python code dynamically from string or code object.",
+      "example": "exec('x = 1 + 1'); exec(compile('print(x)', '<string>', 'exec'))",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "eval",
+      "type": "builtin_function",
+      "description": "eval - Evaluates Python expression from string and returns result.",
+      "example": "result = eval('2 + 3 * 4'); result = eval(user_expression)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "compile",
+      "type": "builtin_function",
+      "description": "compile - Compiles source code into code object for exec() or eval().",
+      "example": "code = compile('x + y', '<string>', 'eval'); result = eval(code)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "__name__",
+      "type": "special_variable",
+      "description": "__name__ - Special variable containing module's name or '__main__' if run as script.",
+      "example": "if __name__ == '__main__': main()",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "__file__",
+      "type": "special_variable",
+      "description": "__file__ - Special variable containing path to current module's file.",
+      "example": "script_dir = os.path.dirname(__file__)",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "__doc__",
+      "type": "special_variable",
+      "description": "__doc__ - Special variable containing module's or function's docstring.",
+      "example": "print(__doc__); print(function.__doc__)",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "self",
+      "type": "convention",
+      "description": "self - Conventional first parameter name for instance methods, referring to the instance.",
+      "example": "def method(self, arg): self.attribute = arg",
+      "category": "conventions"
+    },
+    {
+      "keyword": "cls",
+      "type": "convention",
+      "description": "cls - Conventional first parameter name for class methods, referring to the class.",
+      "example": "@classmethod def create(cls, args): return cls(args)",
+      "category": "conventions"
+    },
+    {
+      "keyword": "str",
+      "type": "builtin_type",
+      "description": "str - Immutable string type for text data. Supports Unicode and many string operations.",
+      "example": "text = str(42); name = 'Hello World'.upper()",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "int",
+      "type": "builtin_type",
+      "description": "int - Integer type for whole numbers. Has unlimited precision in Python 3.",
+      "example": "age = int('25'); large_num = 10**100",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "float",
+      "type": "builtin_type",
+      "description": "float - Floating-point number type for decimal numbers. Uses double precision.",
+      "example": "pi = float('3.14159'); result = 10.5 + 2.3",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "complex",
+      "type": "builtin_type",
+      "description": "complex - Complex number type with real and imaginary parts.",
+      "example": "z = complex(3, 4); z = 3+4j",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "bool",
+      "type": "builtin_type",
+      "description": "bool - Boolean type representing True or False. Subclass of int.",
+      "example": "is_valid = bool(1); result = bool('')  # False",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "list",
+      "type": "builtin_type",
+      "description": "list - Mutable sequence type for ordered collections. Most commonly used container.",
+      "example": "items = list([1, 2, 3]); items = [1, 2, 3]",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "tuple",
+      "type": "builtin_type",
+      "description": "tuple - Immutable sequence type for ordered collections. Good for fixed data sets.",
+      "example": "coords = tuple((x, y)); point = (10, 20)",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "dict",
+      "type": "builtin_type",
+      "description": "dict - Mutable mapping type for key-value pairs. Hash table implementation.",
+      "example": "data = dict(name='John', age=30); data = {'key': 'value'}",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "set",
+      "type": "builtin_type",
+      "description": "set - Mutable set type for unique unordered collections. Good for membership testing.",
+      "example": "unique = set([1, 2, 2, 3]); unique = {1, 2, 3}",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "frozenset",
+      "type": "builtin_type",
+      "description": "frozenset - Immutable set type. Can be used as dictionary keys unlike regular sets.",
+      "example": "immutable_set = frozenset([1, 2, 3])",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "bytes",
+      "type": "builtin_type",
+      "description": "bytes - Immutable sequence of integers 0-255. For binary data handling.",
+      "example": "data = bytes([65, 66, 67]); data = b'ABC'",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "bytearray",
+      "type": "builtin_type",
+      "description": "bytearray - Mutable sequence of integers 0-255. Mutable version of bytes.",
+      "example": "data = bytearray(b'Hello'); data[0] = ord('h')",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "range",
+      "type": "builtin_type",
+      "description": "range - Immutable sequence of numbers. Efficient for loops and numeric sequences.",
+      "example": "for i in range(10): pass; numbers = list(range(1, 6))",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "enumerate",
+      "type": "builtin_function",
+      "description": "enumerate - Returns enumerated object with index-value pairs from iterable.",
+      "example": "for i, item in enumerate(my_list): print(f'{i}: {item}')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "zip",
+      "type": "builtin_function",
+      "description": "zip - Combines multiple iterables element-wise into tuples.",
+      "example": "for name, age in zip(names, ages): print(f'{name}: {age}')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "map",
+      "type": "builtin_function",
+      "description": "map - Applies function to every item in iterable and returns iterator.",
+      "example": "squares = list(map(lambda x: x**2, [1, 2, 3, 4]))",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "filter",
+      "type": "builtin_function",
+      "description": "filter - Filters iterable elements for which function returns True.",
+      "example": "evens = list(filter(lambda x: x % 2 == 0, numbers))",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "len",
+      "type": "builtin_function",
+      "description": "len - Returns the length (number of items) of an object.",
+      "example": "length = len(my_list); size = len('Hello World')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "max",
+      "type": "builtin_function",
+      "description": "max - Returns the largest item in iterable or among arguments.",
+      "example": "largest = max(numbers); biggest = max(a, b, c)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "min",
+      "type": "builtin_function",
+      "description": "min - Returns the smallest item in iterable or among arguments.",
+      "example": "smallest = min(numbers); lowest = min(a, b, c)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "sum",
+      "type": "builtin_function",
+      "description": "sum - Returns sum of iterable's numeric items, optionally with start value.",
+      "example": "total = sum(numbers); total = sum(numbers, start=10)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "sorted",
+      "type": "builtin_function",
+      "description": "sorted - Returns new sorted list from iterable items.",
+      "example": "sorted_items = sorted(my_list); sorted_names = sorted(names, key=str.lower)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "reversed",
+      "type": "builtin_function",
+      "description": "reversed - Returns reverse iterator over sequence.",
+      "example": "for item in reversed(my_list): print(item)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "any",
+      "type": "builtin_function",
+      "description": "any - Returns True if any element of iterable is True.",
+      "example": "has_positive = any(x > 0 for x in numbers)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "all",
+      "type": "builtin_function",
+      "description": "all - Returns True if all elements of iterable are True.",
+      "example": "all_positive = all(x > 0 for x in numbers)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "isinstance",
+      "type": "builtin_function",
+      "description": "isinstance - Checks if object is instance of specified class or classes.",
+      "example": "if isinstance(value, (int, float)): process_number(value)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "issubclass",
+      "type": "builtin_function",
+      "description": "issubclass - Checks if class is subclass of specified class or classes.",
+      "example": "if issubclass(MyClass, BaseClass): process_subclass()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "hasattr",
+      "type": "builtin_function",
+      "description": "hasattr - Checks if object has specified attribute.",
+      "example": "if hasattr(obj, 'method_name'): obj.method_name()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "getattr",
+      "type": "builtin_function",
+      "description": "getattr - Gets attribute value from object, with optional default.",
+      "example": "value = getattr(obj, 'attr', 'default_value')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "setattr",
+      "type": "builtin_function",
+      "description": "setattr - Sets attribute value on object.",
+      "example": "setattr(obj, 'new_attr', 'value')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "delattr",
+      "type": "builtin_function",
+      "description": "delattr - Deletes attribute from object.",
+      "example": "delattr(obj, 'unwanted_attr')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "type",
+      "type": "builtin_function",
+      "description": "type - Returns type of object or creates new type with name, bases, and dict.",
+      "example": "obj_type = type(my_object); MyClass = type('MyClass', (), {})",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "super",
+      "type": "builtin_function",
+      "description": "super - Returns proxy object that delegates method calls to parent or sibling class.",
+      "example": "super().__init__(args); super(Child, self).method()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "property",
+      "type": "decorator",
+      "description": "property - Built-in decorator that creates a property attribute, enabling getter/setter methods.",
+      "example": "@property def name(self): return self._name",
+      "category": "decorators"
+    },
+    {
+      "keyword": "staticmethod",
+      "type": "decorator",
+      "description": "staticmethod - Decorator that creates a static method that doesn't receive instance or class.",
+      "example": "@staticmethod def utility_function(x, y): return x + y",
+      "category": "decorators"
+    },
+    {
+      "keyword": "classmethod",
+      "type": "decorator",
+      "description": "classmethod - Decorator that creates a class method receiving the class as first argument.",
+      "example": "@classmethod def from_string(cls, data): return cls(parse(data))",
+      "category": "decorators"
+    },
+    {
+      "keyword": "Exception",
+      "type": "exception",
+      "description": "Exception - Base class for all built-in exceptions except system-exiting exceptions.",
+      "example": "try: risky_code() except Exception as e: log_error(e)",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "ValueError",
+      "type": "exception",
+      "description": "ValueError - Exception raised when function receives argument of right type but inappropriate value.",
+      "example": "if x < 0: raise ValueError('x must be non-negative')",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "TypeError",
+      "type": "exception",
+      "description": "TypeError - Exception raised when operation is applied to object of inappropriate type.",
+      "example": "try: '2' + 2 except TypeError: handle_type_error()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "KeyError",
+      "type": "exception",
+      "description": "KeyError - Exception raised when dictionary key is not found.",
+      "example": "try: value = my_dict[key] except KeyError: handle_missing_key()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "IndexError",
+      "type": "exception",
+      "description": "IndexError - Exception raised when sequence index is out of range.",
+      "example": "try: item = my_list[index] except IndexError: handle_bad_index()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "AttributeError",
+      "type": "exception",
+      "description": "AttributeError - Exception raised when attribute reference or assignment fails.",
+      "example": "try: obj.nonexistent except AttributeError: handle_missing_attr()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "ImportError",
+      "type": "exception",
+      "description": "ImportError - Exception raised when import statement cannot find module or name.",
+      "example": "try: import missing_module except ImportError: use_fallback()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "FileNotFoundError",
+      "type": "exception",
+      "description": "FileNotFoundError - Exception raised when file or directory is requested but doesn't exist.",
+      "example": "try: open('missing.txt') except FileNotFoundError: create_file()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "KeyboardInterrupt",
+      "type": "exception",
+      "description": "KeyboardInterrupt - Exception raised when user hits interrupt key (Ctrl+C).",
+      "example": "try: long_running_task() except KeyboardInterrupt: cleanup()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "__name__",
+      "type": "special_variable",
+      "description": "__name__ - Special variable containing module's name or '__main__' if run as script.",
+      "example": "if __name__ == '__main__': main()",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "__file__",
+      "type": "special_variable",
+      "description": "__file__ - Special variable containing path to current module's file.",
+      "example": "script_dir = os.path.dirname(__file__)",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "__doc__",
+      "type": "special_variable",
+      "description": "__doc__ - Special variable containing module's or function's docstring.",
+      "example": "print(__doc__); print(function.__doc__)",
+      "category": "special_variables"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "def",
+      "description": "Function definition template with parameters and docstring",
+      "content": "def ${1:function_name}(${2:parameters}):\n    \"\"\"${3:Description}\n    \n    Args:\n        ${4:param}: ${5:description}\n    \n    Returns:\n        ${6:description}\n    \"\"\"\n    ${7:pass}",
+      "category": "function"
+    },
+    {
+      "trigger": "class",
+      "description": "Class definition template with constructor",
+      "content": "class ${1:ClassName}:\n    \"\"\"${2:Class description}\"\"\"\n    \n    def __init__(self${3:, parameters}):\n        \"\"\"Initialize the class.\"\"\"\n        ${4:pass}",
+      "category": "class"
+    },
+    {
+      "trigger": "if",
+      "description": "If statement template with optional elif and else",
+      "content": "if ${1:condition}:\n    ${2:pass}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "for",
+      "description": "For loop template for iterating over sequences",
+      "content": "for ${1:item} in ${2:iterable}:\n    ${3:pass}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "while",
+      "description": "While loop template with condition",
+      "content": "while ${1:condition}:\n    ${2:pass}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "try",
+      "description": "Try-except block template for error handling",
+      "content": "try:\n    ${1:pass}\nexcept ${2:Exception} as e:\n    ${3:print(f'Error: {e}')}\nfinally:\n    ${4:pass}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "with",
+      "description": "Context manager template for resource management",
+      "content": "with ${1:expression} as ${2:variable}:\n    ${3:pass}",
+      "category": "context_management"
+    },
+    {
+      "trigger": "lambda",
+      "description": "Lambda function template for anonymous functions",
+      "content": "lambda ${1:args}: ${2:expression}",
+      "category": "function"
+    },
+    {
+      "trigger": "list_comp",
+      "description": "List comprehension template for creating lists",
+      "content": "[${1:expression} for ${2:item} in ${3:iterable}]",
+      "category": "comprehension"
+    },
+    {
+      "trigger": "dict_comp", 
+      "description": "Dictionary comprehension template for creating dictionaries",
+      "content": "{${1:key}: ${2:value} for ${3:item} in ${4:iterable}}",
+      "category": "comprehension"
+    },
+    {
+      "trigger": "import",
+      "description": "Import module template",
+      "content": "import ${1:module}",
+      "category": "import"
+    },
+    {
+      "trigger": "from_import",
+      "description": "From-import template for specific imports",
+      "content": "from ${1:module} import ${2:item}",
+      "category": "import"
+    },
+    {
+      "trigger": "main",
+      "description": "Main execution guard template",
+      "content": "if __name__ == '__main__':\n    ${1:main()}",
+      "category": "main"
+    },
+    {
+      "trigger": "init",
+      "description": "Constructor method template",
+      "content": "def __init__(self${1:, parameters}):\n    \"\"\"Initialize the instance.\"\"\"\n    ${2:pass}",
+      "category": "method"
+    },
+    {
+      "trigger": "str",
+      "description": "String representation method template",
+      "content": "def __str__(self):\n    \"\"\"Return string representation.\"\"\"\n    return ${1:f'{self.__class__.__name__}()'}",
+      "category": "method"
+    },
+    {
+      "trigger": "repr",
+      "description": "Developer representation method template", 
+      "content": "def __repr__(self):\n    \"\"\"Return developer representation.\"\"\"\n    return ${1:f'{self.__class__.__name__}()'}",
+      "category": "method"
+    },
+    {
+      "trigger": "property",
+      "description": "Property decorator template for getter/setter",
+      "content": "@property\ndef ${1:property_name}(self):\n    \"\"\"${2:Property description}\"\"\"\n    return self._${1:property_name}",
+      "category": "property"
+    },
+    {
+      "trigger": "async_def",
+      "description": "Async function definition template",
+      "content": "async def ${1:function_name}(${2:parameters}):\n    \"\"\"${3:Async function description}\"\"\"\n    ${4:pass}",
+      "category": "async"
+    },
+    {
+      "trigger": "dataclass",
+      "description": "Dataclass template for simple data containers",
+      "content": "from dataclasses import dataclass\n\n@dataclass\nclass ${1:ClassName}:\n    \"\"\"${2:Class description}\"\"\"\n    ${3:field}: ${4:Type}",
+      "category": "dataclass"
+    },
+    {
+      "trigger": "pytest",
+      "description": "Pytest test function template",
+      "content": "def test_${1:function_name}():\n    \"\"\"Test ${2:description}.\"\"\"\n    ${3:# Arrange}\n    ${4:# Act}\n    ${5:# Assert}\n    assert ${6:condition}",
+      "category": "testing"
+    },
+    {
+      "trigger": "fixture",
+      "description": "Pytest fixture template",
+      "content": "@pytest.fixture\ndef ${1:fixture_name}():\n    \"\"\"${2:Fixture description}.\"\"\"\n    ${3:# Setup}\n    yield ${4:value}\n    ${5:# Teardown}",
+      "category": "testing"
+    },
+    {
+      "trigger": "unittest_class",
+      "description": "unittest TestCase class template",
+      "content": "import unittest\n\nclass ${1:TestClass}(unittest.TestCase):\n    \"\"\"${2:Test class description}.\"\"\"\n    \n    def setUp(self):\n        \"\"\"Set up test fixtures.\"\"\"\n        ${3:pass}\n    \n    def tearDown(self):\n        \"\"\"Tear down test fixtures.\"\"\"\n        ${4:pass}\n    \n    def test_${5:method_name}(self):\n        \"\"\"Test ${6:description}.\"\"\"\n        ${7:# Test implementation}\n        self.assertEqual(${8:actual}, ${9:expected})\n\nif __name__ == '__main__':\n    unittest.main()",
+      "category": "testing"
+    },
+    {
+      "trigger": "context_manager",
+      "description": "Context manager class template",
+      "content": "class ${1:ContextManager}:\n    \"\"\"${2:Context manager description}.\"\"\"\n    \n    def __init__(self, ${3:args}):\n        ${4:self.resource = args}\n    \n    def __enter__(self):\n        \"\"\"Enter the runtime context.\"\"\"\n        ${5:# Setup code}\n        return ${6:self.resource}\n    \n    def __exit__(self, exc_type, exc_val, exc_tb):\n        \"\"\"Exit the runtime context.\"\"\"\n        ${7:# Cleanup code}\n        if exc_type is not None:\n            ${8:# Handle exception if needed}\n        return ${9:False}  # Don't suppress exceptions",
+      "category": "context_management"
+    },
+    {
+      "trigger": "contextmanager_decorator",
+      "description": "Context manager using @contextmanager decorator",
+      "content": "from contextlib import contextmanager\n\n@contextmanager\ndef ${1:context_name}(${2:args}):\n    \"\"\"${3:Context manager description}.\"\"\"\n    ${4:# Setup}\n    try:\n        yield ${5:resource}\n    finally:\n        ${6:# Cleanup}",
+      "category": "context_management"
+    },
+    {
+      "trigger": "generator",
+      "description": "Generator function template",
+      "content": "def ${1:generator_name}(${2:args}):\n    \"\"\"${3:Generator description}.\n    \n    Yields:\n        ${4:type}: ${5:description}\n    \"\"\"\n    ${6:for item in iterable:}\n        ${7:# Process item}\n        yield ${8:processed_item}",
+      "category": "generator"
+    },
+    {
+      "trigger": "async_generator",
+      "description": "Async generator function template",
+      "content": "async def ${1:async_generator}(${2:args}):\n    \"\"\"${3:Async generator description}.\n    \n    Yields:\n        ${4:type}: ${5:description}\n    \"\"\"\n    ${6:async for item in async_iterable:}\n        ${7:# Process item}\n        yield ${8:processed_item}",
+      "category": "async"
+    },
+    {
+      "trigger": "decorator",
+      "description": "Function decorator template",
+      "content": "def ${1:decorator_name}(func):\n    \"\"\"${2:Decorator description}.\"\"\"\n    from functools import wraps\n    \n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        ${3:# Pre-execution code}\n        result = func(*args, **kwargs)\n        ${4:# Post-execution code}\n        return result\n    \n    return wrapper",
+      "category": "decorators"
+    },
+    {
+      "trigger": "decorator_with_args",
+      "description": "Parameterized decorator template",
+      "content": "def ${1:decorator_name}(${2:decorator_args}):\n    \"\"\"${3:Parameterized decorator description}.\"\"\"\n    def decorator(func):\n        from functools import wraps\n        \n        @wraps(func)\n        def wrapper(*args, **kwargs):\n            ${4:# Use decorator_args here}\n            result = func(*args, **kwargs)\n            return result\n        \n        return wrapper\n    return decorator",
+      "category": "decorators"
+    },
+    {
+      "trigger": "metaclass",
+      "description": "Metaclass template",
+      "content": "class ${1:MetaClass}(type):\n    \"\"\"${2:Metaclass description}.\"\"\"\n    \n    def __new__(cls, name, bases, attrs):\n        \"\"\"Create a new class.\"\"\"\n        ${3:# Modify class creation}\n        return super().__new__(cls, name, bases, attrs)\n    \n    def __init__(cls, name, bases, attrs):\n        \"\"\"Initialize the class.\"\"\"\n        super().__init__(name, bases, attrs)\n        ${4:# Additional initialization}\n\nclass ${5:MyClass}(metaclass=${1:MetaClass}):\n    \"\"\"${6:Class using metaclass}.\"\"\"\n    ${7:pass}",
+      "category": "metaclass"
+    },
+    {
+      "trigger": "abc_class",
+      "description": "Abstract base class template",
+      "content": "from abc import ABC, abstractmethod\n\nclass ${1:AbstractClass}(ABC):\n    \"\"\"${2:Abstract class description}.\"\"\"\n    \n    @abstractmethod\n    def ${3:abstract_method}(self, ${4:args}):\n        \"\"\"${5:Abstract method description}.\"\"\"\n        pass\n    \n    @abstractproperty\n    def ${6:abstract_property}(self):\n        \"\"\"${7:Abstract property description}.\"\"\"\n        pass\n    \n    def ${8:concrete_method}(self):\n        \"\"\"${9:Concrete method description}.\"\"\"\n        ${10:# Implementation}",
+      "category": "abstract"
+    },
+    {
+      "trigger": "enum_class",
+      "description": "Enum class template",
+      "content": "from enum import Enum, auto\n\nclass ${1:MyEnum}(Enum):\n    \"\"\"${2:Enum description}.\"\"\"\n    ${3:OPTION_1} = auto()\n    ${4:OPTION_2} = auto()\n    ${5:OPTION_3} = auto()\n    \n    def ${6:method_name}(self):\n        \"\"\"${7:Method description}.\"\"\"\n        return f\"Value: {self.value}\"",
+      "category": "enum"
+    },
+    {
+      "trigger": "namedtuple",
+      "description": "Named tuple template",
+      "content": "from collections import namedtuple\n\n${1:Point} = namedtuple('${1:Point}', ['${2:x}', '${3:y}'])\n\n# Usage example\n${4:p} = ${1:Point}(${5:1}, ${6:2})\nprint(f\"x: {${4:p}.${2:x}}, y: {${4:p}.${3:y}}\")",
+      "category": "collections"
+    },
+    {
+      "trigger": "typed_dict",
+      "description": "TypedDict template for type hints",
+      "content": "from typing import TypedDict\n\nclass ${1:PersonDict}(TypedDict):\n    \"\"\"${2:TypedDict description}.\"\"\"\n    ${3:name}: str\n    ${4:age}: int\n    ${5:email}: str\n\n# Usage\n${6:person}: ${1:PersonDict} = {\n    '${3:name}': '${7:John Doe}',\n    '${4:age}': ${8:30},\n    '${5:email}': '${9:john@example.com}'\n}",
+      "category": "typing"
+    },
+    {
+      "trigger": "generic_class",
+      "description": "Generic class template with type variables",
+      "content": "from typing import TypeVar, Generic, List\n\nT = TypeVar('T')\n\nclass ${1:Container}(Generic[T]):\n    \"\"\"${2:Generic container description}.\"\"\"\n    \n    def __init__(self) -> None:\n        self._items: List[T] = []\n    \n    def add(self, item: T) -> None:\n        \"\"\"Add item to container.\"\"\"\n        self._items.append(item)\n    \n    def get(self, index: int) -> T:\n        \"\"\"Get item at index.\"\"\"\n        return self._items[index]\n    \n    def __len__(self) -> int:\n        return len(self._items)",
+      "category": "typing"
+    },
+    {
+      "trigger": "protocol",
+      "description": "Protocol template for structural subtyping",
+      "content": "from typing import Protocol\n\nclass ${1:Drawable}(Protocol):\n    \"\"\"${2:Protocol description}.\"\"\"\n    \n    def ${3:draw}(self) -> None:\n        \"\"\"${4:Method description}.\"\"\"\n        ...\n    \n    def ${5:get_area}(self) -> float:\n        \"\"\"${6:Method description}.\"\"\"\n        ...\n\ndef ${7:render}(obj: ${1:Drawable}) -> None:\n    \"\"\"${8:Function using protocol}.\"\"\"\n    obj.${3:draw}()\n    print(f\"Area: {obj.${5:get_area}()}\")",
+      "category": "typing"
+    },
+    {
+      "trigger": "fastapi_app",
+      "description": "FastAPI application template",
+      "content": "from fastapi import FastAPI, HTTPException\nfrom pydantic import BaseModel\nfrom typing import List\n\napp = FastAPI(title=\"${1:My API}\", description=\"${2:API description}\")\n\nclass ${3:Item}(BaseModel):\n    \"\"\"${4:Item model description}.\"\"\"\n    ${5:name}: str\n    ${6:price}: float\n    ${7:is_available}: bool = True\n\n@app.get(\"/\")\nasync def root():\n    \"\"\"Root endpoint.\"\"\"\n    return {\"message\": \"Hello World\"}\n\n@app.get(\"/items/{item_id}\")\nasync def get_item(item_id: int) -> ${3:Item}:\n    \"\"\"Get item by ID.\"\"\"\n    # Mock item\n    return ${3:Item}(${5:name}=\"Example\", ${6:price}=10.99)\n\n@app.post(\"/items/\")\nasync def create_item(item: ${3:Item}) -> ${3:Item}:\n    \"\"\"Create new item.\"\"\"\n    # Process item\n    return item\n\nif __name__ == \"__main__\":\n    import uvicorn\n    uvicorn.run(app, host=\"0.0.0.0\", port=8000)",
+      "category": "web"
+    },
+    {
+      "trigger": "flask_app",
+      "description": "Flask application template",
+      "content": "from flask import Flask, request, jsonify\nfrom flask import render_template\n\napp = Flask(__name__)\napp.config['SECRET_KEY'] = '${1:your-secret-key}'\n\n@app.route('/')\ndef index():\n    \"\"\"Home page.\"\"\"\n    return render_template('index.html')\n\n@app.route('/api/${2:resource}', methods=['GET'])\ndef get_${2:resource}():\n    \"\"\"Get ${2:resource} endpoint.\"\"\"\n    return jsonify({\"${2:resource}\": \"data\"})\n\n@app.route('/api/${2:resource}', methods=['POST'])\ndef create_${2:resource}():\n    \"\"\"Create ${2:resource} endpoint.\"\"\"\n    data = request.get_json()\n    # Process data\n    return jsonify({\"message\": \"Created\", \"data\": data}), 201\n\n@app.errorhandler(404)\ndef not_found(error):\n    \"\"\"Handle 404 errors.\"\"\"\n    return jsonify({\"error\": \"Not found\"}), 404\n\nif __name__ == '__main__':\n    app.run(debug=True, host='0.0.0.0', port=5000)",
+      "category": "web"
+    },
+    {
+      "trigger": "django_model",
+      "description": "Django model template",
+      "content": "from django.db import models\nfrom django.contrib.auth.models import User\n\nclass ${1:MyModel}(models.Model):\n    \"\"\"${2:Model description}.\"\"\"\n    \n    ${3:name} = models.CharField(max_length=${4:100})\n    ${5:description} = models.TextField(blank=True)\n    ${6:created_at} = models.DateTimeField(auto_now_add=True)\n    ${7:updated_at} = models.DateTimeField(auto_now=True)\n    ${8:user} = models.ForeignKey(User, on_delete=models.CASCADE)\n    \n    class Meta:\n        verbose_name = \"${9:My Model}\"\n        verbose_name_plural = \"${10:My Models}\"\n        ordering = ['-${6:created_at}']\n    \n    def __str__(self):\n        return self.${3:name}\n    \n    def ${11:get_absolute_url}(self):\n        from django.urls import reverse\n        return reverse('${12:model-detail}', kwargs={'pk': self.pk})",
+      "category": "django"
+    },
+    {
+      "trigger": "django_view",
+      "description": "Django class-based view template",
+      "content": "from django.views.generic import ListView, DetailView, CreateView\nfrom django.contrib.auth.mixins import LoginRequiredMixin\nfrom django.urls import reverse_lazy\n\nclass ${1:MyModel}ListView(ListView):\n    \"\"\"${2:List view description}.\"\"\"\n    model = ${3:MyModel}\n    template_name = '${4:app/model_list.html}'\n    context_object_name = '${5:objects}'\n    paginate_by = ${6:10}\n    \n    def get_queryset(self):\n        \"\"\"Filter queryset.\"\"\"\n        return super().get_queryset().filter(${7:active=True})\n\nclass ${1:MyModel}DetailView(DetailView):\n    \"\"\"${8:Detail view description}.\"\"\"\n    model = ${3:MyModel}\n    template_name = '${9:app/model_detail.html}'\n    context_object_name = '${10:object}'\n\nclass ${1:MyModel}CreateView(LoginRequiredMixin, CreateView):\n    \"\"\"${11:Create view description}.\"\"\"\n    model = ${3:MyModel}\n    template_name = '${12:app/model_form.html}'\n    fields = ['${13:field1}', '${14:field2}']\n    success_url = reverse_lazy('${15:model-list}')\n    \n    def form_valid(self, form):\n        form.instance.user = self.request.user\n        return super().form_valid(form)",
+      "category": "django"
+    },
+    {
+      "trigger": "sqlalchemy_model",
+      "description": "SQLAlchemy model template",
+      "content": "from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean\nfrom sqlalchemy.ext.declarative import declarative_base\nfrom sqlalchemy.orm import relationship\nfrom datetime import datetime\n\nBase = declarative_base()\n\nclass ${1:User}(Base):\n    \"\"\"${2:User model description}.\"\"\"\n    __tablename__ = '${3:users}'\n    \n    id = Column(Integer, primary_key=True)\n    ${4:username} = Column(String(${5:50}), unique=True, nullable=False)\n    ${6:email} = Column(String(${7:100}), unique=True, nullable=False)\n    ${8:is_active} = Column(Boolean, default=True)\n    ${9:created_at} = Column(DateTime, default=datetime.utcnow)\n    \n    # Relationships\n    ${10:posts} = relationship(\"${11:Post}\", back_populates=\"${12:author}\")\n    \n    def __repr__(self):\n        return f\"<${1:User}(${4:username}='{self.${4:username}}')>\"\n    \n    def __str__(self):\n        return self.${4:username}",
+      "category": "database"
+    },
+    {
+      "trigger": "async_database",
+      "description": "Async database operations template",
+      "content": "import asyncio\nimport aiohttp\nimport asyncpg\nfrom typing import List, Dict, Any\n\nclass ${1:DatabaseManager}:\n    \"\"\"${2:Async database manager}.\"\"\"\n    \n    def __init__(self, database_url: str):\n        self.database_url = database_url\n        self.pool = None\n    \n    async def create_pool(self):\n        \"\"\"Create connection pool.\"\"\"\n        self.pool = await asyncpg.create_pool(self.database_url)\n    \n    async def close_pool(self):\n        \"\"\"Close connection pool.\"\"\"\n        if self.pool:\n            await self.pool.close()\n    \n    async def fetch_all(self, query: str, *args) -> List[Dict[str, Any]]:\n        \"\"\"Fetch all rows.\"\"\"\n        async with self.pool.acquire() as conn:\n            rows = await conn.fetch(query, *args)\n            return [dict(row) for row in rows]\n    \n    async def fetch_one(self, query: str, *args) -> Dict[str, Any]:\n        \"\"\"Fetch one row.\"\"\"\n        async with self.pool.acquire() as conn:\n            row = await conn.fetchrow(query, *args)\n            return dict(row) if row else None\n    \n    async def execute(self, query: str, *args) -> str:\n        \"\"\"Execute query.\"\"\"\n        async with self.pool.acquire() as conn:\n            return await conn.execute(query, *args)\n\n# Usage example\nasync def main():\n    db = ${1:DatabaseManager}(\"postgresql://user:pass@localhost/db\")\n    await db.create_pool()\n    \n    try:\n        users = await db.fetch_all(\"SELECT * FROM users\")\n        print(f\"Found {len(users)} users\")\n    finally:\n        await db.close_pool()\n\nif __name__ == \"__main__\":\n    asyncio.run(main())",
+      "category": "async"
+    },
+    {
+      "trigger": "cli_argparse",
+      "description": "Command line interface with argparse",
+      "content": "import argparse\nimport sys\nfrom pathlib import Path\n\ndef ${1:main}():\n    \"\"\"${2:Main function description}.\"\"\"\n    parser = argparse.ArgumentParser(\n        description=\"${3:Program description}\",\n        formatter_class=argparse.RawDescriptionHelpFormatter\n    )\n    \n    parser.add_argument(\n        '${4:input}',\n        help=\"${5:Input file path}\"\n    )\n    \n    parser.add_argument(\n        '-o', '--output',\n        help=\"${6:Output file path}\",\n        default=\"${7:output.txt}\"\n    )\n    \n    parser.add_argument(\n        '-v', '--verbose',\n        action='store_true',\n        help=\"${8:Enable verbose output}\"\n    )\n    \n    parser.add_argument(\n        '--count',\n        type=int,\n        default=${9:10},\n        help=\"${10:Number of items to process}\"\n    )\n    \n    args = parser.parse_args()\n    \n    # Validate arguments\n    if not Path(args.${4:input}).exists():\n        print(f\"Error: Input file '{args.${4:input}}' does not exist\")\n        sys.exit(1)\n    \n    if args.verbose:\n        print(f\"Processing {args.${4:input}} -> {args.output}\")\n    \n    # Main logic here\n    ${11:process_file(args.input, args.output, args.count)}\n\ndef ${12:process_file}(input_path: str, output_path: str, count: int):\n    \"\"\"${13:Process file function}.\"\"\"\n    ${14:pass}\n\nif __name__ == '__main__':\n    ${1:main}()",
+      "category": "cli"
+    },
+    {
+      "trigger": "logging_setup",
+      "description": "Comprehensive logging setup template",
+      "content": "import logging\nimport logging.handlers\nfrom pathlib import Path\n\ndef setup_logging(\n    level: str = \"INFO\",\n    log_file: str = None,\n    format_string: str = None\n) -> logging.Logger:\n    \"\"\"Set up comprehensive logging.\n    \n    Args:\n        level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)\n        log_file: Optional log file path\n        format_string: Custom format string\n    \n    Returns:\n        Configured logger instance\n    \"\"\"\n    if format_string is None:\n        format_string = (\n            \"%(asctime)s - %(name)s - %(levelname)s - \"\n            \"%(filename)s:%(lineno)d - %(message)s\"\n        )\n    \n    # Create formatter\n    formatter = logging.Formatter(format_string)\n    \n    # Create logger\n    logger = logging.getLogger(\"${1:app_name}\")\n    logger.setLevel(getattr(logging, level.upper()))\n    \n    # Clear existing handlers\n    logger.handlers.clear()\n    \n    # Console handler\n    console_handler = logging.StreamHandler()\n    console_handler.setFormatter(formatter)\n    logger.addHandler(console_handler)\n    \n    # File handler (optional)\n    if log_file:\n        log_path = Path(log_file)\n        log_path.parent.mkdir(parents=True, exist_ok=True)\n        \n        file_handler = logging.handlers.RotatingFileHandler(\n            log_file,\n            maxBytes=10*1024*1024,  # 10MB\n            backupCount=5\n        )\n        file_handler.setFormatter(formatter)\n        logger.addHandler(file_handler)\n    \n    return logger\n\n# Usage example\nif __name__ == \"__main__\":\n    logger = setup_logging(\n        level=\"DEBUG\",\n        log_file=\"logs/app.log\"\n    )\n    \n    logger.debug(\"Debug message\")\n    logger.info(\"Info message\")\n    logger.warning(\"Warning message\")\n    logger.error(\"Error message\")\n    logger.critical(\"Critical message\")",
+      "category": "logging"
+    },
+    {
+      "trigger": "config_manager",
+      "description": "Configuration manager template",
+      "content": "import os\nimport json\nimport yaml\nfrom pathlib import Path\nfrom typing import Dict, Any, Union\nfrom dataclasses import dataclass, field\n\n@dataclass\nclass ${1:AppConfig}:\n    \"\"\"${2:Application configuration}.\"\"\"\n    \n    # Database settings\n    database_url: str = field(default=\"sqlite:///app.db\")\n    database_echo: bool = field(default=False)\n    \n    # Server settings\n    host: str = field(default=\"0.0.0.0\")\n    port: int = field(default=8000)\n    debug: bool = field(default=False)\n    \n    # Logging\n    log_level: str = field(default=\"INFO\")\n    log_file: str = field(default=None)\n    \n    # API settings\n    api_key: str = field(default=\"\")\n    rate_limit: int = field(default=100)\n    \n    @classmethod\n    def from_file(cls, config_path: Union[str, Path]) -> '${1:AppConfig}':\n        \"\"\"Load configuration from file.\"\"\"\n        config_path = Path(config_path)\n        \n        if not config_path.exists():\n            raise FileNotFoundError(f\"Config file not found: {config_path}\")\n        \n        if config_path.suffix.lower() == '.json':\n            with open(config_path) as f:\n                data = json.load(f)\n        elif config_path.suffix.lower() in ['.yml', '.yaml']:\n            with open(config_path) as f:\n                data = yaml.safe_load(f)\n        else:\n            raise ValueError(f\"Unsupported config format: {config_path.suffix}\")\n        \n        return cls(**data)\n    \n    @classmethod\n    def from_env(cls, prefix: str = \"APP_\") -> '${1:AppConfig}':\n        \"\"\"Load configuration from environment variables.\"\"\"\n        config = cls()\n        \n        for field_name in config.__dataclass_fields__:\n            env_name = f\"{prefix}{field_name.upper()}\"\n            env_value = os.getenv(env_name)\n            \n            if env_value is not None:\n                field_type = config.__dataclass_fields__[field_name].type\n                \n                if field_type == bool:\n                    value = env_value.lower() in ('true', '1', 'yes', 'on')\n                elif field_type == int:\n                    value = int(env_value)\n                else:\n                    value = env_value\n                \n                setattr(config, field_name, value)\n        \n        return config\n    \n    def to_dict(self) -> Dict[str, Any]:\n        \"\"\"Convert config to dictionary.\"\"\"\n        return {\n            field.name: getattr(self, field.name)\n            for field in self.__dataclass_fields__.values()\n        }\n    \n    def save_to_file(self, config_path: Union[str, Path]):\n        \"\"\"Save configuration to file.\"\"\"\n        config_path = Path(config_path)\n        config_path.parent.mkdir(parents=True, exist_ok=True)\n        \n        data = self.to_dict()\n        \n        if config_path.suffix.lower() == '.json':\n            with open(config_path, 'w') as f:\n                json.dump(data, f, indent=2)\n        elif config_path.suffix.lower() in ['.yml', '.yaml']:\n            with open(config_path, 'w') as f:\n                yaml.dump(data, f, default_flow_style=False)\n        else:\n            raise ValueError(f\"Unsupported config format: {config_path.suffix}\")\n\n# Usage example\nif __name__ == \"__main__\":\n    # Load from file\n    try:\n        config = ${1:AppConfig}.from_file(\"config.yaml\")\n    except FileNotFoundError:\n        # Use environment variables or defaults\n        config = ${1:AppConfig}.from_env()\n    \n    print(f\"Config: {config}\")\n    \n    # Save current config\n    config.save_to_file(\"current_config.yaml\")",
+      "category": "configuration"
+    }
+  ]
+}

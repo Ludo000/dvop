@@ -81,6 +81,9 @@ fn main() {
                 settings.notify("gtk-application-prefer-dark-theme");
             }
         }
+        
+        // Initialize completion system with JSON data loading
+        completion::initialize_completion();
     });
     
     // Connect the activate signal to the build_ui function with file argument
