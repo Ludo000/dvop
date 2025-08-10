@@ -818,5 +818,6 @@ pub fn setup_keyboard_shortcuts(
     println!("  - Ctrl+Q: Quit application");
     println!("  - Ctrl+Tab/Ctrl+Shift+Tab: Switch between tabs");
     println!("  - Ctrl+PageDown/Ctrl+PageUp: Navigate between tabs");
+    println!("  - Delete: Delete selected file (when file manager has focus)");
     println!("  - Other standard shortcuts (Ctrl+C, Ctrl+V, etc.) handled by GTK");
 }

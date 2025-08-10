@@ -1095,8 +1095,11 @@ fn setup_file_selection_handler(
     // Clone the selection source tracker
     let current_selection_source_clone = current_selection_source.clone();
 
-    // Add keyboard support for file deletion
+    // Add keyboard support for file deletion - attach to window for global access
     let key_controller = EventControllerKey::new();
+    // Set to CAPTURE phase to intercept keys before completion system
+    key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
+    
     let file_list_box_for_key = file_list_box.clone();
     let editor_notebook_for_key = editor_notebook.clone();
     let active_tab_path_for_key = active_tab_path_ref.clone();
@@ -1104,17 +1107,21 @@ fn setup_file_selection_handler(
     let current_dir_for_key = current_dir.clone();
     let window_for_key = window.clone();
     
-    key_controller.connect_key_pressed(move |_controller, keyval, _keycode, _state| {
-        if keyval == gtk4::gdk::Key::Delete {
-            // Get the selected row
+    key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
+        if keyval == gtk4::gdk::Key::Delete && !state.contains(gtk4::gdk::ModifierType::CONTROL_MASK) {
+            println!("DEBUG: Delete key pressed in file handler");
+            
+            // First priority: Check if there's a selected row in the file list
             if let Some(selected_row) = file_list_box_for_key.selected_row() {
                 if let Some(label) = selected_row.child().and_then(|c| c.downcast::<Label>().ok()) {
                     let file_name = label.text();
                     let mut file_path = current_dir_for_key.borrow().clone();
                     file_path.push(&file_name.as_str());
+                    println!("DEBUG: File from selected row: {:?}", file_path);
                     
                     // Only delete files, not directories
                     if file_path.is_file() {
+                        println!("DEBUG: Deleting selected file");
                         handle_file_deletion(
                             &file_path,
                             &window_for_key,
@@ -1125,14 +1132,40 @@ fn setup_file_selection_handler(
                             &file_path_manager_for_key,
                         );
                         return glib::Propagation::Stop;
+                    } else {
+                        println!("DEBUG: Selected item is not a file: {:?}", file_path);
                     }
                 }
             }
+            
+            // Second priority: Check if there's an active tab with a file in current directory
+            else if let Some(active_file) = active_tab_path_for_key.borrow().as_ref() {
+                println!("DEBUG: Checking active tab file: {:?}", active_file);
+                if active_file.parent() == Some(current_dir_for_key.borrow().as_path()) && active_file.is_file() {
+                    println!("DEBUG: Deleting active tab file");
+                    handle_file_deletion(
+                        active_file,
+                        &window_for_key,
+                        &file_list_box_for_key,
+                        &current_dir_for_key,
+                        &active_tab_path_for_key,
+                        &editor_notebook_for_key,
+                        &file_path_manager_for_key,
+                    );
+                    return glib::Propagation::Stop;
+                } else {
+                    println!("DEBUG: Active file is not in current directory: {:?} vs {:?}", 
+                             active_file.parent(), current_dir_for_key.borrow().as_path());
+                }
+            }
+            
+            println!("DEBUG: No file found to delete");
         }
         glib::Propagation::Proceed
     });
     
-    file_list_box.add_controller(key_controller);
+    // Add to window for global key handling, not just file list box
+    window.add_controller(key_controller);
 
     // Add right-click context menu support
     let right_click_gesture = GestureClick::new();
