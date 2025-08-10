@@ -1002,7 +1002,23 @@ fn setup_save_button_handler(
                 );
                 
                 dialog.set_default_response(gtk4::ResponseType::Cancel);
-                // ... (rest of save_as logic, simplified here) ...
+                
+                // Set current folder to match the file manager's current directory
+                let current_dialog_dir_path = current_dir.borrow().clone();
+                let gio_file_result: Result<gtk4::gio::File, glib::Error> = Ok(gtk4::gio::File::for_path(&current_dialog_dir_path));
+                match gio_file_result {
+                    Ok(gfile) => {
+                        if current_dialog_dir_path.is_dir() {
+                            let _ = dialog.set_current_folder(Some(&gfile));
+                        } else if let Some(parent_gfile) = gfile.parent() {
+                            let _ = dialog.set_current_folder(Some(&parent_gfile));
+                        }
+                    }
+                    Err(e) => { 
+                        eprintln!("Failed to create GFile for path {:?}: {}", current_dialog_dir_path, e);
+                    }
+                }
+                
                 let editor_notebook_clone = editor_notebook.clone();
                 let active_tab_path_ref_clone = active_tab_path_ref.clone();
                 let file_path_manager_clone = file_path_manager.clone();
