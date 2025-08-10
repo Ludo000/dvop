@@ -1,0 +1,907 @@
+{
+  "language": "javascript",
+  "description": "JavaScript/TypeScript programming language completion data",
+  "keywords": [
+    {
+      "keyword": "function",
+      "type": "keyword",
+      "description": "function - Declares a function. Functions are reusable blocks of code that can be called with arguments.",
+      "example": "function greet(name) { return 'Hello ' + name; }",
+      "category": "function_declaration"
+    },
+    {
+      "keyword": "var",
+      "type": "keyword",
+      "description": "var - Declares a variable with function scope. Hoisted and can be redeclared. Use let/const instead for modern code.",
+      "example": "var x = 5;",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "let", 
+      "type": "keyword",
+      "description": "let - Declares a block-scoped variable that can be reassigned. Preferred over var for mutable variables.",
+      "example": "let count = 0; count++;",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "const",
+      "type": "keyword",
+      "description": "const - Declares a block-scoped constant that cannot be reassigned. Use for values that won't change.",
+      "example": "const PI = 3.14159;",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "if",
+      "type": "keyword",
+      "description": "if - Conditional statement that executes code based on a boolean condition. Foundation of program logic.",
+      "example": "if (x > 0) { console.log('positive'); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "else",
+      "type": "keyword",
+      "description": "else - Provides alternative execution path when if condition evaluates to false.",
+      "example": "if (x > 0) { } else { console.log('not positive'); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "for",
+      "type": "keyword", 
+      "description": "for - Loop that repeats code a specific number of times with initialization, condition, and increment.",
+      "example": "for (let i = 0; i < 10; i++) { console.log(i); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "while",
+      "type": "keyword",
+      "description": "while - Loop that repeats while a condition remains true. Use when iteration count is unknown.",
+      "example": "while (x < 10) { x++; }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "return",
+      "type": "keyword",
+      "description": "return - Returns a value from a function and immediately exits function execution.",
+      "example": "return x * 2;",
+      "category": "function_control"
+    },
+    {
+      "keyword": "class",
+      "type": "keyword",
+      "description": "class - Declares a class for object-oriented programming. Modern way to create constructor functions.",
+      "example": "class Person { constructor(name) { this.name = name; } }",
+      "category": "class_declaration"
+    },
+    {
+      "keyword": "extends",
+      "type": "keyword",
+      "description": "extends - Creates a class that inherits from another class. Enables classical inheritance patterns.",
+      "example": "class Student extends Person { }",
+      "category": "inheritance"
+    },
+    {
+      "keyword": "super",
+      "type": "keyword",
+      "description": "super - Refers to the parent class. Used to call parent constructor or methods in inheritance.",
+      "example": "super(name);",
+      "category": "inheritance"
+    },
+    {
+      "keyword": "this",
+      "type": "keyword",
+      "description": "this - Refers to the current object instance. Context-dependent and changes based on how function is called.",
+      "example": "this.name = name;",
+      "category": "object_context"
+    },
+    {
+      "keyword": "new",
+      "type": "keyword",
+      "description": "new - Creates a new instance of a class or constructor function. Invokes constructor and returns object.",
+      "example": "const person = new Person('John');",
+      "category": "object_creation"
+    },
+    {
+      "keyword": "try",
+      "type": "keyword",
+      "description": "try - Begins a block that might throw an exception. Must be followed by catch and/or finally.",
+      "example": "try { riskyOperation(); }",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "catch", 
+      "type": "keyword",
+      "description": "catch - Handles exceptions thrown in a try block. Allows graceful error recovery.",
+      "example": "catch (error) { console.error(error); }",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "finally",
+      "type": "keyword",
+      "description": "finally - Code that always executes after try/catch, regardless of success or failure.",
+      "example": "finally { cleanup(); }",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "throw",
+      "type": "keyword",
+      "description": "throw - Throws an exception/error that can be caught by try/catch blocks.",
+      "example": "throw new Error('Something went wrong');",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "async",
+      "type": "keyword", 
+      "description": "async - Declares an asynchronous function that returns a Promise. Enables use of await keyword.",
+      "example": "async function fetchData() { }",
+      "category": "async"
+    },
+    {
+      "keyword": "await",
+      "type": "keyword",
+      "description": "await - Waits for a Promise to resolve. Can only be used inside async functions.",
+      "example": "const data = await fetchData();",
+      "category": "async"
+    },
+    {
+      "keyword": "import",
+      "type": "keyword",
+      "description": "import - Imports modules, functions, or variables from other files. Part of ES6 module system.",
+      "example": "import { useState } from 'react';",
+      "category": "module_system"
+    },
+    {
+      "keyword": "export",
+      "type": "keyword",
+      "description": "export - Exports functions, variables, or classes to be used in other modules.",
+      "example": "export const myFunction = () => {};",
+      "category": "module_system"
+    },
+    {
+      "keyword": "default",
+      "type": "keyword",
+      "description": "default - Used with export/import for default module exports and switch statement default cases.",
+      "example": "export default class MyClass {}",
+      "category": "module_system"
+    },
+    {
+      "keyword": "from",
+      "type": "keyword",
+      "description": "from - Specifies the module path when importing. Used with import statements.",
+      "example": "import { Component } from 'react';",
+      "category": "module_system"
+    },
+    {
+      "keyword": "as",
+      "type": "keyword",
+      "description": "as - Renames imports/exports or used for type assertions in TypeScript.",
+      "example": "import { Component as ReactComponent } from 'react';",
+      "category": "module_system"
+    },
+    {
+      "keyword": "instanceof",
+      "type": "keyword",
+      "description": "instanceof - Tests if an object is an instance of a specific constructor/class.",
+      "example": "obj instanceof Array",
+      "category": "type_checking"
+    },
+    {
+      "keyword": "typeof",
+      "type": "keyword",
+      "description": "typeof - Returns a string indicating the type of the operand.",
+      "example": "typeof variable === 'string'",
+      "category": "type_checking"
+    },
+    {
+      "keyword": "in",
+      "type": "keyword",
+      "description": "in - Tests if a property exists in an object or iterates over object properties.",
+      "example": "'name' in person",
+      "category": "object_operations"
+    },
+    {
+      "keyword": "delete",
+      "type": "keyword",
+      "description": "delete - Removes a property from an object. Use with caution as it affects performance.",
+      "example": "delete obj.property",
+      "category": "object_operations"
+    },
+    {
+      "keyword": "void",
+      "type": "keyword",
+      "description": "void - Evaluates an expression and returns undefined. Often used as void(0).",
+      "example": "void 0",
+      "category": "operators"
+    },
+    {
+      "keyword": "null",
+      "type": "literal",
+      "description": "null - Represents the intentional absence of any object value. Primitive value.",
+      "example": "let value = null;",
+      "category": "primitives"
+    },
+    {
+      "keyword": "undefined",
+      "type": "literal",
+      "description": "undefined - Represents an uninitialized or missing value. Default for unassigned variables.",
+      "example": "let x; // x is undefined",
+      "category": "primitives"
+    },
+    {
+      "keyword": "true",
+      "type": "literal",
+      "description": "true - Boolean literal representing logical truth. Falsy values convert to false.",
+      "example": "const isActive = true;",
+      "category": "primitives"
+    },
+    {
+      "keyword": "false",
+      "type": "literal",
+      "description": "false - Boolean literal representing logical falsehood.",
+      "example": "const isDisabled = false;",
+      "category": "primitives"
+    },
+    {
+      "keyword": "break",
+      "type": "keyword",
+      "description": "break - Exits from a loop or switch statement immediately.",
+      "example": "for (let i = 0; i < 10; i++) { if (i === 5) break; }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "continue",
+      "type": "keyword",
+      "description": "continue - Skips the rest of the current loop iteration and continues with the next.",
+      "example": "for (let i = 0; i < 10; i++) { if (i % 2 === 0) continue; }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "do",
+      "type": "keyword",
+      "description": "do - Part of do-while loop. Executes code at least once before checking condition.",
+      "example": "do { console.log(i); i++; } while (i < 5);",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "switch",
+      "type": "keyword",
+      "description": "switch - Multi-branch conditional statement. More efficient than multiple if-else for many conditions.",
+      "example": "switch (day) { case 'Monday': break; default: break; }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "case",
+      "type": "keyword",
+      "description": "case - Defines a branch in a switch statement. Must be followed by break to prevent fall-through.",
+      "example": "case 'value': console.log('matched'); break;",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "with",
+      "type": "keyword",
+      "description": "with - Extends scope chain with an object. Deprecated and not allowed in strict mode.",
+      "example": "with (obj) { property = value; }",
+      "category": "scope"
+    },
+    {
+      "keyword": "debugger",
+      "type": "keyword",
+      "description": "debugger - Invokes debugging functionality. Causes breakpoint in developer tools.",
+      "example": "debugger; // Browser will pause here",
+      "category": "debugging"
+    },
+    {
+      "keyword": "constructor",
+      "type": "method",
+      "description": "constructor - Special method for creating and initializing class instances.",
+      "example": "constructor(name) { this.name = name; }",
+      "category": "class_methods"
+    },
+    {
+      "keyword": "static",
+      "type": "keyword",
+      "description": "static - Defines static methods/properties that belong to the class, not instances.",
+      "example": "static create() { return new this(); }",
+      "category": "class_methods"
+    },
+    {
+      "keyword": "get",
+      "type": "keyword",
+      "description": "get - Defines a getter method that appears as a property but executes code when accessed.",
+      "example": "get fullName() { return this.first + ' ' + this.last; }",
+      "category": "accessors"
+    },
+    {
+      "keyword": "set",
+      "type": "keyword",
+      "description": "set - Defines a setter method that executes when a property is assigned a value.",
+      "example": "set fullName(name) { [this.first, this.last] = name.split(' '); }",
+      "category": "accessors"
+    },
+    {
+      "keyword": "yield",
+      "type": "keyword",
+      "description": "yield - Pauses generator function execution and returns a value to the caller.",
+      "example": "function* gen() { yield 1; yield 2; }",
+      "category": "generators"
+    },
+    {
+      "keyword": "of",
+      "type": "keyword",
+      "description": "of - Used in for-of loops to iterate over iterable objects (arrays, strings, etc.).",
+      "example": "for (const item of array) { console.log(item); }",
+      "category": "iteration"
+    },
+    {
+      "keyword": "Symbol",
+      "type": "constructor",
+      "description": "Symbol - Creates unique primitive values. Often used for object property keys.",
+      "example": "const sym = Symbol('description');",
+      "category": "primitives"
+    },
+    {
+      "keyword": "BigInt",
+      "type": "constructor", 
+      "description": "BigInt - Represents integers larger than Number.MAX_SAFE_INTEGER.",
+      "example": "const big = BigInt(9007199254740991);",
+      "category": "primitives"
+    },
+    {
+      "keyword": "Array",
+      "type": "constructor",
+      "description": "Array - Global object for creating arrays. Provides array methods and properties.",
+      "example": "const arr = new Array(1, 2, 3);",
+      "category": "built_ins"
+    },
+    {
+      "keyword": "Object",
+      "type": "constructor",
+      "description": "Object - Base constructor for all objects. Provides utility methods like Object.keys().",
+      "example": "const obj = Object.create(null);",
+      "category": "built_ins"
+    },
+    {
+      "keyword": "String",
+      "type": "constructor",
+      "description": "String - Global object for working with strings. Provides string methods and properties.",
+      "example": "const str = new String('hello');",
+      "category": "built_ins"
+    },
+    {
+      "keyword": "Number",
+      "type": "constructor",
+      "description": "Number - Global object for working with numbers. Provides number methods and constants.",
+      "example": "const num = Number.parseFloat('3.14');",
+      "category": "built_ins"
+    },
+    {
+      "keyword": "Boolean",
+      "type": "constructor",
+      "description": "Boolean - Global object for working with boolean values. Can convert values to boolean.",
+      "example": "const bool = Boolean(value);",
+      "category": "built_ins"
+    },
+    {
+      "keyword": "Date",
+      "type": "constructor",
+      "description": "Date - Creates date objects for working with dates and times.",
+      "example": "const now = new Date();",
+      "category": "built_ins"
+    },
+    {
+      "keyword": "RegExp",
+      "type": "constructor",
+      "description": "RegExp - Creates regular expression objects for pattern matching in strings.",
+      "example": "const regex = new RegExp('pattern', 'flags');",
+      "category": "built_ins"
+    },
+    {
+      "keyword": "Error",
+      "type": "constructor",
+      "description": "Error - Creates error objects. Base class for all JavaScript errors.",
+      "example": "throw new Error('Something went wrong');",
+      "category": "error_types"
+    },
+    {
+      "keyword": "TypeError",
+      "type": "constructor",
+      "description": "TypeError - Error thrown when a value is not of the expected type.",
+      "example": "throw new TypeError('Expected string');",
+      "category": "error_types"
+    },
+    {
+      "keyword": "ReferenceError",
+      "type": "constructor",
+      "description": "ReferenceError - Error thrown when referencing an undefined variable.",
+      "example": "// ReferenceError: undefinedVar is not defined",
+      "category": "error_types"
+    },
+    {
+      "keyword": "SyntaxError",
+      "type": "constructor",
+      "description": "SyntaxError - Error thrown when JavaScript engine encounters invalid syntax.",
+      "example": "// SyntaxError: Unexpected token",
+      "category": "error_types"
+    },
+    {
+      "keyword": "Promise",
+      "type": "constructor",
+      "description": "Promise - Represents eventual completion or failure of asynchronous operation.",
+      "example": "const promise = new Promise((resolve, reject) => {});",
+      "category": "async"
+    },
+    {
+      "keyword": "Map",
+      "type": "constructor",
+      "description": "Map - Collection of keyed values where keys can be any type. Maintains insertion order.",
+      "example": "const map = new Map([['key', 'value']]);",
+      "category": "collections"
+    },
+    {
+      "keyword": "Set",
+      "type": "constructor",
+      "description": "Set - Collection of unique values of any type. Automatically removes duplicates.",
+      "example": "const set = new Set([1, 2, 2, 3]); // Set {1, 2, 3}",
+      "category": "collections"
+    },
+    {
+      "keyword": "WeakMap",
+      "type": "constructor",
+      "description": "WeakMap - Collection of key-value pairs where keys are objects and weakly referenced.",
+      "example": "const wm = new WeakMap(); wm.set(obj, 'value');",
+      "category": "collections"
+    },
+    {
+      "keyword": "WeakSet",
+      "type": "constructor",
+      "description": "WeakSet - Collection of unique objects that are weakly referenced.",
+      "example": "const ws = new WeakSet(); ws.add(obj);",
+      "category": "collections"
+    },
+    {
+      "keyword": "Proxy",
+      "type": "constructor",
+      "description": "Proxy - Intercepts and customizes operations performed on objects (property lookup, assignment, etc.).",
+      "example": "const proxy = new Proxy(target, handler);",
+      "category": "meta_programming"
+    },
+    {
+      "keyword": "Reflect",
+      "type": "object",
+      "description": "Reflect - Provides methods for interceptable JavaScript operations. Used with Proxy.",
+      "example": "Reflect.get(target, property);",
+      "category": "meta_programming"
+    },
+    {
+      "keyword": "JSON",
+      "type": "object",
+      "description": "JSON - Global object for parsing and stringifying JSON data.",
+      "example": "const obj = JSON.parse(jsonString);",
+      "category": "serialization"
+    },
+    {
+      "keyword": "Math",
+      "type": "object",
+      "description": "Math - Global object providing mathematical constants and functions.",
+      "example": "Math.random(); Math.floor(3.7);",
+      "category": "math"
+    },
+    {
+      "keyword": "console",
+      "type": "object",
+      "description": "console - Global object for logging and debugging. Available in browsers and Node.js.",
+      "example": "console.log('message'); console.error('error');",
+      "category": "debugging"
+    },
+    {
+      "keyword": "window",
+      "type": "object",
+      "description": "window - Global object in browsers representing the browser window. Contains DOM APIs.",
+      "example": "window.location.href; window.alert('message');",
+      "category": "browser_apis"
+    },
+    {
+      "keyword": "document",
+      "type": "object",
+      "description": "document - Represents the HTML document in browsers. Entry point for DOM manipulation.",
+      "example": "document.getElementById('myId');",
+      "category": "dom"
+    },
+    {
+      "keyword": "global",
+      "type": "object",
+      "description": "global - Global object in Node.js. Similar to window in browsers.",
+      "example": "global.process; global.Buffer;",
+      "category": "nodejs"
+    },
+    {
+      "keyword": "process",
+      "type": "object",
+      "description": "process - Node.js global providing information about and control over the current process.",
+      "example": "process.env.NODE_ENV; process.argv;",
+      "category": "nodejs"
+    },
+    {
+      "keyword": "Buffer",
+      "type": "constructor",
+      "description": "Buffer - Node.js global for handling binary data. Similar to Uint8Array.",
+      "example": "const buf = Buffer.from('hello', 'utf8');",
+      "category": "nodejs"
+    },
+    {
+      "keyword": "require",
+      "type": "function",
+      "description": "require - Node.js function for importing modules. CommonJS module system.",
+      "example": "const fs = require('fs');",
+      "category": "nodejs"
+    },
+    {
+      "keyword": "module",
+      "type": "object",
+      "description": "module - Node.js object representing the current module. Has exports property.",
+      "example": "module.exports = { myFunction };",
+      "category": "nodejs"
+    },
+    {
+      "keyword": "exports",
+      "type": "object",
+      "description": "exports - Node.js shorthand for module.exports. Used to export values from modules.",
+      "example": "exports.myFunction = () => {};",
+      "category": "nodejs"
+    },
+    {
+      "keyword": "__dirname",
+      "type": "variable",
+      "description": "__dirname - Node.js global containing directory name of current module.",
+      "example": "const filePath = path.join(__dirname, 'file.txt');",
+      "category": "nodejs"
+    },
+    {
+      "keyword": "__filename",
+      "type": "variable",
+      "description": "__filename - Node.js global containing filename of current module.",
+      "example": "console.log('Current file:', __filename);",
+      "category": "nodejs"
+    },
+    {
+      "keyword": "setTimeout",
+      "type": "function",
+      "description": "setTimeout - Executes a function after a specified delay in milliseconds.",
+      "example": "setTimeout(() => console.log('delayed'), 1000);",
+      "category": "timers"
+    },
+    {
+      "keyword": "setInterval",
+      "type": "function",
+      "description": "setInterval - Executes a function repeatedly with a fixed delay between calls.",
+      "example": "const id = setInterval(() => console.log('tick'), 1000);",
+      "category": "timers"
+    },
+    {
+      "keyword": "clearTimeout",
+      "type": "function",
+      "description": "clearTimeout - Cancels a timeout previously established by setTimeout.",
+      "example": "clearTimeout(timeoutId);",
+      "category": "timers"
+    },
+    {
+      "keyword": "clearInterval",
+      "type": "function",
+      "description": "clearInterval - Cancels an interval previously established by setInterval.",
+      "example": "clearInterval(intervalId);",
+      "category": "timers"
+    },
+    {
+      "keyword": "fetch",
+      "type": "function",
+      "description": "fetch - Modern API for making HTTP requests. Returns a Promise that resolves to Response.",
+      "example": "fetch('/api/data').then(res => res.json());",
+      "category": "http"
+    },
+    {
+      "keyword": "localStorage",
+      "type": "object",
+      "description": "localStorage - Browser API for storing data locally with no expiration time.",
+      "example": "localStorage.setItem('key', 'value');",
+      "category": "storage"
+    },
+    {
+      "keyword": "sessionStorage",
+      "type": "object",
+      "description": "sessionStorage - Browser API for storing data for the duration of the page session.",
+      "example": "sessionStorage.getItem('key');",
+      "category": "storage"
+    },
+    {
+      "keyword": "addEventListener",
+      "type": "method",
+      "description": "addEventListener - DOM method to register event listeners on elements.",
+      "example": "element.addEventListener('click', handler);",
+      "category": "events"
+    },
+    {
+      "keyword": "removeEventListener",
+      "type": "method",
+      "description": "removeEventListener - DOM method to remove previously registered event listeners.",
+      "example": "element.removeEventListener('click', handler);",
+      "category": "events"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "function",
+      "description": "Function declaration template with parameters and return",
+      "content": "function ${1:functionName}(${2:parameters}) {\n    ${3:// function body}\n    return ${4:result};\n}",
+      "category": "function"
+    },
+    {
+      "trigger": "arrow",
+      "description": "Arrow function template with concise syntax",
+      "content": "const ${1:functionName} = (${2:parameters}) => {\n    ${3:// function body}\n    return ${4:result};\n};",
+      "category": "function"
+    },
+    {
+      "trigger": "arrow_inline",
+      "description": "Inline arrow function template",
+      "content": "(${1:parameters}) => ${2:expression}",
+      "category": "function"
+    },
+    {
+      "trigger": "class",
+      "description": "Class declaration template with constructor and methods",
+      "content": "class ${1:ClassName} {\n    constructor(${2:parameters}) {\n        ${3:// initialize properties}\n    }\n    \n    ${4:methodName}() {\n        ${5:// method body}\n    }\n}",
+      "category": "class"
+    },
+    {
+      "trigger": "if",
+      "description": "If statement template with optional else",
+      "content": "if (${1:condition}) {\n    ${2:// if body}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "if_else",
+      "description": "If-else statement template",
+      "content": "if (${1:condition}) {\n    ${2:// if body}\n} else {\n    ${3:// else body}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "for",
+      "description": "For loop template with initialization, condition, and increment",
+      "content": "for (let ${1:i} = 0; ${1:i} < ${2:length}; ${1:i}++) {\n    ${3:// loop body}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "for_of",
+      "description": "For-of loop template for iterating over arrays and iterables",
+      "content": "for (const ${1:item} of ${2:iterable}) {\n    ${3:// loop body}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "for_in",
+      "description": "For-in loop template for iterating over object properties", 
+      "content": "for (const ${1:key} in ${2:object}) {\n    if (${2:object}.hasOwnProperty(${1:key})) {\n        ${3:// loop body}\n    }\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "while",
+      "description": "While loop template with condition",
+      "content": "while (${1:condition}) {\n    ${2:// loop body}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "try",
+      "description": "Try-catch block template for error handling",
+      "content": "try {\n    ${1:// code that might throw}\n} catch (${2:error}) {\n    ${3:console.error(error);}\n} finally {\n    ${4:// cleanup code}\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "async",
+      "description": "Async function template",
+      "content": "async function ${1:functionName}(${2:parameters}) {\n    try {\n        const ${3:result} = await ${4:asyncOperation};\n        return ${3:result};\n    } catch (${5:error}) {\n        console.error(${5:error});\n        throw ${5:error};\n    }\n}",
+      "category": "async"
+    },
+    {
+      "trigger": "promise",
+      "description": "Promise constructor template",
+      "content": "new Promise((resolve, reject) => {\n    ${1:// async operation}\n    if (${2:success}) {\n        resolve(${3:result});\n    } else {\n        reject(${4:error});\n    }\n})",
+      "category": "async"
+    },
+    {
+      "trigger": "import",
+      "description": "ES6 import statement template",
+      "content": "import { ${1:namedExport} } from '${2:module}';",
+      "category": "module"
+    },
+    {
+      "trigger": "import_default",
+      "description": "Default import statement template",
+      "content": "import ${1:defaultExport} from '${2:module}';",
+      "category": "module"
+    },
+    {
+      "trigger": "export",
+      "description": "Named export template",
+      "content": "export const ${1:exportName} = ${2:value};",
+      "category": "module"
+    },
+    {
+      "trigger": "export_default",
+      "description": "Default export template",
+      "content": "export default ${1:value};",
+      "category": "module"
+    },
+    {
+      "trigger": "switch",
+      "description": "Switch statement template with cases",
+      "content": "switch (${1:expression}) {\n    case ${2:value1}:\n        ${3:// case 1}\n        break;\n    case ${4:value2}:\n        ${5:// case 2}\n        break;\n    default:\n        ${6:// default case}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "ternary",
+      "description": "Ternary operator template",
+      "content": "${1:condition} ? ${2:trueValue} : ${3:falseValue}",
+      "category": "conditional"
+    },
+    {
+      "trigger": "destructure_array",
+      "description": "Array destructuring template",
+      "content": "const [${1:first}, ${2:second}] = ${3:array};",
+      "category": "destructuring"
+    },
+    {
+      "trigger": "destructure_object",
+      "description": "Object destructuring template",
+      "content": "const { ${1:property1}, ${2:property2} } = ${3:object};",
+      "category": "destructuring"
+    },
+    {
+      "trigger": "spread_array",
+      "description": "Array spread operator template",
+      "content": "const ${1:newArray} = [...${2:array1}, ...${3:array2}];",
+      "category": "spread"
+    },
+    {
+      "trigger": "spread_object",
+      "description": "Object spread operator template", 
+      "content": "const ${1:newObject} = { ...${2:object1}, ...${3:object2} };",
+      "category": "spread"
+    },
+    {
+      "trigger": "fetch",
+      "description": "Fetch API template for HTTP requests",
+      "content": "fetch('${1:url}')\n    .then(response => response.json())\n    .then(data => {\n        ${2:// handle data}\n    })\n    .catch(error => {\n        console.error('Error:', error);\n    });",
+      "category": "http"
+    },
+    {
+      "trigger": "fetch_async",
+      "description": "Async/await fetch template",
+      "content": "async function ${1:fetchData}() {\n    try {\n        const response = await fetch('${2:url}');\n        const data = await response.json();\n        return data;\n    } catch (error) {\n        console.error('Error:', error);\n        throw error;\n    }\n}",
+      "category": "http"
+    },
+    {
+      "trigger": "react_component",
+      "description": "React functional component template",
+      "content": "import React from 'react';\n\nconst ${1:ComponentName} = ({ ${2:props} }) => {\n    const [${3:state}, ${4:setState}] = React.useState(${5:initialState});\n    \n    React.useEffect(() => {\n        ${6:// Side effect logic}\n    }, [${7:dependencies}]);\n    \n    return (\n        <div>\n            ${8:// Component JSX}\n        </div>\n    );\n};\n\nexport default ${1:ComponentName};",
+      "category": "react"
+    },
+    {
+      "trigger": "react_hook",
+      "description": "Custom React hook template",
+      "content": "import { useState, useEffect } from 'react';\n\nconst use${1:HookName} = (${2:parameters}) => {\n    const [${3:state}, ${4:setState}] = useState(${5:initialState});\n    \n    useEffect(() => {\n        ${6:// Hook logic}\n        \n        return () => {\n            ${7:// Cleanup}\n        };\n    }, [${8:dependencies}]);\n    \n    return { ${3:state}, ${4:setState} };\n};\n\nexport default use${1:HookName};",
+      "category": "react"
+    },
+    {
+      "trigger": "react_context",
+      "description": "React Context provider template",
+      "content": "import React, { createContext, useContext, useReducer } from 'react';\n\n// Context\nconst ${1:MyContext} = createContext();\n\n// Actions\nconst ${2:MY_ACTION} = '${2:MY_ACTION}';\n\n// Reducer\nconst ${3:reducer} = (state, action) => {\n    switch (action.type) {\n        case ${2:MY_ACTION}:\n            return { ...state, ${4:property}: action.payload };\n        default:\n            return state;\n    }\n};\n\n// Provider\nexport const ${1:MyContext}Provider = ({ children }) => {\n    const [state, dispatch] = useReducer(${3:reducer}, ${5:initialState});\n    \n    const value = {\n        state,\n        dispatch,\n        ${6:// Action creators}\n        ${7:actionName}: (payload) => dispatch({ type: ${2:MY_ACTION}, payload }),\n    };\n    \n    return (\n        <${1:MyContext}.Provider value={value}>\n            {children}\n        </${1:MyContext}.Provider>\n    );\n};\n\n// Hook\nexport const use${1:MyContext} = () => {\n    const context = useContext(${1:MyContext});\n    if (!context) {\n        throw new Error('use${1:MyContext} must be used within a ${1:MyContext}Provider');\n    }\n    return context;\n};",
+      "category": "react"
+    },
+    {
+      "trigger": "express_server",
+      "description": "Express.js server template",
+      "content": "const express = require('express');\nconst cors = require('cors');\nconst morgan = require('morgan');\nconst helmet = require('helmet');\n\nconst app = express();\nconst PORT = process.env.PORT || ${1:3000};\n\n// Middleware\napp.use(helmet());\napp.use(cors());\napp.use(morgan('combined'));\napp.use(express.json({ limit: '10mb' }));\napp.use(express.urlencoded({ extended: true }));\n\n// Routes\napp.get('/', (req, res) => {\n    res.json({ message: '${2:API is running!}' });\n});\n\napp.get('/api/${3:resource}', (req, res) => {\n    try {\n        ${4:// Get logic}\n        res.json({ data: ${5:result} });\n    } catch (error) {\n        res.status(500).json({ error: error.message });\n    }\n});\n\napp.post('/api/${3:resource}', (req, res) => {\n    try {\n        const { ${6:body} } = req.body;\n        ${7:// Post logic}\n        res.status(201).json({ data: ${8:result} });\n    } catch (error) {\n        res.status(500).json({ error: error.message });\n    }\n});\n\n// Error handling middleware\napp.use((err, req, res, next) => {\n    console.error(err.stack);\n    res.status(500).json({ error: 'Something broke!' });\n});\n\n// 404 handler\napp.use((req, res) => {\n    res.status(404).json({ error: 'Route not found' });\n});\n\napp.listen(PORT, () => {\n    console.log(`Server running on port ${PORT}`);\n});",
+      "category": "nodejs"
+    },
+    {
+      "trigger": "express_middleware",
+      "description": "Express middleware template",
+      "content": "const ${1:middlewareName} = (${2:options = {}}) => {\n    return (req, res, next) => {\n        try {\n            ${3:// Middleware logic}\n            \n            // Modify request/response\n            req.${4:customProperty} = ${5:value};\n            \n            // Continue to next middleware\n            next();\n        } catch (error) {\n            next(error);\n        }\n    };\n};\n\nmodule.exports = ${1:middlewareName};",
+      "category": "nodejs"
+    },
+    {
+      "trigger": "mongoose_schema",
+      "description": "Mongoose schema template",
+      "content": "const mongoose = require('mongoose');\nconst { Schema } = mongoose;\n\nconst ${1:ModelName}Schema = new Schema({\n    ${2:name}: {\n        type: String,\n        required: [true, '${3:Name is required}'],\n        trim: true,\n        maxlength: [${4:100}, '${5:Name too long}']\n    },\n    ${6:email}: {\n        type: String,\n        required: true,\n        unique: true,\n        lowercase: true,\n        validate: {\n            validator: function(v) {\n                return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v);\n            },\n            message: 'Invalid email format'\n        }\n    },\n    ${7:createdAt}: {\n        type: Date,\n        default: Date.now\n    },\n    ${8:updatedAt}: {\n        type: Date,\n        default: Date.now\n    }\n}, {\n    timestamps: true,\n    toJSON: { virtuals: true },\n    toObject: { virtuals: true }\n});\n\n// Virtual properties\n${1:ModelName}Schema.virtual('${9:virtualProperty}').get(function() {\n    return ${10:// computed value};\n});\n\n// Instance methods\n${1:ModelName}Schema.methods.${11:methodName} = function() {\n    ${12:// instance method logic}\n    return this;\n};\n\n// Static methods\n${1:ModelName}Schema.statics.${13:staticMethod} = function(${14:params}) {\n    ${15:// static method logic}\n    return this.find({ ${16:condition} });\n};\n\n// Pre middleware\n${1:ModelName}Schema.pre('save', function(next) {\n    this.${8:updatedAt} = Date.now();\n    next();\n});\n\nconst ${1:ModelName} = mongoose.model('${1:ModelName}', ${1:ModelName}Schema);\n\nmodule.exports = ${1:ModelName};",
+      "category": "database"
+    },
+    {
+      "trigger": "jest_test",
+      "description": "Jest test suite template",
+      "content": "describe('${1:ComponentName}', () => {\n    beforeEach(() => {\n        ${2:// Setup before each test}\n    });\n    \n    afterEach(() => {\n        ${3:// Cleanup after each test}\n    });\n    \n    beforeAll(() => {\n        ${4:// Setup before all tests}\n    });\n    \n    afterAll(() => {\n        ${5:// Cleanup after all tests}\n    });\n    \n    test('should ${6:test description}', () => {\n        // Arrange\n        const ${7:input} = ${8:testData};\n        const ${9:expected} = ${10:expectedResult};\n        \n        // Act\n        const ${11:result} = ${12:functionToTest}(${7:input});\n        \n        // Assert\n        expect(${11:result}).toBe(${9:expected});\n    });\n    \n    test('should handle ${13:edge case}', () => {\n        expect(() => {\n            ${14:functionThatShouldThrow}();\n        }).toThrow(${15:ExpectedError});\n    });\n    \n    test('should ${16:async test description}', async () => {\n        const ${17:result} = await ${18:asyncFunction}();\n        expect(${17:result}).resolves.toBe(${19:expected});\n    });\n});",
+      "category": "testing"
+    },
+    {
+      "trigger": "jest_mock",
+      "description": "Jest mock template",
+      "content": "// Mock external module\njest.mock('${1:module-name}', () => ({\n    ${2:functionName}: jest.fn(),\n    ${3:default}: jest.fn(() => (${4:mockImplementation})),\n}));\n\n// Mock implementation\nconst ${5:mockFunction} = jest.fn();\n${5:mockFunction}.mockImplementation((${6:params}) => {\n    return ${7:mockReturn};\n});\n\n// Mock resolved promise\n${5:mockFunction}.mockResolvedValue(${8:resolvedValue});\n\n// Mock rejected promise\n${5:mockFunction}.mockRejectedValue(new Error('${9:error message}'));\n\n// Restore original implementation\nafterEach(() => {\n    jest.clearAllMocks();\n});",
+      "category": "testing"
+    },
+    {
+      "trigger": "generator_function",
+      "description": "Generator function template",
+      "content": "function* ${1:generatorName}(${2:params}) {\n    ${3:let current = 0};\n    \n    while (${4:condition}) {\n        const ${5:value} = yield ${6:current};\n        ${7:// Process yielded value if provided}\n        if (${5:value} !== undefined) {\n            ${8:// Handle input}\n        }\n        ${9:current++};\n    }\n    \n    return ${10:finalValue};\n}\n\n// Usage:\n// const gen = ${1:generatorName}();\n// console.log(gen.next().value);\n// console.log(gen.next(inputValue).value);",
+      "category": "generators"
+    },
+    {
+      "trigger": "async_generator",
+      "description": "Async generator template",
+      "content": "async function* ${1:asyncGeneratorName}(${2:params}) {\n    ${3:let current = 0};\n    \n    while (${4:condition}) {\n        // Async operation\n        const ${5:data} = await ${6:asyncOperation}(${3:current});\n        \n        yield ${5:data};\n        ${3:current}++;\n        \n        // Optional delay\n        await new Promise(resolve => setTimeout(resolve, ${7:1000}));\n    }\n}\n\n// Usage:\n// for await (const item of ${1:asyncGeneratorName}()) {\n//     console.log(item);\n// }",
+      "category": "generators"
+    },
+    {
+      "trigger": "worker_thread",
+      "description": "Web Worker template",
+      "content": "// Main thread\nconst worker = new Worker('${1:worker.js}');\n\n// Send data to worker\nworker.postMessage({\n    type: '${2:ACTION_TYPE}',\n    payload: ${3:data}\n});\n\n// Listen for messages from worker\nworker.onmessage = function(e) {\n    const { type, payload, error } = e.data;\n    \n    switch (type) {\n        case '${4:RESULT}':\n            ${5:handleResult}(payload);\n            break;\n        case '${6:ERROR}':\n            ${7:handleError}(error);\n            break;\n        default:\n            console.warn('Unknown message type:', type);\n    }\n};\n\n// Handle worker errors\nworker.onerror = function(error) {\n    console.error('Worker error:', error);\n};\n\n// Terminate worker when done\n// worker.terminate();",
+      "category": "web_workers"
+    },
+    {
+      "trigger": "worker_script",
+      "description": "Web Worker script template",
+      "content": "// Worker script (${1:worker.js})\n\n// Listen for messages from main thread\nself.onmessage = function(e) {\n    const { type, payload } = e.data;\n    \n    try {\n        switch (type) {\n            case '${2:ACTION_TYPE}':\n                const result = ${3:processData}(payload);\n                \n                // Send result back to main thread\n                self.postMessage({\n                    type: '${4:RESULT}',\n                    payload: result\n                });\n                break;\n                \n            default:\n                throw new Error(`Unknown action type: ${type}`);\n        }\n    } catch (error) {\n        // Send error back to main thread\n        self.postMessage({\n            type: '${5:ERROR}',\n            error: error.message\n        });\n    }\n};\n\nfunction ${3:processData}(data) {\n    ${6:// Heavy computation here}\n    return ${7:result};\n}",
+      "category": "web_workers"
+    },
+    {
+      "trigger": "service_worker",
+      "description": "Service Worker template",
+      "content": "// Service Worker (${1:sw.js})\n\nconst CACHE_NAME = '${2:app-cache-v1}';\nconst urlsToCache = [\n    '/',\n    '/css/style.css',\n    '/js/app.js',\n    ${3:// Add your assets}\n];\n\n// Install event - cache resources\nself.addEventListener('install', (event) => {\n    event.waitUntil(\n        caches.open(CACHE_NAME)\n            .then((cache) => {\n                return cache.addAll(urlsToCache);\n            })\n    );\n});\n\n// Fetch event - serve from cache\nself.addEventListener('fetch', (event) => {\n    event.respondWith(\n        caches.match(event.request)\n            .then((response) => {\n                // Return cached version or fetch from network\n                return response || fetch(event.request);\n            })\n    );\n});\n\n// Activate event - clean up old caches\nself.addEventListener('activate', (event) => {\n    event.waitUntil(\n        caches.keys().then((cacheNames) => {\n            return Promise.all(\n                cacheNames.map((cacheName) => {\n                    if (cacheName !== CACHE_NAME) {\n                        return caches.delete(cacheName);\n                    }\n                })\n            );\n        })\n    );\n});",
+      "category": "pwa"
+    },
+    {
+      "trigger": "websocket_client",
+      "description": "WebSocket client template",
+      "content": "class ${1:WebSocketClient} {\n    constructor(url, protocols = []) {\n        this.url = url;\n        this.protocols = protocols;\n        this.ws = null;\n        this.reconnectAttempts = 0;\n        this.maxReconnectAttempts = ${2:5};\n        this.reconnectDelay = ${3:1000};\n        this.eventHandlers = new Map();\n    }\n    \n    connect() {\n        try {\n            this.ws = new WebSocket(this.url, this.protocols);\n            \n            this.ws.onopen = (event) => {\n                console.log('WebSocket connected');\n                this.reconnectAttempts = 0;\n                this.emit('open', event);\n            };\n            \n            this.ws.onmessage = (event) => {\n                const data = JSON.parse(event.data);\n                this.emit('message', data);\n            };\n            \n            this.ws.onclose = (event) => {\n                console.log('WebSocket disconnected');\n                this.emit('close', event);\n                this.handleReconnect();\n            };\n            \n            this.ws.onerror = (error) => {\n                console.error('WebSocket error:', error);\n                this.emit('error', error);\n            };\n        } catch (error) {\n            console.error('Failed to create WebSocket:', error);\n        }\n    }\n    \n    send(data) {\n        if (this.ws && this.ws.readyState === WebSocket.OPEN) {\n            this.ws.send(JSON.stringify(data));\n        } else {\n            console.error('WebSocket is not open');\n        }\n    }\n    \n    close() {\n        if (this.ws) {\n            this.ws.close();\n        }\n    }\n    \n    on(event, handler) {\n        if (!this.eventHandlers.has(event)) {\n            this.eventHandlers.set(event, []);\n        }\n        this.eventHandlers.get(event).push(handler);\n    }\n    \n    off(event, handler) {\n        const handlers = this.eventHandlers.get(event);\n        if (handlers) {\n            const index = handlers.indexOf(handler);\n            if (index > -1) {\n                handlers.splice(index, 1);\n            }\n        }\n    }\n    \n    emit(event, data) {\n        const handlers = this.eventHandlers.get(event);\n        if (handlers) {\n            handlers.forEach(handler => handler(data));\n        }\n    }\n    \n    handleReconnect() {\n        if (this.reconnectAttempts < this.maxReconnectAttempts) {\n            this.reconnectAttempts++;\n            console.log(`Reconnecting... Attempt ${this.reconnectAttempts}`);\n            \n            setTimeout(() => {\n                this.connect();\n            }, this.reconnectDelay * this.reconnectAttempts);\n        }\n    }\n}\n\n// Usage:\n// const client = new ${1:WebSocketClient}('ws://localhost:8080');\n// client.on('message', (data) => console.log(data));\n// client.connect();",
+      "category": "websockets"
+    },
+    {
+      "trigger": "indexed_db",
+      "description": "IndexedDB wrapper template",
+      "content": "class ${1:IndexedDBWrapper} {\n    constructor(dbName, version = 1) {\n        this.dbName = dbName;\n        this.version = version;\n        this.db = null;\n    }\n    \n    async open(stores = []) {\n        return new Promise((resolve, reject) => {\n            const request = indexedDB.open(this.dbName, this.version);\n            \n            request.onerror = () => reject(request.error);\n            request.onsuccess = () => {\n                this.db = request.result;\n                resolve(this.db);\n            };\n            \n            request.onupgradeneeded = (event) => {\n                const db = event.target.result;\n                \n                stores.forEach(({ name, keyPath, indexes = [] }) => {\n                    if (!db.objectStoreNames.contains(name)) {\n                        const store = db.createObjectStore(name, { keyPath });\n                        \n                        indexes.forEach(({ name: indexName, keyPath: indexKeyPath, unique = false }) => {\n                            store.createIndex(indexName, indexKeyPath, { unique });\n                        });\n                    }\n                });\n            };\n        });\n    }\n    \n    async get(storeName, key) {\n        return new Promise((resolve, reject) => {\n            const transaction = this.db.transaction([storeName], 'readonly');\n            const store = transaction.objectStore(storeName);\n            const request = store.get(key);\n            \n            request.onerror = () => reject(request.error);\n            request.onsuccess = () => resolve(request.result);\n        });\n    }\n    \n    async put(storeName, data) {\n        return new Promise((resolve, reject) => {\n            const transaction = this.db.transaction([storeName], 'readwrite');\n            const store = transaction.objectStore(storeName);\n            const request = store.put(data);\n            \n            request.onerror = () => reject(request.error);\n            request.onsuccess = () => resolve(request.result);\n        });\n    }\n    \n    async delete(storeName, key) {\n        return new Promise((resolve, reject) => {\n            const transaction = this.db.transaction([storeName], 'readwrite');\n            const store = transaction.objectStore(storeName);\n            const request = store.delete(key);\n            \n            request.onerror = () => reject(request.error);\n            request.onsuccess = () => resolve(request.result);\n        });\n    }\n    \n    async getAll(storeName) {\n        return new Promise((resolve, reject) => {\n            const transaction = this.db.transaction([storeName], 'readonly');\n            const store = transaction.objectStore(storeName);\n            const request = store.getAll();\n            \n            request.onerror = () => reject(request.error);\n            request.onsuccess = () => resolve(request.result);\n        });\n    }\n    \n    close() {\n        if (this.db) {\n            this.db.close();\n        }\n    }\n}\n\n// Usage:\n// const db = new ${1:IndexedDBWrapper}('${2:MyApp}', 1);\n// await db.open([{\n//     name: '${3:users}',\n//     keyPath: 'id',\n//     indexes: [{ name: 'email', keyPath: 'email', unique: true }]\n// }]);\n// await db.put('${3:users}', { id: 1, name: 'John', email: 'john@example.com' });",
+      "category": "storage"
+    },
+    {
+      "trigger": "custom_element",
+      "description": "Custom Web Component template",
+      "content": "class ${1:MyElement} extends HTMLElement {\n    constructor() {\n        super();\n        \n        // Create shadow DOM\n        this.attachShadow({ mode: 'open' });\n        \n        // Initialize state\n        this.state = {\n            ${2:count}: 0\n        };\n        \n        // Bind methods\n        this.${3:handleClick} = this.${3:handleClick}.bind(this);\n    }\n    \n    // Observed attributes\n    static get observedAttributes() {\n        return ['${4:attribute}'];\n    }\n    \n    // Lifecycle callbacks\n    connectedCallback() {\n        this.render();\n        this.attachEventListeners();\n    }\n    \n    disconnectedCallback() {\n        this.removeEventListeners();\n    }\n    \n    attributeChangedCallback(name, oldValue, newValue) {\n        if (oldValue !== newValue) {\n            this.render();\n        }\n    }\n    \n    // Getters and setters\n    get ${4:attribute}() {\n        return this.getAttribute('${4:attribute}');\n    }\n    \n    set ${4:attribute}(value) {\n        this.setAttribute('${4:attribute}', value);\n    }\n    \n    // Event handlers\n    ${3:handleClick}() {\n        this.state.${2:count}++;\n        this.render();\n        \n        // Dispatch custom event\n        this.dispatchEvent(new CustomEvent('${5:count-changed}', {\n            detail: { count: this.state.${2:count} },\n            bubbles: true\n        }));\n    }\n    \n    // Event listeners\n    attachEventListeners() {\n        const button = this.shadowRoot.querySelector('button');\n        if (button) {\n            button.addEventListener('click', this.${3:handleClick});\n        }\n    }\n    \n    removeEventListeners() {\n        const button = this.shadowRoot.querySelector('button');\n        if (button) {\n            button.removeEventListener('click', this.${3:handleClick});\n        }\n    }\n    \n    // Render method\n    render() {\n        this.shadowRoot.innerHTML = `\n            <style>\n                :host {\n                    display: block;\n                    padding: 16px;\n                    border: 1px solid #ccc;\n                    border-radius: 4px;\n                }\n                \n                button {\n                    padding: 8px 16px;\n                    background: #007bff;\n                    color: white;\n                    border: none;\n                    border-radius: 4px;\n                    cursor: pointer;\n                }\n                \n                button:hover {\n                    background: #0056b3;\n                }\n            </style>\n            \n            <div>\n                <h3>${6:My Custom Element}</h3>\n                <p>Count: ${this.state.${2:count}}</p>\n                <p>Attribute: ${this.${4:attribute} || 'Not set'}</p>\n                <button>Click me</button>\n            </div>\n        `;\n    }\n}\n\n// Register the custom element\ncustomElements.define('${7:my-element}', ${1:MyElement});\n\n// Usage in HTML: <${7:my-element} ${4:attribute}=\"value\"></${7:my-element}>",
+      "category": "web_components"
+    },
+    {
+      "trigger": "module_pattern",
+      "description": "JavaScript Module Pattern template",
+      "content": "const ${1:MyModule} = (function() {\n    // Private variables\n    let ${2:privateVar} = ${3:initialValue};\n    const ${4:privateArray} = [];\n    \n    // Private methods\n    function ${5:privateMethod}(${6:params}) {\n        ${7:// Private method logic}\n        return ${8:result};\n    }\n    \n    function ${9:anotherPrivateMethod}() {\n        ${10:// Another private method}\n    }\n    \n    // Public API\n    return {\n        // Public methods\n        ${11:publicMethod}: function(${12:params}) {\n            ${13:// Public method logic}\n            return ${5:privateMethod}(${12:params});\n        },\n        \n        ${14:getData}: function() {\n            return ${2:privateVar};\n        },\n        \n        ${15:setData}: function(value) {\n            ${2:privateVar} = value;\n        },\n        \n        ${16:addItem}: function(item) {\n            ${4:privateArray}.push(item);\n        },\n        \n        ${17:getItems}: function() {\n            return [...${4:privateArray}]; // Return copy\n        },\n        \n        // Public properties\n        version: '${18:1.0.0}',\n        \n        // Initialization\n        init: function(${19:config}) {\n            ${20:// Module initialization}\n            return this;\n        }\n    };\n})();\n\n// Usage:\n// ${1:MyModule}.init(${21:config});\n// ${1:MyModule}.${11:publicMethod}(${22:args});",
+      "category": "patterns"
+    },
+    {
+      "trigger": "observer_pattern",
+      "description": "Observer Pattern template",
+      "content": "class ${1:Subject} {\n    constructor() {\n        this.observers = [];\n        this.state = ${2:null};\n    }\n    \n    subscribe(observer) {\n        if (typeof observer.update !== 'function') {\n            throw new Error('Observer must have an update method');\n        }\n        \n        this.observers.push(observer);\n    }\n    \n    unsubscribe(observer) {\n        const index = this.observers.indexOf(observer);\n        if (index > -1) {\n            this.observers.splice(index, 1);\n        }\n    }\n    \n    notify(data) {\n        this.observers.forEach(observer => {\n            observer.update(this, data);\n        });\n    }\n    \n    setState(newState) {\n        this.state = newState;\n        this.notify(newState);\n    }\n    \n    getState() {\n        return this.state;\n    }\n}\n\nclass ${3:Observer} {\n    constructor(name) {\n        this.name = name;\n    }\n    \n    update(subject, data) {\n        console.log(`${this.name} received update:`, data);\n        ${4:// Handle the update}\n    }\n}\n\n// Usage:\n// const subject = new ${1:Subject}();\n// const observer1 = new ${3:Observer}('Observer 1');\n// const observer2 = new ${3:Observer}('Observer 2');\n// \n// subject.subscribe(observer1);\n// subject.subscribe(observer2);\n// \n// subject.setState('${5:new state}'); // Both observers will be notified",
+      "category": "patterns"
+    },
+    {
+      "trigger": "singleton_pattern",
+      "description": "Singleton Pattern template",
+      "content": "class ${1:Singleton} {\n    constructor() {\n        if (${1:Singleton}.instance) {\n            return ${1:Singleton}.instance;\n        }\n        \n        // Initialize instance properties\n        this.${2:data} = ${3:initialValue};\n        this.${4:config} = {};\n        \n        ${1:Singleton}.instance = this;\n        return this;\n    }\n    \n    // Static method to get instance\n    static getInstance() {\n        if (!${1:Singleton}.instance) {\n            ${1:Singleton}.instance = new ${1:Singleton}();\n        }\n        return ${1:Singleton}.instance;\n    }\n    \n    // Instance methods\n    ${5:getData}() {\n        return this.${2:data};\n    }\n    \n    ${6:setData}(value) {\n        this.${2:data} = value;\n    }\n    \n    ${7:configure}(config) {\n        this.${4:config} = { ...this.${4:config}, ...config };\n    }\n    \n    ${8:reset}() {\n        this.${2:data} = ${3:initialValue};\n        this.${4:config} = {};\n    }\n}\n\n// Prevent direct instantiation\nObject.freeze(${1:Singleton});\n\n// Usage:\n// const instance1 = ${1:Singleton}.getInstance();\n// const instance2 = ${1:Singleton}.getInstance();\n// console.log(instance1 === instance2); // true",
+      "category": "patterns"
+    },
+    {
+      "trigger": "factory_pattern",
+      "description": "Factory Pattern template",
+      "content": "// Product classes\nclass ${1:ConcreteProductA} {\n    constructor(${2:params}) {\n        this.${3:type} = '${4:A}';\n        this.${5:properties} = ${2:params};\n    }\n    \n    ${6:operation}() {\n        return `${4:A} operation with ${this.${5:properties}}`;\n    }\n}\n\nclass ${7:ConcreteProductB} {\n    constructor(${2:params}) {\n        this.${3:type} = '${8:B}';\n        this.${5:properties} = ${2:params};\n    }\n    \n    ${6:operation}() {\n        return `${8:B} operation with ${this.${5:properties}}`;\n    }\n}\n\n// Factory class\nclass ${9:ProductFactory} {\n    static create(type, ${2:params}) {\n        switch (type.toLowerCase()) {\n            case '${10:a}':\n                return new ${1:ConcreteProductA}(${2:params});\n            case '${11:b}':\n                return new ${7:ConcreteProductB}(${2:params});\n            default:\n                throw new Error(`Unknown product type: ${type}`);\n        }\n    }\n    \n    // Alternative: registry-based factory\n    static registry = new Map();\n    \n    static register(type, constructor) {\n        ${9:ProductFactory}.registry.set(type, constructor);\n    }\n    \n    static createFromRegistry(type, ${2:params}) {\n        const Constructor = ${9:ProductFactory}.registry.get(type);\n        if (!Constructor) {\n            throw new Error(`Unknown product type: ${type}`);\n        }\n        return new Constructor(${2:params});\n    }\n}\n\n// Register products (optional)\n${9:ProductFactory}.register('${10:a}', ${1:ConcreteProductA});\n${9:ProductFactory}.register('${11:b}', ${7:ConcreteProductB});\n\n// Usage:\n// const productA = ${9:ProductFactory}.create('${10:a}', ${12:params});\n// const productB = ${9:ProductFactory}.createFromRegistry('${11:b}', ${12:params});",
+      "category": "patterns"
+    },
+    {
+      "trigger": "debounce_throttle",
+      "description": "Debounce and throttle utility functions",
+      "content": "// Debounce function - delays execution until after delay has passed since last call\nfunction debounce(func, delay) {\n    let timeoutId;\n    \n    return function debounced(...args) {\n        const context = this;\n        \n        clearTimeout(timeoutId);\n        timeoutId = setTimeout(() => {\n            func.apply(context, args);\n        }, delay);\n    };\n}\n\n// Throttle function - limits execution to at most once per delay period\nfunction throttle(func, delay) {\n    let lastCallTime = 0;\n    let timeoutId;\n    \n    return function throttled(...args) {\n        const context = this;\n        const now = Date.now();\n        \n        if (now - lastCallTime >= delay) {\n            // Execute immediately if enough time has passed\n            lastCallTime = now;\n            func.apply(context, args);\n        } else {\n            // Schedule execution at the end of the current period\n            clearTimeout(timeoutId);\n            timeoutId = setTimeout(() => {\n                lastCallTime = Date.now();\n                func.apply(context, args);\n            }, delay - (now - lastCallTime));\n        }\n    };\n}\n\n// Enhanced debounce with immediate option\nfunction debounceAdvanced(func, delay, immediate = false) {\n    let timeoutId;\n    \n    return function debouncedAdvanced(...args) {\n        const context = this;\n        const callNow = immediate && !timeoutId;\n        \n        clearTimeout(timeoutId);\n        timeoutId = setTimeout(() => {\n            timeoutId = null;\n            if (!immediate) func.apply(context, args);\n        }, delay);\n        \n        if (callNow) func.apply(context, args);\n    };\n}\n\n// Usage examples:\n// const debouncedSearch = debounce((query) => {\n//     console.log('Searching for:', query);\n// }, 300);\n// \n// const throttledScroll = throttle(() => {\n//     console.log('Scroll event handled');\n// }, 100);",
+      "category": "utilities"
+    }
+  ]
+}

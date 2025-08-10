@@ -1,0 +1,1419 @@
+{
+  "language": "rust",
+  "description": "Rust programming language completion data",
+  "keywords": [
+    {
+      "keyword": "let",
+      "type": "keyword",
+      "description": "let - Creates a new variable binding. By default variables are immutable. Use 'let mut' to make them changeable.",
+      "example": "let name = \"Alice\"; let mut count = 0;",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "mut",
+      "type": "keyword", 
+      "description": "mut - Makes a variable mutable so you can change its value after creation. Essential for variables that need to be modified.",
+      "example": "let mut score = 0; score += 10;",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "fn",
+      "type": "keyword",
+      "description": "fn - Defines a function that can be called to execute code. Functions help organize code and enable reuse.",
+      "example": "fn greet(name: &str) { println!(\"Hello, {}!\", name); }",
+      "category": "function_declaration"
+    },
+    {
+      "keyword": "pub", 
+      "type": "keyword",
+      "description": "pub - Makes items (functions, structs, modules) accessible from outside their current module. Controls code visibility and API design.",
+      "example": "pub fn public_api() {}",
+      "category": "visibility"
+    },
+    {
+      "keyword": "struct",
+      "type": "keyword",
+      "description": "struct - Creates a custom data type by grouping related fields together. The foundation of data modeling in Rust.",
+      "example": "struct Person { name: String, age: u32 }",
+      "category": "type_declaration"
+    },
+    {
+      "keyword": "enum",
+      "type": "keyword", 
+      "description": "enum - Defines a type that can be one of several different variants. Perfect for representing choices or states.",
+      "example": "enum Status { Loading, Success(String), Error }",
+      "category": "type_declaration"
+    },
+    {
+      "keyword": "impl",
+      "type": "keyword",
+      "description": "impl - Adds methods and functionality to structs and enums. This is how you define behavior for your custom types.",
+      "example": "impl Person { fn greet(&self) { println!(\"Hi, I'm {}\", self.name); } }",
+      "category": "implementation"
+    },
+    {
+      "keyword": "trait",
+      "type": "keyword",
+      "description": "trait - Defines shared behavior that different types can implement. Like interfaces in other languages but more powerful.",
+      "example": "trait Drawable { fn draw(&self); }",
+      "category": "trait_declaration"
+    },
+    {
+      "keyword": "if",
+      "type": "keyword",
+      "description": "if - Executes code conditionally based on a boolean expression. The cornerstone of program logic and decision making.",
+      "example": "if temperature > 30 { println!(\"It's hot!\"); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "match",
+      "type": "keyword",
+      "description": "match - Compares a value against patterns and executes corresponding code. More powerful than switch statements - ensures all cases are handled.",
+      "example": "match result { Ok(value) => use_value(value), Err(e) => handle_error(e) }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "for",
+      "type": "keyword",
+      "description": "for - Iterates over collections, ranges, or anything that implements Iterator. The most common way to loop in Rust.",
+      "example": "for item in &my_list { println!(\"{}\", item); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "while",
+      "type": "keyword", 
+      "description": "while - Repeats code as long as a condition remains true. Perfect for processing until a goal is reached.",
+      "example": "while !queue.is_empty() { process(queue.pop()); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "loop",
+      "type": "keyword",
+      "description": "loop - Creates an infinite loop that runs until you explicitly break out of it. Useful for event loops and continuous processing.",
+      "example": "loop { if should_stop() { break; } process(); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "break",
+      "type": "keyword",
+      "description": "break - Immediately exits the current loop, skipping any remaining iterations. Use to stop looping when a condition is met.",
+      "example": "for x in data { if x == target { break; } }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "continue",
+      "type": "keyword",
+      "description": "continue - Skips the rest of the current loop iteration and jumps to the next one. Use to skip processing certain items.",
+      "example": "for x in data { if x < 0 { continue; } process(x); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "return",
+      "type": "keyword",
+      "description": "return - Immediately exits a function and optionally returns a value to the caller.",
+      "example": "fn divide(a: f64, b: f64) -> Option<f64> { if b == 0.0 { return None; } Some(a / b) }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "use",
+      "type": "keyword",
+      "description": "use - Imports items from other modules into the current scope, avoiding repetitive module paths.",
+      "example": "use std::collections::HashMap; // Now you can use HashMap directly",
+      "category": "module_system"
+    },
+    {
+      "keyword": "mod",
+      "type": "keyword", 
+      "description": "mod - Organizes code into modules for better structure and namespace management. Helps keep large projects organized.",
+      "example": "mod database { pub fn connect() {} }",
+      "category": "module_system"
+    },
+    {
+      "keyword": "async",
+      "type": "keyword",
+      "description": "async - Makes a function asynchronous, returning a Future that can be awaited. Essential for concurrent programming.",
+      "example": "async fn fetch_data() -> Result<String, Error> { /* */ }",
+      "category": "async"
+    },
+    {
+      "keyword": "await",
+      "type": "keyword", 
+      "description": "await - Waits for an async operation to complete, yielding control to other tasks while waiting.",
+      "example": "let data = fetch_from_server().await?;",
+      "category": "async"
+    },
+    {
+      "keyword": "static",
+      "type": "keyword",
+      "description": "static - Creates a global variable that exists for the entire program lifetime. Use sparingly for truly global state.",
+      "example": "static COUNTER: AtomicUsize = AtomicUsize::new(0);",
+      "category": "declaration"
+    },
+    {
+      "keyword": "const",
+      "type": "keyword",
+      "description": "const - Declares a constant value that's computed at compile time and never changes.",
+      "example": "const MAX_USERS: usize = 1000;",
+      "category": "declaration"
+    },
+    {
+      "keyword": "else",
+      "type": "keyword",
+      "description": "else - Provides alternative code to execute when the if condition is false.",
+      "example": "if sunny { go_outside(); } else { stay_inside(); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "self",
+      "type": "keyword",
+      "description": "self - Refers to the current module or the instance of a struct in methods.",
+      "example": "fn method(&self) { self.field }",
+      "category": "reference"
+    },
+    {
+      "keyword": "Self",
+      "type": "keyword",
+      "description": "Self - A type alias for the current type. Makes code cleaner in impl blocks.",
+      "example": "fn new() -> Self { Self { field: 0 } }",
+      "category": "reference"
+    },
+    {
+      "keyword": "where",
+      "type": "keyword",
+      "description": "where - Adds constraints to generic types, making complex type bounds more readable.",
+      "example": "fn process<T>(item: T) where T: Clone + Debug { /* */ }",
+      "category": "generic"
+    },
+    {
+      "keyword": "unsafe",
+      "type": "keyword",
+      "description": "unsafe - Allows operations that bypass Rust's safety guarantees. Use only when absolutely necessary.",
+      "example": "unsafe { *raw_pointer }",
+      "category": "safety"
+    },
+    {
+      "keyword": "extern",
+      "type": "keyword",
+      "description": "extern - Declares functions from other languages (like C) or specifies calling conventions.",
+      "example": "extern \"C\" { fn printf(format: *const c_char, ...) -> c_int; }",
+      "category": "ffi"
+    },
+    {
+      "keyword": "crate",
+      "type": "keyword",
+      "description": "crate - Refers to the root of the current compilation unit. Use to access items from your crate's root module.",
+      "example": "crate::utils::helper_function();",
+      "category": "module"
+    },
+    {
+      "keyword": "super",
+      "type": "keyword",
+      "description": "super - Refers to the parent module in the module hierarchy. Use to access items one level up.",
+      "example": "super::parent_function();",
+      "category": "module"
+    },
+    {
+      "keyword": "as",
+      "type": "keyword",
+      "description": "as - Performs explicit type conversion between compatible types.",
+      "example": "let x = 42i32 as f64;",
+      "category": "conversion"
+    },
+    {
+      "keyword": "in",
+      "type": "keyword",
+      "description": "in - Specifies what to iterate over in for loops.",
+      "example": "for item in &collection { process(item); }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "type",
+      "type": "keyword",
+      "description": "type - Creates a type alias to give a new name to an existing type.",
+      "example": "type UserId = u64;",
+      "category": "type_alias"
+    },
+    {
+      "keyword": "move",
+      "type": "keyword",
+      "description": "move - Forces a closure to take ownership of all captured variables instead of borrowing them.",
+      "example": "let closure = move |x| { expensive_data.process(x) };",
+      "category": "closure"
+    },
+    {
+      "keyword": "ref",
+      "type": "keyword",
+      "description": "ref - Creates a reference to a value in pattern matching instead of moving it.",
+      "example": "match &value { ref inner => use_reference(inner) }",
+      "category": "pattern_matching"
+    },
+    {
+      "keyword": "dyn",
+      "type": "keyword",
+      "description": "dyn - Indicates a trait object for dynamic dispatch at runtime.",
+      "example": "Box<dyn Draw>",
+      "category": "trait_object"
+    },
+    {
+      "keyword": "String",
+      "type": "type",
+      "description": "String - Stores owned, growable UTF-8 text that you can modify. Use when you need to build, modify, or own text data.",
+      "example": "let mut name = String::from(\"Hello\"); name.push_str(\", World!\");",
+      "category": "string_types"
+    },
+    {
+      "keyword": "str",
+      "type": "type",
+      "description": "str - References immutable text data (string slice). Use &str for reading text without owning it.",
+      "example": "fn greet(name: &str) { println!(\"Hello, {}!\", name); }",
+      "category": "string_types"
+    },
+    {
+      "keyword": "Vec",
+      "type": "type",
+      "description": "Vec - Stores a growable list of items on the heap. Use when you need a dynamic array that can change size.",
+      "example": "let mut scores = Vec::new(); scores.push(95);",
+      "category": "collections"
+    },
+    {
+      "keyword": "Option",
+      "type": "type",
+      "description": "Option - Represents a value that might exist (Some) or not exist (None). Use instead of null to safely handle missing values.",
+      "example": "fn find_user(id: u32) -> Option<User> { /* */ }",
+      "category": "option_result"
+    },
+    {
+      "keyword": "Result",
+      "type": "type",
+      "description": "Result - Represents either success (Ok) or failure (Err). Use for operations that can fail and need error handling.",
+      "example": "fn parse_number(s: &str) -> Result<i32, ParseIntError> { s.parse() }",
+      "category": "option_result"
+    },
+    {
+      "keyword": "Some",
+      "type": "enum_variant",
+      "description": "Some - Wraps a value inside an Option to indicate that the value exists.",
+      "example": "Some(42)",
+      "category": "option_result"
+    },
+    {
+      "keyword": "None",
+      "type": "enum_variant", 
+      "description": "None - Represents the absence of a value in an Option.",
+      "example": "if list.is_empty() { None } else { Some(list[0]) }",
+      "category": "option_result"
+    },
+    {
+      "keyword": "Ok",
+      "type": "enum_variant",
+      "description": "Ok - Wraps a successful value in a Result.",
+      "example": "Ok(\"Success!\".to_string())",
+      "category": "option_result"
+    },
+    {
+      "keyword": "Err",
+      "type": "enum_variant",
+      "description": "Err - Wraps an error value in a Result.",
+      "example": "Err(\"File not found\".to_string())",
+      "category": "option_result"
+    },
+    {
+      "keyword": "Box",
+      "type": "type",
+      "description": "Box - Allocates values on the heap instead of the stack. Use for large objects, recursive data structures, or trait objects.",
+      "example": "let big_data = Box::new([0; 1000000]);",
+      "category": "smart_pointers"
+    },
+    {
+      "keyword": "Arc",
+      "type": "type",
+      "description": "Arc - Enables multiple owners to share read-only data across threads safely.",
+      "example": "let shared_data = Arc::new(expensive_computation());",
+      "category": "smart_pointers"
+    },
+    {
+      "keyword": "Rc",
+      "type": "type",
+      "description": "Rc - Enables multiple owners to share data within a single thread.",
+      "example": "let shared = Rc::new(data); let copy = shared.clone();",
+      "category": "smart_pointers"
+    },
+    {
+      "keyword": "HashMap",
+      "type": "type",
+      "description": "HashMap - Stores key-value pairs with fast lookups, insertions, and deletions.",
+      "example": "let mut scores = HashMap::new(); scores.insert(\"Alice\", 95);",
+      "category": "collections"
+    },
+    {
+      "keyword": "HashSet",
+      "type": "type",
+      "description": "HashSet - Stores unique values with fast membership testing.",
+      "example": "let mut seen = HashSet::new(); seen.insert(user_id);",
+      "category": "collections"
+    },
+    {
+      "keyword": "u8",
+      "type": "primitive",
+      "description": "u8 - Stores small unsigned integers (0 to 255). Perfect for bytes, RGB color values, or small positive counts.",
+      "example": "let red: u8 = 255;",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "u16",
+      "type": "primitive",
+      "description": "u16 - Stores medium unsigned integers (0 to 65,535). Use for port numbers, Unicode code points.",
+      "example": "let port: u16 = 8080;",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "u32",
+      "type": "primitive",
+      "description": "u32 - Stores large unsigned integers. Use for IDs, large counts, or when you need more range than u16.",
+      "example": "let user_id: u32 = 1_234_567;",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "u64",
+      "type": "primitive",
+      "description": "u64 - Stores very large unsigned integers. Use for file sizes, large timestamps, or very big counts.",
+      "example": "let file_size: u64 = 1_073_741_824; // 1GB",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "i8",
+      "type": "primitive",
+      "description": "i8 - Stores small signed integers (-128 to 127). Use when memory is tight.",
+      "example": "let temperature_offset: i8 = -40;",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "i16",
+      "type": "primitive",
+      "description": "i16 - Stores medium signed integers (-32,768 to 32,767). Use for coordinates, small measurements.",
+      "example": "let altitude: i16 = 8848;",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "i32",
+      "type": "primitive",
+      "description": "i32 - The default integer type for most whole numbers. Good performance and sufficient range.",
+      "example": "let count = 42; // automatically i32",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "i64",
+      "type": "primitive",
+      "description": "i64 - Stores large signed integers. Use for timestamps, file sizes, large counts.",
+      "example": "let timestamp: i64 = 1640995200;",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "f32",
+      "type": "primitive",
+      "description": "f32 - Stores single-precision floating point numbers. Use when memory is tight.",
+      "example": "let pi: f32 = 3.14159;",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "f64",
+      "type": "primitive",
+      "description": "f64 - The default floating point type with double precision. Use for scientific calculations.",
+      "example": "let precise_pi = 3.141592653589793; // automatically f64",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "bool",
+      "type": "primitive",
+      "description": "bool - Stores true or false values for logical operations.",
+      "example": "let is_valid = true; if is_valid { proceed(); }",
+      "category": "primitive"
+    },
+    {
+      "keyword": "char",
+      "type": "primitive",
+      "description": "char - Stores a single Unicode character (4 bytes). Use for individual characters, emojis.",
+      "example": "let letter: char = 'A'; let emoji: char = '🦀';",
+      "category": "primitive"
+    },
+    {
+      "keyword": "usize",
+      "type": "primitive",
+      "description": "usize - Unsigned integer the same size as a pointer. Use for array lengths, vector indices.",
+      "example": "let len: usize = vec.len();",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "isize",
+      "type": "primitive",
+      "description": "isize - Integer the same size as a pointer. Use for array indexing and memory offsets.",
+      "example": "let index: isize = vec.len() as isize - 1;",
+      "category": "numeric_types"
+    },
+    {
+      "keyword": "Copy",
+      "type": "trait",
+      "description": "Copy - Trait for types that can be copied bit-for-bit. Enables implicit copying instead of moving.",
+      "example": "#[derive(Copy, Clone)] struct Point { x: i32, y: i32 }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Clone",
+      "type": "trait",
+      "description": "Clone - Trait for explicit duplication via clone() method. More flexible than Copy.",
+      "example": "let vec2 = vec1.clone(); // explicit cloning",
+      "category": "traits"
+    },
+    {
+      "keyword": "Debug",
+      "type": "trait",
+      "description": "Debug - Trait for formatting with {:?}. Essential for debugging and printing.",
+      "example": "#[derive(Debug)] struct User { name: String }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Display",
+      "type": "trait",
+      "description": "Display - Trait for user-facing formatting with {}. Implement for custom string representation.",
+      "example": "impl Display for User { fn fmt(&self, f: &mut Formatter) -> Result { write!(f, \"User: {}\", self.name) } }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Default",
+      "type": "trait",
+      "description": "Default - Trait providing default values. Use default() to create instances with sensible defaults.",
+      "example": "#[derive(Default)] struct Config { timeout: u32, retries: u32 }",
+      "category": "traits"
+    },
+    {
+      "keyword": "PartialEq",
+      "type": "trait",
+      "description": "PartialEq - Trait for partial equality comparison using == and !=.",
+      "example": "#[derive(PartialEq)] struct Point { x: i32, y: i32 }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Eq",
+      "type": "trait",
+      "description": "Eq - Trait for full equality. Requires PartialEq and indicates reflexive equality.",
+      "example": "#[derive(PartialEq, Eq)] struct Id(u32);",
+      "category": "traits"
+    },
+    {
+      "keyword": "PartialOrd",
+      "type": "trait",
+      "description": "PartialOrd - Trait for partial ordering comparison. Enables <, <=, >, >= operators.",
+      "example": "#[derive(PartialEq, PartialOrd)] struct Priority(u32);",
+      "category": "traits"
+    },
+    {
+      "keyword": "Ord",
+      "type": "trait",
+      "description": "Ord - Trait for total ordering. Enables sorting and use in BTreeMap keys.",
+      "example": "#[derive(PartialEq, Eq, PartialOrd, Ord)] struct Name(String);",
+      "category": "traits"
+    },
+    {
+      "keyword": "Hash",
+      "type": "trait",
+      "description": "Hash - Trait for hashing. Required for HashMap keys and HashSet elements.",
+      "example": "#[derive(Hash, PartialEq, Eq)] struct UserId(u32);",
+      "category": "traits"
+    },
+    {
+      "keyword": "Iterator",
+      "type": "trait",
+      "description": "Iterator - Trait for types that can be iterated over. Provides map, filter, collect methods.",
+      "example": "impl Iterator for Counter { type Item = u32; fn next(&mut self) -> Option<Self::Item> { /* */ } }",
+      "category": "traits"
+    },
+    {
+      "keyword": "IntoIterator",
+      "type": "trait",
+      "description": "IntoIterator - Trait for types convertible to iterators. Enables for loops.",
+      "example": "impl IntoIterator for MyCollection { type Item = T; type IntoIter = MyIter; /* */ }",
+      "category": "traits"
+    },
+    {
+      "keyword": "From",
+      "type": "trait",
+      "description": "From - Trait for infallible type conversions. Provides into() method automatically.",
+      "example": "impl From<u32> for MyType { fn from(value: u32) -> Self { MyType(value) } }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Into",
+      "type": "trait",
+      "description": "Into - Trait for consuming conversions. Usually get this automatically from From implementation.",
+      "example": "fn process<T: Into<String>>(input: T) { let s = input.into(); }",
+      "category": "traits"
+    },
+    {
+      "keyword": "TryFrom",
+      "type": "trait",
+      "description": "TryFrom - Trait for fallible type conversions that can fail.",
+      "example": "impl TryFrom<i32> for NonNegative { type Error = &'static str; fn try_from(value: i32) -> Result<Self, Self::Error> { /* */ } }",
+      "category": "traits"
+    },
+    {
+      "keyword": "TryInto",
+      "type": "trait",
+      "description": "TryInto - Trait for fallible consuming conversions. Get automatically from TryFrom.",
+      "example": "let result: Result<u32, _> = (-1i32).try_into();",
+      "category": "traits"
+    },
+    {
+      "keyword": "AsRef",
+      "type": "trait",
+      "description": "AsRef - Trait for cheap reference-to-reference conversions.",
+      "example": "fn process<P: AsRef<Path>>(path: P) { let path = path.as_ref(); }",
+      "category": "traits"
+    },
+    {
+      "keyword": "AsMut",
+      "type": "trait",
+      "description": "AsMut - Trait for cheap mutable reference conversions.",
+      "example": "fn modify<T: AsMut<[u8]>>(mut data: T) { let bytes = data.as_mut(); }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Deref",
+      "type": "trait",
+      "description": "Deref - Trait for immutable dereferencing operations. Enables automatic dereferencing.",
+      "example": "impl Deref for MyBox<T> { type Target = T; fn deref(&self) -> &T { &self.0 } }",
+      "category": "traits"
+    },
+    {
+      "keyword": "DerefMut",
+      "type": "trait",
+      "description": "DerefMut - Trait for mutable dereferencing operations.",
+      "example": "impl DerefMut for MyBox<T> { fn deref_mut(&mut self) -> &mut T { &mut self.0 } }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Drop",
+      "type": "trait",
+      "description": "Drop - Trait for custom cleanup when value goes out of scope. Like destructors.",
+      "example": "impl Drop for FileHandle { fn drop(&mut self) { println!(\"Closing file\"); } }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Send",
+      "type": "trait",
+      "description": "Send - Marker trait for types safe to transfer between threads.",
+      "example": "fn spawn_thread<T: Send + 'static>(data: T) { thread::spawn(move || { process(data); }); }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Sync",
+      "type": "trait",
+      "description": "Sync - Marker trait for types safe to share references between threads.",
+      "example": "static COUNTER: AtomicUsize = AtomicUsize::new(0); // AtomicUsize is Sync",
+      "category": "traits"
+    },
+    {
+      "keyword": "Sized",
+      "type": "trait",
+      "description": "Sized - Marker trait for types with known size at compile time. Most types implement this.",
+      "example": "fn generic<T: Sized>(value: T) {} // T must have known size",
+      "category": "traits"
+    },
+    {
+      "keyword": "Unpin",
+      "type": "trait",
+      "description": "Unpin - Marker trait indicating it's safe to move after pinning.",
+      "example": "async fn process<T: Future + Unpin>(fut: T) { fut.await; }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Future",
+      "type": "trait",
+      "description": "Future - Trait for asynchronous computations. Core of async/await system.",
+      "example": "impl Future for MyFuture { type Output = Result<T, Error>; fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> { /* */ } }",
+      "category": "traits"
+    },
+    {
+      "keyword": "FnOnce",
+      "type": "trait",
+      "description": "FnOnce - Trait for closures that can be called once, taking ownership of captured variables.",
+      "example": "fn call_once<F: FnOnce() -> i32>(f: F) -> i32 { f() }",
+      "category": "traits"
+    },
+    {
+      "keyword": "FnMut",
+      "type": "trait",
+      "description": "FnMut - Trait for closures that can be called multiple times and mutate captured variables.",
+      "example": "fn call_mut<F: FnMut() -> i32>(mut f: F) -> i32 { f() }",
+      "category": "traits"
+    },
+    {
+      "keyword": "Fn",
+      "type": "trait",
+      "description": "Fn - Trait for closures that can be called multiple times without mutating captured variables.",
+      "example": "fn call_fn<F: Fn() -> i32>(f: F) -> i32 { f() }",
+      "category": "traits"
+    },
+    {
+      "keyword": "macro_rules",
+      "type": "macro",
+      "description": "macro_rules! - Defines declarative macros for code generation and metaprogramming.",
+      "example": "macro_rules! say_hello { () => { println!(\"Hello!\"); } }",
+      "category": "macros"
+    },
+    {
+      "keyword": "println",
+      "type": "macro",
+      "description": "println! - Prints formatted text to stdout with newline. Most common output macro.",
+      "example": "println!(\"Hello, {}! You are {} years old.\", name, age);",
+      "category": "macros"
+    },
+    {
+      "keyword": "print",
+      "type": "macro",
+      "description": "print! - Prints formatted text to stdout without newline.",
+      "example": "print!(\"Loading\"); for _ in 0..3 { print!(\".\"); }",
+      "category": "macros"
+    },
+    {
+      "keyword": "eprintln",
+      "type": "macro",
+      "description": "eprintln! - Prints formatted text to stderr with newline. Use for error messages.",
+      "example": "eprintln!(\"Error: {}\", error_message);",
+      "category": "macros"
+    },
+    {
+      "keyword": "eprint",
+      "type": "macro",
+      "description": "eprint! - Prints formatted text to stderr without newline.",
+      "example": "eprint!(\"Warning: \");",
+      "category": "macros"
+    },
+    {
+      "keyword": "format",
+      "type": "macro",
+      "description": "format! - Creates formatted string without printing. Returns String.",
+      "example": "let message = format!(\"User {} has {} points\", name, score);",
+      "category": "macros"
+    },
+    {
+      "keyword": "panic",
+      "type": "macro",
+      "description": "panic! - Terminates program with error message. Use for unrecoverable errors.",
+      "example": "if critical_error { panic!(\"System failure: {}\", reason); }",
+      "category": "macros"
+    },
+    {
+      "keyword": "assert",
+      "type": "macro",
+      "description": "assert! - Panics if condition is false. Use for runtime invariant checking.",
+      "example": "assert!(x > 0, \"x must be positive, got {}\", x);",
+      "category": "macros"
+    },
+    {
+      "keyword": "assert_eq",
+      "type": "macro",
+      "description": "assert_eq! - Panics if two values are not equal. Common in tests.",
+      "example": "assert_eq!(result, expected, \"Function returned wrong value\");",
+      "category": "macros"
+    },
+    {
+      "keyword": "assert_ne",
+      "type": "macro",
+      "description": "assert_ne! - Panics if two values are equal. Opposite of assert_eq!.",
+      "example": "assert_ne!(password, \"\", \"Password cannot be empty\");",
+      "category": "macros"
+    },
+    {
+      "keyword": "debug_assert",
+      "type": "macro",
+      "description": "debug_assert! - Like assert! but only enabled in debug builds. Use for expensive checks.",
+      "example": "debug_assert!(is_sorted(&array), \"Array should be sorted here\");",
+      "category": "macros"
+    },
+    {
+      "keyword": "unreachable",
+      "type": "macro",
+      "description": "unreachable! - Marks code that should never execute. Panics if reached.",
+      "example": "match value { 1..=10 => process(), _ => unreachable!(\"Value should be 1-10\") }",
+      "category": "macros"
+    },
+    {
+      "keyword": "unimplemented",
+      "type": "macro",
+      "description": "unimplemented! - Placeholder for code not yet implemented. Panics when called.",
+      "example": "fn complex_algorithm() -> Result<i32, Error> { unimplemented!(\"TODO: implement algorithm\") }",
+      "category": "macros"
+    },
+    {
+      "keyword": "todo",
+      "type": "macro",
+      "description": "todo! - Indicates code that needs to be completed. More explicit than unimplemented!.",
+      "example": "fn calculate_tax(income: f64) -> f64 { todo!(\"Implement tax calculation\") }",
+      "category": "macros"
+    },
+    {
+      "keyword": "vec",
+      "type": "macro",
+      "description": "vec! - Creates Vec with initial elements. Convenient vector creation.",
+      "example": "let numbers = vec![1, 2, 3, 4, 5]; let zeros = vec![0; 100];",
+      "category": "macros"
+    },
+    {
+      "keyword": "include",
+      "type": "macro",
+      "description": "include! - Includes contents of file as code at compile time.",
+      "example": "include!(\"generated_code.rs\");",
+      "category": "macros"
+    },
+    {
+      "keyword": "include_str",
+      "type": "macro",
+      "description": "include_str! - Includes file contents as string literal at compile time.",
+      "example": "const CONFIG: &str = include_str!(\"config.toml\");",
+      "category": "macros"
+    },
+    {
+      "keyword": "include_bytes",
+      "type": "macro",
+      "description": "include_bytes! - Includes file contents as byte array at compile time.",
+      "example": "const LOGO: &[u8] = include_bytes!(\"logo.png\");",
+      "category": "macros"
+    },
+    {
+      "keyword": "env",
+      "type": "macro",
+      "description": "env! - Gets environment variable value at compile time.",
+      "example": "const VERSION: &str = env!(\"CARGO_PKG_VERSION\");",
+      "category": "macros"
+    },
+    {
+      "keyword": "option_env",
+      "type": "macro",
+      "description": "option_env! - Gets optional environment variable at compile time.",
+      "example": "const DEBUG_MODE: Option<&str> = option_env!(\"DEBUG\");",
+      "category": "macros"
+    },
+    {
+      "keyword": "cfg",
+      "type": "attribute",
+      "description": "cfg - Conditional compilation based on target or features.",
+      "example": "#[cfg(target_os = \"windows\")] fn windows_specific() {}",
+      "category": "attributes"
+    },
+    {
+      "keyword": "derive",
+      "type": "attribute",
+      "description": "derive - Automatically implements traits for structs and enums.",
+      "example": "#[derive(Debug, Clone, PartialEq)] struct Point { x: i32, y: i32 }",
+      "category": "attributes"
+    },
+    {
+      "keyword": "allow",
+      "type": "attribute",
+      "description": "allow - Suppresses compiler warnings for specific code.",
+      "example": "#[allow(dead_code)] fn helper_function() {}",
+      "category": "attributes"
+    },
+    {
+      "keyword": "warn",
+      "type": "attribute",
+      "description": "warn - Forces compiler warnings for specific code patterns.",
+      "example": "#[warn(missing_docs)] pub fn important_function() {}",
+      "category": "attributes"
+    },
+    {
+      "keyword": "deny",
+      "type": "attribute",
+      "description": "deny - Turns warnings into compilation errors.",
+      "example": "#[deny(unsafe_code)] mod safe_module {}",
+      "category": "attributes"
+    },
+    {
+      "keyword": "forbid",
+      "type": "attribute",
+      "description": "forbid - Forbids certain code patterns, cannot be overridden.",
+      "example": "#![forbid(unsafe_code)]",
+      "category": "attributes"
+    },
+    {
+      "keyword": "test",
+      "type": "attribute",
+      "description": "test - Marks function as unit test. Run with cargo test.",
+      "example": "#[test] fn test_addition() { assert_eq!(2 + 2, 4); }",
+      "category": "attributes"
+    },
+    {
+      "keyword": "bench",
+      "type": "attribute",
+      "description": "bench - Marks function as benchmark test for performance measurement.",
+      "example": "#[bench] fn bench_sorting(b: &mut Bencher) { b.iter(|| sort_array()); }",
+      "category": "attributes"
+    },
+    {
+      "keyword": "ignore",
+      "type": "attribute",
+      "description": "ignore - Skips test unless specifically requested with --ignored.",
+      "example": "#[test] #[ignore] fn expensive_test() { /* slow test */ }",
+      "category": "attributes"
+    },
+    {
+      "keyword": "should_panic",
+      "type": "attribute",
+      "description": "should_panic - Test passes only if function panics.",
+      "example": "#[test] #[should_panic(expected = \"divide by zero\")] fn test_division() { divide(10, 0); }",
+      "category": "attributes"
+    },
+    {
+      "keyword": "inline",
+      "type": "attribute",
+      "description": "inline - Suggests compiler to inline function calls for performance.",
+      "example": "#[inline] fn fast_math(x: f64) -> f64 { x * x }",
+      "category": "attributes"
+    },
+    {
+      "keyword": "repr",
+      "type": "attribute",
+      "description": "repr - Controls memory representation of structs and enums.",
+      "example": "#[repr(C)] struct CStruct { x: i32, y: i32 }",
+      "category": "attributes"
+    },
+    {
+      "keyword": "no_mangle",
+      "type": "attribute",
+      "description": "no_mangle - Prevents name mangling for FFI functions.",
+      "example": "#[no_mangle] pub extern \"C\" fn add(a: i32, b: i32) -> i32 { a + b }",
+      "category": "attributes"
+    },
+    {
+      "keyword": "Path",
+      "type": "type",
+      "description": "Path - Represents filesystem paths in a platform-agnostic way.",
+      "example": "use std::path::Path; let path = Path::new(\"/home/user/file.txt\");",
+      "category": "std_types"
+    },
+    {
+      "keyword": "PathBuf",
+      "type": "type",
+      "description": "PathBuf - Owned, mutable path. Like String but for filesystem paths.",
+      "example": "let mut path = PathBuf::from(\"/home\"); path.push(\"user\"); path.push(\"file.txt\");",
+      "category": "std_types"
+    },
+    {
+      "keyword": "File",
+      "type": "type",
+      "description": "File - Represents an open file handle for reading/writing.",
+      "example": "let mut file = File::create(\"output.txt\")?; file.write_all(b\"Hello\")?;",
+      "category": "std_types"
+    },
+    {
+      "keyword": "BufReader",
+      "type": "type",
+      "description": "BufReader - Buffered reading for improved I/O performance.",
+      "example": "let reader = BufReader::new(File::open(\"input.txt\")?);",
+      "category": "std_types"
+    },
+    {
+      "keyword": "BufWriter",
+      "type": "type",
+      "description": "BufWriter - Buffered writing for improved I/O performance.",
+      "example": "let writer = BufWriter::new(File::create(\"output.txt\")?);",
+      "category": "std_types"
+    },
+    {
+      "keyword": "Mutex",
+      "type": "type",
+      "description": "Mutex - Mutual exclusion primitive for thread-safe data sharing.",
+      "example": "let counter = Arc::new(Mutex::new(0)); let guard = counter.lock().unwrap();",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "RwLock",
+      "type": "type",
+      "description": "RwLock - Reader-writer lock allowing multiple readers or one writer.",
+      "example": "let data = RwLock::new(vec![1, 2, 3]); let reader = data.read().unwrap();",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "mpsc",
+      "type": "module",
+      "description": "mpsc - Multi-producer, single-consumer channels for thread communication.",
+      "example": "let (tx, rx) = mpsc::channel(); tx.send(42).unwrap(); let value = rx.recv().unwrap();",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "thread",
+      "type": "module",
+      "description": "thread - Thread creation and management utilities.",
+      "example": "let handle = thread::spawn(|| { println!(\"Hello from thread!\"); }); handle.join().unwrap();",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "AtomicUsize",
+      "type": "type",
+      "description": "AtomicUsize - Lock-free atomic usize for concurrent programming.",
+      "example": "static COUNTER: AtomicUsize = AtomicUsize::new(0); COUNTER.fetch_add(1, Ordering::Relaxed);",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "Duration",
+      "type": "type",
+      "description": "Duration - Represents a span of time for timeouts and delays.",
+      "example": "thread::sleep(Duration::from_secs(1)); let timeout = Duration::from_millis(500);",
+      "category": "time"
+    },
+    {
+      "keyword": "Instant",
+      "type": "type",
+      "description": "Instant - Represents a moment in time for measuring elapsed time.",
+      "example": "let start = Instant::now(); do_work(); println!(\"Elapsed: {:?}\", start.elapsed());",
+      "category": "time"
+    },
+    {
+      "keyword": "SystemTime",
+      "type": "type",
+      "description": "SystemTime - Represents system time that can go backwards.",
+      "example": "let now = SystemTime::now(); let since_epoch = now.duration_since(UNIX_EPOCH).unwrap();",
+      "category": "time"
+    },
+    {
+      "keyword": "BTreeMap",
+      "type": "type",
+      "description": "BTreeMap - Sorted map implemented as B-tree. Keys must implement Ord.",
+      "example": "let mut map = BTreeMap::new(); map.insert(\"key\", \"value\");",
+      "category": "collections"
+    },
+    {
+      "keyword": "BTreeSet",
+      "type": "type",
+      "description": "BTreeSet - Sorted set implemented as B-tree. Values must implement Ord.",
+      "example": "let mut set = BTreeSet::new(); set.insert(42); set.insert(17);",
+      "category": "collections"
+    },
+    {
+      "keyword": "HashSet",
+      "type": "type",
+      "description": "HashSet - Hash-based set for fast membership testing. Values must implement Hash.",
+      "example": "let mut set = HashSet::new(); set.insert(\"item\"); if set.contains(\"item\") { /* */ }",
+      "category": "collections"
+    },
+    {
+      "keyword": "VecDeque",
+      "type": "type",
+      "description": "VecDeque - Double-ended queue, efficient insertion/removal at both ends.",
+      "example": "let mut deque = VecDeque::new(); deque.push_back(1); deque.push_front(0);",
+      "category": "collections"
+    },
+    {
+      "keyword": "LinkedList",
+      "type": "type",
+      "description": "LinkedList - Doubly-linked list for efficient insertion/removal at arbitrary positions.",
+      "example": "let mut list = LinkedList::new(); list.push_back(1); list.push_front(0);",
+      "category": "collections"
+    },
+    {
+      "keyword": "BinaryHeap",
+      "type": "type",
+      "description": "BinaryHeap - Priority queue implemented as binary heap. Max-heap by default.",
+      "example": "let mut heap = BinaryHeap::new(); heap.push(3); heap.push(1); heap.push(4);",
+      "category": "collections"
+    },
+    {
+      "keyword": "Cow",
+      "type": "type",
+      "description": "Cow - Clone-on-write smart pointer for efficient handling of borrowed/owned data.",
+      "example": "fn process_string(s: Cow<str>) -> Cow<str> { if s.contains(' ') { s.replace(' ', \"_\").into() } else { s } }",
+      "category": "smart_pointers"
+    },
+    {
+      "keyword": "Cell",
+      "type": "type",
+      "description": "Cell - Provides interior mutability for Copy types in single-threaded contexts.",
+      "example": "let cell = Cell::new(42); cell.set(100); let value = cell.get();",
+      "category": "interior_mutability"
+    },
+    {
+      "keyword": "RefCell",
+      "type": "type",
+      "description": "RefCell - Provides interior mutability with runtime borrow checking.",
+      "example": "let cell = RefCell::new(vec![1, 2, 3]); cell.borrow_mut().push(4);",
+      "category": "interior_mutability"
+    },
+    {
+      "keyword": "Pin",
+      "type": "type",
+      "description": "Pin - Ensures pointed-to value cannot be moved, important for async/await.",
+      "example": "fn process_pinned(value: Pin<&mut MyStruct>) { /* value cannot be moved */ }",
+      "category": "memory"
+    },
+    {
+      "keyword": "ManuallyDrop",
+      "type": "type",
+      "description": "ManuallyDrop - Wrapper to prevent automatic dropping of values.",
+      "example": "let wrapped = ManuallyDrop::new(expensive_resource); // Won't drop automatically",
+      "category": "memory"
+    },
+    {
+      "keyword": "MaybeUninit",
+      "type": "type",
+      "description": "MaybeUninit - Wrapper for potentially uninitialized data.",
+      "example": "let mut uninit: MaybeUninit<i32> = MaybeUninit::uninit(); unsafe { uninit.write(42); }",
+      "category": "memory"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "fn", 
+      "description": "Function template - Creates a complete function definition with parameters and return type",
+      "content": "fn ${1:function_name}(${2:parameters}) -> ${3:return_type} {\n    ${4:// body}\n}",
+      "category": "function"
+    },
+    {
+      "trigger": "struct",
+      "description": "Struct template - Creates a custom data type with named fields", 
+      "content": "struct ${1:Name} {\n    ${2:field}: ${3:Type},\n}",
+      "category": "type"
+    },
+    {
+      "trigger": "impl",
+      "description": "Implementation block template - Used to define methods and associated functions",
+      "content": "impl ${1:Type} {\n    ${2:// methods}\n}",
+      "category": "implementation"
+    },
+    {
+      "trigger": "enum",
+      "description": "Enum template - Creates a type with multiple variants",
+      "content": "enum ${1:Name} {\n    ${2:Variant1},\n    ${3:Variant2}(${4:Type}),\n}",
+      "category": "type"
+    },
+    {
+      "trigger": "trait",
+      "description": "Trait template - Defines shared behavior that different types can implement",
+      "content": "trait ${1:TraitName} {\n    ${2:// trait methods}\n}",
+      "category": "trait"
+    },
+    {
+      "trigger": "match",
+      "description": "Pattern matching template - Provides exhaustive pattern matching for enums and other types",
+      "content": "match ${1:expression} {\n    ${2:pattern} => ${3:result},\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "if",
+      "description": "Conditional template - Creates an if statement with optional else clause",
+      "content": "if ${1:condition} {\n    ${2:// body}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "iflet",
+      "description": "If-let pattern - Combines pattern matching with conditional execution",
+      "content": "if let ${1:Some(value)} = ${2:expression} {\n    ${3:// body}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "for",
+      "description": "For loop template - Creates iteration over collections, ranges, or iterators",
+      "content": "for ${1:item} in ${2:iterator} {\n    ${3:// body}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "while",
+      "description": "While loop template - Creates a loop that continues while a condition remains true",
+      "content": "while ${1:condition} {\n    ${2:// body}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "loop",
+      "description": "Infinite loop template - Creates a loop that runs forever until explicitly broken",
+      "content": "loop {\n    ${1:// body}\n    break;\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "main",
+      "description": "Main function template - Entry point for Rust applications",
+      "content": "fn main() {\n    ${1:// code}\n}",
+      "category": "function"
+    },
+    {
+      "trigger": "test",
+      "description": "Unit test template - Creates a test function with the #[test] attribute",
+      "content": "#[test]\nfn ${1:test_name}() {\n    ${2:// test code}\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "derive",
+      "description": "Derive macro template - Automatically implements common traits for structs and enums",
+      "content": "#[derive(${1:Debug, Clone})]\nstruct ${2:Name} {\n    ${3:field}: ${4:Type},\n}",
+      "category": "type"
+    },
+    {
+      "trigger": "result",
+      "description": "Result type template - For functions that can return errors",
+      "content": "Result<${1:T}, ${2:E}>",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "option",
+      "description": "Option type template - For values that might not exist",
+      "content": "Option<${1:T}>",
+      "category": "option_handling"
+    },
+    {
+      "trigger": "vec_new",
+      "description": "Vector creation template - Creates a new empty vector",
+      "content": "let ${1:vec} = Vec::new();",
+      "category": "collection"
+    },
+    {
+      "trigger": "hashmap",
+      "description": "HashMap creation template - Creates a new empty hash map",
+      "content": "use std::collections::HashMap;\nlet mut ${1:map} = HashMap::new();",
+      "category": "collection"
+    },
+    {
+      "trigger": "println",
+      "description": "Print line template - Prints formatted text to stdout with newline",
+      "content": "println!(\"${1:message}\");",
+      "category": "io"
+    },
+    {
+      "trigger": "format",
+      "description": "String formatting template - Creates formatted strings without printing",
+      "content": "format!(\"${1:format string}\", ${2:args})",
+      "category": "string"
+    },
+    {
+      "trigger": "unwrap_or",
+      "description": "Unwrap with default template - Extract value from Option/Result or use default",
+      "content": "${1:expression}.unwrap_or(${2:default})",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "match_result",
+      "description": "Match Result template - Handle Result with explicit pattern matching", 
+      "content": "match ${1:result} {\n    Ok(${2:value}) => ${3:// handle success},\n    Err(${4:error}) => ${5:// handle error},\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "async_fn",
+      "description": "Async function template - Creates an asynchronous function",
+      "content": "async fn ${1:function_name}(${2:parameters}) -> ${3:return_type} {\n    ${4:// async body}\n}",
+      "category": "async"
+    },
+    {
+      "trigger": "spawn",
+      "description": "Tokio spawn template - Spawns an async task",
+      "content": "tokio::spawn(async move {\n    ${1:// async task}\n})",
+      "category": "async"
+    },
+    {
+      "trigger": "channel",
+      "description": "Tokio channel template - Creates a message passing channel",
+      "content": "use tokio::sync::mpsc;\n\nlet (tx, mut rx) = mpsc::channel::<${1:MessageType}>(${2:32});",
+      "category": "async"
+    },
+    {
+      "trigger": "error_enum",
+      "description": "Custom error enum template - Creates a comprehensive error type",
+      "content": "use std::fmt;\n\n#[derive(Debug)]\npub enum ${1:MyError} {\n    ${2:InvalidInput}(String),\n    ${3:NotFound},\n    ${4:IoError}(std::io::Error),\n}\n\nimpl fmt::Display for ${1:MyError} {\n    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {\n        match self {\n            ${1:MyError}::${2:InvalidInput}(msg) => write!(f, \"Invalid input: {}\", msg),\n            ${1:MyError}::${3:NotFound} => write!(f, \"Item not found\"),\n            ${1:MyError}::${4:IoError}(err) => write!(f, \"IO error: {}\", err),\n        }\n    }\n}\n\nimpl std::error::Error for ${1:MyError} {}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "builder_pattern",
+      "description": "Builder pattern template - Creates a builder struct for configuration",
+      "content": "#[derive(Default)]\npub struct ${1:Config}Builder {\n    ${2:field}: Option<${3:Type}>,\n}\n\nimpl ${1:Config}Builder {\n    pub fn new() -> Self {\n        Self::default()\n    }\n    \n    pub fn ${2:field}(mut self, ${2:field}: ${3:Type}) -> Self {\n        self.${2:field} = Some(${2:field});\n        self\n    }\n    \n    pub fn build(self) -> Result<${1:Config}, Box<dyn std::error::Error>> {\n        Ok(${1:Config} {\n            ${2:field}: self.${2:field}.ok_or(\"${2:field} is required\")?,\n        })\n    }\n}",
+      "category": "design_pattern"
+    },
+    {
+      "trigger": "iterator_chain",
+      "description": "Iterator chain template - Common iterator operations chained together",
+      "content": "${1:collection}\n    .iter()\n    .filter(|${2:item}| ${3:condition})\n    .map(|${2:item}| ${4:transformation})\n    .collect::<Vec<_>>()",
+      "category": "iterator"
+    },
+    {
+      "trigger": "closure",
+      "description": "Closure template - Creates a closure with explicit types",
+      "content": "let ${1:closure} = |${2:param}: ${3:Type}| -> ${4:ReturnType} {\n    ${5:// closure body}\n};",
+      "category": "closure"
+    },
+    {
+      "trigger": "thread_spawn",
+      "description": "Thread spawn template - Spawns a new thread",
+      "content": "use std::thread;\n\nlet handle = thread::spawn(move || {\n    ${1:// thread code}\n});\n\n${2:// Optional: wait for thread to complete}\nhandle.join().unwrap();",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "mutex",
+      "description": "Mutex template - Thread-safe shared data",
+      "content": "use std::sync::{Arc, Mutex};\n\nlet ${1:data} = Arc::new(Mutex::new(${2:initial_value}));\n\n// Usage:\nlet ${1:data}_clone = Arc::clone(&${1:data});\nlet mut ${3:guard} = ${1:data}_clone.lock().unwrap();\n*${3:guard} = ${4:new_value};",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "file_read",
+      "description": "File reading template - Read entire file contents",
+      "content": "use std::fs;\n\nlet ${1:contents} = fs::read_to_string(\"${2:file_path}\")\n    .expect(\"Failed to read file\");",
+      "category": "io"
+    },
+    {
+      "trigger": "file_write",
+      "description": "File writing template - Write content to file",
+      "content": "use std::fs;\n\nfs::write(\"${1:file_path}\", ${2:content})\n    .expect(\"Failed to write file\");",
+      "category": "io"
+    },
+    {
+      "trigger": "serde_derive",
+      "description": "Serde serialization template - Add serde traits to struct",
+      "content": "use serde::{Deserialize, Serialize};\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct ${1:MyStruct} {\n    ${2:field}: ${3:Type},\n}",
+      "category": "serialization"
+    },
+    {
+      "trigger": "json_parse",
+      "description": "JSON parsing template - Parse JSON from string",
+      "content": "let ${1:data}: ${2:MyStruct} = serde_json::from_str(&${3:json_string})\n    .expect(\"Failed to parse JSON\");",
+      "category": "serialization"
+    },
+    {
+      "trigger": "http_client",
+      "description": "HTTP client template - Make HTTP request with reqwest",
+      "content": "use reqwest;\n\n#[tokio::main]\nasync fn main() -> Result<(), Box<dyn std::error::Error>> {\n    let ${1:response} = reqwest::get(\"${2:https://api.example.com/data}\")\n        .await?\n        .text()\n        .await?;\n        \n    println!(\"Response: {}\", ${1:response});\n    Ok(())\n}",
+      "category": "http"
+    },
+    {
+      "trigger": "main_async",
+      "description": "Async main function template - Entry point for async applications",
+      "content": "#[tokio::main]\nasync fn main() -> Result<(), Box<dyn std::error::Error>> {\n    ${1:// async code here}\n    Ok(())\n}",
+      "category": "async"
+    },
+    {
+      "trigger": "cfg_test",
+      "description": "Test module template - Create a test module with common test functions",
+      "content": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn ${1:test_name}() {\n        ${2:// test code}\n        assert_eq!(${3:expected}, ${4:actual});\n    }\n\n    #[test]\n    fn ${5:test_error_case}() {\n        let result = ${6:function_call}();\n        assert!(result.is_err());\n    }\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "benchmark",
+      "description": "Benchmark template - Create a benchmark function",
+      "content": "#[cfg(test)]\nmod benches {\n    use super::*;\n    use test::Bencher;\n\n    #[bench]\n    fn ${1:bench_name}(b: &mut Bencher) {\n        b.iter(|| {\n            ${2:// code to benchmark}\n        });\n    }\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "lazy_static",
+      "description": "Lazy static template - Create a lazily initialized static variable",
+      "content": "use lazy_static::lazy_static;\n\nlazy_static! {\n    static ref ${1:STATIC_VAR}: ${2:Type} = {\n        ${3:// initialization code}\n    };\n}",
+      "category": "static"
+    },
+    {
+      "trigger": "once_cell",
+      "description": "OnceCell template - Thread-safe lazy initialization",
+      "content": "use std::sync::OnceLock;\n\nstatic ${1:GLOBAL}: OnceLock<${2:Type}> = OnceLock::new();\n\nfn ${3:get_global}() -> &'static ${2:Type} {\n    ${1:GLOBAL}.get_or_init(|| {\n        ${4:// initialization code}\n    })\n}",
+      "category": "static"
+    },
+    {
+      "trigger": "regex",
+      "description": "Regex template - Create and use regular expressions",
+      "content": "use regex::Regex;\n\nlet ${1:re} = Regex::new(r\"${2:pattern}\").unwrap();\nlet ${3:matches}: Vec<&str> = ${1:re}.find_iter(\"${4:text}\")\n    .map(|m| m.as_str())\n    .collect();",
+      "category": "regex"
+    },
+    {
+      "trigger": "clap_cli",
+      "description": "Clap CLI template - Command line argument parsing",
+      "content": "use clap::{Arg, Command};\n\nfn main() {\n    let ${1:matches} = Command::new(\"${2:myapp}\")\n        .version(\"${3:1.0}\")\n        .about(\"${4:Description}\")\n        .arg(\n            Arg::new(\"${5:input}\")\n                .short('${6:i}')\n                .long(\"${5:input}\")\n                .value_name(\"FILE\")\n                .help(\"${7:Input file}\")\n                .required(true),\n        )\n        .get_matches();\n\n    let ${5:input} = ${1:matches}.get_one::<String>(\"${5:input}\").unwrap();\n    println!(\"Input file: {}\", ${5:input});\n}",
+      "category": "cli"
+    },
+    {
+      "trigger": "derive_macro",
+      "description": "Derive macro template - Create custom derive macros",
+      "content": "use proc_macro::TokenStream;\nuse quote::quote;\nuse syn::{parse_macro_input, DeriveInput};\n\n#[proc_macro_derive(${1:MyTrait})]\npub fn ${2:my_trait}_derive(input: TokenStream) -> TokenStream {\n    let input = parse_macro_input!(input as DeriveInput);\n    let name = input.ident;\n    \n    let expanded = quote! {\n        impl ${1:MyTrait} for #name {\n            ${3:// implementation}\n        }\n    };\n    \n    TokenStream::from(expanded)\n}",
+      "category": "macros"
+    },
+    {
+      "trigger": "proc_macro",
+      "description": "Procedural macro template - Create function-like procedural macros",
+      "content": "use proc_macro::TokenStream;\nuse quote::quote;\nuse syn::{parse_macro_input, LitStr};\n\n#[proc_macro]\npub fn ${1:my_macro}(input: TokenStream) -> TokenStream {\n    let input = parse_macro_input!(input as LitStr);\n    let content = input.value();\n    \n    let expanded = quote! {\n        ${2:// generated code based on content}\n    };\n    \n    TokenStream::from(expanded)\n}",
+      "category": "macros"
+    },
+    {
+      "trigger": "attribute_macro",
+      "description": "Attribute macro template - Create attribute procedural macros",
+      "content": "use proc_macro::TokenStream;\nuse quote::quote;\nuse syn::{parse_macro_input, ItemFn};\n\n#[proc_macro_attribute]\npub fn ${1:my_attribute}(_args: TokenStream, input: TokenStream) -> TokenStream {\n    let input = parse_macro_input!(input as ItemFn);\n    let fn_name = &input.sig.ident;\n    let fn_block = &input.block;\n    \n    let expanded = quote! {\n        fn #fn_name() {\n            println!(\"Before function execution\");\n            #fn_block\n            println!(\"After function execution\");\n        }\n    };\n    \n    TokenStream::from(expanded)\n}",
+      "category": "macros"
+    },
+    {
+      "trigger": "custom_error",
+      "description": "Custom error type template - Create comprehensive error handling",
+      "content": "use std::fmt;\n\n#[derive(Debug)]\npub enum ${1:MyError} {\n    ${2:IoError}(std::io::Error),\n    ${3:ParseError}(String),\n    ${4:CustomError} { message: String },\n}\n\nimpl fmt::Display for ${1:MyError} {\n    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {\n        match self {\n            ${1:MyError}::${2:IoError}(e) => write!(f, \"IO error: {}\", e),\n            ${1:MyError}::${3:ParseError}(msg) => write!(f, \"Parse error: {}\", msg),\n            ${1:MyError}::${4:CustomError} { message } => write!(f, \"Error: {}\", message),\n        }\n    }\n}\n\nimpl std::error::Error for ${1:MyError} {\n    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {\n        match self {\n            ${1:MyError}::${2:IoError}(e) => Some(e),\n            _ => None,\n        }\n    }\n}\n\nimpl From<std::io::Error> for ${1:MyError} {\n    fn from(error: std::io::Error) -> Self {\n        ${1:MyError}::${2:IoError}(error)\n    }\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "builder_pattern",
+      "description": "Builder pattern template - Fluent API for object construction",
+      "content": "pub struct ${1:MyStruct} {\n    ${2:field1}: ${3:String},\n    ${4:field2}: ${5:i32},\n    ${6:field3}: Option<${7:bool}>,\n}\n\npub struct ${1:MyStruct}Builder {\n    ${2:field1}: Option<${3:String}>,\n    ${4:field2}: Option<${5:i32}>,\n    ${6:field3}: Option<${7:bool}>,\n}\n\nimpl ${1:MyStruct}Builder {\n    pub fn new() -> Self {\n        Self {\n            ${2:field1}: None,\n            ${4:field2}: None,\n            ${6:field3}: None,\n        }\n    }\n    \n    pub fn ${2:field1}(mut self, ${2:field1}: ${3:String}) -> Self {\n        self.${2:field1} = Some(${2:field1});\n        self\n    }\n    \n    pub fn ${4:field2}(mut self, ${4:field2}: ${5:i32}) -> Self {\n        self.${4:field2} = Some(${4:field2});\n        self\n    }\n    \n    pub fn ${6:field3}(mut self, ${6:field3}: ${7:bool}) -> Self {\n        self.${6:field3} = Some(${6:field3});\n        self\n    }\n    \n    pub fn build(self) -> Result<${1:MyStruct}, String> {\n        Ok(${1:MyStruct} {\n            ${2:field1}: self.${2:field1}.ok_or(\"Missing field1\")?,\n            ${4:field2}: self.${4:field2}.ok_or(\"Missing field2\")?,\n            ${6:field3}: self.${6:field3},\n        })\n    }\n}",
+      "category": "design_pattern"
+    },
+    {
+      "trigger": "state_machine",
+      "description": "State machine template - Type-safe state transitions",
+      "content": "// States\nstruct ${1:Initial};\nstruct ${2:Processing};\nstruct ${3:Completed};\n\n// State machine\nstruct ${4:StateMachine}<State> {\n    state: std::marker::PhantomData<State>,\n    ${5:data}: ${6:String},\n}\n\nimpl ${4:StateMachine}<${1:Initial}> {\n    pub fn new(${5:data}: ${6:String}) -> Self {\n        Self {\n            state: std::marker::PhantomData,\n            ${5:data},\n        }\n    }\n    \n    pub fn start(self) -> ${4:StateMachine}<${2:Processing}> {\n        println!(\"Starting processing...\");\n        ${4:StateMachine} {\n            state: std::marker::PhantomData,\n            ${5:data}: self.${5:data},\n        }\n    }\n}\n\nimpl ${4:StateMachine}<${2:Processing}> {\n    pub fn finish(self) -> ${4:StateMachine}<${3:Completed}> {\n        println!(\"Processing completed!\");\n        ${4:StateMachine} {\n            state: std::marker::PhantomData,\n            ${5:data}: self.${5:data},\n        }\n    }\n}\n\nimpl ${4:StateMachine}<${3:Completed}> {\n    pub fn get_result(self) -> ${6:String} {\n        self.${5:data}\n    }\n}",
+      "category": "design_pattern"
+    },
+    {
+      "trigger": "actor_pattern",
+      "description": "Actor pattern template - Message-based concurrency",
+      "content": "use std::sync::mpsc::{self, Receiver, Sender};\nuse std::thread;\n\n#[derive(Debug)]\npub enum ${1:Message} {\n    ${2:ProcessData}(${3:String}),\n    ${4:GetStatus},\n    ${5:Shutdown},\n}\n\npub struct ${6:Actor} {\n    sender: Sender<${1:Message}>,\n}\n\nimpl ${6:Actor} {\n    pub fn new() -> Self {\n        let (sender, receiver) = mpsc::channel();\n        \n        thread::spawn(move || {\n            Self::run(receiver);\n        });\n        \n        Self { sender }\n    }\n    \n    pub fn send_message(&self, msg: ${1:Message}) -> Result<(), mpsc::SendError<${1:Message}>> {\n        self.sender.send(msg)\n    }\n    \n    fn run(receiver: Receiver<${1:Message}>) {\n        while let Ok(msg) = receiver.recv() {\n            match msg {\n                ${1:Message}::${2:ProcessData}(data) => {\n                    println!(\"Processing: {}\", data);\n                    // Process data\n                },\n                ${1:Message}::${4:GetStatus} => {\n                    println!(\"Status: Running\");\n                },\n                ${1:Message}::${5:Shutdown} => {\n                    println!(\"Shutting down actor\");\n                    break;\n                },\n            }\n        }\n    }\n}",
+      "category": "design_pattern"
+    },
+    {
+      "trigger": "websocket_client",
+      "description": "WebSocket client template - Real-time communication",
+      "content": "use tokio_tungstenite::{connect_async, tungstenite::Message};\nuse futures_util::{SinkExt, StreamExt};\n\n#[tokio::main]\nasync fn main() -> Result<(), Box<dyn std::error::Error>> {\n    let url = \"${1:ws://localhost:8080/ws}\";\n    \n    let (ws_stream, _) = connect_async(url).await?;\n    let (mut write, mut read) = ws_stream.split();\n    \n    // Send message\n    write.send(Message::Text(\"${2:Hello WebSocket!}\".to_string())).await?;\n    \n    // Read messages\n    while let Some(msg) = read.next().await {\n        match msg? {\n            Message::Text(text) => {\n                println!(\"Received: {}\", text);\n            },\n            Message::Binary(data) => {\n                println!(\"Received binary data: {} bytes\", data.len());\n            },\n            Message::Close(_) => {\n                println!(\"Connection closed\");\n                break;\n            },\n            _ => {},\n        }\n    }\n    \n    Ok(())\n}",
+      "category": "networking"
+    },
+    {
+      "trigger": "database_connection",
+      "description": "Database connection template - SQL database operations",
+      "content": "use sqlx::{Pool, Postgres, Row};\nuse sqlx::postgres::PgPoolOptions;\n\n#[derive(Debug)]\nstruct ${1:User} {\n    id: i32,\n    name: String,\n    email: String,\n}\n\n#[tokio::main]\nasync fn main() -> Result<(), sqlx::Error> {\n    let pool = PgPoolOptions::new()\n        .max_connections(5)\n        .connect(\"${2:postgresql://user:password@localhost/database}\")\n        .await?;\n    \n    // Insert user\n    let user_id: i32 = sqlx::query_scalar!(\n        \"INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id\",\n        \"${3:John Doe}\",\n        \"${4:john@example.com}\"\n    )\n    .fetch_one(&pool)\n    .await?;\n    \n    // Query users\n    let users: Vec<${1:User}> = sqlx::query_as!(\n        ${1:User},\n        \"SELECT id, name, email FROM users WHERE id = $1\",\n        user_id\n    )\n    .fetch_all(&pool)\n    .await?;\n    \n    for user in users {\n        println!(\"User: {:?}\", user);\n    }\n    \n    Ok(())\n}",
+      "category": "database"
+    },
+    {
+      "trigger": "web_server",
+      "description": "Web server template - HTTP server with routing",
+      "content": "use axum::{\n    extract::{Path, Query},\n    http::StatusCode,\n    response::Json,\n    routing::{get, post},\n    Router,\n};\nuse serde::{Deserialize, Serialize};\nuse std::collections::HashMap;\nuse tokio::net::TcpListener;\n\n#[derive(Serialize, Deserialize)]\nstruct ${1:User} {\n    id: u32,\n    name: String,\n    email: String,\n}\n\n#[tokio::main]\nasync fn main() {\n    let app = Router::new()\n        .route(\"/\", get(root))\n        .route(\"/users/:id\", get(get_user))\n        .route(\"/users\", post(create_user))\n        .route(\"/health\", get(health_check));\n    \n    let listener = TcpListener::bind(\"${2:0.0.0.0:3000}\").await.unwrap();\n    println!(\"Server running on http://${2:0.0.0.0:3000}\");\n    \n    axum::serve(listener, app).await.unwrap();\n}\n\nasync fn root() -> &'static str {\n    \"${3:Hello, World!}\"\n}\n\nasync fn get_user(Path(id): Path<u32>) -> Result<Json<${1:User}>, StatusCode> {\n    // Mock user data\n    let user = ${1:User} {\n        id,\n        name: format!(\"User {}\", id),\n        email: format!(\"user{}@example.com\", id),\n    };\n    \n    Ok(Json(user))\n}\n\nasync fn create_user(Json(user): Json<${1:User}>) -> Result<Json<${1:User}>, StatusCode> {\n    // Process user creation\n    println!(\"Creating user: {:?}\", user);\n    Ok(Json(user))\n}\n\nasync fn health_check() -> Json<HashMap<&'static str, &'static str>> {\n    let mut response = HashMap::new();\n    response.insert(\"status\", \"healthy\");\n    Json(response)\n}",
+      "category": "web"
+    },
+    {
+      "trigger": "async_stream",
+      "description": "Async stream template - Processing data streams asynchronously",
+      "content": "use futures::stream::{self, StreamExt};\nuse tokio::time::{sleep, Duration};\n\n#[tokio::main]\nasync fn main() {\n    // Create a stream of numbers\n    let stream = stream::iter(1..=10)\n        .map(|n| async move {\n            // Simulate async work\n            sleep(Duration::from_millis(100)).await;\n            n * 2\n        })\n        .buffer_unordered(3); // Process up to 3 items concurrently\n    \n    // Collect results\n    let results: Vec<i32> = stream.collect().await;\n    println!(\"Results: {:?}\", results);\n    \n    // Process stream with for_each\n    let stream2 = stream::iter(1..=5)\n        .then(|n| async move {\n            sleep(Duration::from_millis(50)).await;\n            format!(\"Item: {}\", n)\n        });\n    \n    stream2\n        .for_each(|item| async {\n            println!(\"Processing: {}\", item);\n        })\n        .await;\n}",
+      "category": "async"
+    },
+    {
+      "trigger": "config_management",
+      "description": "Configuration management template - Environment-based configuration",
+      "content": "use serde::{Deserialize, Serialize};\nuse std::env;\n\n#[derive(Debug, Deserialize, Serialize)]\npub struct ${1:Config} {\n    pub database_url: String,\n    pub server_port: u16,\n    pub log_level: String,\n    pub api_key: String,\n    pub max_connections: u32,\n}\n\nimpl Default for ${1:Config} {\n    fn default() -> Self {\n        Self {\n            database_url: \"postgresql://localhost/mydb\".to_string(),\n            server_port: 8080,\n            log_level: \"info\".to_string(),\n            api_key: \"dev-key\".to_string(),\n            max_connections: 10,\n        }\n    }\n}\n\nimpl ${1:Config} {\n    pub fn from_env() -> Result<Self, Box<dyn std::error::Error>> {\n        let mut config = Self::default();\n        \n        if let Ok(db_url) = env::var(\"DATABASE_URL\") {\n            config.database_url = db_url;\n        }\n        \n        if let Ok(port) = env::var(\"SERVER_PORT\") {\n            config.server_port = port.parse()?;\n        }\n        \n        if let Ok(log_level) = env::var(\"LOG_LEVEL\") {\n            config.log_level = log_level;\n        }\n        \n        if let Ok(api_key) = env::var(\"API_KEY\") {\n            config.api_key = api_key;\n        }\n        \n        if let Ok(max_conn) = env::var(\"MAX_CONNECTIONS\") {\n            config.max_connections = max_conn.parse()?;\n        }\n        \n        Ok(config)\n    }\n    \n    pub fn from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {\n        let content = std::fs::read_to_string(path)?;\n        let config: Self = toml::from_str(&content)?;\n        Ok(config)\n    }\n}",
+      "category": "configuration"
+    },
+    {
+      "trigger": "custom_iterator",
+      "description": "Custom iterator template - Implement Iterator trait",
+      "content": "pub struct ${1:Counter} {\n    current: ${2:usize},\n    max: ${2:usize},\n    step: ${2:usize},\n}\n\nimpl ${1:Counter} {\n    pub fn new(max: ${2:usize}) -> Self {\n        Self {\n            current: 0,\n            max,\n            step: 1,\n        }\n    }\n    \n    pub fn with_step(max: ${2:usize}, step: ${2:usize}) -> Self {\n        Self {\n            current: 0,\n            max,\n            step,\n        }\n    }\n}\n\nimpl Iterator for ${1:Counter} {\n    type Item = ${2:usize};\n    \n    fn next(&mut self) -> Option<Self::Item> {\n        if self.current < self.max {\n            let current = self.current;\n            self.current += self.step;\n            Some(current)\n        } else {\n            None\n        }\n    }\n}\n\nimpl IntoIterator for ${1:Counter} {\n    type Item = ${2:usize};\n    type IntoIter = Self;\n    \n    fn into_iter(self) -> Self::IntoIter {\n        self\n    }\n}\n\n// Usage example\nfn main() {\n    for n in ${1:Counter}::new(10) {\n        println!(\"{}\", n);\n    }\n    \n    let evens: Vec<${2:usize}> = ${1:Counter}::with_step(20, 2).collect();\n    println!(\"Evens: {:?}\", evens);\n}",
+      "category": "iterator"
+    },
+    {
+      "trigger": "plugin_system",
+      "description": "Plugin system template - Dynamic plugin loading",
+      "content": "use std::collections::HashMap;\n\npub trait ${1:Plugin}: Send + Sync {\n    fn name(&self) -> &str;\n    fn version(&self) -> &str;\n    fn execute(&self, input: &str) -> Result<String, Box<dyn std::error::Error>>;\n}\n\npub struct ${2:PluginManager} {\n    plugins: HashMap<String, Box<dyn ${1:Plugin}>>,\n}\n\nimpl ${2:PluginManager} {\n    pub fn new() -> Self {\n        Self {\n            plugins: HashMap::new(),\n        }\n    }\n    \n    pub fn register_plugin(&mut self, plugin: Box<dyn ${1:Plugin}>) {\n        let name = plugin.name().to_string();\n        self.plugins.insert(name, plugin);\n    }\n    \n    pub fn get_plugin(&self, name: &str) -> Option<&dyn ${1:Plugin}> {\n        self.plugins.get(name).map(|p| p.as_ref())\n    }\n    \n    pub fn execute_plugin(&self, name: &str, input: &str) -> Result<String, Box<dyn std::error::Error>> {\n        match self.get_plugin(name) {\n            Some(plugin) => plugin.execute(input),\n            None => Err(format!(\"Plugin '{}' not found\", name).into()),\n        }\n    }\n    \n    pub fn list_plugins(&self) -> Vec<(&str, &str)> {\n        self.plugins\n            .values()\n            .map(|plugin| (plugin.name(), plugin.version()))\n            .collect()\n    }\n}\n\n// Example plugin implementation\nstruct ${3:ExamplePlugin};\n\nimpl ${1:Plugin} for ${3:ExamplePlugin} {\n    fn name(&self) -> &str {\n        \"${4:example_plugin}\"\n    }\n    \n    fn version(&self) -> &str {\n        \"${5:1.0.0}\"\n    }\n    \n    fn execute(&self, input: &str) -> Result<String, Box<dyn std::error::Error>> {\n        Ok(format!(\"Processed: {}\", input.to_uppercase()))\n    }\n}",
+      "category": "design_pattern"
+    },
+    {
+      "trigger": "memory_mapped_file",
+      "description": "Memory-mapped file template - Efficient file I/O",
+      "content": "use memmap2::{Mmap, MmapMut, MmapOptions};\nuse std::fs::{File, OpenOptions};\nuse std::io::{Result, Write};\n\nfn ${1:read_memory_mapped_file}(path: &str) -> Result<()> {\n    let file = File::open(path)?;\n    let mmap = unsafe { Mmap::map(&file)? };\n    \n    // Read data efficiently\n    let data = &mmap[..];\n    println!(\"File size: {} bytes\", data.len());\n    \n    // Process data in chunks\n    for chunk in data.chunks(1024) {\n        // Process chunk\n        println!(\"Processing chunk of {} bytes\", chunk.len());\n    }\n    \n    Ok(())\n}\n\nfn ${2:write_memory_mapped_file}(path: &str, size: usize) -> Result<()> {\n    let file = OpenOptions::new()\n        .read(true)\n        .write(true)\n        .create(true)\n        .open(path)?;\n    \n    file.set_len(size as u64)?;\n    \n    let mut mmap = unsafe { MmapMut::map_mut(&file)? };\n    \n    // Write data efficiently\n    for (i, byte) in mmap.iter_mut().enumerate() {\n        *byte = (i % 256) as u8;\n    }\n    \n    mmap.flush()?;\n    \n    Ok(())\n}\n\nfn main() -> Result<()> {\n    let file_path = \"${3:data.bin}\";\n    \n    // Create and write to memory-mapped file\n    ${2:write_memory_mapped_file}(file_path, 1024 * 1024)?; // 1MB file\n    \n    // Read from memory-mapped file\n    ${1:read_memory_mapped_file}(file_path)?;\n    \n    Ok(())\n}",
+      "category": "io"
+    },
+    {
+      "trigger": "rayon_parallel",
+      "description": "Parallel processing template - CPU-intensive tasks with Rayon",
+      "content": "use rayon::prelude::*;\nuse std::time::Instant;\n\nfn ${1:parallel_computation}() {\n    let data: Vec<i32> = (0..1_000_000).collect();\n    \n    let start = Instant::now();\n    \n    // Sequential processing\n    let sequential_result: i32 = data.iter().map(|&x| x * x).sum();\n    let sequential_time = start.elapsed();\n    \n    let start = Instant::now();\n    \n    // Parallel processing\n    let parallel_result: i32 = data.par_iter().map(|&x| x * x).sum();\n    let parallel_time = start.elapsed();\n    \n    println!(\"Sequential result: {}, time: {:?}\", sequential_result, sequential_time);\n    println!(\"Parallel result: {}, time: {:?}\", parallel_result, parallel_time);\n    \n    assert_eq!(sequential_result, parallel_result);\n}\n\nfn ${2:parallel_sort}() {\n    let mut data: Vec<i32> = (0..100_000).rev().collect();\n    \n    let start = Instant::now();\n    data.par_sort();\n    let sort_time = start.elapsed();\n    \n    println!(\"Parallel sort completed in {:?}\", sort_time);\n    println!(\"First 10 elements: {:?}\", &data[..10]);\n}\n\nfn ${3:parallel_search}() {\n    let data: Vec<i32> = (0..1_000_000).collect();\n    let target = 999_999;\n    \n    let result = data.par_iter().position_any(|&x| x == target);\n    \n    match result {\n        Some(pos) => println!(\"Found {} at position {}\", target, pos),\n        None => println!(\"Target not found\"),\n    }\n}\n\nfn main() {\n    ${1:parallel_computation}();\n    ${2:parallel_sort}();\n    ${3:parallel_search}();\n}",
+      "category": "concurrency"
+    }
+  ]
+}
