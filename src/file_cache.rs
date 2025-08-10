@@ -73,12 +73,14 @@ impl FileCache {
     }
     
     /// Clear the entire cache
+    #[allow(dead_code)]
     pub fn clear(&self) {
         let mut cache = self.cache.lock().unwrap();
         cache.clear();
     }
     
     /// Remove a specific file from the cache
+    #[allow(dead_code)]
     pub fn invalidate<P: AsRef<Path>>(&self, path: P) {
         let path = path.as_ref().to_path_buf();
         let mut cache = self.cache.lock().unwrap();
@@ -86,12 +88,14 @@ impl FileCache {
     }
     
     /// Get the number of cached files
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         let cache = self.cache.lock().unwrap();
         cache.len()
     }
     
     /// Check if cache is empty
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -120,11 +124,13 @@ pub fn get_cached_file_content(path: &std::path::Path) -> std::io::Result<String
 }
 
 /// Clear the global file cache
+#[allow(dead_code)]
 pub fn clear_file_cache() {
     GLOBAL_FILE_CACHE.clear();
 }
 
 /// Invalidate a specific file in the global cache
+#[allow(dead_code)]
 pub fn invalidate_file_cache<P: AsRef<Path>>(path: P) {
     GLOBAL_FILE_CACHE.invalidate(path);
 }

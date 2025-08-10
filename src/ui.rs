@@ -42,7 +42,7 @@ use vte4::TerminalExtManual;
 use vte4::TerminalExt;
 
 // Home directory detection
-use home;
+
 
 /// Creates the main application window with default settings
 pub fn create_window(app: &Application) -> ApplicationWindow {
@@ -249,7 +249,7 @@ pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
     setup_terminal_theme(&terminal);
     
     // Get the user's default shell from environment variables
-    if let Some(shell) = env::var("SHELL").ok() {
+    if let Ok(shell) = env::var("SHELL") {
         // Use the provided working directory or fall back to user's home directory
         let dir = match working_dir {
             Some(dir) => dir,
@@ -1302,11 +1302,7 @@ fn find_terminal_notebook(window: &ApplicationWindow) -> Option<Notebook> {
         .and_then(|terminal_box| terminal_box.first_child())
         .and_then(|child| {
             // Check if this is our terminal notebook
-            if let Ok(notebook) = child.downcast::<Notebook>() {
-                Some(notebook)
-            } else {
-                None
-            }
+            child.downcast::<Notebook>().ok()
         })
 }
 

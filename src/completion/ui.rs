@@ -24,9 +24,11 @@ enum CompletionItem {
 
 /// Extract the programming language from buffer language setting
 fn get_buffer_language(buffer: &Buffer) -> String {
+    let supported_languages = crate::completion::get_supported_languages();
+    
     if let Some(language) = buffer.language() {
         let lang_id = language.id().to_string();
-        match lang_id.as_str() {
+        let detected_lang = match lang_id.as_str() {
             "rust" => "rust".to_string(),
             "javascript" | "js" => "javascript".to_string(),
             "typescript" | "ts" => "javascript".to_string(), // Use JS completions for TS
@@ -37,9 +39,18 @@ fn get_buffer_language(buffer: &Buffer) -> String {
             "html" => "html".to_string(),
             "css" => "css".to_string(),
             _ => "rust".to_string(), // Default to rust instead of generic
+        };
+        
+        // Validate that the detected language is actually supported
+        if supported_languages.contains(&detected_lang) {
+            detected_lang
+        } else {
+            // Fall back to the first supported language if the detected one isn't available
+            supported_languages.get(0).unwrap_or(&"rust".to_string()).clone()
         }
     } else {
-        "rust".to_string() // Default to rust when no language is detected
+        // Default to first supported language when no language is detected
+        supported_languages.get(0).unwrap_or(&"rust".to_string()).clone()
     }
 }
 
@@ -766,6 +777,7 @@ pub fn setup_completion_shortcuts(source_view: &View) {
 }
 
 /// Get completion documentation
+#[allow(dead_code)]
 pub fn get_completion_documentation(keyword: &str, language: &str) -> String {
     // Get documentation from JSON data
     get_keyword_documentation(language, keyword)
@@ -848,8 +860,8 @@ fn extract_import_path(context: &str) -> Option<String> {
     let current_line_trimmed = current_line.trim();
     
     // Check if current line starts with "use"
-    if current_line_trimmed.starts_with("use ") {
-        let after_use = &current_line_trimmed[4..].trim(); // Skip "use "
+    if let Some(stripped) = current_line_trimmed.strip_prefix("use ") {
+        let after_use = &stripped.trim(); // Skip "use "
         
         // Find the last :: to get the module path before it
         if let Some(last_double_colon) = after_use.rfind("::") {

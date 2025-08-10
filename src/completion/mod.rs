@@ -81,5 +81,5 @@ pub fn find_modules_by_prefix(language: &str, partial_path: &str) -> Vec<String>
     find_matching_modules(language, partial_path)
 }
 
-// Re-export UI functions for external use
+// Re-export functions for external use
 pub use ui::{setup_completion, setup_completion_for_file, setup_completion_shortcuts};

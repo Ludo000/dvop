@@ -180,7 +180,7 @@ use std::cell::Cell;
 
 // Used to prevent recursive calls to refresh_settings
 thread_local! {
-    static REFRESHING: Cell<bool> = Cell::new(false);
+    static REFRESHING: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Forces a reload of settings and triggers updates

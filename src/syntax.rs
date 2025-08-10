@@ -126,7 +126,7 @@ use std::cell::Cell;
 
 // Track if we're currently getting the preferred style scheme to avoid recursive calls
 thread_local! {
-    static GETTING_STYLE: Cell<bool> = Cell::new(false);
+    static GETTING_STYLE: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Gets the appropriate style scheme name based on user preferences

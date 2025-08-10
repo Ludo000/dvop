@@ -6,9 +6,9 @@ use gtk4::{Button, ListBox, MenuButton, pango, ApplicationWindow, EventControlle
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::cell::RefCell;
-use mime_guess;
+
 use mime_guess::Mime;
-use home;
+
 
 /// Represents the source of file selection for different visual styling
 #[derive(Clone, Copy, PartialEq)]
@@ -490,10 +490,10 @@ fn show_path_input(
         let path_str = entered_path.as_str();
         
         // Try to parse and validate the path
-        let new_path = if path_str.starts_with("~/") {
+        let new_path = if let Some(stripped) = path_str.strip_prefix("~/") {
             // Handle home directory expansion
             if let Some(home_dir) = home::home_dir() {
-                home_dir.join(&path_str[2..])
+                home_dir.join(stripped)
             } else {
                 PathBuf::from(path_str)
             }

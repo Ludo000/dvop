@@ -90,6 +90,7 @@ impl JsonCompletionProvider {
     }
     
     /// Load completion data from JSON string
+    #[allow(dead_code)]
     pub fn from_json(json_content: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let language_data: LanguageCompletionData = serde_json::from_str(json_content)?;
         
@@ -146,26 +147,31 @@ impl JsonCompletionProvider {
     }
     
     /// Get all keyword data for advanced functionality
+    #[allow(dead_code)]
     pub fn get_keyword_data(&self) -> &[KeywordData] {
         &self.language_data.keywords
     }
     
     /// Get all snippet data for advanced functionality
+    #[allow(dead_code)]
     pub fn get_snippet_data(&self) -> &[SnippetData] {
         &self.language_data.snippets
     }
     
     /// Get language name
+    #[allow(dead_code)]
     pub fn get_language(&self) -> &str {
         &self.language_data.language
     }
     
     /// Get language description
+    #[allow(dead_code)]
     pub fn get_description(&self) -> &str {
         &self.language_data.description
     }
     
     /// Get keywords by category
+    #[allow(dead_code)]
     pub fn get_keywords_by_category(&self, category: &str) -> Vec<&KeywordData> {
         self.language_data.keywords.iter()
             .filter(|k| k.category == category)
@@ -173,6 +179,7 @@ impl JsonCompletionProvider {
     }
     
     /// Get snippets by category
+    #[allow(dead_code)]
     pub fn get_snippets_by_category(&self, category: &str) -> Vec<&SnippetData> {
         self.language_data.snippets.iter()
             .filter(|s| s.category == category)
@@ -180,6 +187,7 @@ impl JsonCompletionProvider {
     }
     
     /// Get all available categories for keywords
+    #[allow(dead_code)]
     pub fn get_keyword_categories(&self) -> Vec<String> {
         let mut categories: Vec<String> = self.language_data.keywords.iter()
             .map(|k| k.category.clone())
@@ -191,6 +199,7 @@ impl JsonCompletionProvider {
     }
     
     /// Get all available categories for snippets
+    #[allow(dead_code)]
     pub fn get_snippet_categories(&self) -> Vec<String> {
         let mut categories: Vec<String> = self.language_data.snippets.iter()
             .map(|s| s.category.clone())
@@ -226,6 +235,7 @@ impl JsonCompletionProvider {
     }
     
     /// Get all available root modules
+    #[allow(dead_code)]
     pub fn get_root_modules(&self) -> Vec<String> {
         if let Some(imports) = &self.language_data.imports {
             return imports.modules.iter()
@@ -293,6 +303,7 @@ impl CompletionDataManager {
     }
     
     /// Get mutable provider for a language
+    #[allow(dead_code)]
     pub fn get_provider_mut(&mut self, language: &str) -> Option<&mut JsonCompletionProvider> {
         // Try to load if not already loaded
         if !self.providers.contains_key(language) {
@@ -306,11 +317,13 @@ impl CompletionDataManager {
     }
     
     /// Check if language data is available
+    #[allow(dead_code)]
     pub fn has_language(&self, language: &str) -> bool {
         self.providers.contains_key(language)
     }
     
     /// Get list of loaded languages
+    #[allow(dead_code)]
     pub fn get_loaded_languages(&self) -> Vec<&str> {
         self.providers.keys().map(|s| s.as_str()).collect()
     }
@@ -346,12 +359,14 @@ impl CompletionDataManager {
     }
     
     /// Reload a specific language from disk
+    #[allow(dead_code)]
     pub fn reload_language(&mut self, language: &str) -> Result<(), Box<dyn std::error::Error>> {
         self.providers.remove(language);
         self.load_language(language)
     }
     
     /// Add custom language data from JSON string (for testing or dynamic data)
+    #[allow(dead_code)]
     pub fn add_language_from_json(&mut self, language: &str, json_content: &str) -> Result<(), Box<dyn std::error::Error>> {
         let provider = JsonCompletionProvider::from_json(json_content)?;
         self.providers.insert(language.to_string(), provider);
