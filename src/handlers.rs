@@ -1177,6 +1177,8 @@ fn setup_file_selection_handler(
     let file_path_manager_for_context = file_path_manager.clone();
     let current_dir_for_context = current_dir.clone();
     let window_for_context = window.clone();
+    let save_button_for_context = save_button.clone();
+    let save_as_button_for_context = save_as_button.clone();
     
     right_click_gesture.connect_pressed(move |gesture, _n_press, x, y| {
         // Find which row was clicked
@@ -1209,6 +1211,20 @@ fn setup_file_selection_handler(
                     }
                 }
             }
+        } else {
+            // Right-clicked on empty space - show background context menu
+            show_file_manager_background_context_menu(
+                &window_for_context,
+                &file_list_box_for_context,
+                &current_dir_for_context,
+                &active_tab_path_for_context,
+                &editor_notebook_for_context,
+                &file_path_manager_for_context,
+                &save_button_for_context,
+                &save_as_button_for_context,
+                x,
+                y,
+            );
         }
     });
     
@@ -1608,5 +1624,95 @@ fn show_file_context_menu(
     
     // Show the popover
     println!("DEBUG: Showing context menu popover");
+    popover.popup();
+}
+
+/// Shows a context menu when right-clicking in empty space of the file manager
+/// 
+/// This function creates and displays a context menu for general file manager actions
+/// like creating new files when clicking in empty space.
+fn show_file_manager_background_context_menu(
+    window: &ApplicationWindow,
+    file_list_box: &ListBox,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+    editor_notebook: &Notebook,
+    file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    save_button: &Button,
+    save_as_button: &Button,
+    x: f64,
+    y: f64,
+) {
+    println!("DEBUG: Creating background context menu for file manager");
+    
+    // Create a popover for the context menu
+    let popover = gtk4::Popover::new();
+    
+    // Create a box to hold the menu items
+    let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    menu_box.add_css_class("menu");
+    
+    // Create "New File" button
+    let new_file_button = Button::with_label("New File");
+    new_file_button.set_hexpand(true);
+    
+    // Clone variables for the button closure
+    let editor_notebook_clone = editor_notebook.clone();
+    let file_path_manager_clone = file_path_manager.clone();
+    let active_tab_path_clone = active_tab_path.clone();
+    let save_button_clone = save_button.clone();
+    let save_as_button_clone = save_as_button.clone();
+    let window_clone = window.clone();
+    let current_dir_clone = current_dir.clone();
+    let file_list_box_clone = file_list_box.clone();
+    let popover_weak = popover.downgrade();
+    
+    new_file_button.connect_clicked(move |_| {
+        println!("DEBUG: New File button clicked!");
+        
+        // Hide the context menu first
+        if let Some(popover) = popover_weak.upgrade() {
+            popover.popdown();
+        }
+        
+        // Create new empty tab
+        let new_tab_deps = NewTabDependencies {
+            editor_notebook: editor_notebook_clone.clone(),
+            window: window_clone.clone(),
+            file_list_box: file_list_box_clone.clone(),
+            active_tab_path: active_tab_path_clone.clone(),
+            file_path_manager: file_path_manager_clone.clone(),
+            current_dir: current_dir_clone.clone(),
+            save_button: save_button_clone.clone(),
+            save_as_button: save_as_button_clone.clone(),
+            _save_menu_button: None,
+        };
+        
+        create_new_empty_tab(&new_tab_deps);
+    });
+    
+    // Add button to menu box
+    menu_box.append(&new_file_button);
+    
+    // Set the menu box as the popover's child
+    popover.set_child(Some(&menu_box));
+    
+    // Set the popover's parent and position
+    popover.set_parent(file_list_box);
+    
+    // Set position
+    let rect = gtk4::gdk::Rectangle::new(x as i32, y as i32, 1, 1);
+    popover.set_pointing_to(Some(&rect));
+    
+    // Properly handle cleanup when the popover is closed
+    let popover_weak_cleanup = popover.downgrade();
+    popover.connect_closed(move |_| {
+        if let Some(popover) = popover_weak_cleanup.upgrade() {
+            popover.unparent();
+        }
+    });
+    
+    // Show the popover
+    println!("DEBUG: Showing background context menu popover");
     popover.popup();
 }
