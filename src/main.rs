@@ -367,14 +367,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Initialize the file manager panel components
     let (file_list_box, file_list_scrolled_window) =
-        ui::create_file_manager_panel();
+        ui::file_manager::create_file_manager_panel();
         
     // Assemble the file manager panel from its components
     let file_manager_panel =
-        ui::create_file_manager_panel_container(file_list_scrolled_window);
+        ui::file_manager::create_file_manager_panel_container(file_list_scrolled_window);
 
     // Create the path bar with navigation buttons and path segments
-    let (path_bar, path_box, up_button, _refresh_button, terminal_button) = ui::create_path_bar();
+    let (path_bar, path_box, up_button, _refresh_button, terminal_button) = ui::file_manager::create_path_bar();
     
     // Set up keyboard shortcuts for common operations (including Ctrl+L for path editing)
     utils::setup_keyboard_shortcuts(
