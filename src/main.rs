@@ -195,8 +195,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button) = ui::create_header();
 
     // Create terminal notebook with tabs instead of single terminal
-    let (terminal_notebook, add_terminal_button) = ui::create_terminal_notebook();
-    let terminal_notebook_box = ui::create_terminal_notebook_box(&terminal_notebook, &add_terminal_button);
+    let (terminal_notebook, add_terminal_button) = ui::terminal::create_terminal_notebook();
+    let terminal_notebook_box = ui::terminal::create_terminal_notebook_box(&terminal_notebook, &add_terminal_button);
     
     // Set up theme settings based on system preferences
     if let Some(settings) = gtk4::Settings::default() {
@@ -220,7 +220,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 println!("Theme changed via gtk-application-prefer-dark-theme signal");
                 syntax::sync_gtk_with_system_theme();
                 update_all_buffer_themes(&window_clone);
-                ui::update_all_terminal_themes(&terminal_notebook_clone);
+                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone);
             }
         );
         
@@ -231,7 +231,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 println!("Theme changed via gtk-theme-name signal");
                 syntax::sync_gtk_with_system_theme();
                 update_all_buffer_themes(&window_clone_2);
-                ui::update_all_terminal_themes(&terminal_notebook_clone_2);
+                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_2);
             }
         );
         
@@ -242,7 +242,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 println!("Icon theme changed - may indicate system theme change");
                 syntax::sync_gtk_with_system_theme();
                 update_all_buffer_themes(&window_clone_3);
-                ui::update_all_terminal_themes(&terminal_notebook_clone_3);
+                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_3);
             }
         );
         
@@ -761,7 +761,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let current_dir_clone_for_terminal_button = current_dir.clone();
     terminal_button.connect_clicked(move |_| {
         // Add a new terminal tab in the current directory
-        ui::add_terminal_tab(&terminal_notebook_clone_for_terminal_button, Some(current_dir_clone_for_terminal_button.borrow().clone()));
+        ui::terminal::add_terminal_tab(&terminal_notebook_clone_for_terminal_button, Some(current_dir_clone_for_terminal_button.borrow().clone()));
     });
 
     // Set up the add file button handler to create a new file (same as new button functionality)
@@ -945,7 +945,7 @@ fn setup_gsettings_monitor(window: &ApplicationWindow, terminal_notebook: &gtk4:
             let terminal_notebook_clone_inner = terminal_notebook_clone.clone();
             glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
                 update_all_buffer_themes(&window_clone_inner);
-                ui::update_all_terminal_themes(&terminal_notebook_clone_inner);
+                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_inner);
             });
         });
         
@@ -956,7 +956,7 @@ fn setup_gsettings_monitor(window: &ApplicationWindow, terminal_notebook: &gtk4:
             let terminal_notebook_clone_inner = terminal_notebook_clone_2.clone();
             glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
                 update_all_buffer_themes(&window_clone_inner);
-                ui::update_all_terminal_themes(&terminal_notebook_clone_inner);
+                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_inner);
             });
         });
         
