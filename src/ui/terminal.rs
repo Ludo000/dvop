@@ -180,7 +180,7 @@ pub fn create_terminal_box(terminal: &VteTerminal) -> ScrolledWindow {
         .child(terminal)           // Set the terminal as the child widget
         .vexpand(true)             // Expand vertically to fill all available space
         .hexpand(true)             // Expand horizontally to fill available width
-        .min_content_height(150)   // Set minimum height for usability
+        .min_content_height(200)   // Set minimum height for better usability (increased from 150)
         .build()
 }
 

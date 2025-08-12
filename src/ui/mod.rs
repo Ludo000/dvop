@@ -261,7 +261,7 @@ pub fn create_paned(
     
     // Set initial split positions
     paned.set_position(200);        // Width of file manager sidebar
-    editor_paned.set_position(400); // Height of editor area
+    editor_paned.set_position(320); // Height of editor area (reduced to give more space to terminal)
     
     paned
 }
