@@ -457,20 +457,62 @@ pub fn show_log_history_popup(parent_window: &gtk4::ApplicationWindow) {
             message_box.set_margin_top(6);
             message_box.set_margin_bottom(6);
             
-            // Format timestamp
-            let timestamp_str = log_message.timestamp
-                .elapsed()
-                .map(|duration| {
-                    let secs = duration.as_secs();
-                    if secs < 60 {
-                        format!("{}s ago", secs)
-                    } else if secs < 3600 {
-                        format!("{}m ago", secs / 60)
-                    } else {
-                        format!("{}h ago", secs / 3600)
+            // Format timestamp to show both real date/time and relative time
+            let timestamp_str = {
+                use chrono::{Datelike, Local, TimeZone};
+                
+                let relative_time = log_message.timestamp
+                    .elapsed()
+                    .map(|duration| {
+                        let secs = duration.as_secs();
+                        if secs < 60 {
+                            format!("{}s ago", secs)
+                        } else if secs < 3600 {
+                            format!("{}m ago", secs / 60)
+                        } else if secs < 86400 {
+                            format!("{}h ago", secs / 3600)
+                        } else {
+                            format!("{}d ago", secs / 86400)
+                        }
+                    })
+                    .unwrap_or_else(|_| "just now".to_string());
+                
+                match log_message.timestamp.duration_since(std::time::UNIX_EPOCH) {
+                    Ok(duration) => {
+                        let secs = duration.as_secs() as i64;
+                        let nanos = duration.subsec_nanos();
+                        
+                        if let Some(datetime) = Local.timestamp_opt(secs, nanos).single() {
+                            let now = Local::now();
+                            let date_today = now.date_naive();
+                            let date_message = datetime.date_naive();
+                            
+                            let formatted_time = if date_message == date_today {
+                                // Today - show time only
+                                datetime.format("%H:%M:%S").to_string()
+                            } else if date_today.signed_duration_since(date_message).num_days() == 1 {
+                                // Yesterday
+                                datetime.format("Yesterday %H:%M").to_string()
+                            } else if date_today.signed_duration_since(date_message).num_days() < 7 {
+                                // This week - show day name and time
+                                datetime.format("%A %H:%M").to_string()
+                            } else if date_message.year() == date_today.year() {
+                                // This year - show month, day and time
+                                datetime.format("%b %d %H:%M").to_string()
+                            } else {
+                                // Different year - show full date and time
+                                datetime.format("%Y-%m-%d %H:%M").to_string()
+                            };
+                            
+                            // Combine both formats: "Aug 12 14:30 (2m ago)"
+                            format!("{} ({})", formatted_time, relative_time)
+                        } else {
+                            format!("Invalid time ({})", relative_time)
+                        }
                     }
-                })
-                .unwrap_or_else(|_| "just now".to_string());
+                    Err(_) => format!("Unknown time ({})", relative_time)
+                }
+            };
             
             // Create level indicator and message
             let top_line = GtkBox::new(Orientation::Horizontal, 8);

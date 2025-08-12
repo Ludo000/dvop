@@ -25,6 +25,9 @@ fn main() {
     // Initialize user settings first
     settings::initialize_settings();
     
+    // Load log history from previous sessions
+    status_log::load_log_history();
+    
     // Create the main GTK application with a unique application ID
     // Set flags to handle file opening
     let app = Application::builder()

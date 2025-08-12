@@ -5,6 +5,8 @@ use gtk4::prelude::*;
 use gtk4::Label;
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
+use std::path::PathBuf;
+use std::fs;
 
 /// Maximum number of log messages to keep in memory
 const MAX_LOG_HISTORY: usize = 100;
@@ -15,6 +17,49 @@ pub struct LogMessage {
     pub timestamp: std::time::SystemTime,
     pub message: String,
     pub level: LogLevel,
+}
+
+impl LogMessage {
+    /// Serialize log message to a string for file storage
+    pub fn to_string(&self) -> String {
+        let timestamp = self.timestamp
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or(std::time::Duration::from_secs(0))
+            .as_secs();
+        let level_str = match self.level {
+            LogLevel::Info => "INFO",
+            LogLevel::Warning => "WARNING",
+            LogLevel::Error => "ERROR",
+            LogLevel::Success => "SUCCESS",
+        };
+        format!("{}|{}|{}", timestamp, level_str, self.message)
+    }
+
+    /// Deserialize log message from a string
+    pub fn from_string(s: &str) -> Option<LogMessage> {
+        let parts: Vec<&str> = s.splitn(3, '|').collect();
+        if parts.len() != 3 {
+            return None;
+        }
+
+        let timestamp_secs: u64 = parts[0].parse().ok()?;
+        let level = match parts[1] {
+            "INFO" => LogLevel::Info,
+            "WARNING" => LogLevel::Warning,
+            "ERROR" => LogLevel::Error,
+            "SUCCESS" => LogLevel::Success,
+            _ => return None,
+        };
+        let message = parts[2].to_string();
+
+        let timestamp = std::time::UNIX_EPOCH + std::time::Duration::from_secs(timestamp_secs);
+
+        Some(LogMessage {
+            timestamp,
+            message,
+            level,
+        })
+    }
 }
 
 /// Log levels for different types of messages
@@ -29,6 +74,74 @@ pub enum LogLevel {
 /// Simple status log storage (no global state, just for history)
 static STATUS_HISTORY: once_cell::sync::Lazy<Arc<Mutex<VecDeque<LogMessage>>>> = 
     once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(VecDeque::new())));
+
+/// Get the log file path
+fn get_log_file_path() -> PathBuf {
+    // Use the same configuration directory as settings
+    let config_dir = crate::settings::get_config_dir_public();
+    config_dir.join("log_history.txt")
+}
+
+/// Load log history from file
+pub fn load_log_history() {
+    let log_file = get_log_file_path();
+    
+    // Create the config directory if it doesn't exist
+    if let Some(parent) = log_file.parent() {
+        if !parent.exists() {
+            if let Err(e) = fs::create_dir_all(parent) {
+                eprintln!("Failed to create config directory for logs: {}", e);
+                return;
+            }
+        }
+    }
+    
+    match fs::read_to_string(&log_file) {
+        Ok(contents) => {
+            if let Ok(mut history) = STATUS_HISTORY.lock() {
+                history.clear();
+                
+                // Parse each line as a log message
+                for line in contents.lines() {
+                    if let Some(log_message) = LogMessage::from_string(line) {
+                        history.push_back(log_message);
+                    }
+                }
+                
+                // Keep only the last MAX_LOG_HISTORY messages
+                while history.len() > MAX_LOG_HISTORY {
+                    history.pop_front();
+                }
+                
+                println!("Loaded {} log messages from history", history.len());
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            // File doesn't exist yet, that's fine for first run
+            println!("Log history file not found, starting fresh");
+        }
+        Err(e) => {
+            eprintln!("Failed to load log history: {}", e);
+        }
+    }
+}
+
+/// Save log history to file
+fn save_log_history() {
+    let log_file = get_log_file_path();
+    
+    if let Ok(history) = STATUS_HISTORY.lock() {
+        let mut contents = String::new();
+        for message in history.iter() {
+            contents.push_str(&message.to_string());
+            contents.push('\n');
+        }
+        
+        if let Err(e) = fs::write(&log_file, contents) {
+            eprintln!("Failed to save log history: {}", e);
+        }
+    }
+}
 
 /// Store a reference to the current secondary status label (if any)
 thread_local! {
@@ -128,6 +241,9 @@ fn add_message_to_log(message: String, level: LogLevel) {
         }
     }
 
+    // Save to file asynchronously
+    save_log_history();
+
     // Update the current status label
     update_status_label(&log_message);
 }
@@ -189,6 +305,13 @@ pub fn clear_log_history() {
     if let Ok(mut history) = STATUS_HISTORY.lock() {
         history.clear();
     }
+    
+    // Also clear the saved file
+    let log_file = get_log_file_path();
+    if let Err(e) = fs::write(&log_file, "") {
+        eprintln!("Failed to clear log history file: {}", e);
+    }
+    
     // Show ready message
     log_info("Ready");
 }

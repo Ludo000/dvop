@@ -150,6 +150,11 @@ fn get_config_dir() -> PathBuf {
     PathBuf::from("./config")
 }
 
+/// Returns the configuration directory path (public function)
+pub fn get_config_dir_public() -> PathBuf {
+    get_config_dir()
+}
+
 use std::sync::{Mutex, Once};
 use once_cell::sync::Lazy;
 

@@ -18,3 +18,4 @@ serde = { version = "1.0", features = ["derive"] }  # For JSON serialization/des
 serde_json = "1.0"  # For JSON parsing
 lazy_static = "1.4"  # For global static variables
 tempfile = "3.0"  # For file operations and testing
+chrono = "0.4"  # For proper date/time formatting
