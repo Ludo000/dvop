@@ -30,6 +30,27 @@ pub enum LogLevel {
 static STATUS_HISTORY: once_cell::sync::Lazy<Arc<Mutex<VecDeque<LogMessage>>>> = 
     once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(VecDeque::new())));
 
+/// Store a reference to the current secondary status label (if any)
+thread_local! {
+    static CURRENT_SECONDARY_STATUS_LABEL: std::cell::RefCell<Option<Label>> = std::cell::RefCell::new(None);
+}
+
+/// Set the current secondary status label for this thread
+pub fn set_secondary_status_label(label: &Label) {
+    CURRENT_SECONDARY_STATUS_LABEL.with(|l| {
+        *l.borrow_mut() = Some(label.clone());
+    });
+}
+
+/// Update secondary status label with file information
+pub fn update_secondary_status(text: &str) {
+    CURRENT_SECONDARY_STATUS_LABEL.with(|l| {
+        if let Some(ref label) = *l.borrow() {
+            label.set_text(text);
+        }
+    });
+}
+
 /// Store a reference to the current status label (if any)
 thread_local! {
     static CURRENT_STATUS_LABEL: std::cell::RefCell<Option<Label>> = std::cell::RefCell::new(None);
@@ -109,6 +130,15 @@ fn add_message_to_log(message: String, level: LogLevel) {
 
     // Update the current status label
     update_status_label(&log_message);
+}
+
+/// Register status bar labels to receive log updates
+pub fn register_status_labels(status_label: &Label, secondary_label: &Label) {
+    set_status_label(status_label);
+    set_secondary_status_label(secondary_label);
+    
+    // Show ready message initially
+    log_info("Ready");
 }
 
 /// Register a status bar label to receive log updates (compatibility function)

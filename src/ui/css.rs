@@ -133,6 +133,40 @@ fn get_status_bar_styles() -> &'static str {
     "
     /* === STATUS BAR STYLES === */
     
+    .status-bar {
+        background-color: shade(@theme_bg_color, 0.97);
+        border-top: 1px solid alpha(@theme_fg_color, 0.2);
+        min-height: 24px;
+    }
+    
+    .status-text {
+        font-size: 0.9em;
+        color: @theme_fg_color;
+    }
+    
+    .status-secondary {
+        font-size: 0.8em;
+        color: alpha(@theme_fg_color, 0.7);
+        font-family: monospace;
+    }
+    
+    /* Status message type styling */
+    .status-log-info {
+        color: @theme_fg_color;
+    }
+    
+    .status-log-success {
+        color: #27ae60;
+    }
+    
+    .status-log-warning {
+        color: #f39c12;
+    }
+    
+    .status-log-error {
+        color: #e74c3c;
+    }
+    
     .basado-status-bar {
         border-top: 1px solid alpha(#999, 0.3);
     }

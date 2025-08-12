@@ -142,6 +142,9 @@ pub struct NewTabDependencies {
 /// This function is used to create a new tab for a new document,
 /// setting up all the necessary UI components and state tracking.
 pub fn create_new_empty_tab(deps: &NewTabDependencies) {
+    // Log new file creation
+    crate::status_log::log_info("Creating new file...");
+    
     // Create a new source view with syntax highlighting capabilities
     let (source_view, source_buffer) = crate::syntax::create_source_view();
     source_buffer.set_text(""); // Start with empty content
@@ -194,6 +197,9 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
             Some(mime_guess::mime::TEXT_PLAIN_UTF_8)
         );
     }
+    
+    // Log success
+    crate::status_log::log_success("New file ready");
 
     // Connect dirty tracking for the new "Untitled" tab's label
     // Use weak reference to prevent memory leaks from circular references
@@ -205,8 +211,10 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
             
             if label_text == "Untitled" && !buffer_content.is_empty() {
                 label.set_text("*Untitled");
+                crate::status_log::log_info("File modified");
             } else if label_text == "*Untitled" && buffer_content.is_empty() {
                 label.set_text("Untitled");
+                crate::status_log::log_info("File no longer modified");
             }
         }
     });
@@ -229,6 +237,9 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
             );
         }
     });
+    
+    // Log successful creation
+    crate::status_log::log_success("New file ready");
 }
 
 // Helper function to update tab label after save or name change
@@ -275,6 +286,15 @@ pub fn handle_close_tab_request(
     new_tab_deps: Option<NewTabDependencies>, // Dependencies to create a new tab if the last one is closed
 ) {
     if let Some(page_widget) = notebook.nth_page(Some(page_num_to_close)) {
+        // Get file name for logging
+        let filename = file_path_manager.borrow()
+            .get(&page_num_to_close)
+            .and_then(|path| path.file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Untitled".to_string());
+            
+        crate::status_log::log_info(&format!("Closing {}", filename));
+        
         if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
             let mut is_dirty = false;
             if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
@@ -444,7 +464,16 @@ fn actually_close_tab(
 ) {
     let n_pages_before_close = notebook.n_pages();
     
+    // Get filename for logging before we remove it
+    let filename = file_path_manager_rc.borrow()
+        .get(&page_num_to_close)
+        .and_then(|path| path.file_name())
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Untitled".to_string());
+    
     notebook.remove_page(Some(page_num_to_close));
+    
+    crate::status_log::log_success(&format!("Closed {}", filename));
     
     // Efficiently handle HashMap index updates
     {
@@ -525,6 +554,13 @@ pub fn open_or_focus_tab(
     current_dir: &Rc<RefCell<PathBuf>>,
     _save_menu_button: Option<&MenuButton>, // Added save_menu_button parameter
 ) {
+    let filename = file_to_open.file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "file".to_string());
+
+    // Log opening operation
+    crate::status_log::log_info(&format!("Opening {}...", filename));
+    
     // Check if file is already open
     let mut page_to_focus = None;
     let num_pages = notebook.n_pages();
@@ -545,6 +581,8 @@ pub fn open_or_focus_tab(
         if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, page_num) {
             text_view.grab_focus();
         }
+        
+        crate::status_log::log_success(&format!("Focused {}", filename));
     } else {
         // Get file MIME type 
         let mime_type = mime_guess::from_path(&file_to_open).first_or_octet_stream();
@@ -600,6 +638,7 @@ pub fn open_or_focus_tab(
                     let current_text = label.text();
                     if !current_text.starts_with('*') {
                         label.set_text(&format!("*{}", file_name_ref));
+                        crate::status_log::log_info(&format!("{} modified", file_name_ref));
                     }
                 }
             });
@@ -624,6 +663,9 @@ pub fn open_or_focus_tab(
         // Update state
         file_path_manager.borrow_mut().insert(new_page_num, file_to_open.clone());
         *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+
+        // Log successful opening
+        crate::status_log::log_success(&format!("Opened {}", filename));
 
         // Connect close button
         let notebook_clone = notebook.clone();
@@ -831,6 +873,8 @@ fn setup_open_button_handler(
     let path_box = path_box.cloned(); // Clone the optional path box
 
     open_button.connect_clicked(move |_| {
+        crate::status_log::log_info("Opening file dialog...");
+        
         let dialog = gtk4::FileChooserDialog::new(
             Some("Open File"),
             Some(&window),
@@ -882,25 +926,40 @@ fn setup_open_button_handler(
                     
                     let mime_type = mime_guess::from_path(&file_to_open).first_or_octet_stream();
                     if utils::is_allowed_mime_type(&mime_type) {
-                        if let Ok(content) = std::fs::read_to_string(&file_to_open) {                        open_or_focus_tab(
-                            &editor_notebook_clone,
-                            &file_to_open,
-                            &content,
-                            &active_tab_path_ref_for_response, 
-                            &file_path_manager_for_response,   
-                            &save_button_clone,
-                            &save_as_button_clone,
-                            &mime_type.clone(), // Clone here to avoid ownership move
-                            &window_for_response, // Pass window
-                            &file_list_box_for_response, // Pass file_list_box
-                            &current_dir_for_response, // Pass current_dir
-                            save_menu_button_for_response.as_ref(), // Pass the save_menu_button
-                        );
+                        match std::fs::read_to_string(&file_to_open) {
+                            Ok(content) => {
+                                open_or_focus_tab(
+                                    &editor_notebook_clone,
+                                    &file_to_open,
+                                    &content,
+                                    &active_tab_path_ref_for_response, 
+                                    &file_path_manager_for_response,   
+                                    &save_button_clone,
+                                    &save_as_button_clone,
+                                    &mime_type.clone(), // Clone here to avoid ownership move
+                                    &window_for_response, // Pass window
+                                    &file_list_box_for_response, // Pass file_list_box
+                                    &current_dir_for_response, // Pass current_dir
+                                    save_menu_button_for_response.as_ref(), // Pass the save_menu_button
+                                );
 
-                            if let Some(parent) = file_to_open.parent() {
-                                let parent_path = parent.to_path_buf();
-                                *current_dir_clone.borrow_mut() = parent_path.clone();
-                                utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow(), utils::FileSelectionSource::TabSwitch);
+                                if let Some(parent) = file_to_open.parent() {
+                                    let parent_path = parent.to_path_buf();
+                                    *current_dir_clone.borrow_mut() = parent_path.clone();
+                                    utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow(), utils::FileSelectionSource::TabSwitch);
+                                }
+                                
+                                // Log successful file opening
+                                let filename = file_to_open.file_name()
+                                    .map(|name| name.to_string_lossy().into_owned())
+                                    .unwrap_or_else(|| "file".to_string());
+                                crate::status_log::log_success(&format!("Opened {}", filename));
+                            }
+                            Err(e) => {
+                                let filename = file_to_open.file_name()
+                                    .map(|name| name.to_string_lossy().into_owned())
+                                    .unwrap_or_else(|| "file".to_string());
+                                crate::status_log::log_error(&format!("Failed to read {}: {}", filename, e));
                             }
                         }
                     } else if mime_type.type_() == "image" {
@@ -924,6 +983,12 @@ fn setup_open_button_handler(
                             *current_dir_clone.borrow_mut() = parent.to_path_buf();
                             utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow(), utils::FileSelectionSource::TabSwitch);
                         }
+                        
+                        // Log successful image opening
+                        let filename = file_to_open.file_name()
+                            .map(|name| name.to_string_lossy().into_owned())
+                            .unwrap_or_else(|| "image".to_string());
+                        crate::status_log::log_success(&format!("Opened {}", filename));
                     } else {
                         // Handle unsupported file types
                         open_or_focus_tab(
@@ -945,9 +1010,22 @@ fn setup_open_button_handler(
                             *current_dir_clone.borrow_mut() = parent.to_path_buf();
                             utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow(), utils::FileSelectionSource::TabSwitch);
                         }
+                        
+                        // Log successful file opening (even for unsupported types)
+                        let filename = file_to_open.file_name()
+                            .map(|name| name.to_string_lossy().into_owned())
+                            .unwrap_or_else(|| "file".to_string());
+                        crate::status_log::log_success(&format!("Opened {}", filename));
                     }
+                } else {
+                    // No file was selected despite Accept response
+                    crate::status_log::log_error("No file selected");
                 }
+            } else if response == gtk4::ResponseType::Cancel {
+                // Only log cancellation if it's explicitly a cancel response
+                crate::status_log::log_info("File open cancelled");
             }
+            // Don't log anything for other response types (like dialog close events)
             dialog.close();
         });
         dialog.show();
@@ -971,29 +1049,55 @@ fn setup_save_button_handler(
     let current_dir = current_dir.clone();
 
     save_button.connect_clicked(move |_| {
+        // Log save operation start
+        crate::status_log::log_info("Saving file...");
+        
         if let Some((_active_text_view, active_buffer)) = get_active_text_view_and_buffer(&editor_notebook) { // Prefixed active_text_view
             let current_page_num_opt = editor_notebook.current_page();
-            if current_page_num_opt.is_none() { return; }
+            if current_page_num_opt.is_none() { 
+                crate::status_log::log_error("No active tab found");
+                return; 
+            }
             let current_page_num = current_page_num_opt.unwrap();
 
             let path_to_save_opt = file_path_manager.borrow().get(&current_page_num).cloned();
 
             if let Some(path_to_save) = path_to_save_opt {
+                let filename = path_to_save.file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "file".to_string());
+                
                 let mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
                 if utils::is_allowed_mime_type(&mime_type) {
-                    if let Ok(mut file) = File::create(&path_to_save) {
-                        let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
-                        if file.write_all(text.as_bytes()).is_ok() {
-                            // Update tab label (remove *)
-                            update_tab_label_after_save(&editor_notebook, current_page_num, Some(&path_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
-                            
-                            // Apply syntax highlighting based on file extension
-                            apply_syntax_highlighting_after_save(&editor_notebook, current_page_num, &path_to_save);
+                    match File::create(&path_to_save) {
+                        Ok(mut file) => {
+                            let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
+                            match file.write_all(text.as_bytes()) {
+                                Ok(_) => {
+                                    // Update tab label (remove *)
+                                    update_tab_label_after_save(&editor_notebook, current_page_num, Some(&path_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
+                                    
+                                    // Apply syntax highlighting based on file extension
+                                    apply_syntax_highlighting_after_save(&editor_notebook, current_page_num, &path_to_save);
+                                    
+                                    crate::status_log::log_success(&format!("Saved {}", filename));
+                                }
+                                Err(e) => {
+                                    crate::status_log::log_error(&format!("Failed to write {}: {}", filename, e));
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            crate::status_log::log_error(&format!("Failed to create {}: {}", filename, e));
                         }
                     }
+                } else {
+                    crate::status_log::log_error("File type not supported for saving");
                 }
             } else { // No path associated, treat as "Save As"
                 // This logic should ideally call a shared "save_as" function
+                crate::status_log::log_info("Opening Save As dialog...");
+                
                 let dialog = gtk4::FileChooserDialog::new(
                     Some("Save File"),
                     Some(&window),
@@ -1028,25 +1132,43 @@ fn setup_save_button_handler(
                 dialog.connect_response(move |d, resp| {
                     if resp == gtk4::ResponseType::Accept {
                         if let Some(file) = d.file().and_then(|f| f.path()) {
-                             if let Ok(mut f_obj) = File::create(&file) {
-                                let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
-                                if f_obj.write_all(text.as_bytes()).is_ok() {
-                                    file_path_manager_clone.borrow_mut().insert(current_page_num, file.clone());
-                                    *active_tab_path_ref_clone.borrow_mut() = Some(file.clone());
-                                     // Update tab label
-                                    update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&file.file_name().unwrap_or_default().to_string_lossy()), false);
-                                    
-                                    // Apply syntax highlighting based on file extension
-                                    apply_syntax_highlighting_after_save(&editor_notebook_clone, current_page_num, &file);
-                                    
-                                    // Update main window title potentially
-                                    if let Some(parent) = file.parent() {
-                                        *current_dir_clone.borrow_mut() = parent.to_path_buf();
+                            let filename = file.file_name()
+                                .map(|name| name.to_string_lossy().into_owned())
+                                .unwrap_or_else(|| "file".to_string());
+                            
+                            match File::create(&file) {
+                                Ok(mut f_obj) => {
+                                    let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
+                                    match f_obj.write_all(text.as_bytes()) {
+                                        Ok(_) => {
+                                            file_path_manager_clone.borrow_mut().insert(current_page_num, file.clone());
+                                            *active_tab_path_ref_clone.borrow_mut() = Some(file.clone());
+                                            // Update tab label
+                                            update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&file.file_name().unwrap_or_default().to_string_lossy()), false);
+                                            
+                                            // Apply syntax highlighting based on file extension
+                                            apply_syntax_highlighting_after_save(&editor_notebook_clone, current_page_num, &file);
+                                            
+                                            // Update main window title potentially
+                                            if let Some(parent) = file.parent() {
+                                                *current_dir_clone.borrow_mut() = parent.to_path_buf();
+                                            }
+                                            utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow(), utils::FileSelectionSource::TabSwitch);
+                                            
+                                            crate::status_log::log_success(&format!("Saved as {}", filename));
+                                        }
+                                        Err(e) => {
+                                            crate::status_log::log_error(&format!("Failed to write {}: {}", filename, e));
+                                        }
                                     }
-                                    utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow(), utils::FileSelectionSource::TabSwitch);
+                                }
+                                Err(e) => {
+                                    crate::status_log::log_error(&format!("Failed to create {}: {}", filename, e));
                                 }
                             }
                         }
+                    } else {
+                        crate::status_log::log_info("Save cancelled");
                     }
                     d.close();
                 });
@@ -1073,9 +1195,14 @@ fn setup_save_as_button_handler(
     let file_list_box = file_list_box.clone();
 
     save_as_button.connect_clicked(move |_| {
+        crate::status_log::log_info("Opening Save As dialog...");
+        
         if let Some((_active_text_view, active_buffer)) = get_active_text_view_and_buffer(&editor_notebook) { // Prefixed active_text_view
             let current_page_num_opt = editor_notebook.current_page();
-            if current_page_num_opt.is_none() { return; }
+            if current_page_num_opt.is_none() { 
+                crate::status_log::log_error("No active tab found");
+                return; 
+            }
             let current_page_num = current_page_num_opt.unwrap();
 
             let dialog = gtk4::FileChooserDialog::new(
@@ -1119,28 +1246,48 @@ fn setup_save_as_button_handler(
             dialog.connect_response(move |d, resp| {
                 if resp == gtk4::ResponseType::Accept {
                     if let Some(file_to_save) = d.file().and_then(|f| f.path()) {
+                        let filename = file_to_save.file_name()
+                            .map(|name| name.to_string_lossy().into_owned())
+                            .unwrap_or_else(|| "file".to_string());
+                        
                         let mime_type = mime_guess::from_path(&file_to_save).first_or_octet_stream();
                         if utils::is_allowed_mime_type(&mime_type) {
-                            if let Ok(mut f_obj) = File::create(&file_to_save) {
-                                let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
-                                if f_obj.write_all(text.as_bytes()).is_ok() {
-                                    file_path_manager_clone.borrow_mut().insert(current_page_num, file_to_save.clone());
-                                    *active_tab_path_ref_clone.borrow_mut() = Some(file_to_save.clone());
+                            match File::create(&file_to_save) {
+                                Ok(mut f_obj) => {
+                                    let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
+                                    match f_obj.write_all(text.as_bytes()) {
+                                        Ok(_) => {
+                                            file_path_manager_clone.borrow_mut().insert(current_page_num, file_to_save.clone());
+                                            *active_tab_path_ref_clone.borrow_mut() = Some(file_to_save.clone());
 
-                                    // Update tab label
-                                    update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&file_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
-                                    
-                                    // Apply syntax highlighting based on file extension
-                                    apply_syntax_highlighting_after_save(&editor_notebook_clone, current_page_num, &file_to_save);
-                                    
-                                    if let Some(parent) = file_to_save.parent() {
-                                        *current_dir_clone.borrow_mut() = parent.to_path_buf();
+                                            // Update tab label
+                                            update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&file_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
+                                            
+                                            // Apply syntax highlighting based on file extension
+                                            apply_syntax_highlighting_after_save(&editor_notebook_clone, current_page_num, &file_to_save);
+                                            
+                                            if let Some(parent) = file_to_save.parent() {
+                                                *current_dir_clone.borrow_mut() = parent.to_path_buf();
+                                            }
+                                            utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow(), utils::FileSelectionSource::TabSwitch);
+                                            
+                                            crate::status_log::log_success(&format!("Saved as {}", filename));
+                                        }
+                                        Err(e) => {
+                                            crate::status_log::log_error(&format!("Failed to write {}: {}", filename, e));
+                                        }
                                     }
-                                     utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_clone.borrow(), utils::FileSelectionSource::TabSwitch);
+                                }
+                                Err(e) => {
+                                    crate::status_log::log_error(&format!("Failed to create {}: {}", filename, e));
                                 }
                             }
+                        } else {
+                            crate::status_log::log_error("File type not supported for saving");
                         }
                     }
+                } else {
+                    crate::status_log::log_info("Save As cancelled");
                 }
                 d.close();
             });

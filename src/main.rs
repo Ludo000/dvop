@@ -6,6 +6,7 @@ mod syntax;    // Syntax highlighting functionality
 mod settings;  // User settings and preferences
 mod completion; // Code completion functionality
 mod file_cache; // File content caching for performance optimization
+mod status_log; // Status logging system
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
@@ -390,83 +391,32 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         Some(&active_tab_path)
     );
 
-    // Create the main container that will hold the path bar and paned content
+    // Create the main container that will hold the path bar, paned content, and status bar
     let main_container = GtkBox::new(gtk4::Orientation::Vertical, 0);
     main_container.append(&path_bar);
 
-    // Define GIO actions for save operations to be used by the menu
-    let save_action = gio::SimpleAction::new("save", None);
-    let save_as_action = gio::SimpleAction::new("save-as", None);
-    
-    // Prepare button references for the action handlers
-    let save_button_clone = save_button.clone();
-    let save_as_button_clone = save_as_button.clone();
-    
-    // Connect the save action to trigger the save button's click event
-    // This allows menu items to reuse existing save functionality
-    let save_button_clone_for_action = save_button_clone.clone();
-    save_action.connect_activate(move |_, _| {
-        save_button_clone_for_action.emit_clicked();
-    });
-    
-    // Connect the save-as action to trigger the save-as button's click event
-    let save_as_button_clone_for_action = save_as_button_clone.clone();
-    save_as_action.connect_activate(move |_, _| {
-        save_as_button_clone_for_action.emit_clicked();
-    });
-    
-    // Register the actions with the application window
-    // This makes them available to be triggered by menu items
-    window.add_action(&save_action);
-    window.add_action(&save_as_action);
-    
-    // Set up direct save functionality for the main save button
-    // Instead of circular references between buttons, implement the save logic directly here
-    
-    // Clone references needed for the save operation
-    let editor_notebook_clone = editor_notebook.clone();
-    let _active_tab_path_clone = active_tab_path.clone(); // Unused but kept for potential future use
-    let file_path_manager_clone = file_path_manager.clone();
-    let _window_clone = window.clone(); // Unused but kept for potential future use
-    let _file_list_box_clone = file_list_box.clone(); // Unused but kept for potential future use
-    let _current_dir_clone = current_dir.clone(); // Unused but kept for potential future use
-    let save_as_button_clone = save_as_button.clone();
-    
-    save_main_button.connect_clicked(move |_| {
-        // Implementation of the save functionality
-        if let Some((_active_text_view, active_buffer)) = handlers::get_active_text_view_and_buffer(&editor_notebook_clone) {
-            // Get the current tab index
-            let current_page_num_opt = editor_notebook_clone.current_page();
-            if current_page_num_opt.is_none() { return; }
-            let current_page_num = current_page_num_opt.unwrap();
+    // Create the status bar components
+    let (status_bar, status_label, secondary_status_label) = ui::create_status_bar();
 
-            // Look up the file path associated with this tab
-            let path_to_save_opt = file_path_manager_clone.borrow().get(&current_page_num).cloned();
+    // Register both status labels with the logging system
+    crate::status_log::register_status_labels(&status_label, &secondary_status_label);
 
-            if let Some(path_to_save) = path_to_save_opt {
-                // Check if this is a supported file type for saving
-                let mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
-                if utils::is_allowed_mime_type(&mime_type) {
-                    // Attempt to save the file
-                    if let Ok(mut file) = std::fs::File::create(&path_to_save) {
-                        // Extract the text content from the buffer
-                        let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
-                        
-                        // Write the content to the file and update UI if successful
-                        if file.write_all(text.as_bytes()).is_ok() {
-                            // Update tab label to remove the modified indicator (*)
-                            handlers::update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&path_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
-                        }
-                    }
-                }
-            } else {
-                // If no path is associated with this tab (new unsaved file),
-                // redirect to the Save As functionality
-                save_as_button_clone.emit_clicked();
-            }
-        }
-    });
+    // Initialize secondary status for the initial untitled tab with cursor position
+    if let Some(text_view) = _initial_text_view.downcast_ref::<sourceview5::View>() {
+        update_cursor_position_status(text_view, &secondary_status_label, "Untitled", None);
+    } else {
+        // For non-source views, just show empty status initially
+        secondary_status_label.set_text("");
+    }
 
+    // Create the editor notebook container with add button
+    let editor_notebook_box = ui::create_editor_notebook_box(&editor_notebook, &add_file_button);
+
+    // Create the main paned layout that contains:
+    // - The file manager sidebar on the left
+    // - The editor notebook and terminal in a vertical split on the right
+    let paned_content = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
+    
     // Set up modification tracking for the initial tab
     // This adds a "*" indicator to the tab label when content has been modified
     let initial_tab_actual_label_clone = initial_tab_actual_label.clone();
@@ -493,6 +443,30 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             initial_tab_actual_label_clone.set_text("Untitled");
         }
     });
+
+    // Set up cursor position tracking for the initial tab
+    if let Some(text_view) = _initial_text_view.downcast_ref::<sourceview5::View>() {
+        let text_view_clone = text_view.clone();
+        let secondary_status_clone = secondary_status_label.clone();
+        
+        // Connect to buffer's cursor position changed signal
+        let buffer = text_view.buffer();
+        buffer.connect_notify_local(Some("cursor-position"), move |_, _| {
+            update_cursor_position_status(&text_view_clone, &secondary_status_clone, "Untitled", None);
+        });
+        
+        // Also connect to mark-set signal which fires when cursor moves
+        let text_view_clone_2 = text_view.clone();
+        let secondary_status_clone_2 = secondary_status_label.clone();
+        buffer.connect_mark_set(move |_, _, mark| {
+            if mark.name().as_deref() == Some("insert") { // "insert" is the cursor mark
+                update_cursor_position_status(&text_view_clone_2, &secondary_status_clone_2, "Untitled", None);
+            }
+        });
+        
+        // Initial cursor position update
+        update_cursor_position_status(text_view, &secondary_status_label, "Untitled", None);
+    }
 
     // Prepare dependencies needed for creating a new tab
     // This structure holds references to all components needed when creating or managing tabs
@@ -542,17 +516,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Track the current file selection source for click-outside detection
     let current_selection_source = Rc::new(RefCell::new(utils::FileSelectionSource::TabSwitch));
-    
-    // Initialize the path box with clickable buttons for each directory segment
-    utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
-    
-    // Create the editor notebook container with add button
-    let editor_notebook_box = ui::create_editor_notebook_box(&editor_notebook, &add_file_button);
-    
-    // Create the main paned layout that contains:
-    // - The file manager sidebar on the left
-    // - The editor notebook and terminal in a vertical split on the right
-    let paned_content = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
     
     // Add click-outside detection for file manager to switch from DirectClick to TabSwitch styling
     // This allows the file manager to revert to subtle highlighting when focus is lost
@@ -608,8 +571,110 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Add the click controller to the main window to capture all clicks
     window.add_controller(click_controller);
 
-    // Add the main paned content
+    // Add the paned content to the main container
     main_container.append(&paned_content);
+    
+    // Add the status bar at the bottom
+    main_container.append(&status_bar);
+
+    // Define GIO actions for save operations to be used by the menu
+    let save_action = gio::SimpleAction::new("save", None);
+    let save_as_action = gio::SimpleAction::new("save-as", None);
+    
+    // Prepare button references for the action handlers
+    let save_button_clone = save_button.clone();
+    let save_as_button_clone = save_as_button.clone();
+    
+    // Connect the save action to trigger the save button's click event
+    // This allows menu items to reuse existing save functionality
+    let save_button_clone_for_action = save_button_clone.clone();
+    save_action.connect_activate(move |_, _| {
+        save_button_clone_for_action.emit_clicked();
+    });
+    
+    // Connect the save-as action to trigger the save-as button's click event
+    let save_as_button_clone_for_action = save_as_button_clone.clone();
+    save_as_action.connect_activate(move |_, _| {
+        save_as_button_clone_for_action.emit_clicked();
+    });
+    
+    // Register the actions with the application window
+    // This makes them available to be triggered by menu items
+    window.add_action(&save_action);
+    window.add_action(&save_as_action);
+    
+    // Set up direct save functionality for the main save button
+    // Instead of circular references between buttons, implement the save logic directly here
+    
+    // Clone references needed for the save operation
+    let editor_notebook_clone = editor_notebook.clone();
+    let _active_tab_path_clone = active_tab_path.clone(); // Unused but kept for potential future use
+    let file_path_manager_clone = file_path_manager.clone();
+    let _window_clone = window.clone(); // Unused but kept for potential future use
+    let _file_list_box_clone = file_list_box.clone(); // Unused but kept for potential future use
+    let _current_dir_clone = current_dir.clone(); // Unused but kept for potential future use
+    let save_as_button_clone = save_as_button.clone();
+    
+    save_main_button.connect_clicked(move |_| {
+        // Log save operation start
+        crate::status_log::log_info("Saving file...");
+        
+        // Implementation of the save functionality
+        if let Some((_active_text_view, active_buffer)) = handlers::get_active_text_view_and_buffer(&editor_notebook_clone) {
+            // Get the current tab index
+            let current_page_num_opt = editor_notebook_clone.current_page();
+            if current_page_num_opt.is_none() { 
+                crate::status_log::log_error("No active tab found");
+                return; 
+            }
+            let current_page_num = current_page_num_opt.unwrap();
+
+            // Look up the file path associated with this tab
+            let path_to_save_opt = file_path_manager_clone.borrow().get(&current_page_num).cloned();
+
+            if let Some(path_to_save) = path_to_save_opt {
+                // Check if this is a supported file type for saving
+                let mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
+                if utils::is_allowed_mime_type(&mime_type) {
+                    // Attempt to save the file
+                    match std::fs::File::create(&path_to_save) {
+                        Ok(mut file) => {
+                            // Extract the text content from the buffer
+                            let text = active_buffer.text(&active_buffer.start_iter(), &active_buffer.end_iter(), false);
+                            
+                            // Write the content to the file and update UI if successful
+                            match file.write_all(text.as_bytes()) {
+                                Ok(_) => {
+                                    // Update tab label to remove the modified indicator (*)
+                                    handlers::update_tab_label_after_save(&editor_notebook_clone, current_page_num, Some(&path_to_save.file_name().unwrap_or_default().to_string_lossy()), false);
+                                    
+                                    let filename = path_to_save.file_name()
+                                        .map(|name| name.to_string_lossy().into_owned())
+                                        .unwrap_or_else(|| "file".to_string());
+                                    crate::status_log::log_success(&format!("Saved {}", filename));
+                                }
+                                Err(e) => {
+                                    crate::status_log::log_error(&format!("Failed to write file: {}", e));
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            crate::status_log::log_error(&format!("Failed to create file: {}", e));
+                        }
+                    }
+                } else {
+                    crate::status_log::log_error("File type not supported for saving");
+                }
+            } else {
+                // If no path is associated with this tab (new unsaved file),
+                // redirect to the Save As functionality
+                crate::status_log::log_info("Opening Save As dialog...");
+                save_as_button_clone.emit_clicked();
+            }
+        } else {
+            crate::status_log::log_error("No active text view found");
+        }
+    });
 
     // Set the custom header bar as the window's titlebar
     window.set_titlebar(Some(&header));
@@ -635,6 +700,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let save_as_button_clone_for_switch = save_as_button.clone();
     let save_menu_button_clone_for_switch = save_menu_button.clone();
     let path_box_clone_for_switch = path_box.clone();
+    let secondary_status_label_clone = secondary_status_label.clone();
 
     // Connect to the notebook's switch-page signal
     editor_notebook.connect_switch_page(move |notebook, _page, page_num| {
@@ -646,6 +712,91 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
         // Update the active tab path reference
         *active_tab_path_clone_for_switch.borrow_mut() = new_active_path.clone();
+
+        // Update the secondary status label with file information
+        if let Some(file_path) = &new_active_path {
+            let filename = file_path.file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "Unknown".to_string());
+            
+            // Try to get the text view for cursor position
+            if let Some((text_view, _)) = handlers::get_text_view_and_buffer_for_page(notebook, page_num) {
+                if let Some(source_view) = text_view.downcast_ref::<sourceview5::View>() {
+                    update_cursor_position_status(source_view, &secondary_status_label_clone, &filename, Some(file_path));
+                    
+                    // Set up cursor position tracking for this tab
+                    let secondary_status_clone = secondary_status_label_clone.clone();
+                    let filename_clone = filename.clone();
+                    let file_path_clone = file_path.clone();
+                    let source_view_clone = source_view.clone();
+                    
+                    let buffer = source_view.buffer();
+                    buffer.connect_notify_local(Some("cursor-position"), move |_, _| {
+                        update_cursor_position_status(&source_view_clone, &secondary_status_clone, &filename_clone, Some(&file_path_clone));
+                    });
+                    
+                    // Also connect to mark-set signal for more reliable cursor tracking
+                    let secondary_status_clone_2 = secondary_status_label_clone.clone();
+                    let filename_clone_2 = filename.clone();
+                    let file_path_clone_2 = file_path.clone();
+                    let source_view_clone_2 = source_view.clone();
+                    buffer.connect_mark_set(move |_, _, mark| {
+                        if mark.name().as_deref() == Some("insert") {
+                            update_cursor_position_status(&source_view_clone_2, &secondary_status_clone_2, &filename_clone_2, Some(&file_path_clone_2));
+                        }
+                    });
+                } else {
+                    // Fallback for non-source views
+                    let parent = file_path.parent()
+                        .map(|p| p.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| "/".to_string());
+                    
+                    secondary_status_label_clone.set_text(&format!("{} ({})", filename, parent));
+                }
+            } else {
+                // No text view (e.g., image file)
+                let parent = file_path.parent()
+                    .map(|p| p.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "/".to_string());
+                
+                secondary_status_label_clone.set_text(&format!("{} ({})", filename, parent));
+            }
+            
+            crate::status_log::log_info(&format!("Switched to {}", filename));
+        } else {
+            // Handle untitled tab
+            if let Some((text_view, _)) = handlers::get_text_view_and_buffer_for_page(notebook, page_num) {
+                if let Some(source_view) = text_view.downcast_ref::<sourceview5::View>() {
+                    update_cursor_position_status(source_view, &secondary_status_label_clone, "Untitled", None);
+                    
+                    // Set up cursor position tracking for this tab
+                    let secondary_status_clone = secondary_status_label_clone.clone();
+                    let source_view_clone = source_view.clone();
+                    
+                    let buffer = source_view.buffer();
+                    buffer.connect_notify_local(Some("cursor-position"), move |_, _| {
+                        update_cursor_position_status(&source_view_clone, &secondary_status_clone, "Untitled", None);
+                    });
+                    
+                    // Also connect to mark-set signal for more reliable cursor tracking
+                    let secondary_status_clone_2 = secondary_status_label_clone.clone();
+                    let source_view_clone_2 = source_view.clone();
+                    buffer.connect_mark_set(move |_, _, mark| {
+                        if mark.name().as_deref() == Some("insert") {
+                            update_cursor_position_status(&source_view_clone_2, &secondary_status_clone_2, "Untitled", None);
+                        }
+                    });
+                } else {
+                    // For non-source views, just show empty status
+                    secondary_status_label_clone.set_text("");
+                }
+            } else {
+                // For non-source views, just show empty status
+                secondary_status_label_clone.set_text("");
+            }
+            
+            crate::status_log::log_info("Switched to Untitled");
+        }
 
         // If the focused tab has a file, update current directory to match the file's directory
         if let Some(file_path) = &new_active_path {
@@ -966,4 +1117,30 @@ fn setup_gsettings_monitor(window: &ApplicationWindow, terminal_notebook: &gtk4:
             println!("Could not set up GSettings monitor - org.gnome.desktop.interface not available");
         }
     }
+}
+
+/// Updates the secondary status label with cursor position and file information
+fn update_cursor_position_status(text_view: &sourceview5::View, status_label: &Label, filename: &str, file_path: Option<&std::path::Path>) {
+    let buffer = text_view.buffer();
+    let cursor_mark = buffer.get_insert();
+    let cursor_iter = buffer.iter_at_mark(&cursor_mark);
+    
+    let line = cursor_iter.line() + 1; // 1-based line numbers
+    let column = cursor_iter.line_offset() + 1; // 1-based column numbers
+    
+    let status_text = if let Some(path) = file_path {
+        // For actual files, show: "filename (path) | Line X, Column Y"
+        let parent = path.parent()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "/".to_string());
+        format!("{} ({}) | Line {}, Column {}", filename, parent, line, column)
+    } else if filename == "Untitled" {
+        // For untitled documents, just show: "Line X, Column Y"
+        format!("Line {}, Column {}", line, column)
+    } else {
+        // For other cases (shouldn't normally happen), show: "filename | Line X, Column Y"
+        format!("{} | Line {}, Column {}", filename, line, column)
+    };
+    
+    status_label.set_text(&status_text);
 }

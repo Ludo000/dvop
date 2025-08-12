@@ -342,4 +342,39 @@ pub fn create_editor_notebook_box(editor_notebook: &Notebook, add_file_button: &
     editor_box
 }
 
+/// Creates a status bar with operation status display
+///
+/// Returns a tuple of:
+/// - GtkBox: Container for the status bar
+/// - Label: Main status text label
+/// - Label: Secondary status information (current file, line/column, etc.)
+pub fn create_status_bar() -> (GtkBox, Label, Label) {
+    // Create horizontal container for status bar
+    let status_bar = GtkBox::new(Orientation::Horizontal, 8);
+    status_bar.add_css_class("status-bar");
+    
+    // Set padding and styling
+    status_bar.set_margin_start(12);
+    status_bar.set_margin_end(12);
+    status_bar.set_margin_top(4);
+    status_bar.set_margin_bottom(4);
+    
+    // Create main status label for current operation
+    let status_label = Label::new(Some("Ready"));
+    status_label.set_halign(gtk4::Align::Start);
+    status_label.set_hexpand(true);
+    status_label.add_css_class("status-text");
+    
+    // Create secondary status label for file info (right-aligned)
+    let secondary_label = Label::new(Some(""));
+    secondary_label.set_halign(gtk4::Align::End);
+    secondary_label.add_css_class("status-secondary");
+    
+    // Add labels to status bar
+    status_bar.append(&status_label);
+    status_bar.append(&secondary_label);
+    
+    (status_bar, status_label, secondary_label)
+}
+
 
