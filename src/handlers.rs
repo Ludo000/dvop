@@ -609,6 +609,21 @@ pub fn open_or_focus_tab(
                 let error_label = Label::new(Some(&error_msg));
                 new_scrolled_window.set_child(Some(&error_label));
             }
+        } else if mime_type.type_() == "audio" {
+            // Handle audio file
+            match crate::audio::AudioPlayer::new(&file_to_open) {
+                Ok(audio_player) => {
+                    new_scrolled_window.set_child(Some(&audio_player.widget));
+                },
+                Err(e) => {
+                    // Failed to create audio player, show error
+                    let error_msg = format!("Failed to load audio file {}: {:?}", file_name, e);
+                    let error_label = Label::new(Some(&error_msg));
+                    error_label.add_css_class("error");
+                    new_scrolled_window.set_child(Some(&error_label));
+                    crate::status_log::log_error(&error_msg);
+                }
+            }
         } else if utils::is_allowed_mime_type(&mime_type) {
             // Handle text file - use cached file reading for performance
             // Create source view with syntax highlighting
@@ -988,6 +1003,34 @@ fn setup_open_button_handler(
                         let filename = file_to_open.file_name()
                             .map(|name| name.to_string_lossy().into_owned())
                             .unwrap_or_else(|| "image".to_string());
+                        crate::status_log::log_success(&format!("Opened {}", filename));
+                    } else if mime_type.type_() == "audio" {
+                        // For audio files, use open_or_focus_tab with empty content
+                        open_or_focus_tab(
+                            &editor_notebook_clone,
+                            &file_to_open,
+                            "", // Empty content for audio files
+                            &active_tab_path_ref_for_response,
+                            &file_path_manager_for_response,
+                            &save_button_clone,
+                            &save_as_button_clone,
+                            &mime_type,
+                            &window_for_response,
+                            &file_list_box_for_response,
+                            &current_dir_for_response,
+                            save_menu_button_for_response.as_ref(),
+                        );
+
+                        if let Some(parent) = file_to_open.parent() {
+                            *current_dir_clone.borrow_mut() = parent.to_path_buf();
+                            utils::update_file_list(&file_list_box_clone, &current_dir_clone.borrow(), &active_tab_path_ref_for_response.borrow(), utils::FileSelectionSource::TabSwitch);
+                        }
+                        
+                        // Log successful audio opening
+                        let filename = file_to_open.file_name()
+                            .map(|name| name.to_string_lossy().into_owned())
+                            .unwrap_or_else(|| "audio".to_string());
+                        crate::status_log::log_success(&format!("Opened {}", filename));
                         crate::status_log::log_success(&format!("Opened {}", filename));
                     } else {
                         // Handle unsupported file types
@@ -1538,6 +1581,31 @@ fn setup_file_selection_handler(
                         &editor_notebook_for_handler, 
                         &path_from_list,
                         "", // Empty content for images
+                        &active_tab_path_for_handler, 
+                        &file_path_manager_for_handler,   
+                        &save_button_for_handler,
+                        &save_as_button_for_handler,
+                        &mime_type,
+                        &window_for_handler, 
+                        &file_list_box_for_handler_update, 
+                        &current_dir_for_handler,
+                        save_menu_button_for_handler.as_ref() // Pass the save menu button option
+                    );
+                    // Ensure the list reflects the newly opened file as active with DirectClick styling
+                    // and update the selection source tracker
+                    *current_selection_source_for_handler.borrow_mut() = utils::FileSelectionSource::DirectClick;
+                    utils::update_file_list(
+                        &file_list_box_for_handler_update,
+                        &current_dir_for_handler.borrow(),
+                        &active_tab_path_for_handler.borrow(),
+                        utils::FileSelectionSource::DirectClick
+                    );
+                } else if mime_type.type_() == "audio" {
+                    // Use open_or_focus_tab for audio files
+                    open_or_focus_tab(
+                        &editor_notebook_for_handler, 
+                        &path_from_list,
+                        "", // Empty content for audio files
                         &active_tab_path_for_handler, 
                         &file_path_manager_for_handler,   
                         &save_button_for_handler,

@@ -20,7 +20,7 @@ Each platform requires specific system libraries to be installed before building
 
    ```bash
    sudo apt update
-   sudo apt install build-essential libgtk-4-dev libvte-2.91-dev libglib2.0-dev pkg-config libgtk-4-dev libpango1.0-dev libgtksourceview-5-dev
+   sudo apt install build-essential libgtk-4-dev libvte-2.91-dev libglib2.0-dev pkg-config libgtk-4-dev libpango1.0-dev libgtksourceview-5-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav
   ```
 
 #### Install Rust:
@@ -39,7 +39,7 @@ Install Dependencies using Homebrew:
 Ensure you have Homebrew installed, then run the following commands:
     
    ```bash
-   brew install gtk4 vte3 gtksourceview5
+   brew install gtk4 vte3 gtksourceview5 gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav
    ```
 
 #### Install Rust:
@@ -58,7 +58,7 @@ Installing GTK4 and related libraries on Windows is more complex:
 
 1. Use MSYS2 (https://www.msys2.org/) to install the required packages:
    ```bash
-   pacman -S mingw-w64-x86_64-gtk4 mingw-w64-x86_64-vte3 mingw-w64-x86_64-gtksourceview5
+   pacman -S mingw-w64-x86_64-gtk4 mingw-w64-x86_64-vte3 mingw-w64-x86_64-gtksourceview5 mingw-w64-x86_64-gstreamer mingw-w64-x86_64-gst-plugins-base mingw-w64-x86_64-gst-plugins-good mingw-w64-x86_64-gst-plugins-bad mingw-w64-x86_64-gst-plugins-ugly mingw-w64-x86_64-gst-libav
    ```
 
 2. Add the MSYS2 binaries to your PATH
@@ -124,6 +124,11 @@ The editor supports dark mode for comfortable coding in low-light environments:
 - Embedded terminal
 - File browser
 - Basic text editing capabilities
+- Audio file playback support (MP3, WAV, FLAC, OGG, M4A, AAC, OPUS, WMA)
+  - Built-in audio player with play/pause/stop controls
+  - Progress bar with seek functionality
+  - Displays audio file information and duration
+  - Powered by GStreamer for reliable audio playback
 
 ## Installing the Application
 

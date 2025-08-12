@@ -162,11 +162,11 @@ pub fn update_file_list_default(file_list_box: &ListBox, current_dir: &PathBuf, 
 /// Updates the visibility of save buttons based on content type
 ///
 /// Disables save functionality for content types that can't be edited,
-/// such as images which are display-only in this editor.
+/// such as images and audio files which are display/playback-only in this editor.
 pub fn update_save_buttons_visibility(save_button: &Button, save_as_button: &Button, mime_type: Option<mime_guess::Mime>) {
     match mime_type {
-        // For images, disable save functionality since we don't support image editing
-        Some(mime) if mime.type_() == "image" => {
+        // For images and audio files, disable save functionality since we don't support editing
+        Some(mime) if mime.type_() == "image" || mime.type_() == "audio" => {
             save_button.set_visible(false);
             save_as_button.set_visible(false);
         },
@@ -183,8 +183,8 @@ pub fn update_save_buttons_visibility(save_button: &Button, save_as_button: &But
 /// Similar to update_save_buttons_visibility, but for the split button menu component
 pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_type: Option<mime_guess::Mime>) {
     match mime_type {
-        // Hide menu button for images since saving is not supported
-        Some(mime) if mime.type_() == "image" => {
+        // Hide menu button for images and audio files since saving is not supported
+        Some(mime) if mime.type_() == "image" || mime.type_() == "audio" => {
             // Get the parent widget of the menu button to hide the entire split button
             if let Some(parent) = save_menu_button.parent() {
                 parent.set_visible(false); // Hide the entire container (split button)

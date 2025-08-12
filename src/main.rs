@@ -7,6 +7,7 @@ mod settings;  // User settings and preferences
 mod completion; // Code completion functionality
 mod file_cache; // File content caching for performance optimization
 mod status_log; // Status logging system
+mod audio;     // Audio file playback functionality
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
