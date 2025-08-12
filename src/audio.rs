@@ -82,6 +82,119 @@ impl GlobalVolumeManager {
 use once_cell::sync::Lazy;
 static GLOBAL_VOLUME_MANAGER: Lazy<GlobalVolumeManager> = Lazy::new(|| GlobalVolumeManager::new());
 
+/// Global audio playback manager to coordinate multiple audio players
+#[derive(Clone)]
+struct GlobalAudioManager {
+    active_players: Arc<Mutex<Vec<(gstreamer::Pipeline, String)>>>, // (pipeline, unique_id)
+    stopped_notifications: Arc<Mutex<Vec<String>>>, // List of player IDs that should be notified of stopping
+}
+
+impl GlobalAudioManager {
+    fn new() -> Self {
+        Self {
+            active_players: Arc::new(Mutex::new(Vec::new())),
+            stopped_notifications: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+    
+    /// Register a new audio player pipeline with a unique ID
+    fn register_player(&self, pipeline: &gstreamer::Pipeline, player_id: String) {
+        let mut players = self.active_players.lock().unwrap();
+        
+        // Clean up any pipelines that have been set to NULL state (destroyed) BEFORE adding new one
+        let original_count = players.len();
+        players.retain(|(p, _)| p.current_state() != gstreamer::State::Null);
+        let cleaned_count = original_count - players.len();
+        if cleaned_count > 0 {
+            println!("Audio: Cleaned {} dead players during registration", cleaned_count);
+        }
+        
+        // Add the new pipeline with its unique ID
+        players.push((pipeline.clone(), player_id.clone()));
+        
+        println!("Audio: Registered new player. Total active players: {}", players.len());
+        println!("Audio: New pipeline name: {} (ID: {})", 
+                 pipeline.upcast_ref::<gstreamer::Object>().name(), player_id);
+    }
+    
+    /// Check if this player was stopped by another and should update its UI
+    fn check_and_clear_stop_notification(&self, player_id: &str) -> bool {
+        let mut notifications = self.stopped_notifications.lock().unwrap();
+        if let Some(pos) = notifications.iter().position(|id| id == player_id) {
+            notifications.remove(pos);
+            true
+        } else {
+            false
+        }
+    }
+    
+    /// Stop all other audio players except the one that's starting to play
+    fn stop_other_players(&self, current_pipeline: &gstreamer::Pipeline, current_player_id: &str) {
+        let mut players = self.active_players.lock().unwrap();
+        let mut notifications = self.stopped_notifications.lock().unwrap();
+        
+        let mut stopped_count = 0;
+        let current_name = current_pipeline.upcast_ref::<gstreamer::Object>().name();
+        
+        println!("Audio: Checking {} registered players for stopping", players.len());
+        println!("Audio: Current pipeline name: {} (ID: {})", current_name, current_player_id);
+        
+        // Clean up dead pipelines and stop others
+        players.retain(|(pipeline, player_id)| {
+            let pipeline_state = pipeline.current_state();
+            let pipeline_name = pipeline.upcast_ref::<gstreamer::Object>().name();
+            
+            println!("Audio: Checking pipeline '{}' (ID: {}) with state {:?}", pipeline_name, player_id, pipeline_state);
+            
+            // Remove if pipeline is NULL (destroyed)
+            if pipeline_state == gstreamer::State::Null {
+                println!("Audio: Removing NULL pipeline: {} (ID: {})", pipeline_name, player_id);
+                return false;
+            }
+            
+            // Check if this is not the current pipeline
+            if player_id != current_player_id {
+                // Stop this other player if it's playing
+                if pipeline_state == gstreamer::State::Playing {
+                    println!("Audio: Stopping other playing audio player: {} (ID: {})", pipeline_name, player_id);
+                    let _ = pipeline.set_state(gstreamer::State::Paused);
+                    
+                    // Add to notification list so the player can update its UI
+                    notifications.push(player_id.clone());
+                    
+                    stopped_count += 1;
+                } else {
+                    println!("Audio: Pipeline '{}' (ID: {}) is not playing (state: {:?}), leaving as-is", pipeline_name, player_id, pipeline_state);
+                }
+            } else {
+                println!("Audio: Pipeline '{}' (ID: {}) is the current one, keeping it", pipeline_name, player_id);
+            }
+            
+            true // Keep this pipeline in the list
+        });
+        
+        if stopped_count > 0 {
+            println!("Audio: Stopped {} other audio player(s)", stopped_count);
+        } else {
+            println!("Audio: No other playing audio players found to stop");
+        }
+    }
+    
+    /// Clean up dead pipelines
+    fn cleanup_dead_players(&self) {
+        let mut players = self.active_players.lock().unwrap();
+        let original_count = players.len();
+        players.retain(|(p, _)| p.current_state() != gstreamer::State::Null);
+        let cleaned_count = original_count - players.len();
+        if cleaned_count > 0 {
+            println!("Audio: Cleaned up {} dead player(s)", cleaned_count);
+        }
+    }
+}
+
+// Global audio manager instance
+static GLOBAL_AUDIO_MANAGER: Lazy<GlobalAudioManager> = Lazy::new(|| GlobalAudioManager::new());
+
 /// Public function to update global volume from UI components
 pub fn set_global_volume(volume: f64) {
     GLOBAL_VOLUME_MANAGER.set_volume(volume);
@@ -285,6 +398,15 @@ impl AudioPlayer {
         let pending_seek_position = Rc::new(RefCell::new(None::<u64>));
         let is_seeking = Rc::new(RefCell::new(false));
         
+        // Create a unique player ID for this audio player
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let player_id = format!("player_{}_{}", 
+                               SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis(),
+                               audio_path.file_name().unwrap_or_default().to_string_lossy());
+        
+        // Register this pipeline with the global audio manager
+        GLOBAL_AUDIO_MANAGER.register_player(&pipeline, player_id.clone());
+        
         // Waveform and spectrogram data
         let waveform_data = Rc::new(RefCell::new(None));
         let spectrogram_data = Rc::new(RefCell::new(None));
@@ -338,6 +460,7 @@ impl AudioPlayer {
         let current_position_play = current_position.clone();
         let duration_play = duration.clone();
         let is_seeking_play = is_seeking.clone();
+        let player_id_play = player_id.clone();
         
         play_button.connect_clicked(move |_| {
             println!("Audio: Play button clicked!");
@@ -358,6 +481,10 @@ impl AudioPlayer {
                     }
                 }
             } else {
+                // Stop all other playing audio before starting this one
+                println!("Audio: About to stop other players before starting playback");
+                GLOBAL_AUDIO_MANAGER.stop_other_players(&pipeline_play, &player_id_play);
+                
                 // Play
                 println!("Audio: Starting playback");
                 match pipeline_play.set_state(State::Playing) {
@@ -459,13 +586,23 @@ impl AudioPlayer {
             }
         ));
         
-        // Set up pipeline volume monitoring from global volume
+        // Set up pipeline volume monitoring from global volume and cleanup dead players
         let pipeline_volume = player.pipeline.clone();
         glib::timeout_add_local(Duration::from_millis(500), move || {
             let global_volume = GLOBAL_VOLUME_MANAGER.get_volume();
             
             // Update pipeline volume to match global volume
             pipeline_volume.set_property("volume", global_volume);
+            
+            // Periodically cleanup dead player references (every ~10 seconds)
+            static mut CLEANUP_COUNTER: u32 = 0;
+            unsafe {
+                CLEANUP_COUNTER += 1;
+                if CLEANUP_COUNTER >= 20 { // Every 20 * 500ms = 10 seconds
+                    GLOBAL_AUDIO_MANAGER.cleanup_dead_players();
+                    CLEANUP_COUNTER = 0;
+                }
+            }
             
             glib::ControlFlow::Continue
         });
@@ -693,9 +830,21 @@ impl AudioPlayer {
         let current_time_label_update = current_time_label.clone();
         let total_time_label_update = total_time_label.clone();
         let pending_seek_timer = pending_seek_position.clone();
+        let is_playing_timer = is_playing.clone();
+        let play_button_timer = play_button.clone();
+        let player_id_timer = player_id.clone();
         
         // Use a much simpler timeout approach
         let _timeout = glib::timeout_add_local(Duration::from_millis(1000), move || {
+            // Check if this player was stopped by another player
+            if GLOBAL_AUDIO_MANAGER.check_and_clear_stop_notification(&player_id_timer) {
+                println!("Audio: Received stop notification - updating UI to paused state");
+                *is_playing_timer.borrow_mut() = false;
+                let play_icon = Image::from_icon_name("media-playback-start");
+                play_button_timer.set_child(Some(&play_icon));
+                play_button_timer.set_tooltip_text(Some("Play"));
+            }
+            
             println!("Audio: Timer callback executing...");
             
             if *is_seeking_update.borrow() {
@@ -741,7 +890,7 @@ impl AudioPlayer {
             }
             
             // Update waveform display to show current position
-            if let (Some(dur), pos) = (*duration_update.borrow(), *current_position_update.borrow()) {
+            if let (Some(dur), _pos) = (*duration_update.borrow(), *current_position_update.borrow()) {
                 if dur > 0 {
                     waveform_area_update.queue_draw();
                     println!("Audio: Updating waveform position display");
