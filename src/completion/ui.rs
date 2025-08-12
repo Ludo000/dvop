@@ -776,13 +776,6 @@ pub fn setup_completion_shortcuts(source_view: &View) {
     println!("  - Auto-completion has been DISABLED");
 }
 
-/// Get completion documentation
-#[allow(dead_code)]
-pub fn get_completion_documentation(keyword: &str, language: &str) -> String {
-    // Get documentation from JSON data
-    get_keyword_documentation(language, keyword)
-}
-
 /// Expand snippet content by removing placeholders and converting to simple text
 /// For now, this is a basic implementation that removes ${n:placeholder} syntax
 fn expand_snippet_content(content: &str) -> String {

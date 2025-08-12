@@ -342,38 +342,4 @@ pub fn create_editor_notebook_box(editor_notebook: &Notebook, add_file_button: &
     editor_box
 }
 
-/// Creates a status bar for the bottom of the application
-///
-/// This function creates a status bar with a horizontal box to display the current directory path
-/// as a series of clickable buttons, one for each directory level
-/// 
-/// Returns a tuple of:
-/// - GtkBox: The status bar container
-/// - GtkBox: The path box that will contain individual path segment buttons
-#[allow(dead_code)]
-pub fn create_status_bar() -> (GtkBox, GtkBox) {
-    // Create a horizontal box for the status bar
-    let status_bar = GtkBox::new(Orientation::Horizontal, 5);
-    status_bar.set_margin_start(10);
-    status_bar.set_margin_end(10);
-    status_bar.set_margin_top(5);
-    status_bar.set_margin_bottom(5);
-    
-    // Create a horizontal box to hold the path segment buttons
-    let path_box = GtkBox::new(Orientation::Horizontal, 2);
-    path_box.set_halign(gtk4::Align::Start); // Align to the left
-    path_box.set_hexpand(true); // Use all available horizontal space
-    
-    // Add some styling to make the path box visually distinct
-    path_box.add_css_class("path-box");
-    
-    // Add the path box to the status bar
-    status_bar.append(&path_box);
-    
-    // Add a CSS class for custom styling
-    status_bar.add_css_class("basado-status-bar");
-    
-    (status_bar, path_box)
-}
-
 
