@@ -23,14 +23,16 @@ enum SpectrogramProgress {
     NotStarted,
     InProgress(u8),       // Progress percentage
     Complete(SpectrogramData), // Completed spectrogram data
-    Error(String),        // Error message
+    Error(()),            // Error occurred
 }
 
 /// Thread-safe waveform data for volume visualization
 #[derive(Debug, Clone)]
 struct WaveformData {
     samples: Vec<f32>,      // Peak values for each time segment
+    #[allow(dead_code)]
     sample_rate: u32,
+    #[allow(dead_code)]
     duration_secs: f64,
 }
 
@@ -201,6 +203,7 @@ pub fn set_global_volume(volume: f64) {
 }
 
 /// Public function to get current global volume
+#[allow(dead_code)]
 pub fn get_global_volume() -> f64 {
     GLOBAL_VOLUME_MANAGER.get_volume()
 }
@@ -209,13 +212,21 @@ pub fn get_global_volume() -> f64 {
 pub struct AudioPlayer {
     pub widget: GtkBox,
     pipeline: Pipeline,
+    #[allow(dead_code)]
     waveform_area: DrawingArea,
+    #[allow(dead_code)]
     play_button: Button,
+    #[allow(dead_code)]
     current_position: Rc<RefCell<u64>>,
+    #[allow(dead_code)]
     duration: Rc<RefCell<Option<u64>>>,
+    #[allow(dead_code)]
     is_playing: Rc<RefCell<bool>>,
+    #[allow(dead_code)]
     spectrogram_data: Rc<RefCell<Option<ImageSurface>>>,
+    #[allow(dead_code)]
     spectrum_area: DrawingArea,
+    #[allow(dead_code)]
     waveform_data: Rc<RefCell<Option<WaveformData>>>,
 }
 
@@ -416,7 +427,7 @@ impl AudioPlayer {
         let bus = pipeline.bus().unwrap();
         let pipeline_debug = pipeline.clone();
         
-        bus.add_watch(move |_, msg| {
+        let _bus_watch = bus.add_watch(move |_, msg| {
             use gstreamer::MessageView;
             match msg.view() {
                 MessageView::Error(err) => {
@@ -522,7 +533,7 @@ impl AudioPlayer {
                                         *current_position_delayed.borrow_mut() = seek_pos; // Update current position
                                         
                                         // Update waveform area to trigger redraw at correct position
-                                        if let Some(dur) = *duration_delayed.borrow() {
+                                        if let Some(_dur) = *duration_delayed.borrow() {
                                             waveform_area_delayed.queue_draw();
                                         }
                                         
@@ -647,7 +658,7 @@ impl AudioPlayer {
                     }
                     Err(e) => {
                         println!("Audio: Spectrogram generation failed: {}", e);
-                        *progress_data_thread.lock().unwrap() = SpectrogramProgress::Error(format!("{}", e));
+                        *progress_data_thread.lock().unwrap() = SpectrogramProgress::Error(());
                     }
                 }
             });
@@ -1007,6 +1018,7 @@ impl AudioPlayer {
     }
     
     /// Destroys the audio player and cleans up resources
+    #[allow(dead_code)]
     pub fn destroy(&self) {
         // Stop the pipeline
         let _ = self.pipeline.set_state(State::Null);
@@ -1174,6 +1186,7 @@ fn read_wav_file_super_fast(path: &Path) -> Result<WaveformData, Box<dyn std::er
 }
 
 /// Generates waveform data for volume visualization (fast version)
+#[allow(dead_code)]
 fn generate_waveform_fast(audio_path: &Path) -> Result<WaveformData, Box<dyn std::error::Error + Send + Sync>> {
     println!("Audio: Generating fast waveform for: {}", audio_path.display());
     
@@ -1224,6 +1237,7 @@ fn generate_waveform_fast(audio_path: &Path) -> Result<WaveformData, Box<dyn std
 }
 
 /// Fast WAV file reading that won't hang
+#[allow(dead_code)]
 fn read_wav_file_fast(path: &Path) -> Result<WaveformData, Box<dyn std::error::Error + Send + Sync>> {
     let mut reader = hound::WavReader::open(path)?;
     let spec = reader.spec();
@@ -1302,6 +1316,7 @@ fn read_wav_file_fast(path: &Path) -> Result<WaveformData, Box<dyn std::error::E
 }
 
 /// Read any audio format using GStreamer (fast version with timeout)
+#[allow(dead_code)]
 fn read_audio_with_gstreamer_fast(path: &Path) -> Result<WaveformData, Box<dyn std::error::Error + Send + Sync>> {
     use gstreamer::prelude::*;
     
@@ -1444,6 +1459,7 @@ fn read_audio_with_gstreamer_fast(path: &Path) -> Result<WaveformData, Box<dyn s
 }
 
 /// Generates waveform data for volume visualization
+#[allow(dead_code)]
 fn generate_waveform(audio_path: &Path) -> Result<WaveformData, Box<dyn std::error::Error + Send + Sync>> {
     println!("Audio: Generating waveform for: {}", audio_path.display());
     
@@ -1879,6 +1895,7 @@ fn format_duration(seconds: u64) -> String {
 }
 
 /// Converts HSV color to RGB
+#[allow(dead_code)]
 fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (f64, f64, f64) {
     let c = v * s;
     let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
@@ -1902,11 +1919,13 @@ fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (f64, f64, f64) {
 }
 
 /// Checks if a file is an audio file based on its MIME type
+#[allow(dead_code)]
 pub fn is_audio_file(mime_type: &mime_guess::Mime) -> bool {
     mime_type.type_() == "audio"
 }
 
 /// Gets supported audio file extensions
+#[allow(dead_code)]
 pub fn get_supported_audio_extensions() -> Vec<&'static str> {
     vec!["mp3", "wav", "flac", "ogg", "m4a", "aac", "opus", "wma"]
 }

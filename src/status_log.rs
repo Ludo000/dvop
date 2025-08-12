@@ -143,7 +143,7 @@ fn save_log_history() {
     }
 }
 
-/// Store a reference to the current secondary status label (if any)
+// Store a reference to the current secondary status label (if any)
 thread_local! {
     static CURRENT_SECONDARY_STATUS_LABEL: std::cell::RefCell<Option<Label>> = std::cell::RefCell::new(None);
 }
@@ -155,16 +155,7 @@ pub fn set_secondary_status_label(label: &Label) {
     });
 }
 
-/// Update secondary status label with file information
-pub fn update_secondary_status(text: &str) {
-    CURRENT_SECONDARY_STATUS_LABEL.with(|l| {
-        if let Some(ref label) = *l.borrow() {
-            label.set_text(text);
-        }
-    });
-}
-
-/// Store a reference to the current status label (if any)
+// Store a reference to the current status label (if any)
 thread_local! {
     static CURRENT_STATUS_LABEL: std::cell::RefCell<Option<Label>> = std::cell::RefCell::new(None);
 }
@@ -173,13 +164,6 @@ thread_local! {
 pub fn set_status_label(label: &Label) {
     CURRENT_STATUS_LABEL.with(|l| {
         *l.borrow_mut() = Some(label.clone());
-    });
-}
-
-/// Clear the current status label
-pub fn clear_status_label() {
-    CURRENT_STATUS_LABEL.with(|l| {
-        *l.borrow_mut() = None;
     });
 }
 
@@ -257,26 +241,11 @@ pub fn register_status_labels(status_label: &Label, secondary_label: &Label) {
     log_info("Ready");
 }
 
-/// Register a status bar label to receive log updates (compatibility function)
-pub fn register_status_label(label: &Label) {
-    set_status_label(label);
-    
-    // Show ready message initially
-    log_info("Ready");
-}
-
 /// Log an info message to the status bar
 pub fn log_info(message: &str) {
     add_message_to_log(message.to_string(), LogLevel::Info);
     // Also print to console for debugging
     println!("[INFO] {}", message);
-}
-
-/// Log a warning message to the status bar
-pub fn log_warning(message: &str) {
-    add_message_to_log(message.to_string(), LogLevel::Warning);
-    // Also print to console for debugging
-    eprintln!("[WARNING] {}", message);
 }
 
 /// Log an error message to the status bar

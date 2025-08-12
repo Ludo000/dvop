@@ -706,9 +706,6 @@ pub fn setup_keyboard_shortcuts(
     let new_button_clone = new_button.clone();
     let window_clone = window.clone();
     
-    // Clone notebook for use in the closure
-    let editor_notebook_clone = editor_notebook.cloned();
-    
     // Clone path-related references for Ctrl+L functionality
     let path_box_clone = path_box.cloned();
     let current_dir_clone = current_dir.cloned();
