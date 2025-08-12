@@ -224,15 +224,15 @@ fn get_status_bar_styles() -> &'static str {
     }
     
     .status-log-success {
-        color: #27ae60;
+        color: @theme_fg_color;
     }
     
     .status-log-warning {
-        color: #f39c12;
+        color: @theme_fg_color;
     }
     
     .status-log-error {
-        color: #e74c3c;
+        color: @theme_fg_color;
     }
     
     .basado-status-bar {
