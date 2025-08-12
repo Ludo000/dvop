@@ -359,22 +359,201 @@ pub fn create_status_bar() -> (GtkBox, Label, Label) {
     status_bar.set_margin_top(4);
     status_bar.set_margin_bottom(4);
     
-    // Create main status label for current operation
+    // Create main status label for current operation wrapped in a button for clickability
+    let status_button = gtk4::Button::new();
+    status_button.set_has_frame(false);
+    status_button.add_css_class("status-button");
+    
     let status_label = Label::new(Some("Ready"));
     status_label.set_halign(gtk4::Align::Start);
     status_label.set_hexpand(true);
     status_label.add_css_class("status-text");
+    
+    status_button.set_child(Some(&status_label));
     
     // Create secondary status label for file info (right-aligned)
     let secondary_label = Label::new(Some(""));
     secondary_label.set_halign(gtk4::Align::End);
     secondary_label.add_css_class("status-secondary");
     
-    // Add labels to status bar
-    status_bar.append(&status_label);
+    // Add widgets to status bar
+    status_bar.append(&status_button);
     status_bar.append(&secondary_label);
     
     (status_bar, status_label, secondary_label)
+}
+
+/// Creates and shows a log history popup window
+/// 
+/// # Arguments
+/// * `parent_window` - The parent window to center the popup on
+pub fn show_log_history_popup(parent_window: &gtk4::ApplicationWindow) {
+    use crate::status_log;
+    
+    // Create the dialog window as an ApplicationWindow for full window controls
+    let dialog = gtk4::ApplicationWindow::new(parent_window.application().as_ref().unwrap());
+    dialog.set_title(Some("Log History"));
+    // Don't set as transient or modal to allow minimize/maximize
+    dialog.set_default_size(600, 500);
+    dialog.set_resizable(true);
+    
+    // Enable window controls and proper window manager hints
+    dialog.set_deletable(true);
+    dialog.set_decorated(true);
+    
+    // Set minimum size to prevent it from getting too small
+    dialog.set_size_request(400, 300);
+    
+    // Create a header bar with the clear button
+    let header_bar = gtk4::HeaderBar::new();
+    header_bar.set_title_widget(Some(&Label::new(Some("Log History"))));
+    
+    // Show window control buttons explicitly
+    header_bar.set_show_title_buttons(true);
+    
+    // Add clear button to header bar on the left side
+    let clear_button = gtk4::Button::with_label("Clear History");
+    clear_button.add_css_class("destructive-action");
+    header_bar.pack_start(&clear_button);
+    
+    dialog.set_titlebar(Some(&header_bar));
+    
+    // Create the main container
+    let main_box = GtkBox::new(Orientation::Vertical, 8);
+    main_box.set_margin_start(12);
+    main_box.set_margin_end(12);
+    main_box.set_margin_top(12);
+    main_box.set_margin_bottom(12);
+    
+    // Create scrollable area for log messages (no header box needed now)
+    let scrolled_window = gtk4::ScrolledWindow::new();
+    scrolled_window.set_policy(gtk4::PolicyType::Never, gtk4::PolicyType::Automatic);
+    scrolled_window.set_vexpand(true);
+    scrolled_window.set_hexpand(true);
+    
+    // Create list box for log entries
+    let log_list = gtk4::ListBox::new();
+    log_list.add_css_class("log-history-list");
+    log_list.set_selection_mode(gtk4::SelectionMode::None);
+    
+    // Populate the list with log history
+    let history = status_log::get_log_history();
+    
+    if history.is_empty() {
+        let empty_label = Label::new(Some("No log messages yet."));
+        empty_label.add_css_class("dim-label");
+        empty_label.set_margin_top(20);
+        empty_label.set_margin_bottom(20);
+        log_list.append(&empty_label);
+    } else {
+        // Add messages in reverse order (newest first)
+        for log_message in history.iter().rev() {
+            let row = gtk4::ListBoxRow::new();
+            row.set_activatable(false);
+            
+            let message_box = GtkBox::new(Orientation::Vertical, 4);
+            message_box.set_margin_start(8);
+            message_box.set_margin_end(8);
+            message_box.set_margin_top(6);
+            message_box.set_margin_bottom(6);
+            
+            // Format timestamp
+            let timestamp_str = log_message.timestamp
+                .elapsed()
+                .map(|duration| {
+                    let secs = duration.as_secs();
+                    if secs < 60 {
+                        format!("{}s ago", secs)
+                    } else if secs < 3600 {
+                        format!("{}m ago", secs / 60)
+                    } else {
+                        format!("{}h ago", secs / 3600)
+                    }
+                })
+                .unwrap_or_else(|_| "just now".to_string());
+            
+            // Create level indicator and message
+            let top_line = GtkBox::new(Orientation::Horizontal, 8);
+            
+            let level_label = Label::new(Some(&format!("[{}]", match log_message.level {
+                status_log::LogLevel::Info => "INFO",
+                status_log::LogLevel::Warning => "WARN", 
+                status_log::LogLevel::Error => "ERROR",
+                status_log::LogLevel::Success => "OK",
+            })));
+            
+            let level_css_class = match log_message.level {
+                status_log::LogLevel::Info => "log-level-info",
+                status_log::LogLevel::Warning => "log-level-warning",
+                status_log::LogLevel::Error => "log-level-error", 
+                status_log::LogLevel::Success => "log-level-success",
+            };
+            level_label.add_css_class(level_css_class);
+            level_label.add_css_class("log-level-badge");
+            
+            let time_label = Label::new(Some(&timestamp_str));
+            time_label.add_css_class("log-timestamp");
+            time_label.set_halign(gtk4::Align::End);
+            time_label.set_hexpand(true);
+            
+            top_line.append(&level_label);
+            top_line.append(&time_label);
+            
+            let message_label = Label::new(Some(&log_message.message));
+            message_label.set_halign(gtk4::Align::Start);
+            message_label.set_wrap(true);
+            message_label.set_wrap_mode(gtk4::pango::WrapMode::WordChar);
+            message_label.add_css_class("log-message");
+            
+            message_box.append(&top_line);
+            message_box.append(&message_label);
+            
+            row.set_child(Some(&message_box));
+            log_list.append(&row);
+        }
+    }
+    
+    scrolled_window.set_child(Some(&log_list));
+    
+    // Assemble the dialog - just add the scrolled window since we have a header bar now
+    main_box.append(&scrolled_window);
+    
+    dialog.set_child(Some(&main_box));
+    
+    // Connect clear button event
+    let log_list_clone = log_list.clone();
+    clear_button.connect_clicked(move |_| {
+        // Clear the log history
+        status_log::clear_log_history();
+        
+        // Clear all existing entries from the list
+        while let Some(child) = log_list_clone.first_child() {
+            log_list_clone.remove(&child);
+        }
+        
+        // Add empty state message
+        let empty_label = Label::new(Some("No log messages yet."));
+        empty_label.add_css_class("dim-label");
+        empty_label.set_margin_top(20);
+        empty_label.set_margin_bottom(20);
+        log_list_clone.append(&empty_label);
+    });
+    
+    // Handle Escape key to close
+    let key_controller = gtk4::EventControllerKey::new();
+    let dialog_clone_for_key = dialog.clone();
+    key_controller.connect_key_pressed(move |_, key, _, _| {
+        if key == gdk4::Key::Escape {
+            dialog_clone_for_key.close();
+            glib::Propagation::Stop
+        } else {
+            glib::Propagation::Proceed
+        }
+    });
+    dialog.add_controller(key_controller);
+    
+    // Show the dialog
+    dialog.present();
 }
 
 

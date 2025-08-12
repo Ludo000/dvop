@@ -144,10 +144,78 @@ fn get_status_bar_styles() -> &'static str {
         color: @theme_fg_color;
     }
     
+    .status-button {
+        background: none;
+        border: none;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    
+    .status-button:hover {
+        background-color: alpha(@theme_selected_bg_color, 0.1);
+    }
+    
+    .status-button:active {
+        background-color: alpha(@theme_selected_bg_color, 0.2);
+    }
+    
     .status-secondary {
         font-size: 0.8em;
         color: alpha(@theme_fg_color, 0.7);
         font-family: monospace;
+    }
+    
+    /* Log History Popup Styles */
+    .log-history-list {
+        background-color: @theme_base_color;
+    }
+    
+    .log-history-list > row {
+        border-bottom: 1px solid alpha(@theme_fg_color, 0.1);
+    }
+    
+    .log-history-list > row:last-child {
+        border-bottom: none;
+    }
+    
+    .log-level-badge {
+        font-size: 0.8em;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+    
+    .log-level-info {
+        background-color: alpha(@theme_selected_bg_color, 0.2);
+        color: @theme_fg_color;
+    }
+    
+    .log-level-success {
+        background-color: alpha(#27ae60, 0.2);
+        color: #27ae60;
+    }
+    
+    .log-level-warning {
+        background-color: alpha(#f39c12, 0.2);
+        color: #f39c12;
+    }
+    
+    .log-level-error {
+        background-color: alpha(#e74c3c, 0.2);
+        color: #e74c3c;
+    }
+    
+    .log-timestamp {
+        font-size: 0.8em;
+        color: alpha(@theme_fg_color, 0.6);
+        font-family: monospace;
+    }
+    
+    .log-message {
+        font-size: 0.9em;
+        color: @theme_fg_color;
+        margin-top: 2px;
     }
     
     /* Status message type styling */

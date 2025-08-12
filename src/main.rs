@@ -398,6 +398,15 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Create the status bar components
     let (status_bar, status_label, secondary_status_label) = ui::create_status_bar();
 
+    // Set up click handler for the status label to show log history
+    // We need to get the parent button from the status label
+    if let Some(status_button) = status_label.parent().and_then(|p| p.downcast::<gtk4::Button>().ok()) {
+        let window_clone_for_status_click = window.clone();
+        status_button.connect_clicked(move |_| {
+            ui::show_log_history_popup(&window_clone_for_status_click);
+        });
+    }
+
     // Register both status labels with the logging system
     crate::status_log::register_status_labels(&status_label, &secondary_status_label);
 
