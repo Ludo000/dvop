@@ -910,7 +910,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let window_clone_for_settings = window.clone();
     settings_button.connect_clicked(move |_| {
         // Create and show the settings dialog
-        let dialog = ui::create_settings_dialog(&window_clone_for_settings);
+        let dialog = ui::settings::create_settings_dialog(&window_clone_for_settings);
         
         // When the dialog is closed, update all buffer themes
         let window_ref = window_clone_for_settings.clone();
