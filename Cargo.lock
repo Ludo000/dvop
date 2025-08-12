@@ -27,6 +27,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "apodize"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fca387cdc0a1f9c7a7c26556d584aa2d07fc529843082e4861003cde4ab914ed"
+
+[[package]]
+name = "atomic_refcell"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41e67cd8309bbd06cd603a9e693a784ac2e5d1e955f11286e355089fcab3047c"
+
+[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -36,17 +48,21 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 name = "basado-text-editor"
 version = "0.1.0"
 dependencies = [
+ "apodize",
  "chrono",
  "gdk-pixbuf 0.18.5",
  "gdk4",
  "glib 0.20.9",
  "gstreamer",
+ "gstreamer-app",
  "gtk4",
  "home",
+ "hound",
  "lazy_static",
  "mime_guess",
  "once_cell",
  "regex",
+ "rustfft",
  "serde",
  "serde_json",
  "sourceview5",
@@ -224,6 +240,12 @@ dependencies = [
  "quote",
  "syn 2.0.100",
 ]
+
+[[package]]
+name = "futures-sink"
+version = "0.3.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e575fab7d1e0dcb8d0c7bcf9a63ee213816ab51902e6d244a95819acacf1d4f7"
 
 [[package]]
 name = "futures-task"
@@ -595,6 +617,61 @@ dependencies = [
 ]
 
 [[package]]
+name = "gstreamer-app"
+version = "0.23.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e9a883eb21aebcf1289158225c05f7aea5da6ecf71fa7f0ff1ce4d25baf004e"
+dependencies = [
+ "futures-core",
+ "futures-sink",
+ "glib 0.20.9",
+ "gstreamer",
+ "gstreamer-app-sys",
+ "gstreamer-base",
+ "libc",
+]
+
+[[package]]
+name = "gstreamer-app-sys"
+version = "0.23.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94f7ef838306fe51852d503a14dc79ac42de005a59008a05098de3ecdaf05455"
+dependencies = [
+ "glib-sys 0.20.9",
+ "gstreamer-base-sys",
+ "gstreamer-sys",
+ "libc",
+ "system-deps 7.0.3",
+]
+
+[[package]]
+name = "gstreamer-base"
+version = "0.23.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f19a74fd04ffdcb847dd322640f2cf520897129d00a7bcb92fd62a63f3e27404"
+dependencies = [
+ "atomic_refcell",
+ "cfg-if",
+ "glib 0.20.9",
+ "gstreamer",
+ "gstreamer-base-sys",
+ "libc",
+]
+
+[[package]]
+name = "gstreamer-base-sys"
+version = "0.23.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87f2fb0037b6d3c5b51f60dea11e667910f33be222308ca5a101450018a09840"
+dependencies = [
+ "glib-sys 0.20.9",
+ "gobject-sys 0.20.9",
+ "gstreamer-sys",
+ "libc",
+ "system-deps 7.0.3",
+]
+
+[[package]]
 name = "gstreamer-sys"
 version = "0.23.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -684,6 +761,12 @@ checksum = "589533453244b0995c858700322199b2becb13b627df2851f64a2775d024abcf"
 dependencies = [
  "windows-sys",
 ]
+
+[[package]]
+name = "hound"
+version = "3.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62adaabb884c94955b19907d60019f4e145d091c75345379e70d1ee696f7854f"
 
 [[package]]
 name = "iana-time-zone"
@@ -812,6 +895,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "956787520e75e9bd233246045d19f42fb73242759cc57fba9611d940ae96d4b0"
 
 [[package]]
+name = "num-complex"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "num-integer"
 version = "0.1.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -901,6 +993,15 @@ name = "pkg-config"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
+
+[[package]]
+name = "primal-check"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc0d895b311e3af9902528fbb8f928688abbd95872819320517cc24ca6b2bd08"
+dependencies = [
+ "num-integer",
+]
 
 [[package]]
 name = "proc-macro-crate"
@@ -1004,6 +1105,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
 dependencies = [
  "semver",
+]
+
+[[package]]
+name = "rustfft"
+version = "6.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6f140db74548f7c9d7cce60912c9ac414e74df5e718dc947d514b051b42f3f4"
+dependencies = [
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "primal-check",
+ "strength_reduce",
+ "transpose",
 ]
 
 [[package]]
@@ -1133,6 +1248,12 @@ dependencies = [
  "pango-sys",
  "system-deps 7.0.3",
 ]
+
+[[package]]
+name = "strength_reduce"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe895eb47f22e2ddd4dabc02bce419d2e643c8e3b585c78158b349195bc24d82"
 
 [[package]]
 name = "syn"
@@ -1283,6 +1404,16 @@ dependencies = [
  "serde_spanned",
  "toml_datetime",
  "winnow 0.7.6",
+]
+
+[[package]]
+name = "transpose"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ad61aed86bc3faea4300c7aee358b4c6d0c8d6ccc36524c96e4c92ccf26e77e"
+dependencies = [
+ "num-integer",
+ "strength_reduce",
 ]
 
 [[package]]
