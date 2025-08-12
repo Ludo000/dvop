@@ -1524,7 +1524,7 @@ fn setup_file_selection_handler(
                         );
                         // Ensure the list reflects the newly opened file as active with DirectClick styling
                         // and update the selection source tracker
-                        *current_selection_source_clone.borrow_mut() = utils::FileSelectionSource::DirectClick;
+                        *current_selection_source_for_handler.borrow_mut() = utils::FileSelectionSource::DirectClick;
                         utils::update_file_list(
                             &file_list_box_for_handler_update,
                             &current_dir_for_handler.borrow(),

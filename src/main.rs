@@ -517,59 +517,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Track the current file selection source for click-outside detection
     let current_selection_source = Rc::new(RefCell::new(utils::FileSelectionSource::TabSwitch));
     
-    // Add click-outside detection for file manager to switch from DirectClick to TabSwitch styling
-    // This allows the file manager to revert to subtle highlighting when focus is lost
-    let click_controller = gtk4::GestureClick::new();
-    let file_list_box_clone_for_click_outside = file_list_box.clone();
-    let file_manager_panel_clone = file_manager_panel.clone();
-    let current_dir_clone_for_click_outside = current_dir.clone();
-    let active_tab_path_clone_for_click_outside = active_tab_path.clone();
-    let current_selection_source_clone = current_selection_source.clone();
-    
-    click_controller.connect_pressed(move |_gesture, _n_press, x, y| {
-        println!("Click detected at coordinates: ({}, {})", x, y);
-        
-        // Check if the current selection is DirectClick (only then do we need to switch)
-        if *current_selection_source_clone.borrow() == utils::FileSelectionSource::DirectClick {
-            println!("Current selection is DirectClick, checking if click is outside file manager");
-            
-            // Check if the click was outside the file manager panel bounds
-            let file_manager_allocation = file_manager_panel_clone.allocation();
-            let fm_x = file_manager_allocation.x() as f64;
-            let fm_y = file_manager_allocation.y() as f64;
-            let fm_width = file_manager_allocation.width() as f64;
-            let fm_height = file_manager_allocation.height() as f64;
-            
-            println!("File manager bounds: x={}, y={}, width={}, height={}", fm_x, fm_y, fm_width, fm_height);
-            
-            let clicked_outside_file_manager = x < fm_x || 
-                y < fm_y ||
-                x > (fm_x + fm_width) || 
-                y > (fm_y + fm_height);
-            
-            if clicked_outside_file_manager {
-                println!("Click outside file manager detected! Switching from DirectClick to TabSwitch styling");
-                
-                // Update selection source to TabSwitch
-                *current_selection_source_clone.borrow_mut() = utils::FileSelectionSource::TabSwitch;
-                
-                // Update file list to use TabSwitch styling instead of DirectClick
-                utils::update_file_list(
-                    &file_list_box_clone_for_click_outside,
-                    &current_dir_clone_for_click_outside.borrow(),
-                    &active_tab_path_clone_for_click_outside.borrow(),
-                    utils::FileSelectionSource::TabSwitch
-                );
-            } else {
-                println!("Click was inside file manager bounds");
-            }
-        } else {
-            println!("Current selection is not DirectClick, ignoring click");
-        }
-    });
-    
-    // Add the click controller to the main window to capture all clicks
-    window.add_controller(click_controller);
+    // Note: Removed click-outside detection as it was interfering with normal file selection
+    // The file manager highlighting will revert naturally when tabs are switched
 
     // Add the paned content to the main container
     main_container.append(&paned_content);
@@ -701,9 +650,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let save_menu_button_clone_for_switch = save_menu_button.clone();
     let path_box_clone_for_switch = path_box.clone();
     let secondary_status_label_clone = secondary_status_label.clone();
+    let current_selection_source_clone_for_switch = current_selection_source.clone();
 
     // Connect to the notebook's switch-page signal
     editor_notebook.connect_switch_page(move |notebook, _page, page_num| {
+        // Reset selection source to TabSwitch when switching tabs
+        // This ensures file manager highlighting reverts to subtle style
+        *current_selection_source_clone_for_switch.borrow_mut() = utils::FileSelectionSource::TabSwitch;
+        
         // Retrieve the file path associated with the newly selected tab
         let new_active_path = { 
             // Use a separate scope to limit the borrow duration
