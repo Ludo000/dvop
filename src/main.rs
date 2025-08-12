@@ -400,7 +400,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     main_container.append(&path_bar);
 
     // Create the status bar components
-    let (status_bar, status_label, secondary_status_label) = ui::create_status_bar();
+    let (status_bar, status_label, secondary_status_label, _global_volume_scale) = ui::create_status_bar();
 
     // Set up click handler for the status label to show log history
     // We need to get the parent button from the status label

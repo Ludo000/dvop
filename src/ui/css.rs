@@ -239,6 +239,43 @@ fn get_status_bar_styles() -> &'static str {
         border-top: 1px solid alpha(#999, 0.3);
     }
     
+    /* === GLOBAL VOLUME CONTROL STYLES === */
+    
+    .global-volume-scale {
+        min-width: 120px;
+        min-height: 20px;
+    }
+    
+    .global-volume-scale > trough {
+        min-height: 8px;
+        border-radius: 4px;
+        background-color: alpha(@theme_fg_color, 0.15);
+    }
+    
+    .global-volume-scale > trough > highlight {
+        background-color: @theme_selected_bg_color;
+        border-radius: 4px;
+    }
+    
+    .global-volume-scale > trough > slider {
+        min-width: 14px;
+        min-height: 14px;
+        margin: -3px;
+        border-radius: 7px;
+        background-color: @theme_selected_bg_color;
+        border: 1px solid alpha(@theme_fg_color, 0.2);
+    }
+    
+    .global-volume-scale > trough > slider:hover {
+        background-color: shade(@theme_selected_bg_color, 1.1);
+        box-shadow: 0 0 0 2px alpha(@theme_selected_bg_color, 0.3);
+    }
+    
+    .global-volume-scale > trough > slider:active {
+        background-color: shade(@theme_selected_bg_color, 0.9);
+        box-shadow: 0 0 0 3px alpha(@theme_selected_bg_color, 0.4);
+    }
+    
     /* === PATH BAR STYLES === */
     
     .basado-path-bar {

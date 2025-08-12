@@ -15,7 +15,7 @@ use gtk4::{
     Box as GtkBox, Notebook,
     
     // Common UI elements
-    Button, HeaderBar, Label, Picture, TextView, Image, TextBuffer,
+    Button, HeaderBar, Label, Picture, TextView, Image, TextBuffer, Scale,
     
     // Menu components for split button functionality
     MenuButton, PopoverMenu, gio,
@@ -342,13 +342,14 @@ pub fn create_editor_notebook_box(editor_notebook: &Notebook, add_file_button: &
     editor_box
 }
 
-/// Creates a status bar with operation status display
+/// Creates a status bar with operation status display and global volume control
 ///
 /// Returns a tuple of:
 /// - GtkBox: Container for the status bar
 /// - Label: Main status text label
 /// - Label: Secondary status information (current file, line/column, etc.)
-pub fn create_status_bar() -> (GtkBox, Label, Label) {
+/// - Scale: Global volume control slider (None if audio not available)
+pub fn create_status_bar() -> (GtkBox, Label, Label, Option<Scale>) {
     // Create horizontal container for status bar
     let status_bar = GtkBox::new(Orientation::Horizontal, 8);
     status_bar.add_css_class("status-bar");
@@ -371,6 +372,62 @@ pub fn create_status_bar() -> (GtkBox, Label, Label) {
     
     status_button.set_child(Some(&status_label));
     
+    // Create global volume control
+    let volume_control_box = GtkBox::new(Orientation::Horizontal, 8);
+    volume_control_box.set_halign(gtk4::Align::Center);
+    
+    // Volume icon
+    let volume_icon = Image::from_icon_name("audio-volume-medium-symbolic");
+    volume_icon.set_pixel_size(16);
+    volume_icon.set_tooltip_text(Some("Global Volume"));
+    volume_control_box.append(&volume_icon);
+    
+    // Global volume scale
+    let global_volume_scale = Scale::with_range(Orientation::Horizontal, 0.0, 1.0, 0.01);
+    global_volume_scale.set_size_request(120, -1);
+    global_volume_scale.set_hexpand(false);
+    global_volume_scale.set_tooltip_text(Some("Global Audio Volume"));
+    global_volume_scale.add_css_class("global-volume-scale");
+    
+    // Set initial volume from settings
+    let initial_volume = crate::settings::get_settings().get_audio_volume();
+    global_volume_scale.set_value(initial_volume);
+    
+    volume_control_box.append(&global_volume_scale);
+    
+    // Volume percentage label
+    let volume_percent = (initial_volume * 100.0) as i32;
+    let volume_label = Label::new(Some(&format!("{}%", volume_percent)));
+    volume_label.set_size_request(35, -1);
+    volume_label.add_css_class("status-secondary");
+    volume_control_box.append(&volume_label);
+    
+    // Set up volume scale change handler
+    let volume_icon_clone = volume_icon.clone();
+    let volume_label_clone = volume_label.clone();
+    global_volume_scale.connect_value_changed(move |scale| {
+        let volume = scale.value();
+        
+        // Update global volume via audio module
+        crate::audio::set_global_volume(volume);
+        
+        // Update percentage label
+        let percent = (volume * 100.0) as i32;
+        volume_label_clone.set_text(&format!("{}%", percent));
+        
+        // Update volume icon based on level
+        let icon_name = if volume < 0.01 {
+            "audio-volume-muted-symbolic"
+        } else if volume < 0.33 {
+            "audio-volume-low-symbolic"
+        } else if volume < 0.67 {
+            "audio-volume-medium-symbolic"
+        } else {
+            "audio-volume-high-symbolic"
+        };
+        volume_icon_clone.set_icon_name(Some(icon_name));
+    });
+    
     // Create secondary status label for file info (right-aligned)
     let secondary_label = Label::new(Some(""));
     secondary_label.set_halign(gtk4::Align::End);
@@ -378,9 +435,10 @@ pub fn create_status_bar() -> (GtkBox, Label, Label) {
     
     // Add widgets to status bar
     status_bar.append(&status_button);
+    status_bar.append(&volume_control_box);
     status_bar.append(&secondary_label);
     
-    (status_bar, status_label, secondary_label)
+    (status_bar, status_label, secondary_label, Some(global_volume_scale))
 }
 
 /// Creates and shows a log history popup window

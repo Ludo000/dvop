@@ -15,6 +15,7 @@ use hound;
 
 use gstreamer::prelude::*;
 use gstreamer::{Pipeline, State};
+use crate::settings;
 
 /// Progress tracking for spectrogram generation
 #[derive(Debug, Clone)]
@@ -39,6 +40,56 @@ struct SpectrogramData {
     width: usize,
     height: usize,
     pixel_data: Vec<u8>, // RGB pixel data
+}
+
+/// Global volume manager to sync volume across all audio players
+#[derive(Clone)]
+struct GlobalVolumeManager {
+    current_volume: Arc<Mutex<f64>>,
+}
+
+impl GlobalVolumeManager {
+    fn new() -> Self {
+        let initial_volume = settings::get_settings().get_audio_volume();
+        Self {
+            current_volume: Arc::new(Mutex::new(initial_volume)),
+        }
+    }
+    
+    fn get_volume(&self) -> f64 {
+        *self.current_volume.lock().unwrap()
+    }
+    
+    fn set_volume(&self, volume: f64) {
+        let clamped_volume = volume.max(0.0).min(1.0);
+        *self.current_volume.lock().unwrap() = clamped_volume;
+        
+        // Save to settings
+        {
+            let mut settings = settings::get_settings_mut();
+            settings.set_audio_volume(clamped_volume);
+            if let Err(e) = settings.save() {
+                println!("Audio: Warning - could not save volume setting: {}", e);
+            }
+        }
+        
+        // Refresh settings to trigger any global updates
+        settings::refresh_settings();
+    }
+}
+
+// Global volume manager instance
+use once_cell::sync::Lazy;
+static GLOBAL_VOLUME_MANAGER: Lazy<GlobalVolumeManager> = Lazy::new(|| GlobalVolumeManager::new());
+
+/// Public function to update global volume from UI components
+pub fn set_global_volume(volume: f64) {
+    GLOBAL_VOLUME_MANAGER.set_volume(volume);
+}
+
+/// Public function to get current global volume
+pub fn get_global_volume() -> f64 {
+    GLOBAL_VOLUME_MANAGER.get_volume()
 }
 
 /// Audio player widget that provides playback controls and visualization
@@ -205,6 +256,7 @@ impl AudioPlayer {
         controls_box.append(&play_button);
         controls_box.append(&stop_button);
         main_box.append(&controls_box);
+        
         main_box.append(&spectrum_box);
         
         // Create simple GStreamer pipeline for audio playback
@@ -263,6 +315,7 @@ impl AudioPlayer {
         
         println!("Audio: Message handling set up");
         
+        // Create the AudioPlayer struct
         let player = AudioPlayer {
             widget: main_box,
             pipeline,
@@ -405,6 +458,23 @@ impl AudioPlayer {
                 println!("Audio: Playback stopped and UI reset");
             }
         ));
+        
+        // Set up pipeline volume monitoring from global volume
+        let pipeline_volume = player.pipeline.clone();
+        glib::timeout_add_local(Duration::from_millis(500), move || {
+            let global_volume = GLOBAL_VOLUME_MANAGER.get_volume();
+            
+            // Update pipeline volume to match global volume
+            pipeline_volume.set_property("volume", global_volume);
+            
+            glib::ControlFlow::Continue
+        });
+        
+        // Set initial volume on the pipeline using global volume
+        let initial_volume = GLOBAL_VOLUME_MANAGER.get_volume();
+        player.pipeline.set_property("volume", initial_volume);
+        
+        println!("Audio: Volume control initialized with global volume: {:.1}%", initial_volume * 100.0);
         
         // Set up spectrum button handler
         let spectrogram_data_button = spectrogram_data.clone();
@@ -694,31 +764,6 @@ impl AudioPlayer {
             // Draw waveform if available
             if let Some(ref waveform) = *waveform_data_draw.borrow() {
                 draw_waveform(cr, &waveform, width, height);
-                
-                // Draw playback position indicator
-                if let (Some(duration_secs), current_pos) = (*duration_draw.borrow(), *current_position_draw.borrow()) {
-                    if duration_secs > 0 {
-                        let progress = current_pos as f64 / duration_secs as f64;
-                        let x = progress * width as f64;
-                        
-                        // Draw red vertical line for current position
-                        cr.set_source_rgba(1.0, 0.2, 0.2, 0.9);
-                        cr.set_line_width(2.0);
-                        cr.move_to(x, 0.0);
-                        cr.line_to(x, height as f64);
-                        cr.stroke().unwrap();
-                        
-                        // Draw time indicator at the top
-                        cr.set_source_rgba(1.0, 0.2, 0.2, 0.8);
-                        cr.select_font_face("Sans", gtk4::cairo::FontSlant::Normal, gtk4::cairo::FontWeight::Normal);
-                        cr.set_font_size(10.0);
-                        let time_text = format_duration(current_pos);
-                        let text_extents = cr.text_extents(&time_text).unwrap();
-                        let text_x = (x - text_extents.width() / 2.0).max(0.0).min(width as f64 - text_extents.width());
-                        cr.move_to(text_x, 12.0);
-                        cr.show_text(&time_text).unwrap();
-                    }
-                }
             } else {
                 // Show loading message
                 cr.set_source_rgb(0.7, 0.7, 0.7);
@@ -730,6 +775,31 @@ impl AudioPlayer {
                 let y = (height as f64 + text_extents.height()) / 2.0;
                 cr.move_to(x, y);
                 cr.show_text(text).unwrap();
+            }
+            
+            // Draw playback position indicator and time display
+            if let (Some(duration_secs), current_pos) = (*duration_draw.borrow(), *current_position_draw.borrow()) {
+                if duration_secs > 0 {
+                    let progress = current_pos as f64 / duration_secs as f64;
+                    let x = progress * width as f64;
+                    
+                    // Draw red vertical line for current position
+                    cr.set_source_rgba(1.0, 0.2, 0.2, 0.9);
+                    cr.set_line_width(2.0);
+                    cr.move_to(x, 0.0);
+                    cr.line_to(x, height as f64);
+                    cr.stroke().unwrap();
+                    
+                    // Draw time indicator above the waveform, following the cursor
+                    cr.set_source_rgba(1.0, 0.2, 0.2, 0.9);
+                    cr.select_font_face("Sans", gtk4::cairo::FontSlant::Normal, gtk4::cairo::FontWeight::Bold);
+                    cr.set_font_size(16.0);
+                    let time_text = format_duration(current_pos);
+                    let text_extents = cr.text_extents(&time_text).unwrap();
+                    let text_x = (x - text_extents.width() / 2.0).max(0.0).min(width as f64 - text_extents.width());
+                    cr.move_to(text_x, 18.0);
+                    cr.show_text(&time_text).unwrap();
+                }
             }
         });
         
@@ -789,6 +859,7 @@ impl AudioPlayer {
     
     /// Destroys the audio player and cleans up resources
     pub fn destroy(&self) {
+        // Stop the pipeline
         let _ = self.pipeline.set_state(State::Null);
     }
 }

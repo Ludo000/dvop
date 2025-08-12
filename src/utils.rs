@@ -43,6 +43,80 @@ pub fn is_allowed_mime_type(mime_type: &Mime) -> bool {
 
 }
 
+/// Checks if the currently active file is a non-editable type (image, video, or audio)
+///
+/// Returns true if the current file should not support saving (i.e., is media content),
+/// false if it's a text file that can be edited and saved.
+fn is_current_file_non_editable(
+    active_tab_path: Option<&Rc<RefCell<Option<PathBuf>>>>,
+    editor_notebook: Option<&gtk4::Notebook>
+) -> bool {
+    // Check if we have an active file path
+    if let Some(tab_path_ref) = active_tab_path {
+        if let Some(file_path) = tab_path_ref.borrow().as_ref() {
+            let mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
+            
+            // Check if it's an image, video, or audio file
+            if mime_type.type_() == "image" || 
+               mime_type.type_() == "video" || 
+               mime_type.type_() == "audio" {
+                return true;
+            }
+            
+            // Additional check: if it's not a supported text type
+            if !is_allowed_mime_type(&mime_type) {
+                return true;
+            }
+        }
+    }
+    
+    // Also check if the current tab contains non-text content
+    if let Some(notebook) = editor_notebook {
+        if let Some(current_page) = notebook.current_page() {
+            if let Some(page_widget) = notebook.nth_page(Some(current_page)) {
+                // If the page contains a Picture widget, it's an image
+                if let Some(scrolled) = page_widget.downcast_ref::<gtk4::ScrolledWindow>() {
+                    if let Some(child) = scrolled.child() {
+                        if child.type_().name() == "GtkPicture" {
+                            return true;
+                        }
+                        // Check for audio player widget (GtkBox containing audio controls)
+                        if let Some(box_widget) = child.downcast_ref::<gtk4::Box>() {
+                            // Look for audio-specific widgets as indicators
+                            if has_audio_controls(box_widget) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    false
+}
+
+/// Helper function to detect if a box contains audio player controls
+fn has_audio_controls(box_widget: &gtk4::Box) -> bool {
+    // Look for characteristic audio player elements
+    let mut child = box_widget.first_child();
+    while let Some(widget) = child {
+        if let Some(button) = widget.downcast_ref::<gtk4::Button>() {
+            if let Some(tooltip) = button.tooltip_text() {
+                if tooltip.contains("Play") || tooltip.contains("Stop") {
+                    return true;
+                }
+            }
+        }
+        // Also check for waveform/spectrum visualization areas
+        if widget.type_().name() == "GtkDrawingArea" {
+            return true;
+        }
+        child = widget.next_sibling();
+    }
+    false
+}
+
 /// Updates the file browser list with contents of the current directory
 ///
 /// This function refreshes the file list to show folders and files in the current directory,
@@ -641,6 +715,9 @@ pub fn setup_keyboard_shortcuts(
     let file_list_box_clone = file_list_box.cloned();
     let active_tab_path_clone = active_tab_path.cloned();
     
+    // Clone the editor notebook for file type checking
+    let editor_notebook_clone = editor_notebook.cloned();
+    
     // Connect the key pressed event
     key_controller.connect_key_pressed(move |_controller, keyval, keycode, state| {
         // Check modifier keys
@@ -654,6 +731,12 @@ pub fn setup_keyboard_shortcuts(
                 // File operations
                 // Ctrl+S: Save or Ctrl+Shift+S: Save As
                 Some("s") => {
+                    // Check if current file is non-editable (image, video, audio)
+                    if is_current_file_non_editable(active_tab_path_clone.as_ref(), editor_notebook_clone.as_ref()) {
+                        println!("Keyboard shortcut: Ctrl+S blocked - Cannot save media files (image/video/audio)");
+                        return glib::Propagation::Stop; // Block the save operation
+                    }
+                    
                     if shift_pressed {
                         save_as_button_clone.emit_clicked();
                         println!("Keyboard shortcut: Ctrl+Shift+S (Save As)");
@@ -666,6 +749,12 @@ pub fn setup_keyboard_shortcuts(
                 },
                 // Ctrl+Shift+S: Save As (uppercase S)
                 Some("S") => {
+                    // Check if current file is non-editable (image, video, audio)
+                    if is_current_file_non_editable(active_tab_path_clone.as_ref(), editor_notebook_clone.as_ref()) {
+                        println!("Keyboard shortcut: Ctrl+Shift+S blocked - Cannot save media files (image/video/audio)");
+                        return glib::Propagation::Stop; // Block the save operation
+                    }
+                    
                     save_as_button_clone.emit_clicked();
                     println!("Keyboard shortcut: Ctrl+Shift+S (Save As)");
                     return glib::Propagation::Stop;
@@ -835,8 +924,8 @@ pub fn setup_keyboard_shortcuts(
     
     // Log that keyboard shortcuts have been set up
     println!("Keyboard shortcuts initialized:");
-    println!("  - Ctrl+S: Save");
-    println!("  - Ctrl+Shift+S: Save As");
+    println!("  - Ctrl+S: Save (blocked for image/video/audio files)");
+    println!("  - Ctrl+Shift+S: Save As (blocked for image/video/audio files)");
     println!("  - Ctrl+O: Open");
     println!("  - Ctrl+N: New file");
     println!("  - Ctrl+L: Edit path manually");
