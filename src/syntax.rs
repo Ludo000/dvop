@@ -198,6 +198,11 @@ pub fn create_source_view() -> (View, Buffer) {
     source_view.set_tab_width(4);
     source_view.set_auto_indent(true);
     
+    // Apply user's font size setting
+    let settings = crate::settings::get_settings();
+    let font_size = settings.get_font_size();
+    apply_font_size_to_view(&source_view, font_size);
+    
     // Enable code completion
     crate::completion::setup_completion(&source_view);
     
@@ -377,4 +382,135 @@ pub fn sync_gtk_with_system_theme() {
             crate::settings::refresh_settings();
         }
     }
+}
+
+/// Increases the font size for all text editors
+pub fn increase_font_size() {
+    let mut settings = crate::settings::get_settings_mut();
+    let current_size = settings.get_font_size();
+    let new_size = (current_size + 1).min(72); // Cap at 72pt
+    settings.set_font_size(new_size);
+    let _ = settings.save();
+    
+    // Drop the mutex guard before calling refresh
+    drop(settings);
+    crate::settings::refresh_settings();
+    
+    // Apply the new font size to all editor views
+    apply_font_size_globally(new_size);
+    
+    crate::status_log::log_info(&format!("Font size increased to {}", new_size));
+}
+
+/// Decreases the font size for all text editors  
+pub fn decrease_font_size() {
+    let mut settings = crate::settings::get_settings_mut();
+    let current_size = settings.get_font_size();
+    let new_size = (current_size.saturating_sub(1)).max(6); // Minimum 6pt
+    settings.set_font_size(new_size);
+    let _ = settings.save();
+    
+    // Drop the mutex guard before calling refresh
+    drop(settings);
+    crate::settings::refresh_settings();
+    
+    // Apply the new font size to all editor views
+    apply_font_size_globally(new_size);
+    
+    crate::status_log::log_info(&format!("Font size decreased to {}", new_size));
+}
+
+/// Resets the font size to the default value
+pub fn reset_font_size() {
+    let mut settings = crate::settings::get_settings_mut();
+    let default_size = crate::settings::DEFAULT_FONT_SIZE;
+    settings.set_font_size(default_size);
+    let _ = settings.save();
+    
+    // Drop the mutex guard before calling refresh
+    drop(settings);
+    crate::settings::refresh_settings();
+    
+    // Apply the new font size to all editor views
+    apply_font_size_globally(default_size);
+    
+    crate::status_log::log_info(&format!("Font size reset to default ({})", default_size));
+}
+
+/// Applies the font size to all SourceView widgets in the application
+fn apply_font_size_to_all_views(font_size: u32) {
+    let css = format!(
+        "textview {{ font-size: {}pt; }} 
+         sourceview {{ font-size: {}pt; }}", 
+        font_size, font_size
+    );
+    
+    let provider = gtk4::CssProvider::new();
+    provider.load_from_data(&css);
+    
+    gtk4::style_context_add_provider_for_display(
+        &gtk4::gdk::Display::default().expect("Could not get default display"),
+        &provider,
+        gtk4::STYLE_PROVIDER_PRIORITY_USER // Higher priority than application styles
+    );
+}
+
+/// Applies font size globally by finding all SourceView widgets in the application
+pub fn apply_font_size_globally(font_size: u32) {
+    // First apply the global CSS for new views
+    apply_font_size_to_all_views(font_size);
+    
+    // Then find all existing windows and update their SourceViews
+    let app = gtk4::gio::Application::default();
+    if let Some(app) = app {
+        if let Ok(gtk_app) = app.downcast::<gtk4::Application>() {
+            for window in gtk_app.windows() {
+                if let Ok(app_window) = window.downcast::<gtk4::ApplicationWindow>() {
+                    update_font_size_in_window(&app_window, font_size);
+                }
+            }
+        }
+    }
+}
+
+/// Updates font size for all SourceView widgets within a window
+fn update_font_size_in_window(window: &gtk4::ApplicationWindow, font_size: u32) {
+    // Recursively find all SourceView widgets in the window
+    find_and_update_source_views(window.upcast_ref::<gtk4::Widget>(), font_size);
+}
+
+/// Recursively searches for SourceView widgets and updates their font size
+fn find_and_update_source_views(widget: &gtk4::Widget, font_size: u32) {
+    // Check if this widget is a SourceView
+    if let Ok(source_view) = widget.clone().downcast::<sourceview5::View>() {
+        apply_font_size_to_view(&source_view, font_size);
+    }
+    
+    // Recursively search children
+    let mut child = widget.first_child();
+    while let Some(current_child) = child {
+        find_and_update_source_views(&current_child, font_size);
+        child = current_child.next_sibling();
+    }
+}
+
+/// Applies font size to a specific SourceView widget
+fn apply_font_size_to_view(source_view: &View, font_size: u32) {
+    let css_class = format!("font-size-{}", font_size);
+    let css = format!(".{} {{ font-size: {}pt; }}", css_class, font_size);
+    
+    let provider = gtk4::CssProvider::new();
+    provider.load_from_data(&css);
+    
+    // Add the CSS provider to the view's style context
+    let style_context = source_view.style_context();
+    
+    // Remove old font size classes to avoid accumulation
+    for size in 6..=72 {
+        let old_class = format!("font-size-{}", size);
+        style_context.remove_class(&old_class);
+    }
+    
+    style_context.add_provider(&provider, gtk4::STYLE_PROVIDER_PRIORITY_USER);
+    style_context.add_class(&css_class);
 }

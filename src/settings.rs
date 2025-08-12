@@ -9,6 +9,7 @@ use home::home_dir;
 // Default settings values
 const DEFAULT_LIGHT_THEME: &str = "solarized-light";
 const DEFAULT_DARK_THEME: &str = "solarized-dark";
+pub const DEFAULT_FONT_SIZE: u32 = 11;
 
 /// Represents user-configurable settings for the application
 #[derive(Clone)]
@@ -50,6 +51,7 @@ impl EditorSettings {
     fn set_defaults(&mut self) {
         self.values.insert("light_theme".to_owned(), DEFAULT_LIGHT_THEME.to_owned());
         self.values.insert("dark_theme".to_owned(), DEFAULT_DARK_THEME.to_owned());
+        self.values.insert("font_size".to_owned(), DEFAULT_FONT_SIZE.to_string());
         // Add more default settings here as needed
     }
 
@@ -116,6 +118,18 @@ impl EditorSettings {
     /// Sets the preferred dark theme
     pub fn set_dark_theme(&mut self, theme: &str) {
         self.set("dark_theme", theme);
+    }
+
+    /// Gets the font size
+    pub fn get_font_size(&self) -> u32 {
+        self.get("font_size")
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(DEFAULT_FONT_SIZE)
+    }
+
+    /// Sets the font size
+    pub fn set_font_size(&mut self, size: u32) {
+        self.set("font_size", &size.to_string());
     }
 }
 

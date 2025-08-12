@@ -642,7 +642,7 @@ pub fn setup_keyboard_shortcuts(
     let active_tab_path_clone = active_tab_path.cloned();
     
     // Connect the key pressed event
-    key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
+    key_controller.connect_key_pressed(move |_controller, keyval, keycode, state| {
         // Check modifier keys
         let ctrl_pressed = state.contains(gdk::ModifierType::CONTROL_MASK);
         let shift_pressed = state.contains(gdk::ModifierType::SHIFT_MASK);
@@ -794,8 +794,35 @@ pub fn setup_keyboard_shortcuts(
                     }
                     return glib::Propagation::Proceed;
                 },
+                // Ctrl+Plus/Ctrl+Equal: Increase font size
+                Some("plus") | Some("equal") => {
+                    println!("Keyboard shortcut: Ctrl+Plus (Increase Font Size)");
+                    crate::syntax::increase_font_size();
+                    return glib::Propagation::Stop;
+                },
+                // Ctrl+Minus: Decrease font size
+                Some("minus") => {
+                    println!("Keyboard shortcut: Ctrl+Minus (Decrease Font Size)");
+                    crate::syntax::decrease_font_size();
+                    return glib::Propagation::Stop;
+                },
+                // Ctrl+0: Reset font size to default (supports both QWERTY and AZERTY)
+                // On AZERTY, 0 is accessed with Shift, so we also check for keycode 19 (0 key position)
+                Some("0") | Some("agrave") | Some("à") => {
+                    println!("Keyboard shortcut: Ctrl+0 (Reset Font Size)");
+                    crate::syntax::reset_font_size();
+                    return glib::Propagation::Stop;
+                },
                 // Let other Ctrl shortcuts pass through to the editor (like Ctrl+C, Ctrl+V)
                 _ => {}
+            }
+            
+            // Check for keycode-based shortcuts (for AZERTY keyboard compatibility)
+            // Keycode 19 is typically the "0" key position on most keyboards
+            if keycode == 19 {
+                println!("Keyboard shortcut: Ctrl+0 (Reset Font Size) - detected by keycode");
+                crate::syntax::reset_font_size();
+                return glib::Propagation::Stop;
             }
         }
         
@@ -814,6 +841,9 @@ pub fn setup_keyboard_shortcuts(
     println!("  - Ctrl+N: New file");
     println!("  - Ctrl+L: Edit path manually");
     println!("  - Ctrl+Q: Quit application");
+    println!("  - Ctrl+Plus/Ctrl+=: Increase font size");
+    println!("  - Ctrl+Minus/Ctrl+-: Decrease font size");
+    println!("  - Ctrl+0: Reset font size to default (AZERTY compatible)");
     println!("  - Ctrl+Tab/Ctrl+Shift+Tab: Switch between tabs");
     println!("  - Ctrl+PageDown/Ctrl+PageUp: Navigate between tabs");
     println!("  - Delete: Delete selected file (when file manager has focus)");

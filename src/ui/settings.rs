@@ -106,6 +106,10 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
     settings_box.append(&light_theme_box.0);
     settings_box.append(&dark_theme_box.0);
     
+    // Add font size setting section
+    let font_size_box = create_font_size_setting();
+    settings_box.append(&font_size_box.0);
+    
     // Add the settings box to the content area
     content_area.append(&settings_box);
     
@@ -118,6 +122,7 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
     // We need to capture the dropdowns and available_schemes to get their values when the user clicks Save
     let light_dropdown = light_theme_box.1;
     let dark_dropdown = dark_theme_box.1;
+    let font_size_spinbutton = font_size_box.1;
     let available_schemes_clone = available_schemes.clone();
     
     dialog.connect_response(move |dialog, response| {
@@ -137,6 +142,13 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
                 settings.set_dark_theme(&dark_theme);
             }
             
+            // Get the font size value and save it
+            let font_size = font_size_spinbutton.value() as u32;
+            {
+                let mut settings = settings::get_settings_mut();
+                settings.set_font_size(font_size);
+            }
+            
             // Save settings to disk
             if let Err(e) = settings::get_settings_mut().save() {
                 eprintln!("Failed to save settings: {}", e);
@@ -147,6 +159,9 @@ pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
             
             // Refresh settings across the application
             settings::refresh_settings();
+            
+            // Apply font size changes globally
+            crate::syntax::apply_font_size_globally(font_size);
             
             // Get a reference to the parent window to update themes
             if let Some(parent) = dialog.transient_for() {
@@ -201,6 +216,62 @@ fn create_theme_selection_box(label_text: &str, available_themes: &[String], cur
     box_container.append(&dropdown);
     
     (box_container, dropdown)
+}
+
+/// Creates a font size setting control
+///
+/// Returns a tuple containing:
+/// - A container with the label and spin button
+/// - The spin button widget for getting the value
+fn create_font_size_setting() -> (GtkBox, gtk4::SpinButton) {
+    let box_container = GtkBox::new(Orientation::Vertical, 5);
+    
+    // Add section title
+    let title_label = Label::new(Some("Editor Font Size"));
+    title_label.set_halign(gtk4::Align::Start);
+    title_label.set_margin_top(10);
+    title_label.set_margin_bottom(5);
+    title_label.add_css_class("heading");
+    box_container.append(&title_label);
+    
+    // Create horizontal box for the control
+    let control_box = GtkBox::new(Orientation::Horizontal, 10);
+    
+    // Add label
+    let label = Label::new(Some("Font Size:"));
+    label.set_halign(gtk4::Align::Start);
+    label.set_width_chars(20);
+    label.set_xalign(0.0);
+    control_box.append(&label);
+    
+    // Get current font size from settings
+    let current_font_size = settings::get_settings().get_font_size();
+    
+    // Create spin button for font size (range 6-72pt)
+    let adjustment = gtk4::Adjustment::new(
+        current_font_size as f64, // current value
+        6.0,  // minimum
+        72.0, // maximum
+        1.0,  // step increment
+        5.0,  // page increment
+        0.0   // page size
+    );
+    
+    let spin_button = gtk4::SpinButton::new(Some(&adjustment), 1.0, 0);
+    spin_button.set_value(current_font_size as f64);
+    spin_button.set_width_chars(5);
+    
+    control_box.append(&spin_button);
+    
+    // Add size hint label
+    let size_hint = Label::new(Some("pt (6-72)"));
+    size_hint.set_halign(gtk4::Align::Start);
+    size_hint.add_css_class("caption");
+    control_box.append(&size_hint);
+    
+    box_container.append(&control_box);
+    
+    (box_container, spin_button)
 }
 
 /// Updates themes throughout the application
