@@ -87,7 +87,7 @@ static GLOBAL_VOLUME_MANAGER: Lazy<GlobalVolumeManager> = Lazy::new(|| GlobalVol
 /// Global audio playback manager to coordinate multiple audio players
 #[derive(Clone)]
 struct GlobalAudioManager {
-    active_players: Arc<Mutex<Vec<(gstreamer::Pipeline, String)>>>, // (pipeline, unique_id)
+    active_players: Arc<Mutex<Vec<(gstreamer::Pipeline, String, bool)>>>, // (pipeline, unique_id, is_music)
     stopped_notifications: Arc<Mutex<Vec<String>>>, // List of player IDs that should be notified of stopping
 }
 
@@ -100,23 +100,23 @@ impl GlobalAudioManager {
     }
     
     /// Register a new audio player pipeline with a unique ID
-    fn register_player(&self, pipeline: &gstreamer::Pipeline, player_id: String) {
+    fn register_player(&self, pipeline: &gstreamer::Pipeline, player_id: String, is_music: bool) {
         let mut players = self.active_players.lock().unwrap();
         
         // Clean up any pipelines that have been set to NULL state (destroyed) BEFORE adding new one
         let original_count = players.len();
-        players.retain(|(p, _)| p.current_state() != gstreamer::State::Null);
+        players.retain(|(p, _, _)| p.current_state() != gstreamer::State::Null);
         let cleaned_count = original_count - players.len();
         if cleaned_count > 0 {
             println!("Audio: Cleaned {} dead players during registration", cleaned_count);
         }
         
-        // Add the new pipeline with its unique ID
-        players.push((pipeline.clone(), player_id.clone()));
+        // Add the new pipeline with its unique ID and music flag
+        players.push((pipeline.clone(), player_id.clone(), is_music));
         
         println!("Audio: Registered new player. Total active players: {}", players.len());
-        println!("Audio: New pipeline name: {} (ID: {})", 
-                 pipeline.upcast_ref::<gstreamer::Object>().name(), player_id);
+        println!("Audio: New pipeline name: {} (ID: {}, music: {})", 
+                 pipeline.upcast_ref::<gstreamer::Object>().name(), player_id, is_music);
     }
     
     /// Check if this player was stopped by another and should update its UI
@@ -142,7 +142,7 @@ impl GlobalAudioManager {
         println!("Audio: Current pipeline name: {} (ID: {})", current_name, current_player_id);
         
         // Clean up dead pipelines and stop others
-        players.retain(|(pipeline, player_id)| {
+        players.retain(|(pipeline, player_id, _is_music)| {
             let pipeline_state = pipeline.current_state();
             let pipeline_name = pipeline.upcast_ref::<gstreamer::Object>().name();
             
@@ -186,7 +186,7 @@ impl GlobalAudioManager {
     fn cleanup_dead_players(&self) {
         let mut players = self.active_players.lock().unwrap();
         let original_count = players.len();
-        players.retain(|(p, _)| p.current_state() != gstreamer::State::Null);
+        players.retain(|(p, _, _)| p.current_state() != gstreamer::State::Null);
         let cleaned_count = original_count - players.len();
         if cleaned_count > 0 {
             println!("Audio: Cleaned up {} dead player(s)", cleaned_count);
@@ -206,6 +206,80 @@ pub fn set_global_volume(volume: f64) {
 #[allow(dead_code)]
 pub fn get_global_volume() -> f64 {
     GLOBAL_VOLUME_MANAGER.get_volume()
+}
+
+/// Public function to check if a file path represents music content
+pub fn is_music_file(path: &std::path::Path) -> bool {
+    is_music_content(path)
+}
+
+/// Determines if an audio file is likely to be music content
+/// This is a heuristic-based approach using file extension and path analysis
+fn is_music_content(audio_path: &Path) -> bool {
+    let path_str = audio_path.to_string_lossy().to_lowercase();
+    let file_name = audio_path.file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    
+    // Check for music-specific file extensions
+    if let Some(extension) = audio_path.extension() {
+        let ext = extension.to_string_lossy().to_lowercase();
+        match ext.as_str() {
+            // Typically music formats
+            "mp3" | "flac" | "m4a" | "aac" | "opus" | "wav" | "ogg" | "wma" => return true,
+            _ => return false,
+        }
+    }
+    
+    // Check for non-music indicators first (higher priority)
+    let non_music_indicators = [
+        "speech", "voice", "talk", "podcast", "interview", 
+        "notification", "alert", "system", "effect", "sfx",
+        "recording", "memo", "note", "call", "voicemail",
+        "announcement", "dialog", "dialogue"
+    ];
+    
+    for indicator in &non_music_indicators {
+        if path_str.contains(indicator) || file_name.contains(indicator) {
+            return false;
+        }
+    }
+    
+    // Check for music-related keywords in path or filename
+    let music_indicators = [
+        "music", "song", "track", "album", "artist", "band", 
+        "mp3", "audio", "sound", "playlist", "library", "tune",
+        "melody", "beat", "rhythm", "genre", "acoustic", "instrumental"
+    ];
+    
+    // Check for music indicators
+    for indicator in &music_indicators {
+        if path_str.contains(indicator) || file_name.contains(indicator) {
+            return true;
+        }
+    }
+    
+    // Check for common music file naming patterns (Artist - Title, etc.)
+    if file_name.contains(" - ") || file_name.contains("_-_") {
+        return true;
+    }
+    
+    // Check for track numbers at the beginning (e.g., "01. Song Name" or "1 - Song")
+    if file_name.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        if file_name.contains(". ") || file_name.contains(" - ") {
+            return true;
+        }
+    }
+    
+    // Default assumption: if it's a common audio format in a typical location, 
+    // it's likely music
+    if let Some(extension) = audio_path.extension() {
+        let ext = extension.to_string_lossy().to_lowercase();
+        matches!(ext.as_str(), "wav" | "ogg" | "wma")
+    } else {
+        false
+    }
 }
 
 /// Audio player widget that provides playback controls and visualization
@@ -238,6 +312,11 @@ impl AudioPlayer {
         gstreamer::init().map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
         
         println!("Audio: Creating audio player for: {}", audio_path.display());
+        
+        // Determine if this is music content
+        let is_music = is_music_content(audio_path);
+        println!("Audio: Content type detected: {} (is_music: {})", 
+            if is_music { "Music" } else { "Non-music audio" }, is_music);
         
         // Create the main container
         let main_box = GtkBox::new(Orientation::Vertical, 12);
@@ -416,7 +495,7 @@ impl AudioPlayer {
                                audio_path.file_name().unwrap_or_default().to_string_lossy());
         
         // Register this pipeline with the global audio manager
-        GLOBAL_AUDIO_MANAGER.register_player(&pipeline, player_id.clone());
+        GLOBAL_AUDIO_MANAGER.register_player(&pipeline, player_id.clone(), is_music);
         
         // Waveform and spectrogram data
         let waveform_data = Rc::new(RefCell::new(None));

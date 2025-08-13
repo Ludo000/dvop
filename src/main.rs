@@ -379,7 +379,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         ui::file_manager::create_file_manager_panel_container(file_list_scrolled_window);
 
     // Create the path bar with navigation buttons and path segments
-    let (path_bar, path_box, up_button, _refresh_button, terminal_button) = ui::file_manager::create_path_bar();
+    let (path_bar, path_box, up_button, _refresh_button, terminal_button, volume_control_box, _global_volume_scale) = ui::file_manager::create_path_bar();
     
     // Set up keyboard shortcuts for common operations (including Ctrl+L for path editing)
     utils::setup_keyboard_shortcuts(
@@ -399,8 +399,20 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let main_container = GtkBox::new(gtk4::Orientation::Vertical, 0);
     main_container.append(&path_bar);
 
+    // Add fixed height to the path bar section to prevent vertical layout shifts
+    path_bar.set_height_request(44); // Fixed height for the entire path bar section
+
     // Create the status bar components
-    let (status_bar, status_label, secondary_status_label, _global_volume_scale) = ui::create_status_bar();
+    let (status_bar, status_label, secondary_status_label) = ui::create_status_bar();
+
+    // Set up periodic checking for volume control visibility
+    let volume_control_clone = volume_control_box.clone();
+    let active_tab_path_for_volume = active_tab_path.clone();
+    glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
+        let current_path = active_tab_path_for_volume.borrow().clone();
+        ui::update_volume_control_visibility_for_tab(&volume_control_clone, &current_path);
+        glib::ControlFlow::Continue
+    });
 
     // Set up click handler for the status label to show log history
     // We need to get the parent button from the status label
@@ -664,6 +676,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let path_box_clone_for_switch = path_box.clone();
     let secondary_status_label_clone = secondary_status_label.clone();
     let current_selection_source_clone_for_switch = current_selection_source.clone();
+    let volume_control_clone_for_switch = volume_control_box.clone();
 
     // Connect to the notebook's switch-page signal
     editor_notebook.connect_switch_page(move |notebook, _page, page_num| {
@@ -850,6 +863,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 None
             );
         }
+        
+        // Update volume control visibility based on the new active tab
+        ui::update_volume_control_visibility_for_tab(&volume_control_clone_for_switch, &new_active_path);
     });
 
     // Set up all button event handlers and their associated functionality
