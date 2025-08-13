@@ -186,6 +186,9 @@ pub fn create_text_view() -> (
     // Create the first "Untitled" tab
     let (tab_widget, tab_label, tab_close_button) = create_tab_widget("Untitled");
     
+    // Add middle mouse click support for the tab
+    setup_tab_middle_click(&tab_widget, &tab_close_button);
+    
     // Create a source view with syntax highlighting instead of a standard text view
     let (source_view, source_buffer) = syntax::create_source_view();
     
@@ -317,6 +320,33 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     tab_box.append(&close_button);
     
     (tab_box, label, close_button)
+}
+
+/// Adds middle mouse click support to a tab widget for closing tabs
+///
+/// This function sets up a gesture click controller that listens for
+/// middle mouse button clicks on the tab and triggers the close action.
+pub fn setup_tab_middle_click(tab_box: &GtkBox, close_button: &Button) {
+    use gtk4::prelude::*;
+    
+    // Create a gesture click controller that responds to middle mouse button clicks
+    let middle_click_gesture = gtk4::GestureClick::new();
+    middle_click_gesture.set_button(2); // Middle mouse button
+    
+    // Clone the close button for the closure
+    let close_button_clone = close_button.clone();
+    
+    // Connect the pressed signal to simulate a close button click
+    middle_click_gesture.connect_pressed(move |_, _n_press, _x, _y| {
+        // Log the middle mouse click for debugging
+        crate::status_log::log_info("Middle mouse click detected on tab - closing");
+        
+        // Emit the clicked signal on the close button to trigger the existing close logic
+        close_button_clone.emit_clicked();
+    });
+    
+    // Add the gesture controller to the tab box
+    tab_box.add_controller(middle_click_gesture);
 }
 
 /// Creates a container box for the editor notebook with the add button

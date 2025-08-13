@@ -159,6 +159,9 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     // Create a custom tab widget with label and close button
     let (tab_widget, tab_actual_label, tab_close_button) = crate::ui::create_tab_widget("Untitled");
     
+    // Add middle mouse click support for the tab
+    crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
+    
     // Add the new tab to the notebook and switch to it
     let new_page_num = deps.editor_notebook.append_page(&new_scrolled_window, Some(&tab_widget));
     // Setting current page after append ensures the switch_page signal is emitted properly
@@ -601,6 +604,9 @@ pub fn open_or_focus_tab(
         
         // Create tab widget regardless of content type
         let (tab_widget, tab_actual_label, tab_close_button) = crate::ui::create_tab_widget(&file_name);
+        
+        // Add middle mouse click support for the tab
+        crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
         
         let new_scrolled_window = ScrolledWindow::builder()
             .vexpand(true)

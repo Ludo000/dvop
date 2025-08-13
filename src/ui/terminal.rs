@@ -243,6 +243,9 @@ pub fn add_terminal_tab(terminal_notebook: &Notebook, working_dir: Option<PathBu
     // Create a tab widget with the folder name or default title
     let (tab_widget, _tab_label, tab_close_button) = crate::ui::create_tab_widget(&tab_title);
     
+    // Add middle mouse click support for the tab
+    crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
+    
     // Append the terminal to the notebook
     let page_num = terminal_notebook.append_page(&terminal_box, Some(&tab_widget));
     terminal_notebook.set_current_page(Some(page_num));
