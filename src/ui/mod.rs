@@ -40,8 +40,8 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
     
     ApplicationWindow::builder()
         .application(app)      // Associate with the GTK application
-        .default_width(800)    // Initial window width
-        .default_height(600)   // Initial window height
+        .default_width(1200)    // Initial window width
+        .default_height(700)   // Initial window height
         .title("Basado Text Editor")
         .build()
 }
