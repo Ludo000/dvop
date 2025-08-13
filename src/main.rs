@@ -440,7 +440,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Create the main paned layout that contains:
     // - The file manager sidebar on the left
     // - The editor notebook and terminal in a vertical split on the right
-    let paned_content = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
+    let (paned_content, editor_paned) = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
     
     // Set up modification tracking for the initial tab
     // This adds a "*" indicator to the tab label when content has been modified
@@ -1052,6 +1052,36 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     
     // Show the main window to display the application
     window.show();
+
+    // Set up window close handler to save window size and pane positions
+    let paned_content_for_close = paned_content.clone();
+    let editor_paned_for_close = editor_paned.clone();
+    window.connect_close_request(move |window| {
+        // Get the current window size - use width() and height() for actual size
+        let width = window.width();
+        let height = window.height();
+        
+        // Get the current pane positions
+        let file_panel_width = paned_content_for_close.position();
+        let terminal_height = editor_paned_for_close.position();
+        
+        // Save all dimensions to settings
+        let mut settings = settings::get_settings_mut();
+        settings.set_window_size(width, height);
+        settings.set_pane_dimensions(file_panel_width, terminal_height);
+        
+        // Save settings to disk
+        if let Err(e) = settings.save() {
+            eprintln!("Failed to save window dimensions: {}", e);
+        } else {
+            println!("Saved window size: {}x{}", width, height);
+            println!("Saved file panel width: {}", file_panel_width);
+            println!("Saved terminal height: {}", terminal_height);
+        }
+        
+        // Allow the window to close
+        glib::Propagation::Proceed
+    });
 
     // Set up the settings button handler
     let window_clone_for_settings = window.clone();

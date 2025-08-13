@@ -38,10 +38,15 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
     // Apply our custom CSS styling before building the window
     css::apply_custom_css();
     
+    // Get saved window dimensions from settings
+    let settings = crate::settings::get_settings();
+    let window_width = settings.get_window_width();
+    let window_height = settings.get_window_height();
+    
     ApplicationWindow::builder()
         .application(app)      // Associate with the GTK application
-        .default_width(1200)    // Initial window width
-        .default_height(700)   // Initial window height
+        .default_width(window_width)    // Use saved window width
+        .default_height(window_height)   // Use saved window height
         .title("Basado Text Editor")
         .build()
 }
@@ -233,11 +238,15 @@ pub fn create_text_view() -> (
 /// This function arranges the major UI components into a nested paned layout:
 /// - Horizontal split between file manager (left) and editor+terminal (right)
 /// - The right side has a vertical split between editor (top) and terminal (bottom)
+/// 
+/// Returns a tuple of:
+/// - gtk4::Paned: The main horizontal paned container
+/// - gtk4::Paned: The vertical paned container for editor+terminal
 pub fn create_paned(
     file_manager_panel: &GtkBox,     // File browser sidebar
     editor_notebook_box: &GtkBox,    // Editor notebook container with add button
     terminal_box: &impl IsA<gtk4::Widget>,  // Terminal container (either ScrolledWindow or GtkBox)
-) -> gtk4::Paned {
+) -> (gtk4::Paned, gtk4::Paned) {
     // Create the main horizontal split pane
     let paned = gtk4::Paned::new(Orientation::Horizontal);
     paned.set_wide_handle(true);  // Use a wider drag handle for easier resizing
@@ -262,11 +271,16 @@ pub fn create_paned(
     // Place the editor+terminal vertical split on the right side
     paned.set_end_child(Some(&editor_paned));
     
-    // Set initial split positions
-    paned.set_position(200);        // Width of file manager sidebar
-    editor_paned.set_position(320); // Height of editor area (reduced to give more space to terminal)
+    // Get saved pane positions from settings
+    let settings = crate::settings::get_settings();
+    let file_panel_width = settings.get_file_panel_width();
+    let terminal_height = settings.get_terminal_height();
     
-    paned
+    // Set initial split positions
+    paned.set_position(file_panel_width);        // Width of file manager sidebar
+    editor_paned.set_position(terminal_height); // Height of editor area
+    
+    (paned, editor_paned)
 }
 
 /// Creates a custom tab widget with a label and close button

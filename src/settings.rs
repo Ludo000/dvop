@@ -11,6 +11,10 @@ const DEFAULT_LIGHT_THEME: &str = "solarized-light";
 const DEFAULT_DARK_THEME: &str = "solarized-dark";
 pub const DEFAULT_FONT_SIZE: u32 = 11;
 const DEFAULT_AUDIO_VOLUME: f64 = 0.8; // 80% volume
+const DEFAULT_WINDOW_WIDTH: i32 = 800;
+const DEFAULT_WINDOW_HEIGHT: i32 = 600;
+const DEFAULT_FILE_PANEL_WIDTH: i32 = 200; // Width of file manager sidebar
+const DEFAULT_TERMINAL_HEIGHT: i32 = 320;  // Height of terminal section
 
 /// Represents user-configurable settings for the application
 #[derive(Clone)]
@@ -54,6 +58,10 @@ impl EditorSettings {
         self.values.insert("dark_theme".to_owned(), DEFAULT_DARK_THEME.to_owned());
         self.values.insert("font_size".to_owned(), DEFAULT_FONT_SIZE.to_string());
         self.values.insert("audio_volume".to_owned(), DEFAULT_AUDIO_VOLUME.to_string());
+        self.values.insert("window_width".to_owned(), DEFAULT_WINDOW_WIDTH.to_string());
+        self.values.insert("window_height".to_owned(), DEFAULT_WINDOW_HEIGHT.to_string());
+        self.values.insert("file_panel_width".to_owned(), DEFAULT_FILE_PANEL_WIDTH.to_string());
+        self.values.insert("terminal_height".to_owned(), DEFAULT_TERMINAL_HEIGHT.to_string());
         // Add more default settings here as needed
     }
 
@@ -147,6 +155,74 @@ impl EditorSettings {
     pub fn set_audio_volume(&mut self, volume: f64) {
         let clamped_volume = volume.max(0.0).min(1.0);
         self.set("audio_volume", &clamped_volume.to_string());
+    }
+
+    /// Gets the window width
+    pub fn get_window_width(&self) -> i32 {
+        self.get("window_width")
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(DEFAULT_WINDOW_WIDTH)
+            .max(400) // Minimum width
+    }
+
+    /// Sets the window width
+    pub fn set_window_width(&mut self, width: i32) {
+        let clamped_width = width.max(400); // Minimum width
+        self.set("window_width", &clamped_width.to_string());
+    }
+
+    /// Gets the window height
+    pub fn get_window_height(&self) -> i32 {
+        self.get("window_height")
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(DEFAULT_WINDOW_HEIGHT)
+            .max(300) // Minimum height
+    }
+
+    /// Sets the window height
+    pub fn set_window_height(&mut self, height: i32) {
+        let clamped_height = height.max(300); // Minimum height
+        self.set("window_height", &clamped_height.to_string());
+    }
+
+    /// Sets both window dimensions at once
+    pub fn set_window_size(&mut self, width: i32, height: i32) {
+        self.set_window_width(width);
+        self.set_window_height(height);
+    }
+
+    /// Gets the file panel width
+    pub fn get_file_panel_width(&self) -> i32 {
+        self.get("file_panel_width")
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(DEFAULT_FILE_PANEL_WIDTH)
+            .max(100) // Minimum file panel width
+    }
+
+    /// Sets the file panel width
+    pub fn set_file_panel_width(&mut self, width: i32) {
+        let clamped_width = width.max(100); // Minimum file panel width
+        self.set("file_panel_width", &clamped_width.to_string());
+    }
+
+    /// Gets the terminal height
+    pub fn get_terminal_height(&self) -> i32 {
+        self.get("terminal_height")
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(DEFAULT_TERMINAL_HEIGHT)
+            .max(100) // Minimum terminal height
+    }
+
+    /// Sets the terminal height
+    pub fn set_terminal_height(&mut self, height: i32) {
+        let clamped_height = height.max(100); // Minimum terminal height
+        self.set("terminal_height", &clamped_height.to_string());
+    }
+
+    /// Sets both pane dimensions at once
+    pub fn set_pane_dimensions(&mut self, file_panel_width: i32, terminal_height: i32) {
+        self.set_file_panel_width(file_panel_width);
+        self.set_terminal_height(terminal_height);
     }
 }
 
