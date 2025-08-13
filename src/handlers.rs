@@ -464,12 +464,23 @@ fn actually_close_tab(
 ) {
     let n_pages_before_close = notebook.n_pages();
     
-    // Get filename for logging before we remove it
-    let filename = file_path_manager_rc.borrow()
-        .get(&page_num_to_close)
-        .and_then(|path| path.file_name())
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "Untitled".to_string());
+    // Get file path and filename for logging and audio cleanup before we remove it
+    let (filename, file_path_opt) = {
+        let manager = file_path_manager_rc.borrow();
+        let path_opt = manager.get(&page_num_to_close).cloned();
+        let name = path_opt.as_ref()
+            .and_then(|path| path.file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Untitled".to_string());
+        (name, path_opt)
+    };
+    
+    // Stop any audio playback for this file if it's a music file
+    if let Some(ref file_path) = file_path_opt {
+        if crate::audio::is_music_file(file_path) {
+            crate::audio::stop_audio_for_file(file_path);
+        }
+    }
     
     notebook.remove_page(Some(page_num_to_close));
     

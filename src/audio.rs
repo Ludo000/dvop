@@ -192,6 +192,51 @@ impl GlobalAudioManager {
             println!("Audio: Cleaned up {} dead player(s)", cleaned_count);
         }
     }
+
+    /// Stop all audio players associated with a specific file path
+    /// This is used when a music file tab is closed
+    fn stop_players_for_file(&self, file_path: &std::path::Path) {
+        let mut players = self.active_players.lock().unwrap();
+        let mut notifications = self.stopped_notifications.lock().unwrap();
+        
+        let file_name = file_path.file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("");
+        
+        let mut stopped_count = 0;
+        
+        println!("Audio: Stopping all players for file: {}", file_path.display());
+        
+        // Find and stop all players associated with this file
+        players.retain(|(pipeline, player_id, _is_music)| {
+            let pipeline_state = pipeline.current_state();
+            
+            // Remove if pipeline is already NULL (destroyed)
+            if pipeline_state == gstreamer::State::Null {
+                return false;
+            }
+            
+            // Check if this player is associated with the file being closed
+            if player_id.contains(file_name) {
+                println!("Audio: Stopping player for closed file: {} (ID: {})", file_name, player_id);
+                
+                // Stop the pipeline
+                let _ = pipeline.set_state(gstreamer::State::Null);
+                
+                // Add to notification list for UI updates
+                notifications.push(player_id.clone());
+                
+                stopped_count += 1;
+                return false; // Remove from active players list
+            }
+            
+            true // Keep this player
+        });
+        
+        if stopped_count > 0 {
+            println!("Audio: Stopped {} player(s) for closed file: {}", stopped_count, file_name);
+        }
+    }
 }
 
 // Global audio manager instance
@@ -211,6 +256,12 @@ pub fn get_global_volume() -> f64 {
 /// Public function to check if a file path represents music content
 pub fn is_music_file(path: &std::path::Path) -> bool {
     is_music_content(path)
+}
+
+/// Public function to stop all audio players associated with a specific file path
+/// This should be called when a music file tab is closed
+pub fn stop_audio_for_file(file_path: &std::path::Path) {
+    GLOBAL_AUDIO_MANAGER.stop_players_for_file(file_path);
 }
 
 /// Determines if an audio file is likely to be music content
