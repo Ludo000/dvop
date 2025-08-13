@@ -2,12 +2,37 @@
 // This module contains helper functions used throughout the application
 
 use gtk4::prelude::*;
-use gtk4::{Button, ListBox, MenuButton, pango, ApplicationWindow, EventControllerKey, gdk, glib, Entry};
+use gtk4::{Button, ListBox, MenuButton, pango, ApplicationWindow, EventControllerKey, gdk, glib, Entry, DropTarget};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::cell::RefCell;
 
 use mime_guess::Mime;
+
+// Global storage for file list refresh callback
+thread_local! {
+    static FILE_LIST_REFRESH_CALLBACK: RefCell<Option<Box<dyn Fn()>>> = RefCell::new(None);
+}
+
+/// Set a callback function to refresh the file list
+/// This is called by drag and drop operations to trigger a refresh
+pub fn set_file_list_refresh_callback<F>(callback: F) 
+where 
+    F: Fn() + 'static,
+{
+    FILE_LIST_REFRESH_CALLBACK.with(|cb| {
+        *cb.borrow_mut() = Some(Box::new(callback));
+    });
+}
+
+/// Trigger the file list refresh callback
+pub fn trigger_file_list_refresh() {
+    FILE_LIST_REFRESH_CALLBACK.with(|cb| {
+        if let Some(ref callback) = *cb.borrow() {
+            callback();
+        }
+    });
+}
 
 
 /// Represents the source of file selection for different visual styling
@@ -167,7 +192,7 @@ pub fn update_file_list(
     files.sort_by(|a, b| a.0.cmp(&b.0));
 
     // Add folders to the list first with bold formatting
-    for (file_name_str, _entry) in folders {
+    for (file_name_str, entry) in folders {
         let row = gtk4::ListBoxRow::new();
         let label = gtk4::Label::new(Some(&file_name_str));
         label.set_halign(gtk4::Align::Start);        // Left-align text
@@ -178,6 +203,11 @@ pub fn update_file_list(
         label.set_markup(&format!("<span weight=\"bold\">{}</span>", file_name_str));
         
         row.set_child(Some(&label));
+        
+        // Set up drag and drop for this folder
+        let folder_path = entry.path();
+        crate::ui::file_manager::setup_drag_drop_for_row(&row, &folder_path, true);
+        
         file_list_box.append(&row);
     }
 
@@ -214,6 +244,11 @@ pub fn update_file_list(
         }
 
         row.set_child(Some(&label));
+        
+        // Set up drag and drop for this file
+        let file_path = entry.path();
+        crate::ui::file_manager::setup_drag_drop_for_row(&row, &file_path, false);
+        
         file_list_box.append(&row);
     }
 
@@ -413,6 +448,9 @@ pub fn update_path_buttons(
         button.add_css_class("path-segment-button");
         button.set_has_frame(false);  // Make it look like a link
         
+        // Set up drop target for this path button to allow dragging files/folders onto it
+        setup_path_button_drop_target(&button, &path);
+        
         // Clone needed variables for the closure
         let path_clone = path.clone();
         let file_list_box_clone = file_list_box.clone();
@@ -453,6 +491,50 @@ pub fn update_path_buttons(
             path_box.append(&separator);
         }
     }
+}
+
+/// Sets up drag and drop functionality for path buttons
+///
+/// This function configures a path button to accept dropped files and folders,
+/// allowing users to drag items from the file list onto any path segment to move them there.
+fn setup_path_button_drop_target(button: &gtk4::Button, target_path: &std::path::PathBuf) {
+    use gtk4::{DropTarget, gdk, glib};
+    
+    let drop_target = DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE | gdk::DragAction::COPY);
+    
+    let target_path_clone = target_path.clone();
+    drop_target.connect_drop(move |target, value, _x, _y| {
+        // Remove visual feedback immediately
+        if let Some(widget) = target.widget() {
+            widget.remove_css_class("path-drop-target");
+        }
+        
+        if let Ok(source_path_str) = value.get::<String>() {
+            let source_path = std::path::PathBuf::from(&source_path_str);
+            let target_dir = target_path_clone.clone();
+            
+            // Show confirmation modal for the move operation
+            crate::ui::file_manager::show_move_confirmation_modal(&source_path, &target_dir);
+            return true;
+        }
+        false
+    });
+    
+    // Visual feedback during drag over path buttons
+    drop_target.connect_enter(move |target, _x, _y| {
+        if let Some(widget) = target.widget() {
+            widget.add_css_class("path-drop-target");
+        }
+        gdk::DragAction::MOVE
+    });
+    
+    drop_target.connect_leave(move |target| {
+        if let Some(widget) = target.widget() {
+            widget.remove_css_class("path-drop-target");
+        }
+    });
+    
+    button.add_controller(drop_target);
 }
 
 /// Toggles between showing path buttons and an input entry for manual path editing

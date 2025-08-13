@@ -25,11 +25,12 @@ pub fn apply_custom_css() {
 /// Builds the complete CSS string by combining all component styles
 fn build_complete_css() -> String {
     format!(
-        "{}{}{}{}",
+        "{}{}{}{}{}",
         get_notebook_tab_styles(),
         get_button_styles(),
         get_status_bar_styles(),
-        get_path_navigation_styles()
+        get_path_navigation_styles(),
+        get_drag_drop_styles()
     )
 }
 
@@ -308,6 +309,26 @@ fn get_path_navigation_styles() -> &'static str {
         border-color: alpha(#888, 0.3);
     }
     
+    /* Path button drop target styling */
+    .path-drop-target {
+        background-color: alpha(@theme_selected_bg_color, 0.25) !important;
+        border: 2px dashed @theme_selected_bg_color !important;
+        border-radius: 4px;
+        transition: all 0.15s ease;
+        animation: path-drop-pulse 1.0s ease-in-out infinite alternate;
+    }
+    
+    @keyframes path-drop-pulse {
+        0% {
+            background-color: alpha(@theme_selected_bg_color, 0.2);
+            border-color: alpha(@theme_selected_bg_color, 0.7);
+        }
+        100% {
+            background-color: alpha(@theme_selected_bg_color, 0.3);
+            border-color: @theme_selected_bg_color;
+        }
+    }
+    
     .path-separator {
         opacity: 0.7;
         margin: 0 1px;
@@ -413,6 +434,74 @@ fn get_path_navigation_styles() -> &'static str {
     .path-input-container button {
         min-height: 24px;
         max-height: 24px;
+    }
+    "
+}
+
+/// Returns CSS styles for drag and drop visual feedback
+fn get_drag_drop_styles() -> &'static str {
+    "
+    /* === DRAG AND DROP STYLES === */
+    
+    /* Drag icon styling */
+    .drag-icon {
+        background-color: alpha(@theme_selected_bg_color, 0.9);
+        color: @theme_selected_fg_color;
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 1px solid @theme_selected_bg_color;
+        box-shadow: 0 4px 8px alpha(#000, 0.3);
+        font-size: 0.9em;
+        font-weight: 500;
+    }
+    
+    /* Drop target styling for folders */
+    .drop-target {
+        background-color: alpha(@theme_selected_bg_color, 0.2) !important;
+        border: 2px dashed @theme_selected_bg_color !important;
+        border-radius: 4px;
+        transition: all 0.15s ease;
+        animation: drop-target-pulse 1.5s ease-in-out infinite alternate;
+    }
+    
+    /* Drop target styling for file list background */
+    .drop-target-background {
+        background-color: alpha(@theme_selected_bg_color, 0.1) !important;
+        border: 2px dashed alpha(@theme_selected_bg_color, 0.5) !important;
+        border-radius: 4px;
+        transition: all 0.15s ease;
+        animation: drop-target-pulse-bg 1.5s ease-in-out infinite alternate;
+    }
+    
+    /* Ensure no drop target styling when class is removed */
+    listbox > row:not(.drop-target):not(.drop-target-background) {
+        background-color: transparent;
+        border: none;
+        animation: none;
+        transition: all 0.15s ease;
+    }
+    
+    /* Pulse animations */
+    @keyframes drop-target-pulse {
+        0% {
+            background-color: alpha(@theme_selected_bg_color, 0.15);
+            border-color: alpha(@theme_selected_bg_color, 0.6);
+        }
+        100% {
+            background-color: alpha(@theme_selected_bg_color, 0.25);
+            border-color: @theme_selected_bg_color;
+        }
+    }
+    
+    @keyframes drop-target-pulse-bg {
+        0% {
+            background-color: alpha(@theme_selected_bg_color, 0.05);
+            border-color: alpha(@theme_selected_bg_color, 0.3);
+        }
+        100% {
+            background-color: alpha(@theme_selected_bg_color, 0.15);
+            border-color: alpha(@theme_selected_bg_color, 0.5);
+        }
     }
     "
 }

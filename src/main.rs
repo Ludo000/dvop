@@ -890,6 +890,19 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         &current_selection_source, // Track selection source for click-outside detection
     );
 
+    // Set up file list refresh callback for drag and drop operations
+    let file_list_box_for_refresh = file_list_box.clone();
+    let current_dir_for_refresh = current_dir.clone();
+    let active_tab_path_for_refresh = active_tab_path.clone();
+    utils::set_file_list_refresh_callback(move || {
+        utils::update_file_list(
+            &file_list_box_for_refresh,
+            &current_dir_for_refresh.borrow(),
+            &active_tab_path_for_refresh.borrow(),
+            utils::FileSelectionSource::TabSwitch
+        );
+    });
+
     // Set up the terminal button handler to open a new terminal in the current directory
     let terminal_notebook_clone_for_terminal_button = terminal_notebook.clone();
     let current_dir_clone_for_terminal_button = current_dir.clone();
