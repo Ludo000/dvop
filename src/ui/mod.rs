@@ -200,6 +200,9 @@ pub fn create_text_view() -> (
     // Clone source_view before upcast to avoid ownership move
     let text_view = source_view.clone().upcast::<TextView>();
     let buffer = source_buffer.upcast::<TextBuffer>();
+    
+    // Set up interaction tracking for the initial text editor
+    crate::handlers::setup_text_editor_interaction_tracking(&text_view);
 
     // Place the source view in a scrolled window
     let scrolled_window = syntax::create_source_view_scrolled(&source_view);

@@ -153,6 +153,9 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     let new_text_view = source_view.clone().upcast::<TextView>();
     let new_text_buffer = source_buffer.upcast::<TextBuffer>();
     
+    // Set up interaction tracking for the new text editor
+    setup_text_editor_interaction_tracking(&new_text_view);
+    
     // Place the source view in a scrollable container
     let new_scrolled_window = crate::syntax::create_source_view_scrolled(&source_view);
     
@@ -169,6 +172,11 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     
     // Focus the text area of the new tab so the user can start typing immediately
     new_text_view.grab_focus();
+    
+    // Mark text editor as the last active area
+    LAST_ACTIVE_AREA.with(|area| {
+        *area.borrow_mut() = LastActiveArea::TextEditor;
+    });
     
     // Update the active tab path to None (unsaved document)
     *deps.active_tab_path.borrow_mut() = None;
@@ -208,6 +216,11 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     // Use weak reference to prevent memory leaks from circular references
     let tab_actual_label_weak = tab_actual_label.downgrade();
     new_text_buffer.connect_changed(move |buffer| {
+        // Mark text editor as active when user actually types/modifies content
+        LAST_ACTIVE_AREA.with(|area| {
+            *area.borrow_mut() = LastActiveArea::TextEditor;
+        });
+        
         if let Some(label) = tab_actual_label_weak.upgrade() {
             let label_text = label.text();
             let buffer_content = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
@@ -594,6 +607,8 @@ pub fn open_or_focus_tab(
         // Focus the text area of the existing tab
         if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, page_num) {
             text_view.grab_focus();
+            // Don't change last active area when just switching to existing tabs
+            // The user's intent (file manager vs text editor) should remain unchanged
         }
         
         crate::status_log::log_success(&format!("Focused {}", filename));
@@ -656,6 +671,10 @@ pub fn open_or_focus_tab(
             // Setup keyboard shortcuts for completion
             crate::completion::setup_completion_shortcuts(&source_view);
             
+            // Set up interaction tracking for the text editor
+            let text_view = source_view.clone().upcast::<TextView>();
+            setup_text_editor_interaction_tracking(&text_view);
+            
             // Get TextBuffer interfaces for compatibility with the rest of the code
             let new_text_buffer = source_buffer.upcast::<TextBuffer>();
             
@@ -666,6 +685,11 @@ pub fn open_or_focus_tab(
             let tab_actual_label_weak = tab_actual_label.downgrade();
             let file_name_ref = file_name.clone(); // Only clone once
             new_text_buffer.connect_changed(move |_buffer| { 
+                // Mark text editor as active when user actually types/modifies content
+                LAST_ACTIVE_AREA.with(|area| {
+                    *area.borrow_mut() = LastActiveArea::TextEditor;
+                });
+                
                 if let Some(label) = tab_actual_label_weak.upgrade() {
                     let current_text = label.text();
                     if !current_text.starts_with('*') {
@@ -689,6 +713,8 @@ pub fn open_or_focus_tab(
         if utils::is_allowed_mime_type(&mime_type) {
             if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, new_page_num) {
                 text_view.grab_focus();
+                // Don't change last active area when opening files from file manager
+                // The user's intent (file manager vs text editor) should remain unchanged
             }
         }
 
@@ -1356,6 +1382,108 @@ fn setup_save_as_button_handler(
     });
 }
 
+/// Enum to track which area was last actively used
+#[derive(Clone, Debug, PartialEq)]
+pub enum LastActiveArea {
+    TextEditor,
+    FileManager,
+}
+
+// Global state to track the last active area
+thread_local! {
+    pub static LAST_ACTIVE_AREA: RefCell<LastActiveArea> = RefCell::new(LastActiveArea::TextEditor);
+}
+
+/// Adds interaction tracking to a text view to detect when user actively uses it
+pub fn setup_text_editor_interaction_tracking(text_view: &gtk4::TextView) {
+    // Add click gesture to detect when user clicks in the text editor
+    let click_gesture = GestureClick::new();
+    click_gesture.set_button(1); // Left mouse button
+    
+    click_gesture.connect_pressed(move |_, _, _, _| {
+        // Mark text editor as active when user clicks in it
+        LAST_ACTIVE_AREA.with(|area| {
+            let current_area = area.borrow().clone();
+            if current_area != LastActiveArea::TextEditor {
+                *area.borrow_mut() = LastActiveArea::TextEditor;
+                println!("DEBUG: Text editor clicked - set as last active area");
+            }
+        });
+    });
+    
+    text_view.add_controller(click_gesture);
+    
+    // Note: Removed key press handler as it was interfering with clipboard operations
+    // Text editor will become active through:
+    // 1. Clicking in the text editor (above)
+    // 2. Typing/editing text (buffer change handlers)
+}
+
+/// Checks if any text editor in the notebook currently has focus
+/// Returns true if a text editor (SourceView) has focus, false otherwise
+fn is_text_editor_focused(notebook: &gtk4::Notebook) -> bool {
+    if let Some(current_page_num) = notebook.current_page() {
+        if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, current_page_num) {
+            let has_focus = text_view.has_focus();
+            let is_focus = text_view.is_focus();
+            println!("DEBUG: Text editor focus check - has_focus: {}, is_focus: {}", 
+                     has_focus, is_focus);
+            return has_focus;
+        }
+    }
+    println!("DEBUG: No text view found or no current page");
+    false
+}
+
+/// Checks if the file manager should handle clipboard operations
+/// Returns true if file manager operations should be prioritized over text operations
+fn should_handle_file_operations(notebook: &gtk4::Notebook, file_list_box: &gtk4::ListBox) -> bool {
+    let text_editor_has_focus = is_text_editor_focused(notebook);
+    let file_list_has_focus = file_list_box.has_focus();
+    let file_selected = file_list_box.selected_row().is_some();
+    
+    // Get the last active area
+    let last_active = LAST_ACTIVE_AREA.with(|area| area.borrow().clone());
+    
+    println!("DEBUG: Focus check - Text editor: {}, File list: {}, File selected: {}, Last active: {:?}", 
+             text_editor_has_focus, file_list_has_focus, file_selected, last_active);
+    
+    // If the file manager was the last active area and has a selection, prioritize file operations
+    // This handles the case where files are double-clicked (which opens them and gives focus to text editor)
+    // but the user's intent was to work with files
+    if last_active == LastActiveArea::FileManager && file_selected {
+        println!("DEBUG: File manager was last active with file selected - handling file operations");
+        return true;
+    }
+    
+    // If the file list box has focus, definitely handle file operations
+    if file_list_has_focus {
+        println!("DEBUG: File list has focus - handling file operations");
+        return true;
+    }
+    
+    // If a text editor has focus and was the last active area, let text operations proceed
+    if text_editor_has_focus && last_active == LastActiveArea::TextEditor {
+        println!("DEBUG: Text editor has focus and was last active - letting text operations proceed");
+        return false;
+    }
+    
+    // If there's a selected row in the file list and no text editor has focus, handle file operations
+    if file_selected && !text_editor_has_focus {
+        println!("DEBUG: File selected but no text editor focus - handling file operations");
+        return true;
+    }
+    
+    // Default: if text editor has focus, let it handle operations
+    if text_editor_has_focus {
+        println!("DEBUG: Text editor has focus - letting text operations proceed");
+        return false;
+    }
+    
+    // Final default: handle file operations
+    println!("DEBUG: Default case - handling file operations");
+    true
+}
 
 fn setup_file_selection_handler(
     file_list_box: &ListBox,
@@ -1410,6 +1538,13 @@ fn setup_file_selection_handler(
                 // Ctrl+C: Copy file
                 gtk4::gdk::Key::c => {
                     println!("DEBUG: Ctrl+C pressed in file manager");
+                    
+                    // Check if we should handle file operations or let text editor handle it
+                    if !should_handle_file_operations(&editor_notebook_for_key, &file_list_box_for_key) {
+                        println!("DEBUG: Text editor has priority, letting Ctrl+C propagate");
+                        return glib::Propagation::Proceed;
+                    }
+                    
                     // First priority: Check if there's a selected row in the file list
                     if let Some(selected_row) = file_list_box_for_key.selected_row() {
                         if let Some(label) = selected_row.child().and_then(|c| c.downcast::<Label>().ok()) {
@@ -1438,6 +1573,13 @@ fn setup_file_selection_handler(
                 // Ctrl+X: Cut file
                 gtk4::gdk::Key::x => {
                     println!("DEBUG: Ctrl+X pressed in file manager");
+                    
+                    // Check if we should handle file operations or let text editor handle it
+                    if !should_handle_file_operations(&editor_notebook_for_key, &file_list_box_for_key) {
+                        println!("DEBUG: Text editor has priority, letting Ctrl+X propagate");
+                        return glib::Propagation::Proceed;
+                    }
+                    
                     // First priority: Check if there's a selected row in the file list
                     if let Some(selected_row) = file_list_box_for_key.selected_row() {
                         if let Some(label) = selected_row.child().and_then(|c| c.downcast::<Label>().ok()) {
@@ -1466,6 +1608,13 @@ fn setup_file_selection_handler(
                 // Ctrl+V: Paste file
                 gtk4::gdk::Key::v => {
                     println!("DEBUG: Ctrl+V pressed in file manager");
+                    
+                    // Check if we should handle file operations or let text editor handle it
+                    if !should_handle_file_operations(&editor_notebook_for_key, &file_list_box_for_key) {
+                        println!("DEBUG: Text editor has priority, letting Ctrl+V propagate");
+                        return glib::Propagation::Proceed;
+                    }
+                    
                     if crate::ui::file_manager::has_clipboard_content() {
                         crate::ui::file_manager::paste_file_from_clipboard(
                             &current_dir_for_key.borrow(),
@@ -1612,14 +1761,48 @@ fn setup_file_selection_handler(
     left_click_gesture.set_button(1); // Left mouse button
     
     let file_list_box_for_focus = file_list_box.clone();
-    left_click_gesture.connect_pressed(move |_gesture, _n_press, _x, _y| {
-        // Grab focus when the file list box is clicked
+    left_click_gesture.connect_pressed(move |_gesture, _n_press, _x, y| {
+        // Always grab focus when the file list box is clicked (including empty areas)
+        println!("DEBUG: Left click on file manager - grabbing focus");
         file_list_box_for_focus.grab_focus();
+        
+        // Force focus by also setting can_focus and making sure it's focusable
+        file_list_box_for_focus.set_can_focus(true);
+        file_list_box_for_focus.set_focusable(true);
+        
+        // Mark file manager as the last active area
+        LAST_ACTIVE_AREA.with(|area| {
+            *area.borrow_mut() = LastActiveArea::FileManager;
+        });
+        println!("DEBUG: Set last active area to FileManager");
+        
+        // Also handle selection logic for clicks on empty areas
+        if let Some(row_at_position) = file_list_box_for_focus.row_at_y(y as i32) {
+            // Clicking on a row - let the normal selection happen
+            file_list_box_for_focus.select_row(Some(&row_at_position));
+            println!("DEBUG: Selected row at position y={}", y);
+        } else {
+            // Clicking on empty area - clear selection
+            file_list_box_for_focus.unselect_all();
+            println!("DEBUG: Clicked empty area - cleared selection");
+        }
+        
+        // Verify focus was grabbed
+        println!("DEBUG: File list has_focus after grab: {}", file_list_box_for_focus.has_focus());
     });
     
     file_list_box.add_controller(left_click_gesture);
 
-    file_list_box.connect_row_activated(move |_, row| {
+    file_list_box.connect_row_activated(move |list_box, row| {
+        // Grab focus to ensure file operations work correctly
+        println!("DEBUG: Row activated - grabbing focus");
+        list_box.set_can_focus(true);
+        list_box.set_focusable(true);
+        list_box.grab_focus();
+        
+        // Verify focus was grabbed
+        println!("DEBUG: File list has_focus after row activation: {}", list_box.has_focus());
+        
         // Clone necessary items again for the inner part of the closure if they are used across awaits or complex logic
         // For simple moves like this, the outer clones are usually sufficient.
         let editor_notebook_for_handler = editor_notebook_clone.clone();

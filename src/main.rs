@@ -449,6 +449,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     
     // Connect to the buffer's changed signal to detect modifications
     initial_text_buffer.connect_changed(move |_buffer| {
+        // Mark text editor as active when user actually types/modifies content
+        handlers::LAST_ACTIVE_AREA.with(|area| {
+            *area.borrow_mut() = handlers::LastActiveArea::TextEditor;
+        });
+        
         // Get the current text content from the buffer
         let text_content = initial_buffer_clone_for_dirty_track.text(
             &initial_buffer_clone_for_dirty_track.start_iter(),
