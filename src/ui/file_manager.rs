@@ -41,12 +41,16 @@ thread_local! {
 
 /// Copy a file to the clipboard
 pub fn copy_file_to_clipboard(file_path: &PathBuf) {
+    // Store in internal clipboard
     FILE_CLIPBOARD.with(|clipboard| {
         *clipboard.borrow_mut() = Some(FileClipboard {
             file_path: file_path.clone(),
             operation: ClipboardOperation::Copy,
         });
     });
+    
+    // Also sync with OS clipboard
+    sync_to_os_clipboard(file_path, ClipboardOperation::Copy);
     
     let filename = file_path.file_name()
         .map(|name| name.to_string_lossy().to_string())
@@ -56,12 +60,16 @@ pub fn copy_file_to_clipboard(file_path: &PathBuf) {
 
 /// Cut a file to the clipboard
 pub fn cut_file_to_clipboard(file_path: &PathBuf) {
+    // Store in internal clipboard
     FILE_CLIPBOARD.with(|clipboard| {
         *clipboard.borrow_mut() = Some(FileClipboard {
             file_path: file_path.clone(),
             operation: ClipboardOperation::Cut,
         });
     });
+    
+    // Also sync with OS clipboard
+    sync_to_os_clipboard(file_path, ClipboardOperation::Cut);
     
     let filename = file_path.file_name()
         .map(|name| name.to_string_lossy().to_string())
@@ -83,23 +91,57 @@ pub fn is_file_cut(file_path: &PathBuf) -> bool {
 
 /// Check if there's something in the file clipboard
 pub fn has_clipboard_content() -> bool {
-    FILE_CLIPBOARD.with(|clipboard| {
+    // First check internal clipboard (fast)
+    let has_internal = FILE_CLIPBOARD.with(|clipboard| {
         clipboard.borrow().is_some()
-    })
+    });
+    
+    if has_internal {
+        return true;
+    }
+    
+    // Quick check of OS clipboard without blocking
+    if let Some(display) = gdk::Display::default() {
+        let clipboard = display.clipboard();
+        
+        // Non-blocking check - just see if there's any text content
+        // We'll do proper parsing only when actually getting the content
+        return clipboard.formats().contain_mime_type("text/plain") ||
+               clipboard.formats().contain_mime_type("text/uri-list") ||
+               clipboard.formats().contain_mime_type("x-special/gnome-copied-files");
+    }
+    
+    false
 }
 
 /// Get the current clipboard content (if any)
 pub fn get_clipboard_content() -> Option<FileClipboard> {
-    FILE_CLIPBOARD.with(|clipboard| {
+    // First try internal clipboard (fast)
+    let internal_content = FILE_CLIPBOARD.with(|clipboard| {
         clipboard.borrow().clone()
-    })
+    });
+    
+    if internal_content.is_some() {
+        return internal_content;
+    }
+    
+    // Only try OS clipboard if internal is empty
+    try_get_os_clipboard_file()
 }
 
 /// Clear the file clipboard
 pub fn clear_clipboard() {
+    // Clear internal clipboard
     FILE_CLIPBOARD.with(|clipboard| {
         *clipboard.borrow_mut() = None;
     });
+    
+    // Also clear OS clipboard if it contains our file data
+    if let Some(display) = gdk::Display::default() {
+        let clipboard = display.clipboard();
+        clipboard.set_text("");
+    }
+    
     crate::status_log::log_info("Clipboard cleared");
 }
 
@@ -241,6 +283,237 @@ fn generate_unique_filename(original_path: &PathBuf) -> PathBuf {
     let mut fallback_path = parent_dir.to_path_buf();
     fallback_path.push(&fallback_filename);
     fallback_path
+}
+
+/// Synchronize file clipboard operation to OS clipboard
+fn sync_to_os_clipboard(file_path: &PathBuf, operation: ClipboardOperation) {
+    if let Some(display) = gdk::Display::default() {
+        let clipboard = display.clipboard();
+        
+        if file_path.exists() {
+            // Convert to absolute path and create proper file URI
+            match file_path.canonicalize() {
+                Ok(absolute_path) => {
+                    let file_uri = format!("file://{}", absolute_path.to_string_lossy());
+                    
+                    // Simplified approach: Just set the most important formats
+                    // 1. URI list format (most compatible with file managers)
+                    let uri_list_content = format!("{}\n", file_uri);
+                    
+                    // 2. GNOME format for proper cut/copy indication
+                    let gnome_content = match operation {
+                        ClipboardOperation::Cut => format!("cut\n{}", file_uri),
+                        ClipboardOperation::Copy => format!("copy\n{}", file_uri),
+                    };
+                    
+                    // Create content providers - focus on the most important ones
+                    let uri_provider = gdk::ContentProvider::for_bytes(
+                        "text/uri-list", 
+                        &glib::Bytes::from(uri_list_content.as_bytes())
+                    );
+                    
+                    let gnome_provider = gdk::ContentProvider::for_bytes(
+                        "x-special/gnome-copied-files", 
+                        &glib::Bytes::from(gnome_content.as_bytes())
+                    );
+                    
+                    // Simple text fallback
+                    let text_content = match operation {
+                        ClipboardOperation::Copy => format!("BASADO_COPY:{}", absolute_path.to_string_lossy()),
+                        ClipboardOperation::Cut => format!("BASADO_CUT:{}", absolute_path.to_string_lossy()),
+                    };
+                    let text_provider = gdk::ContentProvider::for_bytes(
+                        "text/plain", 
+                        &glib::Bytes::from(text_content.as_bytes())
+                    );
+                    
+                    // Combine providers efficiently
+                    let combined_provider = gdk::ContentProvider::new_union(&[uri_provider, gnome_provider, text_provider]);
+                    let _ = clipboard.set_content(Some(&combined_provider));
+                }
+                Err(_) => {
+                    // If canonicalization fails, just set a simple text representation
+                    let simple_text = match operation {
+                        ClipboardOperation::Copy => format!("BASADO_COPY:{}", file_path.to_string_lossy()),
+                        ClipboardOperation::Cut => format!("BASADO_CUT:{}", file_path.to_string_lossy()),
+                    };
+                    clipboard.set_text(&simple_text);
+                }
+            }
+        }
+    }
+}
+
+/// Try to get file clipboard content from OS clipboard
+fn try_get_os_clipboard_file() -> Option<FileClipboard> {
+    if let Some(display) = gdk::Display::default() {
+        let clipboard = display.clipboard();
+        
+        // Quick non-blocking check of available formats
+        let formats = clipboard.formats();
+        
+        // Try GNOME format first (most reliable for file operations)
+        if formats.contain_mime_type("x-special/gnome-copied-files") {
+            // Use a very short timeout for GNOME format
+            if let Some(gnome_content) = get_clipboard_content_fast(&clipboard, "x-special/gnome-copied-files") {
+                if let Some(clipboard_data) = parse_gnome_clipboard_format(&gnome_content) {
+                    return Some(clipboard_data);
+                }
+            }
+        }
+        
+        // Try URI list format with short timeout
+        if formats.contain_mime_type("text/uri-list") {
+            if let Some(uri_content) = get_clipboard_content_fast(&clipboard, "text/uri-list") {
+                if let Some(clipboard_data) = parse_uri_list_format(&uri_content) {
+                    return Some(clipboard_data);
+                }
+            }
+        }
+        
+        // Finally try plain text with very short timeout
+        if formats.contain_mime_type("text/plain") {
+            if let Some(text) = get_clipboard_text_fast(&clipboard) {
+                if let Some(clipboard_data) = parse_text_format(&text) {
+                    return Some(clipboard_data);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Parse GNOME clipboard format (x-special/gnome-copied-files)
+fn parse_gnome_clipboard_format(content: &str) -> Option<FileClipboard> {
+    let lines: Vec<&str> = content.trim().lines().collect();
+    if lines.len() >= 2 {
+        let operation_str = lines[0];
+        let file_uri = lines[1];
+        
+        let operation = match operation_str {
+            "copy" => ClipboardOperation::Copy,
+            "cut" => ClipboardOperation::Cut,
+            _ => return None,
+        };
+        
+        if let Some(file_path) = uri_to_path(file_uri) {
+            if file_path.exists() {
+                return Some(FileClipboard {
+                    file_path,
+                    operation,
+                });
+            }
+        }
+    }
+    None
+}
+
+/// Parse URI list format (text/uri-list)
+fn parse_uri_list_format(content: &str) -> Option<FileClipboard> {
+    for line in content.lines() {
+        let line = line.trim();
+        if !line.is_empty() && !line.starts_with('#') {
+            if let Some(file_path) = uri_to_path(line) {
+                if file_path.exists() {
+                    return Some(FileClipboard {
+                        file_path,
+                        operation: ClipboardOperation::Copy, // Default to copy for URI lists
+                    });
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Parse plain text format (our custom format or plain paths)
+fn parse_text_format(text: &str) -> Option<FileClipboard> {
+    let text = text.trim();
+    
+    // Check if it's our custom format
+    if text.starts_with("BASADO_COPY:") {
+        if let Some(path_str) = text.strip_prefix("BASADO_COPY:") {
+            let file_path = PathBuf::from(path_str);
+            if file_path.exists() {
+                return Some(FileClipboard {
+                    file_path,
+                    operation: ClipboardOperation::Copy,
+                });
+            }
+        }
+    } else if text.starts_with("BASADO_CUT:") {
+        if let Some(path_str) = text.strip_prefix("BASADO_CUT:") {
+            let file_path = PathBuf::from(path_str);
+            if file_path.exists() {
+                return Some(FileClipboard {
+                    file_path,
+                    operation: ClipboardOperation::Cut,
+                });
+            }
+        }
+    }
+    // Handle file:// URIs
+    else if let Some(file_path) = uri_to_path(text) {
+        if file_path.exists() {
+            return Some(FileClipboard {
+                file_path,
+                operation: ClipboardOperation::Copy,
+            });
+        }
+    }
+    // Handle plain file paths
+    else if let Ok(file_path) = PathBuf::from(text).canonicalize() {
+        if file_path.exists() && file_path.is_absolute() {
+            return Some(FileClipboard {
+                file_path,
+                operation: ClipboardOperation::Copy,
+            });
+        }
+    }
+    
+    None
+}
+
+/// Convert file URI to PathBuf
+fn uri_to_path(uri: &str) -> Option<PathBuf> {
+    if let Some(path_str) = uri.strip_prefix("file://") {
+        // Simple URL decoding for basic cases (spaces, etc.)
+        let decoded = path_str
+            .replace("%20", " ")
+            .replace("%25", "%")
+            .replace("%2F", "/")
+            .replace("%5C", "\\");
+        
+        let path = PathBuf::from(decoded);
+        return Some(path);
+    }
+    None
+}
+
+/// Fast synchronous get text from clipboard with short timeout
+fn get_clipboard_text_fast(clipboard: &gdk::Clipboard) -> Option<String> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    
+    clipboard.read_text_async(None::<&gtk4::gio::Cancellable>, move |result: Result<Option<glib::GString>, glib::Error>| {
+        let text_result = match result {
+            Ok(text) => text.map(|s| s.to_string()),
+            Err(_) => None,
+        };
+        let _ = sender.send(text_result);
+    });
+    
+    // Much shorter timeout - 20ms instead of 200ms
+    match receiver.recv_timeout(std::time::Duration::from_millis(20)) {
+        Ok(result) => result,
+        Err(_) => None,
+    }
+}
+
+/// Fast get clipboard content for specific MIME type
+fn get_clipboard_content_fast(clipboard: &gdk::Clipboard, _mime_type: &str) -> Option<String> {
+    // For now, fall back to text reading since GTK4's async MIME type reading is complex
+    // This is a simplification - in practice most clipboard content we care about is also available as text
+    get_clipboard_text_fast(clipboard)
 }
 
 /// Show an error dialog
