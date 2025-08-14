@@ -903,6 +903,47 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         );
     });
 
+    // Set up tab path update callback for when files are moved
+    let file_path_manager_for_path_update = file_path_manager.clone();
+    let active_tab_path_for_path_update = active_tab_path.clone();
+    let editor_notebook_for_path_update = editor_notebook.clone();
+    utils::set_tab_path_update_callback(move |old_path: &PathBuf, new_path: &PathBuf| {
+        // Update file_path_manager entries that match the old path
+        let mut manager = file_path_manager_for_path_update.borrow_mut();
+        let mut updated_entries = Vec::new();
+        
+        for (&page_num, path) in manager.iter() {
+            if path == old_path {
+                updated_entries.push(page_num);
+            }
+        }
+        
+        // Update the entries
+        for page_num in updated_entries {
+            manager.insert(page_num, new_path.clone());
+            
+            // Update tab label to reflect the new file name if needed
+            if let Some(new_file_name) = new_path.file_name() {
+                handlers::update_tab_label_after_save(
+                    &editor_notebook_for_path_update, 
+                    page_num, 
+                    Some(&new_file_name.to_string_lossy()), 
+                    false
+                );
+            }
+        }
+        
+        // Update active_tab_path if it matches the old path
+        {
+            let mut active_path = active_tab_path_for_path_update.borrow_mut();
+            if let Some(ref current_active) = *active_path {
+                if current_active == old_path {
+                    *active_path = Some(new_path.clone());
+                }
+            }
+        }
+    });
+
     // Set up the terminal button handler to open a new terminal in the current directory
     let terminal_notebook_clone_for_terminal_button = terminal_notebook.clone();
     let current_dir_clone_for_terminal_button = current_dir.clone();

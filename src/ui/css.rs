@@ -25,12 +25,13 @@ pub fn apply_custom_css() {
 /// Builds the complete CSS string by combining all component styles
 fn build_complete_css() -> String {
     format!(
-        "{}{}{}{}{}",
+        "{}{}{}{}{}{}",
         get_notebook_tab_styles(),
         get_button_styles(),
         get_status_bar_styles(),
         get_path_navigation_styles(),
-        get_drag_drop_styles()
+        get_drag_drop_styles(),
+        get_file_operation_styles()
     )
 }
 
@@ -502,6 +503,40 @@ fn get_drag_drop_styles() -> &'static str {
             background-color: alpha(@theme_selected_bg_color, 0.15);
             border-color: alpha(@theme_selected_bg_color, 0.5);
         }
+    }
+    "
+}
+
+/// Returns CSS styles for file operation visual feedback (cut files)
+fn get_file_operation_styles() -> &'static str {
+    "
+    /* === FILE OPERATION STYLES === */
+    
+    /* Cut file styling - reduced opacity to indicate pending move operation */
+    .file-cut {
+        opacity: 0.5;
+        transition: opacity 0.3s ease;
+    }
+    
+    /* Cut file hover - slightly increase opacity for better visibility */
+    .file-cut:hover {
+        opacity: 0.7;
+    }
+    
+    /* Cut file selected - maintain visibility when selected */
+    .file-cut:selected {
+        opacity: 0.8;
+    }
+    
+    /* Cut file with selection classes - ensure proper opacity */
+    .file-cut.file-selected-by-tab,
+    .file-cut.file-selected-by-click {
+        opacity: 0.6;
+    }
+    
+    .file-cut.file-selected-by-tab:hover,
+    .file-cut.file-selected-by-click:hover {
+        opacity: 0.8;
     }
     "
 }

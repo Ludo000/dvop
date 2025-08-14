@@ -2,7 +2,7 @@
 // This module contains helper functions used throughout the application
 
 use gtk4::prelude::*;
-use gtk4::{Button, ListBox, MenuButton, pango, ApplicationWindow, EventControllerKey, gdk, glib, Entry, DropTarget};
+use gtk4::{Button, ListBox, MenuButton, pango, ApplicationWindow, EventControllerKey, gdk, glib, Entry};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -12,6 +12,11 @@ use mime_guess::Mime;
 // Global storage for file list refresh callback
 thread_local! {
     static FILE_LIST_REFRESH_CALLBACK: RefCell<Option<Box<dyn Fn()>>> = RefCell::new(None);
+}
+
+// Global storage for tab path update callback (for when files are moved)
+thread_local! {
+    static TAB_PATH_UPDATE_CALLBACK: RefCell<Option<Box<dyn Fn(&PathBuf, &PathBuf)>>> = RefCell::new(None);
 }
 
 /// Set a callback function to refresh the file list
@@ -25,11 +30,32 @@ where
     });
 }
 
+/// Set a callback function to update tab paths after file moves
+/// This is called when files are moved to update the corresponding open tab paths
+pub fn set_tab_path_update_callback<F>(callback: F) 
+where 
+    F: Fn(&PathBuf, &PathBuf) + 'static,
+{
+    TAB_PATH_UPDATE_CALLBACK.with(|cb| {
+        *cb.borrow_mut() = Some(Box::new(callback));
+    });
+}
+
 /// Trigger the file list refresh callback
 pub fn trigger_file_list_refresh() {
     FILE_LIST_REFRESH_CALLBACK.with(|cb| {
         if let Some(ref callback) = *cb.borrow() {
             callback();
+        }
+    });
+}
+
+/// Trigger the tab path update callback with old and new paths
+/// This should be called when a file is moved to update open tab references
+pub fn trigger_tab_path_update(old_path: &PathBuf, new_path: &PathBuf) {
+    TAB_PATH_UPDATE_CALLBACK.with(|cb| {
+        if let Some(ref callback) = *cb.borrow() {
+            callback(old_path, new_path);
         }
     });
 }
@@ -222,9 +248,15 @@ pub fn update_file_list(
         label.set_margin_start(5);
         label.set_ellipsize(pango::EllipsizeMode::End);
 
+        let current_entry_full_path = entry.path(); // Get PathBuf from DirEntry
+
+        // Check if this file is cut (in clipboard waiting to be moved)
+        if crate::ui::file_manager::is_file_cut(&current_entry_full_path) {
+            row.add_css_class("file-cut");
+        }
+
         // Check if this file is the currently open one by comparing full paths
         if let Some(ref open_file_full_path) = file_path {
-            let current_entry_full_path = entry.path(); // Get PathBuf from DirEntry
             if &current_entry_full_path == open_file_full_path {
                 // Apply different styling based on selection source
                 match selection_source {
@@ -1015,5 +1047,6 @@ pub fn setup_keyboard_shortcuts(
     println!("  - Ctrl+Tab/Ctrl+Shift+Tab: Switch between tabs");
     println!("  - Ctrl+PageDown/Ctrl+PageUp: Navigate between tabs");
     println!("  - Delete: Delete selected file (when file manager has focus)");
-    println!("  - Other standard shortcuts (Ctrl+C, Ctrl+V, etc.) handled by GTK");
+    println!("  - Ctrl+C/X/V: File operations (when file manager has focus)");
+    println!("  - Other standard shortcuts (Ctrl+C, Ctrl+V, etc.) handled by GTK in text editor");
 }

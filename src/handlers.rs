@@ -1402,6 +1402,89 @@ fn setup_file_selection_handler(
     let window_for_key = window.clone();
     
     key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
+        let ctrl_pressed = state.contains(gtk4::gdk::ModifierType::CONTROL_MASK);
+        
+        // Handle Ctrl+C, Ctrl+X, Ctrl+V for file operations when file list has focus
+        if ctrl_pressed {
+            match keyval {
+                // Ctrl+C: Copy file
+                gtk4::gdk::Key::c => {
+                    println!("DEBUG: Ctrl+C pressed in file manager");
+                    // First priority: Check if there's a selected row in the file list
+                    if let Some(selected_row) = file_list_box_for_key.selected_row() {
+                        if let Some(label) = selected_row.child().and_then(|c| c.downcast::<Label>().ok()) {
+                            let file_name = label.text();
+                            let mut file_path = current_dir_for_key.borrow().clone();
+                            file_path.push(&file_name.as_str());
+                            
+                            if file_path.is_file() {
+                                crate::ui::file_manager::copy_file_to_clipboard(&file_path);
+                                // Refresh file list to show visual changes
+                                crate::utils::update_file_list(&file_list_box_for_key, &current_dir_for_key.borrow(), &active_tab_path_for_key.borrow(), crate::utils::FileSelectionSource::TabSwitch);
+                                return glib::Propagation::Stop;
+                            }
+                        }
+                    }
+                    // Second priority: Check if there's an active tab with a file in current directory
+                    else if let Some(active_file) = active_tab_path_for_key.borrow().as_ref() {
+                        if active_file.parent() == Some(current_dir_for_key.borrow().as_path()) && active_file.is_file() {
+                            crate::ui::file_manager::copy_file_to_clipboard(active_file);
+                            // Refresh file list to show visual changes
+                            crate::utils::update_file_list(&file_list_box_for_key, &current_dir_for_key.borrow(), &active_tab_path_for_key.borrow(), crate::utils::FileSelectionSource::TabSwitch);
+                            return glib::Propagation::Stop;
+                        }
+                    }
+                }
+                // Ctrl+X: Cut file
+                gtk4::gdk::Key::x => {
+                    println!("DEBUG: Ctrl+X pressed in file manager");
+                    // First priority: Check if there's a selected row in the file list
+                    if let Some(selected_row) = file_list_box_for_key.selected_row() {
+                        if let Some(label) = selected_row.child().and_then(|c| c.downcast::<Label>().ok()) {
+                            let file_name = label.text();
+                            let mut file_path = current_dir_for_key.borrow().clone();
+                            file_path.push(&file_name.as_str());
+                            
+                            if file_path.is_file() {
+                                crate::ui::file_manager::cut_file_to_clipboard(&file_path);
+                                // Refresh file list to show visual changes (cut file opacity)
+                                crate::utils::update_file_list(&file_list_box_for_key, &current_dir_for_key.borrow(), &active_tab_path_for_key.borrow(), crate::utils::FileSelectionSource::TabSwitch);
+                                return glib::Propagation::Stop;
+                            }
+                        }
+                    }
+                    // Second priority: Check if there's an active tab with a file in current directory
+                    else if let Some(active_file) = active_tab_path_for_key.borrow().as_ref() {
+                        if active_file.parent() == Some(current_dir_for_key.borrow().as_path()) && active_file.is_file() {
+                            crate::ui::file_manager::cut_file_to_clipboard(active_file);
+                            // Refresh file list to show visual changes (cut file opacity)
+                            crate::utils::update_file_list(&file_list_box_for_key, &current_dir_for_key.borrow(), &active_tab_path_for_key.borrow(), crate::utils::FileSelectionSource::TabSwitch);
+                            return glib::Propagation::Stop;
+                        }
+                    }
+                }
+                // Ctrl+V: Paste file
+                gtk4::gdk::Key::v => {
+                    println!("DEBUG: Ctrl+V pressed in file manager");
+                    if crate::ui::file_manager::has_clipboard_content() {
+                        crate::ui::file_manager::paste_file_from_clipboard(
+                            &current_dir_for_key.borrow(),
+                            &window_for_key,
+                            &file_list_box_for_key,
+                            &current_dir_for_key,
+                            &active_tab_path_for_key,
+                        );
+                        return glib::Propagation::Stop;
+                    } else {
+                        crate::status_log::log_error("No file in clipboard to paste");
+                        return glib::Propagation::Stop;
+                    }
+                }
+                _ => {}
+            }
+        }
+        
+        // Handle Delete key for file deletion
         if keyval == gtk4::gdk::Key::Delete && !state.contains(gtk4::gdk::ModifierType::CONTROL_MASK) {
             println!("DEBUG: Delete key pressed in file handler");
             
@@ -1523,6 +1606,18 @@ fn setup_file_selection_handler(
     });
     
     file_list_box.add_controller(right_click_gesture);
+
+    // Add left-click gesture to ensure file list box grabs focus when clicked
+    let left_click_gesture = GestureClick::new();
+    left_click_gesture.set_button(1); // Left mouse button
+    
+    let file_list_box_for_focus = file_list_box.clone();
+    left_click_gesture.connect_pressed(move |_gesture, _n_press, _x, _y| {
+        // Grab focus when the file list box is clicked
+        file_list_box_for_focus.grab_focus();
+    });
+    
+    file_list_box.add_controller(left_click_gesture);
 
     file_list_box.connect_row_activated(move |_, row| {
         // Clone necessary items again for the inner part of the closure if they are used across awaits or complex logic
@@ -2011,12 +2106,82 @@ fn show_file_context_menu(
     let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     menu_box.add_css_class("menu");
     
+    // Create copy button
+    let copy_button = Button::with_label("Copy");
+    copy_button.set_hexpand(true);
+    
+    // Create cut button
+    let cut_button = Button::with_label("Cut");
+    cut_button.set_hexpand(true);
+    
+    // Create paste button (if there's content in clipboard)
+    let paste_button = Button::with_label("Paste");
+    paste_button.set_hexpand(true);
+    paste_button.set_sensitive(crate::ui::file_manager::has_clipboard_content());
+    
+    // Add separator
+    let separator1 = gtk4::Separator::new(gtk4::Orientation::Horizontal);
+    
     // Create delete button
     let delete_button = Button::with_label("Delete");
     delete_button.add_css_class("destructive-action");
     delete_button.set_hexpand(true);
     
-    // Clone variables for the button closure
+    // Clone variables for the copy button closure
+    let file_path_copy = file_path.clone();
+    let popover_copy_weak = popover.downgrade();
+    
+    copy_button.connect_clicked(move |_| {
+        println!("DEBUG: Copy button clicked!");
+        
+        // Hide the context menu first
+        if let Some(popover) = popover_copy_weak.upgrade() {
+            popover.popdown();
+        }
+        
+        crate::ui::file_manager::copy_file_to_clipboard(&file_path_copy);
+    });
+    
+    // Clone variables for the cut button closure
+    let file_path_cut = file_path.clone();
+    let popover_cut_weak = popover.downgrade();
+    
+    cut_button.connect_clicked(move |_| {
+        println!("DEBUG: Cut button clicked!");
+        
+        // Hide the context menu first
+        if let Some(popover) = popover_cut_weak.upgrade() {
+            popover.popdown();
+        }
+        
+        crate::ui::file_manager::cut_file_to_clipboard(&file_path_cut);
+    });
+    
+    // Clone variables for the paste button closure
+    let window_paste = window.clone();
+    let file_list_box_paste = file_list_box.clone();
+    let current_dir_paste = current_dir.clone();
+    let active_tab_path_paste = active_tab_path.clone();
+    let popover_paste_weak = popover.downgrade();
+    
+    paste_button.connect_clicked(move |_| {
+        println!("DEBUG: Paste button clicked!");
+        
+        // Hide the context menu first
+        if let Some(popover) = popover_paste_weak.upgrade() {
+            popover.popdown();
+        }
+        
+        crate::ui::file_manager::paste_file_from_clipboard(
+            &current_dir_paste.borrow(),
+            &window_paste,
+            &file_list_box_paste,
+            &current_dir_paste,
+            &active_tab_path_paste,
+        );
+    });
+    
+    // Clone variables for the delete button closure
     let file_path_clone = file_path.clone();
     let window_clone = window.clone();
     let file_list_box_clone = file_list_box.clone();
@@ -2046,6 +2211,11 @@ fn show_file_context_menu(
         );
     });
     
+    // Add all buttons to the menu
+    menu_box.append(&copy_button);
+    menu_box.append(&cut_button);
+    menu_box.append(&paste_button);
+    menu_box.append(&separator1);
     menu_box.append(&delete_button);
     popover.set_child(Some(&menu_box));
     
@@ -2109,6 +2279,38 @@ fn show_file_manager_background_context_menu(
     let new_file_button = Button::with_label("New File");
     new_file_button.set_hexpand(true);
     
+    // Create "Paste" button (if there's content in clipboard)
+    let paste_button = Button::with_label("Paste");
+    paste_button.set_hexpand(true);
+    paste_button.set_sensitive(crate::ui::file_manager::has_clipboard_content());
+    
+    // Add separator
+    let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
+    
+    // Clone variables for the paste button closure
+    let window_paste = window.clone();
+    let file_list_box_paste = file_list_box.clone();
+    let current_dir_paste = current_dir.clone();
+    let active_tab_path_paste = active_tab_path.clone();
+    let popover_paste_weak = popover.downgrade();
+    
+    paste_button.connect_clicked(move |_| {
+        println!("DEBUG: Background Paste button clicked!");
+        
+        // Hide the context menu first
+        if let Some(popover) = popover_paste_weak.upgrade() {
+            popover.popdown();
+        }
+        
+        crate::ui::file_manager::paste_file_from_clipboard(
+            &current_dir_paste.borrow(),
+            &window_paste,
+            &file_list_box_paste,
+            &current_dir_paste,
+            &active_tab_path_paste,
+        );
+    });
+    
     // Clone variables for the button closure
     let editor_notebook_clone = editor_notebook.clone();
     let file_path_manager_clone = file_path_manager.clone();
@@ -2146,6 +2348,10 @@ fn show_file_manager_background_context_menu(
     
     // Add button to menu box
     menu_box.append(&new_file_button);
+    if crate::ui::file_manager::has_clipboard_content() {
+        menu_box.append(&separator);
+        menu_box.append(&paste_button);
+    }
     
     // Set the menu box as the popover's child
     popover.set_child(Some(&menu_box));
