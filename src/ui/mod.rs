@@ -366,12 +366,16 @@ pub fn setup_tab_middle_click(tab_box: &GtkBox, close_button: &Button) {
     tab_box.add_controller(middle_click_gesture);
 }
 
-/// Creates a container box for the editor notebook with the add button
+/// Creates a container box for the editor notebook with the add button and search bar
 /// 
-/// The editor notebook is placed in a box and the add button is placed as an action button
-/// in the notebook's tab bar area using the notebook's action widget feature
+/// The editor notebook is placed in a box with the search bar above it
+/// The add button is placed as an action button in the notebook's tab bar area
 pub fn create_editor_notebook_box(editor_notebook: &Notebook, add_file_button: &Button) -> GtkBox {
     let editor_box = GtkBox::new(Orientation::Vertical, 0);
+    
+    // Add the search bar at the top
+    let search_bar = crate::search::get_search_bar();
+    editor_box.append(search_bar);
     
     // Add the add button to the tab bar via the action widget feature
     // This places the button in the same row as the tabs
@@ -380,7 +384,7 @@ pub fn create_editor_notebook_box(editor_notebook: &Notebook, add_file_button: &
     // Set the editor notebook to expand vertically
     editor_notebook.set_vexpand(true);
     
-    // Pack just the notebook into the container box
+    // Pack the notebook into the container box
     editor_box.append(editor_notebook);
     
     // Make the entire container expand vertically

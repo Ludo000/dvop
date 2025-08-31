@@ -8,6 +8,7 @@ mod completion; // Code completion functionality
 mod file_cache; // File content caching for performance optimization
 mod status_log; // Status logging system
 mod audio;     // Audio file playback functionality
+mod search;    // Find and replace functionality
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
@@ -798,6 +799,18 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     utils::update_path_buttons(&path_box_clone_for_switch, &current_dir_clone_for_switch, &file_list_box_clone_for_switch, &active_tab_path_clone_for_switch);
                     
                     return; // Exit early since we've already updated the file list
+                }
+            }
+        }
+
+        // Rebind global search context to the new tab's buffer if search UI is currently visible
+        {
+            let search_state = crate::search::get_search_state();
+            if search_state.search_bar.is_search_mode() {
+                if let Some((text_view, text_buffer)) = handlers::get_text_view_and_buffer_for_page(notebook, page_num) {
+                    if let (Ok(source_view), Ok(source_buffer)) = (text_view.downcast::<sourceview5::View>(), text_buffer.downcast::<sourceview5::Buffer>()) {
+                        search_state.rebind_buffer(&source_buffer, Some(&source_view));
+                    }
                 }
             }
         }

@@ -958,15 +958,85 @@ pub fn setup_keyboard_shortcuts(
                 },
                 // Ctrl+F: Find - Placeholder for future implementation
                 Some("f") => {
-                    println!("Keyboard shortcut: Ctrl+F (Find) - Not implemented yet");
-                    // Implementation of Find functionality could be added here
-                    return glib::Propagation::Proceed;
+                    println!("Keyboard shortcut: Ctrl+F (Find)");
+                    let search_state = crate::search::get_search_state();
+                    let is_open = search_state.search_bar.is_search_mode();
+                    let is_replace = *search_state.replace_mode.borrow();
+
+                    if !is_open {
+                        // Open in find mode
+                        if let Some(notebook) = &editor_notebook_clone {
+                            if let Some((text_view, text_buffer)) = crate::handlers::get_active_text_view_and_buffer(notebook) {
+                                if let Ok(source_buffer) = text_buffer.downcast::<sourceview5::Buffer>() {
+                                    if let Ok(source_view) = text_view.downcast::<sourceview5::View>() {
+                                        crate::search::show_search_for_buffer(Some(&source_buffer), Some(&source_view));
+                                    } else {
+                                        crate::search::show_search_for_buffer(Some(&source_buffer), None);
+                                    }
+                                } else {
+                                    crate::search::show_search_for_buffer(None, None);
+                                }
+                            } else {
+                                crate::search::show_search_for_buffer(None, None);
+                            }
+                        } else {
+                            crate::search::show_search_for_buffer(None, None);
+                        }
+                        // Ensure replace mode off
+                        search_state.replace_toggle.set_active(false);
+                        return glib::Propagation::Stop;
+                    } else {
+                        if is_replace {
+                            // Switch to find mode (turn off replace)
+                            search_state.replace_toggle.set_active(false);
+                            *search_state.replace_mode.borrow_mut() = false;
+                            return glib::Propagation::Stop;
+                        } else {
+                            // Already in find mode -> close panel
+                            crate::search::hide_search();
+                            return glib::Propagation::Stop;
+                        }
+                    }
                 },
                 // Ctrl+H: Replace - Placeholder for future implementation
                 Some("h") => {
-                    println!("Keyboard shortcut: Ctrl+H (Replace) - Not implemented yet");
-                    // Implementation of Replace functionality could be added here
-                    return glib::Propagation::Proceed;
+                    println!("Keyboard shortcut: Ctrl+H (Replace)");
+                    let search_state = crate::search::get_search_state();
+                    let is_open = search_state.search_bar.is_search_mode();
+                    let is_replace = *search_state.replace_mode.borrow();
+
+                    if !is_open {
+                        // Open directly in replace mode
+                        if let Some(notebook) = &editor_notebook_clone {
+                            if let Some((text_view, text_buffer)) = crate::handlers::get_active_text_view_and_buffer(notebook) {
+                                if let Ok(source_buffer) = text_buffer.downcast::<sourceview5::Buffer>() {
+                                    if let Ok(source_view) = text_view.downcast::<sourceview5::View>() {
+                                        crate::search::show_replace_for_buffer(Some(&source_buffer), Some(&source_view));
+                                    } else {
+                                        crate::search::show_replace_for_buffer(Some(&source_buffer), None);
+                                    }
+                                } else {
+                                    crate::search::show_replace_for_buffer(None, None);
+                                }
+                            } else {
+                                crate::search::show_replace_for_buffer(None, None);
+                            }
+                        } else {
+                            crate::search::show_replace_for_buffer(None, None);
+                        }
+                        return glib::Propagation::Stop;
+                    } else {
+                        if is_replace {
+                            // Already in replace mode -> close
+                            crate::search::hide_search();
+                            return glib::Propagation::Stop;
+                        } else {
+                            // Switch from find to replace mode
+                            search_state.replace_toggle.set_active(true);
+                            *search_state.replace_mode.borrow_mut() = true;
+                            return glib::Propagation::Stop;
+                        }
+                    }
                 },
                 // Ctrl+Z: Undo - Managed by GtkTextView but log for debugging
                 Some("z") => {
@@ -1023,6 +1093,45 @@ pub fn setup_keyboard_shortcuts(
                 println!("Keyboard shortcut: Ctrl+0 (Reset Font Size) - detected by keycode");
                 crate::syntax::reset_font_size();
                 return glib::Propagation::Stop;
+            }
+        } else {
+            // Handle non-Ctrl shortcuts
+            match keyval.name().as_deref() {
+                // F3: Find Next
+                Some("F3") => {
+                    if !shift_pressed {
+                        println!("Keyboard shortcut: F3 (Find Next)");
+                        if let Some(notebook) = &editor_notebook_clone {
+                            if let Some((_text_view, text_buffer)) = crate::handlers::get_active_text_view_and_buffer(notebook) {
+                                if let Ok(_source_buffer) = text_buffer.downcast::<sourceview5::Buffer>() {
+                                    // Get the search state and trigger find next
+                                    let search_state = crate::search::get_search_state();
+                                    if let Some(context) = search_state.search_context.borrow().as_ref() {
+                                        crate::search::SearchState::find_next(context);
+                                        crate::search::SearchState::update_match_count(&search_state.current_match_label, context);
+                                    }
+                                }
+                            }
+                        }
+                        return glib::Propagation::Stop;
+                    } else {
+                        println!("Keyboard shortcut: Shift+F3 (Find Previous)");
+                        if let Some(notebook) = &editor_notebook_clone {
+                            if let Some((_text_view, text_buffer)) = crate::handlers::get_active_text_view_and_buffer(notebook) {
+                                if let Ok(_source_buffer) = text_buffer.downcast::<sourceview5::Buffer>() {
+                                    // Get the search state and trigger find previous
+                                    let search_state = crate::search::get_search_state();
+                                    if let Some(context) = search_state.search_context.borrow().as_ref() {
+                                        crate::search::SearchState::find_previous(context);
+                                        crate::search::SearchState::update_match_count(&search_state.current_match_label, context);
+                                    }
+                                }
+                            }
+                        }
+                        return glib::Propagation::Stop;
+                    }
+                },
+                _ => {}
             }
         }
         
