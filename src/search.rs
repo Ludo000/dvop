@@ -255,7 +255,6 @@ impl SearchState {
 
         // Handle Enter in replace entry (replace current & advance)
         let search_context_clone = search_context.clone();
-        let replace_entry_clone = replace_entry.clone();
         let current_match_label_clone = current_match_label.clone();
         replace_entry.connect_activate(move |entry| {
             if let Some(context) = search_context_clone.borrow().as_ref() {
@@ -573,7 +572,7 @@ impl SearchState {
             }
             buffer.end_user_action();
 
-            let mut after_iter = buffer.iter_at_offset(insert_offset + replace_text.len() as i32);
+            let after_iter = buffer.iter_at_offset(insert_offset + replace_text.len() as i32);
             buffer.place_cursor(&after_iter);
             // Automatically advance to next match so user can just keep clicking Replace
             Self::find_next(context);
@@ -615,7 +614,10 @@ impl SearchState {
 /// Global search state - shared across the application
 static mut SEARCH_STATE: Option<SearchState> = None;
 
-/// Gets or creates the global search state
+/// Gets or creates the global search state. This uses a mutable static because GTK widgets
+/// are !Send / !Sync and can't live in thread-safe singletons. All access happens on the
+/// main GTK thread, so this is safe in practice.
+#[allow(static_mut_refs)]
 pub fn get_search_state() -> &'static SearchState {
     unsafe {
         if SEARCH_STATE.is_none() {

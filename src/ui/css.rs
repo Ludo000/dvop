@@ -67,7 +67,8 @@ fn get_notebook_tab_styles() -> &'static str {
     
     /* Active/selected tab styling */
     tab:checked {
-        background-color: shade(@theme_bg_color, 1.5);
+        /* Reduced shade factor to avoid parser complaints */
+        background-color: shade(@theme_bg_color, 1.15);
         border-bottom: 3px solid @theme_selected_bg_color;
         box-shadow: 0 -2px 3px -1px shade(@theme_bg_color, 1.2) inset;
     }
@@ -312,8 +313,8 @@ fn get_path_navigation_styles() -> &'static str {
     
     /* Path button drop target styling */
     .path-drop-target {
-        background-color: alpha(@theme_selected_bg_color, 0.25) !important;
-        border: 2px dashed @theme_selected_bg_color !important;
+        background-color: alpha(@theme_selected_bg_color, 0.25);
+        border: 2px dashed @theme_selected_bg_color;
         border-radius: 4px;
         transition: all 0.15s ease;
         animation: path-drop-pulse 1.0s ease-in-out infinite alternate;
@@ -363,8 +364,7 @@ fn get_path_navigation_styles() -> &'static str {
         margin: 1px 1px 1px 0;
         padding: 2px 4px;
         min-width: 20px;
-        min-height: 24px;
-        max-height: 24px;
+    min-height: 24px;
         background-color: shade(@theme_bg_color, 0.95);
         transition: all 0.15s ease;
     }
@@ -429,12 +429,10 @@ fn get_path_navigation_styles() -> &'static str {
     
     .path-input-container entry {
         min-height: 24px;
-        max-height: 24px;
     }
     
     .path-input-container button {
         min-height: 24px;
-        max-height: 24px;
     }
     "
 }
@@ -458,8 +456,8 @@ fn get_drag_drop_styles() -> &'static str {
     
     /* Drop target styling for folders */
     .drop-target {
-        background-color: alpha(@theme_selected_bg_color, 0.2) !important;
-        border: 2px dashed @theme_selected_bg_color !important;
+        background-color: alpha(@theme_selected_bg_color, 0.2);
+        border: 2px dashed @theme_selected_bg_color;
         border-radius: 4px;
         transition: all 0.15s ease;
         animation: drop-target-pulse 1.5s ease-in-out infinite alternate;
@@ -467,8 +465,8 @@ fn get_drag_drop_styles() -> &'static str {
     
     /* Drop target styling for file list background */
     .drop-target-background {
-        background-color: alpha(@theme_selected_bg_color, 0.1) !important;
-        border: 2px dashed alpha(@theme_selected_bg_color, 0.5) !important;
+        background-color: alpha(@theme_selected_bg_color, 0.1);
+        border: 2px dashed alpha(@theme_selected_bg_color, 0.5);
         border-radius: 4px;
         transition: all 0.15s ease;
         animation: drop-target-pulse-bg 1.5s ease-in-out infinite alternate;
