@@ -287,6 +287,41 @@ pub fn update_file_list(
     // If we found the currently open file in the list, select it
     if let Some(row) = selected_row {
         file_list_box.select_row(Some(&row));
+        
+        // Scroll to make the selected row visible (preferably centered)
+        // Use timeout to ensure the row is properly laid out before scrolling
+        let row_clone = row.clone();
+        glib::timeout_add_local_once(std::time::Duration::from_millis(10), move || {
+            // Get the parent ScrolledWindow to control scrolling
+            let mut parent = row_clone.parent();
+            while let Some(widget) = parent {
+                if let Ok(scrolled_window) = widget.clone().downcast::<gtk4::ScrolledWindow>() {
+                    // Get the vertical adjustment (scroll position control)
+                    let vadj = scrolled_window.vadjustment();
+                    
+                    // Get row allocation (position and size)
+                    let allocation = row_clone.allocation();
+                    let row_y = allocation.y() as f64;
+                    let row_height = allocation.height() as f64;
+                    
+                    // Get viewport height
+                    let viewport_height = vadj.page_size();
+                    
+                    // Calculate target scroll position to center the row
+                    let target_scroll = row_y - (viewport_height / 2.0) + (row_height / 2.0);
+                    
+                    // Clamp to valid range
+                    let min_scroll = vadj.lower();
+                    let max_scroll = vadj.upper() - vadj.page_size();
+                    let final_scroll = target_scroll.max(min_scroll).min(max_scroll);
+                    
+                    // Set the scroll position
+                    vadj.set_value(final_scroll);
+                    break;
+                }
+                parent = widget.parent();
+            }
+        });
     } else {
         file_list_box.unselect_all();
     }
