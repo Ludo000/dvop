@@ -62,6 +62,10 @@ impl EditorSettings {
         self.values.insert("window_height".to_owned(), DEFAULT_WINDOW_HEIGHT.to_string());
         self.values.insert("file_panel_width".to_owned(), DEFAULT_FILE_PANEL_WIDTH.to_string());
         self.values.insert("terminal_height".to_owned(), DEFAULT_TERMINAL_HEIGHT.to_string());
+        // Default to home directory if not set
+        if let Some(home) = home_dir() {
+            self.values.insert("last_folder".to_owned(), home.to_string_lossy().to_string());
+        }
         // Add more default settings here as needed
     }
 
@@ -224,6 +228,30 @@ impl EditorSettings {
         self.set_file_panel_width(file_panel_width);
         self.set_terminal_height(terminal_height);
     }
+
+    /// Gets the last used folder path
+    pub fn get_last_folder(&self) -> PathBuf {
+        self.get("last_folder")
+            .map(|s| PathBuf::from(s))
+            .unwrap_or_else(|| {
+                // Fallback to home directory
+                home_dir().unwrap_or_else(|| PathBuf::from("."))
+            })
+    }
+
+    /// Sets the last used folder path
+    pub fn set_last_folder(&mut self, folder: &Path) {
+        self.set("last_folder", &folder.to_string_lossy());
+    }
+}
+
+/// Helper function to save the current folder to settings
+/// This should be called whenever the current directory changes
+pub fn save_current_folder(folder: &Path) {
+    let mut settings = get_settings_mut();
+    settings.set_last_folder(folder);
+    // Don't save immediately to avoid too many disk writes
+    // The folder will be saved on app close
 }
 
 /// Returns the configuration directory path

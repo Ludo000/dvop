@@ -5,6 +5,7 @@ pub mod terminal;
 pub mod file_manager;
 pub mod css;
 pub mod settings;
+pub mod global_search;
 
 use gtk4::prelude::*;
 use gtk4::{
@@ -55,7 +56,7 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
 ///
 /// This function creates the application's header bar with buttons for core functionality.
 /// Returns the header bar and the action buttons for connecting event handlers.
-pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button, Button) {
+pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button, Button, Button) {
     // Create the main header bar
     let header = HeaderBar::new();
 
@@ -121,6 +122,14 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     // Add the complete split button to the right side of the header
     header.pack_end(&save_split_box);
 
+    // Create a Global Search button with a looking glass icon (no label)
+    // Place it before the Save button (pack_end adds from right to left, so this comes before save)
+    let global_search_button = Button::new();
+    let global_search_icon = Image::from_icon_name("system-search-symbolic");
+    global_search_button.set_child(Some(&global_search_icon));
+    global_search_button.set_tooltip_text(Some("Global Search"));
+    header.pack_end(&global_search_button);
+
     // Create a hidden Save As button that will be triggered programmatically from the menu
     // This approach allows reusing the same handler logic for both menu and direct button clicks
     let save_as_button = Button::new();
@@ -143,7 +152,7 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     new_button.set_visible(false);
 
     // Return the header and all action buttons (new_button is now hidden for compatibility)
-    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button)
+    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button, global_search_button)
 }
 
 /// Creates the main text editor view components
@@ -216,8 +225,15 @@ pub fn create_text_view() -> (
     let error_label = Label::new(None);          // Empty error label
     let picture = Picture::new();                // Empty picture widget for showing images
     
-    // Set current directory to user's home directory or fallback to root
-    let current_dir = Rc::new(RefCell::new(home::home_dir().unwrap_or_else(|| PathBuf::from("/"))));
+    // Set current directory to the last used folder from settings, or fallback to home directory
+    let last_folder = crate::settings::get_settings().get_last_folder();
+    let current_dir = Rc::new(RefCell::new(
+        if last_folder.exists() && last_folder.is_dir() {
+            last_folder
+        } else {
+            home::home_dir().unwrap_or_else(|| PathBuf::from("/"))
+        }
+    ));
 
     // Return all components needed by the application
     (

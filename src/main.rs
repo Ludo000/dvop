@@ -198,7 +198,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let window = ui::create_window(app);
     
     // Create the header bar with action buttons
-    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button) = ui::create_header();
+    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button, global_search_button) = ui::create_header();
 
     // Create terminal notebook with tabs instead of single terminal
     let (terminal_notebook, add_terminal_button) = ui::terminal::create_terminal_notebook();
@@ -294,8 +294,18 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let window_clone_for_close = window.clone();
     let editor_notebook_clone_for_close = editor_notebook.clone();
     let file_path_manager_clone_for_close = file_path_manager.clone();
+    let current_dir_clone_for_close = current_dir.clone();
     
     window.connect_close_request(move |_| {
+        // Save the current folder before closing
+        let folder = current_dir_clone_for_close.borrow().clone();
+        let mut settings = settings::get_settings_mut();
+        settings.set_last_folder(&folder);
+        if let Err(e) = settings.save() {
+            eprintln!("Failed to save settings: {}", e);
+        }
+        drop(settings); // Release the lock
+        
         // Check if any tabs have unsaved changes (indicated by '*' in tab labels)
         let notebook = &editor_notebook_clone_for_close;
         let mut unsaved_files = Vec::new();
@@ -382,6 +392,31 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Create the path bar with navigation buttons and path segments
     let (path_bar, path_box, up_button, _refresh_button, terminal_button, volume_control_box, _global_volume_scale) = ui::file_manager::create_path_bar();
     
+    // Connect global search button to open the global search dialog
+    // (Now that all required variables are defined)
+    {
+        let window_clone = window.clone();
+        let current_dir_clone = current_dir.clone();
+        let editor_notebook_clone = editor_notebook.clone();
+        let file_path_manager_clone = file_path_manager.clone();
+        let active_tab_path_clone = active_tab_path.clone();
+        let save_button_clone = save_button.clone();
+        let save_as_button_clone = save_as_button.clone();
+        let file_list_box_clone = file_list_box.clone();
+        global_search_button.connect_clicked(move |_| {
+            ui::global_search::show_global_search_dialog(
+                &window_clone,
+                &current_dir_clone,
+                &editor_notebook_clone,
+                &file_path_manager_clone,
+                &active_tab_path_clone,
+                &save_button_clone,
+                &save_as_button_clone,
+                &file_list_box_clone,
+            );
+        });
+    }
+    
     // Set up keyboard shortcuts for common operations (including Ctrl+L for path editing)
     utils::setup_keyboard_shortcuts(
         &window, 
@@ -389,11 +424,13 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         &open_button, 
         &new_button, 
         &save_as_button, 
+        Some(&global_search_button),
         Some(&editor_notebook),
         Some(&path_box),
         Some(&current_dir),
         Some(&file_list_box),
-        Some(&active_tab_path)
+        Some(&active_tab_path),
+        Some(&file_path_manager)
     );
 
     // Create the main container that will hold the path bar, paned content, and status bar
@@ -662,6 +699,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Initialize the file browser panel with the current directory contents
     // Initially there's no active file selection since we start with an empty "Untitled" tab
     utils::update_file_list(&file_list_box, &current_dir.borrow(), &active_tab_path.borrow(), utils::FileSelectionSource::TabSwitch);
+    
+    // Initialize the path bar to show the current directory
+    utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
     
     // Set up the save menu button visibility for the default text plain content type
     // This is appropriate for the initial empty "Untitled" document

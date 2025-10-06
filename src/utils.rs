@@ -797,18 +797,20 @@ fn restore_path_buttons(
 /// Sets up common keyboard shortcuts for the application
 ///
 /// This function adds keyboard shortcuts like Ctrl+S for saving, Ctrl+O for opening files,
-/// Ctrl+N for new files, Ctrl+Tab for navigating tabs, and other standard editor shortcuts.
+/// Ctrl+N for new files, Ctrl+Tab for navigating tabs, Ctrl+Shift+F for global search, and other standard editor shortcuts.
 pub fn setup_keyboard_shortcuts(
     window: &ApplicationWindow, 
     save_button: &Button, 
     open_button: &Button, 
     new_button: &Button, 
     save_as_button: &Button,
+    global_search_button: Option<&Button>,
     editor_notebook: Option<&gtk4::Notebook>,
     path_box: Option<&gtk4::Box>,
     current_dir: Option<&Rc<RefCell<PathBuf>>>,
     file_list_box: Option<&gtk4::ListBox>,
-    active_tab_path: Option<&Rc<RefCell<Option<PathBuf>>>>
+    active_tab_path: Option<&Rc<RefCell<Option<PathBuf>>>>,
+    file_path_manager: Option<&Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>>
 ) {
     // Create a key event controller
     let key_controller = EventControllerKey::new();
@@ -818,6 +820,7 @@ pub fn setup_keyboard_shortcuts(
     let save_as_button_clone = save_as_button.clone();
     let open_button_clone = open_button.clone();
     let new_button_clone = new_button.clone();
+    let global_search_button_clone = global_search_button.cloned();
     let window_clone = window.clone();
     
     // Clone path-related references for Ctrl+L functionality
@@ -828,6 +831,7 @@ pub fn setup_keyboard_shortcuts(
     
     // Clone the editor notebook for file type checking
     let editor_notebook_clone = editor_notebook.cloned();
+    let file_path_manager_clone = file_path_manager.cloned();
     
     // Connect the key pressed event
     key_controller.connect_key_pressed(move |_controller, keyval, keycode, state| {
@@ -998,6 +1002,36 @@ pub fn setup_keyboard_shortcuts(
                         }
                     }
                 },
+                // Ctrl+Shift+F: Global search in folder
+                Some("F") => {
+                    // Use the button if available, otherwise call the function directly
+                    if let Some(btn) = &global_search_button_clone {
+                        btn.emit_clicked();
+                        return glib::Propagation::Stop;
+                    }
+                    
+                    // Fallback: call the function directly if button not available
+                    if let (Some(en), Some(cd), Some(flb), Some(atp), Some(fpm)) = (
+                        &editor_notebook_clone,
+                        &current_dir_clone,
+                        &file_list_box_clone,
+                        &active_tab_path_clone,
+                        &file_path_manager_clone,
+                    ) {
+                        crate::ui::global_search::show_global_search_dialog(
+                            &window_clone,
+                            cd,
+                            en,
+                            fpm,
+                            atp,
+                            &save_button_clone,
+                            &save_as_button_clone,
+                            flb,
+                        );
+                        return glib::Propagation::Stop;
+                    }
+                    return glib::Propagation::Proceed;
+                },
                 // Ctrl+H: Replace - Placeholder for future implementation
                 Some("h") => {
                     println!("Keyboard shortcut: Ctrl+H (Replace)");
@@ -1148,6 +1182,7 @@ pub fn setup_keyboard_shortcuts(
     println!("  - Ctrl+Shift+S: Save As (blocked for image/video/audio files)");
     println!("  - Ctrl+O: Open");
     println!("  - Ctrl+N: New file");
+    println!("  - Ctrl+Shift+F: Global Search");
     println!("  - Ctrl+L: Edit path manually");
     println!("  - Ctrl+Q: Quit application");
     println!("  - Ctrl+Plus/Ctrl+=: Increase font size");
