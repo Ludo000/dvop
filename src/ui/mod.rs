@@ -327,16 +327,18 @@ pub fn create_paned(
     let paned_clone = paned.clone();
     explorer_button.connect_toggled(move |button| {
         if button.is_active() {
+            let is_hidden = !sidebar_stack_clone.is_visible();
+            
+            // Only restore position if sidebar was hidden
+            if is_hidden {
+                let settings = crate::settings::get_settings();
+                let width = settings.get_file_panel_width();
+                paned_clone.set_position(width);
+            }
+            
+            // Switch to explorer tab
             sidebar_stack_clone.set_visible_child_name("explorer");
             sidebar_stack_clone.set_visible(true);
-            // Restore the position
-            let settings = crate::settings::get_settings();
-            let width = settings.get_file_panel_width();
-            paned_clone.set_position(width);
-        } else {
-            // If toggling off and search is also off, hide the sidebar
-            sidebar_stack_clone.set_visible(false);
-            paned_clone.set_position(0);
         }
     });
     
@@ -345,16 +347,18 @@ pub fn create_paned(
     let paned_clone2 = paned.clone();
     search_button.connect_toggled(move |button| {
         if button.is_active() {
+            let is_hidden = !sidebar_stack_clone2.is_visible();
+            
+            // Only restore position if sidebar was hidden
+            if is_hidden {
+                let settings = crate::settings::get_settings();
+                let width = settings.get_file_panel_width();
+                paned_clone2.set_position(width);
+            }
+            
+            // Switch to search tab
             sidebar_stack_clone2.set_visible_child_name("search");
             sidebar_stack_clone2.set_visible(true);
-            // Restore the position
-            let settings = crate::settings::get_settings();
-            let width = settings.get_file_panel_width();
-            paned_clone2.set_position(width);
-        } else {
-            // If toggling off and explorer is also off, hide the sidebar
-            sidebar_stack_clone2.set_visible(false);
-            paned_clone2.set_position(0);
         }
     });
     
