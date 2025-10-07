@@ -25,14 +25,16 @@ pub fn apply_custom_css() {
 /// Builds the complete CSS string by combining all component styles
 fn build_complete_css() -> String {
     format!(
-        "{}{}{}{}{}{}{}",
+        "{}{}{}{}{}{}{}{}{}",
         get_notebook_tab_styles(),
         get_button_styles(),
         get_status_bar_styles(),
         get_path_navigation_styles(),
         get_drag_drop_styles(),
         get_file_operation_styles(),
-        get_list_styles()
+        get_list_styles(),
+        get_activity_bar_styles(),
+        get_search_styles()
     )
 }
 
@@ -566,6 +568,93 @@ fn get_list_styles() -> &'static str {
     /* Selected state overrides zebra */
     .zebra-list row:selected {
         background-color: @theme_selected_bg_color;
+    }
+    "
+}
+
+/// Returns CSS styles for the activity bar (VS Code-style vertical icon panel)
+fn get_activity_bar_styles() -> &'static str {
+    "
+    /* === ACTIVITY BAR STYLES === */
+    
+    /* Activity bar container */
+    .activity-bar {
+        background-color: shade(@theme_bg_color, 0.92);
+        border-right: 1px solid alpha(@theme_fg_color, 0.15);
+        padding: 0;
+    }
+    
+    /* Activity bar buttons */
+    .activity-bar-button {
+        min-width: 48px;
+        min-height: 48px;
+        border-radius: 0;
+        border: none;
+        background: transparent;
+        padding: 0;
+        margin: 0;
+        transition: background-color 0.15s ease;
+    }
+    
+    /* Activity bar button hover */
+    .activity-bar-button:hover {
+        background-color: alpha(@theme_fg_color, 0.08);
+    }
+    
+    /* Activity bar button active/checked state */
+    .activity-bar-button:checked {
+        background-color: alpha(@theme_selected_bg_color, 0.15);
+        border-left: 2px solid @theme_selected_bg_color;
+    }
+    
+    /* Activity bar button focus */
+    .activity-bar-button:focus {
+        outline: none;
+        box-shadow: none;
+    }
+    "
+}
+
+/// Returns CSS styles for search UI components
+fn get_search_styles() -> &'static str {
+    "
+    /* === SEARCH UI STYLES === */
+    
+    /* Case sensitivity toggle button */
+    .case-toggle-button {
+        min-width: 28px;
+        min-height: 24px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: 600;
+        font-size: 0.85em;
+        background-color: alpha(@theme_bg_color, 0.9);
+        border: 1px solid alpha(@theme_fg_color, 0.2);
+        color: alpha(@theme_fg_color, 0.6);
+        transition: all 0.2s ease;
+    }
+    
+    /* Case toggle button hover */
+    .case-toggle-button:hover {
+        background-color: alpha(@theme_fg_color, 0.08);
+        border-color: alpha(@theme_fg_color, 0.3);
+        color: @theme_fg_color;
+    }
+    
+    /* Case toggle button active/checked state - clearly visible */
+    .case-toggle-button:checked {
+        background-color: @theme_selected_bg_color;
+        border-color: @theme_selected_bg_color;
+        color: @theme_selected_fg_color;
+        font-weight: 700;
+        box-shadow: 0 1px 3px alpha(@theme_selected_bg_color, 0.4);
+    }
+    
+    /* Case toggle button checked hover */
+    .case-toggle-button:checked:hover {
+        background-color: shade(@theme_selected_bg_color, 1.1);
+        border-color: shade(@theme_selected_bg_color, 1.1);
+        box-shadow: 0 2px 4px alpha(@theme_selected_bg_color, 0.5);
     }
     "
 }

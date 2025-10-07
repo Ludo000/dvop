@@ -6,6 +6,7 @@ pub mod file_manager;
 pub mod css;
 pub mod settings;
 pub mod global_search;
+pub mod activity_bar;
 
 use gtk4::prelude::*;
 use gtk4::{
@@ -56,7 +57,7 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
 ///
 /// This function creates the application's header bar with buttons for core functionality.
 /// Returns the header bar and the action buttons for connecting event handlers.
-pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button, Button, Button) {
+pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button, Button) {
     // Create the main header bar
     let header = HeaderBar::new();
 
@@ -122,14 +123,6 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     // Add the complete split button to the right side of the header
     header.pack_end(&save_split_box);
 
-    // Create a Global Search button with a looking glass icon (no label)
-    // Place it before the Save button (pack_end adds from right to left, so this comes before save)
-    let global_search_button = Button::new();
-    let global_search_icon = Image::from_icon_name("system-search-symbolic");
-    global_search_button.set_child(Some(&global_search_icon));
-    global_search_button.set_tooltip_text(Some("Global Search"));
-    header.pack_end(&global_search_button);
-
     // Create a hidden Save As button that will be triggered programmatically from the menu
     // This approach allows reusing the same handler logic for both menu and direct button clicks
     let save_as_button = Button::new();
@@ -152,7 +145,7 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     new_button.set_visible(false);
 
     // Return the header and all action buttons (new_button is now hidden for compatibility)
-    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button, global_search_button)
+    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button)
 }
 
 /// Creates the main text editor view components
@@ -252,20 +245,45 @@ pub fn create_text_view() -> (
     )
 }
 
-/// Creates the main application layout using paned containers
+/// Creates the main application layout with activity bar and paned containers
 ///
-/// This function arranges the major UI components into a nested paned layout:
-/// - Horizontal split between file manager (left) and editor+terminal (right)
+/// This function arranges the major UI components into a nested layout:
+/// - Activity bar on the far left with icon buttons
+/// - A stack that switches between file manager and search panel
+/// - Horizontal split between sidebar stack (left) and editor+terminal (right)
 /// - The right side has a vertical split between editor (top) and terminal (bottom)
 /// 
 /// Returns a tuple of:
+/// - GtkBox: The main container with activity bar + paned content
 /// - gtk4::Paned: The main horizontal paned container
 /// - gtk4::Paned: The vertical paned container for editor+terminal
+/// - gtk4::ToggleButton: The explorer button from activity bar
+/// - gtk4::ToggleButton: The search button from activity bar
+/// - gtk4::Stack: The sidebar stack for switching panels
 pub fn create_paned(
     file_manager_panel: &GtkBox,     // File browser sidebar
     editor_notebook_box: &GtkBox,    // Editor notebook container with add button
     terminal_box: &impl IsA<gtk4::Widget>,  // Terminal container (either ScrolledWindow or GtkBox)
-) -> (gtk4::Paned, gtk4::Paned) {
+) -> (GtkBox, gtk4::Paned, gtk4::Paned, gtk4::ToggleButton, gtk4::ToggleButton, gtk4::Stack) {
+    // Create the activity bar with icon buttons
+    let (activity_bar, explorer_button, search_button) = activity_bar::create_activity_bar();
+    
+    // Create a stack to hold different sidebar panels
+    let sidebar_stack = gtk4::Stack::new();
+    sidebar_stack.set_transition_type(gtk4::StackTransitionType::SlideLeftRight);
+    sidebar_stack.set_transition_duration(200);
+    
+    // Add file manager to stack
+    sidebar_stack.add_named(file_manager_panel, Some("explorer"));
+    
+    // Create search panel placeholder (will be populated from main.rs)
+    let search_panel = GtkBox::new(Orientation::Vertical, 0);
+    search_panel.add_css_class("search-panel");
+    sidebar_stack.add_named(&search_panel, Some("search"));
+    
+    // Start with explorer visible
+    sidebar_stack.set_visible_child_name("explorer");
+    
     // Create the main horizontal split pane
     let paned = gtk4::Paned::new(Orientation::Horizontal);
     paned.set_wide_handle(true);  // Use a wider drag handle for easier resizing
@@ -284,8 +302,8 @@ pub fn create_paned(
     // Make the editor paned expand vertically
     editor_paned.set_vexpand(true);
     
-    // Place file manager on the left side of the horizontal split
-    paned.set_start_child(Some(file_manager_panel));
+    // Place sidebar stack on the left side of the horizontal split
+    paned.set_start_child(Some(&sidebar_stack));
     
     // Place the editor+terminal vertical split on the right side
     paned.set_end_child(Some(&editor_paned));
@@ -299,7 +317,48 @@ pub fn create_paned(
     paned.set_position(file_panel_width);        // Width of file manager sidebar
     editor_paned.set_position(terminal_height); // Height of editor area
     
-    (paned, editor_paned)
+    // Create main container with activity bar + paned content
+    let main_container = GtkBox::new(Orientation::Horizontal, 0);
+    main_container.append(&activity_bar);
+    main_container.append(&paned);
+    
+    // Connect explorer button to show file manager
+    let sidebar_stack_clone = sidebar_stack.clone();
+    let paned_clone = paned.clone();
+    explorer_button.connect_toggled(move |button| {
+        if button.is_active() {
+            sidebar_stack_clone.set_visible_child_name("explorer");
+            sidebar_stack_clone.set_visible(true);
+            // Restore the position
+            let settings = crate::settings::get_settings();
+            let width = settings.get_file_panel_width();
+            paned_clone.set_position(width);
+        } else {
+            // If toggling off and search is also off, hide the sidebar
+            sidebar_stack_clone.set_visible(false);
+            paned_clone.set_position(0);
+        }
+    });
+    
+    // Connect search button to show search panel
+    let sidebar_stack_clone2 = sidebar_stack.clone();
+    let paned_clone2 = paned.clone();
+    search_button.connect_toggled(move |button| {
+        if button.is_active() {
+            sidebar_stack_clone2.set_visible_child_name("search");
+            sidebar_stack_clone2.set_visible(true);
+            // Restore the position
+            let settings = crate::settings::get_settings();
+            let width = settings.get_file_panel_width();
+            paned_clone2.set_position(width);
+        } else {
+            // If toggling off and explorer is also off, hide the sidebar
+            sidebar_stack_clone2.set_visible(false);
+            paned_clone2.set_position(0);
+        }
+    });
+    
+    (main_container, paned, editor_paned, explorer_button, search_button, sidebar_stack)
 }
 
 /// Creates a custom tab widget with a label and close button

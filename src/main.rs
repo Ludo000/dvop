@@ -198,7 +198,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let window = ui::create_window(app);
     
     // Create the header bar with action buttons
-    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button, global_search_button) = ui::create_header();
+    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button) = ui::create_header();
 
     // Create terminal notebook with tabs instead of single terminal
     let (terminal_notebook, add_terminal_button) = ui::terminal::create_terminal_notebook();
@@ -392,31 +392,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Create the path bar with navigation buttons and path segments
     let (path_bar, path_box, up_button, _refresh_button, terminal_button, volume_control_box, _global_volume_scale) = ui::file_manager::create_path_bar();
     
-    // Connect global search button to open the global search dialog
-    // (Now that all required variables are defined)
-    {
-        let window_clone = window.clone();
-        let current_dir_clone = current_dir.clone();
-        let editor_notebook_clone = editor_notebook.clone();
-        let file_path_manager_clone = file_path_manager.clone();
-        let active_tab_path_clone = active_tab_path.clone();
-        let save_button_clone = save_button.clone();
-        let save_as_button_clone = save_as_button.clone();
-        let file_list_box_clone = file_list_box.clone();
-        global_search_button.connect_clicked(move |_| {
-            ui::global_search::show_global_search_dialog(
-                &window_clone,
-                &current_dir_clone,
-                &editor_notebook_clone,
-                &file_path_manager_clone,
-                &active_tab_path_clone,
-                &save_button_clone,
-                &save_as_button_clone,
-                &file_list_box_clone,
-            );
-        });
-    }
-    
     // Set up keyboard shortcuts for common operations (including Ctrl+L for path editing)
     utils::setup_keyboard_shortcuts(
         &window, 
@@ -424,7 +399,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         &open_button, 
         &new_button, 
         &save_as_button, 
-        Some(&global_search_button),
+        None,
         Some(&editor_notebook),
         Some(&path_box),
         Some(&current_dir),
@@ -476,9 +451,33 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let editor_notebook_box = ui::create_editor_notebook_box(&editor_notebook, &add_file_button);
 
     // Create the main paned layout that contains:
-    // - The file manager sidebar on the left
+    // - Activity bar on the left with icon buttons  
+    // - A sidebar stack that switches between file manager and search panel
     // - The editor notebook and terminal in a vertical split on the right
-    let (paned_content, editor_paned) = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
+    let (paned_content, paned, editor_paned, _explorer_button, _search_button, sidebar_stack) = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
+    
+    // Get the search panel from the sidebar stack and populate it with global search UI
+    if let Some(search_panel_widget) = sidebar_stack.child_by_name("search") {
+        if let Some(search_panel_box) = search_panel_widget.downcast_ref::<gtk4::Box>() {
+            // Create the full global search panel
+            let global_search_panel = ui::global_search::create_global_search_panel(
+                &window,
+                &current_dir,
+                &editor_notebook,
+                &file_path_manager,
+                &active_tab_path,
+                &save_button,
+                &save_as_button,
+                &file_list_box,
+            );
+            
+            // Clear placeholder and add the real search panel
+            while let Some(child) = search_panel_box.first_child() {
+                search_panel_box.remove(&child);
+            }
+            search_panel_box.append(&global_search_panel);
+        }
+    }
     
     // Set up modification tracking for the initial tab
     // This adds a "*" indicator to the tab label when content has been modified
@@ -1153,7 +1152,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     window.show();
 
     // Set up window close handler to save window size and pane positions
-    let paned_content_for_close = paned_content.clone();
+    let paned_for_close = paned.clone();
     let editor_paned_for_close = editor_paned.clone();
     window.connect_close_request(move |window| {
         // Get the current window size - use width() and height() for actual size
@@ -1161,7 +1160,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let height = window.height();
         
         // Get the current pane positions
-        let file_panel_width = paned_content_for_close.position();
+        let file_panel_width = paned_for_close.position();
         let terminal_height = editor_paned_for_close.position();
         
         // Save all dimensions to settings

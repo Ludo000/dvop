@@ -1517,10 +1517,8 @@ fn setup_file_selection_handler(
     // Clone the selection source tracker
     let current_selection_source_clone = current_selection_source.clone();
 
-    // Add keyboard support for file deletion - attach to window for global access
+    // Add keyboard support for file operations - attach to file list box so it only handles when file list has focus
     let key_controller = EventControllerKey::new();
-    // Set to CAPTURE phase to intercept keys before completion system
-    key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
     
     let file_list_box_for_key = file_list_box.clone();
     let editor_notebook_for_key = editor_notebook.clone();
@@ -1537,13 +1535,7 @@ fn setup_file_selection_handler(
             match keyval {
                 // Ctrl+C: Copy file
                 gtk4::gdk::Key::c => {
-                    println!("DEBUG: Ctrl+C pressed in file manager");
-                    
-                    // Check if we should handle file operations or let text editor handle it
-                    if !should_handle_file_operations(&editor_notebook_for_key, &file_list_box_for_key) {
-                        println!("DEBUG: Text editor has priority, letting Ctrl+C propagate");
-                        return glib::Propagation::Proceed;
-                    }
+                    println!("DEBUG: Ctrl+C pressed in file list");
                     
                     // First priority: Check if there's a selected row in the file list
                     if let Some(selected_row) = file_list_box_for_key.selected_row() {
@@ -1556,7 +1548,6 @@ fn setup_file_selection_handler(
                                 crate::ui::file_manager::copy_file_to_clipboard(&file_path);
                                 // Refresh file list to show visual changes
                                 crate::utils::update_file_list(&file_list_box_for_key, &current_dir_for_key.borrow(), &active_tab_path_for_key.borrow(), crate::utils::FileSelectionSource::TabSwitch);
-                                return glib::Propagation::Stop;
                             }
                         }
                     }
@@ -1566,19 +1557,14 @@ fn setup_file_selection_handler(
                             crate::ui::file_manager::copy_file_to_clipboard(active_file);
                             // Refresh file list to show visual changes
                             crate::utils::update_file_list(&file_list_box_for_key, &current_dir_for_key.borrow(), &active_tab_path_for_key.borrow(), crate::utils::FileSelectionSource::TabSwitch);
-                            return glib::Propagation::Stop;
                         }
                     }
+                    // Always stop propagation when file list has focus
+                    return glib::Propagation::Stop;
                 }
                 // Ctrl+X: Cut file
                 gtk4::gdk::Key::x => {
-                    println!("DEBUG: Ctrl+X pressed in file manager");
-                    
-                    // Check if we should handle file operations or let text editor handle it
-                    if !should_handle_file_operations(&editor_notebook_for_key, &file_list_box_for_key) {
-                        println!("DEBUG: Text editor has priority, letting Ctrl+X propagate");
-                        return glib::Propagation::Proceed;
-                    }
+                    println!("DEBUG: Ctrl+X pressed in file list");
                     
                     // First priority: Check if there's a selected row in the file list
                     if let Some(selected_row) = file_list_box_for_key.selected_row() {
@@ -1591,7 +1577,6 @@ fn setup_file_selection_handler(
                                 crate::ui::file_manager::cut_file_to_clipboard(&file_path);
                                 // Refresh file list to show visual changes (cut file opacity)
                                 crate::utils::update_file_list(&file_list_box_for_key, &current_dir_for_key.borrow(), &active_tab_path_for_key.borrow(), crate::utils::FileSelectionSource::TabSwitch);
-                                return glib::Propagation::Stop;
                             }
                         }
                     }
@@ -1601,19 +1586,14 @@ fn setup_file_selection_handler(
                             crate::ui::file_manager::cut_file_to_clipboard(active_file);
                             // Refresh file list to show visual changes (cut file opacity)
                             crate::utils::update_file_list(&file_list_box_for_key, &current_dir_for_key.borrow(), &active_tab_path_for_key.borrow(), crate::utils::FileSelectionSource::TabSwitch);
-                            return glib::Propagation::Stop;
                         }
                     }
+                    // Always stop propagation when file list has focus
+                    return glib::Propagation::Stop;
                 }
                 // Ctrl+V: Paste file
                 gtk4::gdk::Key::v => {
-                    println!("DEBUG: Ctrl+V pressed in file manager");
-                    
-                    // Check if we should handle file operations or let text editor handle it
-                    if !should_handle_file_operations(&editor_notebook_for_key, &file_list_box_for_key) {
-                        println!("DEBUG: Text editor has priority, letting Ctrl+V propagate");
-                        return glib::Propagation::Proceed;
-                    }
+                    println!("DEBUG: Ctrl+V pressed in file list");
                     
                     if crate::ui::file_manager::has_clipboard_content() {
                         crate::ui::file_manager::paste_file_from_clipboard(
@@ -1690,8 +1670,8 @@ fn setup_file_selection_handler(
         glib::Propagation::Proceed
     });
     
-    // Add to window for global key handling, not just file list box
-    window.add_controller(key_controller);
+    // Attach to file list box so it only handles when file list has focus
+    file_list_box.add_controller(key_controller);
 
     // Add right-click context menu support
     let right_click_gesture = GestureClick::new();
@@ -1792,6 +1772,13 @@ fn setup_file_selection_handler(
     });
     
     file_list_box.add_controller(left_click_gesture);
+
+    // Ensure focus is grabbed when selection changes (for keyboard navigation)
+    let file_list_box_for_selection = file_list_box.clone();
+    file_list_box.connect_selected_rows_changed(move |_| {
+        println!("DEBUG: Selection changed - grabbing focus");
+        file_list_box_for_selection.grab_focus();
+    });
 
     file_list_box.connect_row_activated(move |list_box, row| {
         // Grab focus to ensure file operations work correctly
