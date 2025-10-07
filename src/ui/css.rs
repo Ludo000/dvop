@@ -25,13 +25,14 @@ pub fn apply_custom_css() {
 /// Builds the complete CSS string by combining all component styles
 fn build_complete_css() -> String {
     format!(
-        "{}{}{}{}{}{}",
+        "{}{}{}{}{}{}{}",
         get_notebook_tab_styles(),
         get_button_styles(),
         get_status_bar_styles(),
         get_path_navigation_styles(),
         get_drag_drop_styles(),
-        get_file_operation_styles()
+        get_file_operation_styles(),
+        get_list_styles()
     )
 }
 
@@ -535,6 +536,36 @@ fn get_file_operation_styles() -> &'static str {
     .file-cut.file-selected-by-tab:hover,
     .file-cut.file-selected-by-click:hover {
         opacity: 0.8;
+    }
+    "
+}
+
+/// Returns CSS styles for list components with zebra striping
+fn get_list_styles() -> &'static str {
+    "
+    /* === LIST STYLES === */
+    
+    /* Zebra striping for lists */
+    .zebra-list row.zebra-even {
+        background-color: alpha(@theme_fg_color, 0.03);
+    }
+    
+    .zebra-list row.zebra-odd {
+        background-color: transparent;
+    }
+    
+    /* Hover state maintains zebra but adds highlight */
+    .zebra-list row.zebra-even:hover {
+        background-color: alpha(@theme_selected_bg_color, 0.08);
+    }
+    
+    .zebra-list row.zebra-odd:hover {
+        background-color: alpha(@theme_selected_bg_color, 0.08);
+    }
+    
+    /* Selected state overrides zebra */
+    .zebra-list row:selected {
+        background-color: @theme_selected_bg_color;
     }
     "
 }
