@@ -62,6 +62,11 @@ impl EditorSettings {
         self.values.insert("window_height".to_owned(), DEFAULT_WINDOW_HEIGHT.to_string());
         self.values.insert("file_panel_width".to_owned(), DEFAULT_FILE_PANEL_WIDTH.to_string());
         self.values.insert("terminal_height".to_owned(), DEFAULT_TERMINAL_HEIGHT.to_string());
+        self.values.insert("active_sidebar_tab".to_owned(), "explorer".to_owned());
+        self.values.insert("search_case_sensitive".to_owned(), "false".to_owned());
+        self.values.insert("search_whole_word".to_owned(), "false".to_owned());
+        self.values.insert("search_query".to_owned(), "".to_owned());
+        self.values.insert("opened_files".to_owned(), "".to_owned());
         // Default to home directory if not set
         if let Some(home) = home_dir() {
             self.values.insert("last_folder".to_owned(), home.to_string_lossy().to_string());
@@ -242,6 +247,75 @@ impl EditorSettings {
     /// Sets the last used folder path
     pub fn set_last_folder(&mut self, folder: &Path) {
         self.set("last_folder", &folder.to_string_lossy());
+    }
+
+    /// Gets the active sidebar tab ("explorer" or "search")
+    pub fn get_active_sidebar_tab(&self) -> String {
+        self.get("active_sidebar_tab")
+            .map_or("explorer".to_string(), |s| s.clone())
+    }
+
+    /// Sets the active sidebar tab
+    pub fn set_active_sidebar_tab(&mut self, tab: &str) {
+        self.set("active_sidebar_tab", tab);
+    }
+
+    /// Gets the search case sensitive setting
+    pub fn get_search_case_sensitive(&self) -> bool {
+        self.get("search_case_sensitive")
+            .map_or(false, |s| s == "true")
+    }
+
+    /// Sets the search case sensitive setting
+    pub fn set_search_case_sensitive(&mut self, case_sensitive: bool) {
+        self.set("search_case_sensitive", if case_sensitive { "true" } else { "false" });
+    }
+
+    /// Gets the search whole word setting
+    pub fn get_search_whole_word(&self) -> bool {
+        self.get("search_whole_word")
+            .map_or(false, |s| s == "true")
+    }
+
+    /// Sets the search whole word setting
+    pub fn set_search_whole_word(&mut self, whole_word: bool) {
+        self.set("search_whole_word", if whole_word { "true" } else { "false" });
+    }
+
+    /// Gets the last search query
+    pub fn get_search_query(&self) -> String {
+        self.get("search_query")
+            .map_or(String::new(), |s| s.clone())
+    }
+
+    /// Sets the last search query
+    pub fn set_search_query(&mut self, query: &str) {
+        self.set("search_query", query);
+    }
+
+    /// Gets the list of opened files (pipe-separated paths)
+    pub fn get_opened_files(&self) -> Vec<PathBuf> {
+        self.get("opened_files")
+            .map(|s| {
+                if s.is_empty() {
+                    Vec::new()
+                } else {
+                    s.split('|')
+                        .filter(|p| !p.is_empty())
+                        .map(PathBuf::from)
+                        .collect()
+                }
+            })
+            .unwrap_or_default()
+    }
+
+    /// Sets the list of opened files
+    pub fn set_opened_files(&mut self, files: &[PathBuf]) {
+        let files_str = files.iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect::<Vec<_>>()
+            .join("|");
+        self.set("opened_files", &files_str);
     }
 }
 

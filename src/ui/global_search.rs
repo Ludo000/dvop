@@ -841,6 +841,15 @@ pub fn create_global_search_panel(
     search_overlay.add_overlay(&toggle_box);
     search_overlay.set_margin_bottom(8);
     
+    // Restore search state from settings
+    let settings = crate::settings::get_settings();
+    case_toggle.set_active(settings.get_search_case_sensitive());
+    whole_word_toggle.set_active(settings.get_search_whole_word());
+    let saved_query = settings.get_search_query();
+    if !saved_query.is_empty() {
+        search_buffer.set_text(&saved_query);
+    }
+    
     vbox.append(&search_overlay);
 
     // Search button
@@ -1211,6 +1220,31 @@ pub fn create_global_search_panel(
         }
     });
     search_text_view.add_controller(key_controller);
+    
+    // Save search state when toggle buttons change
+    case_toggle.connect_toggled(|btn| {
+        let mut settings = crate::settings::get_settings_mut();
+        settings.set_search_case_sensitive(btn.is_active());
+        let _ = settings.save();
+    });
+    
+    whole_word_toggle.connect_toggled(|btn| {
+        let mut settings = crate::settings::get_settings_mut();
+        settings.set_search_whole_word(btn.is_active());
+        let _ = settings.save();
+    });
+    
+    // Save search query when buffer changes (with debouncing via idle)
+    let buffer_for_save = search_buffer.clone();
+    search_buffer.connect_changed(move |_| {
+        let buffer_clone = buffer_for_save.clone();
+        glib::idle_add_local_once(move || {
+            let text = buffer_clone.text(&buffer_clone.start_iter(), &buffer_clone.end_iter(), false).to_string();
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_search_query(&text);
+            let _ = settings.save();
+        });
+    });
 
     vbox
 }

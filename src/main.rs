@@ -454,7 +454,28 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // - Activity bar on the left with icon buttons  
     // - A sidebar stack that switches between file manager and search panel
     // - The editor notebook and terminal in a vertical split on the right
-    let (paned_content, paned, editor_paned, _explorer_button, _search_button, sidebar_stack) = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
+    let (paned_content, paned, editor_paned, explorer_button, search_button, sidebar_stack) = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
+    
+    // Restore active sidebar tab from settings
+    let saved_sidebar_tab = settings::get_settings().get_active_sidebar_tab();
+    if saved_sidebar_tab == "search" {
+        search_button.set_active(true);
+        sidebar_stack.set_visible_child_name("search");
+    } else {
+        explorer_button.set_active(true);
+        sidebar_stack.set_visible_child_name("explorer");
+    }
+    
+    // Save sidebar tab when it changes
+    let sidebar_stack_for_save = sidebar_stack.clone();
+    sidebar_stack.connect_visible_child_notify(move |_| {
+        let visible_child_name = sidebar_stack_for_save.visible_child_name();
+        if let Some(name) = visible_child_name {
+            let mut settings = settings::get_settings_mut();
+            settings.set_active_sidebar_tab(&name);
+            let _ = settings.save();
+        }
+    });
     
     // Get the search panel from the sidebar stack and populate it with global search UI
     if let Some(search_panel_widget) = sidebar_stack.child_by_name("search") {
@@ -1150,10 +1171,40 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     
     // Show the main window to display the application
     window.show();
+    
+    // Restore previously opened files from settings (after window is shown)
+    let saved_files = settings::get_settings().get_opened_files();
+    if !saved_files.is_empty() {
+        println!("Restoring {} previously opened file(s)", saved_files.len());
+        for file_path in saved_files {
+            if file_path.exists() && file_path.is_file() {
+                // Open each saved file in a new tab
+                if let Ok(content) = std::fs::read_to_string(&file_path) {
+                    let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                    handlers::open_or_focus_tab(
+                        &editor_notebook,
+                        &file_path,
+                        &content,
+                        &active_tab_path,
+                        &file_path_manager,
+                        &save_button,
+                        &save_as_button,
+                        &mime_type,
+                        &window,
+                        &file_list_box,
+                        &current_dir,
+                        Some(&save_menu_button),
+                    );
+                }
+            }
+        }
+    }
 
     // Set up window close handler to save window size and pane positions
     let paned_for_close = paned.clone();
     let editor_paned_for_close = editor_paned.clone();
+    let editor_notebook_for_close = editor_notebook.clone();
+    let file_path_manager_for_close = file_path_manager.clone();
     window.connect_close_request(move |window| {
         // Get the current window size - use width() and height() for actual size
         let width = window.width();
@@ -1163,10 +1214,23 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let file_panel_width = paned_for_close.position();
         let terminal_height = editor_paned_for_close.position();
         
-        // Save all dimensions to settings
+        // Collect all opened file paths from the notebook
+        let n_pages = editor_notebook_for_close.n_pages();
+        let mut opened_files = Vec::new();
+        for i in 0..n_pages {
+            if let Some(page) = editor_notebook_for_close.nth_page(Some(i)) {
+                let page_num = i as u32;
+                if let Some(path) = file_path_manager_for_close.borrow().get(&page_num) {
+                    opened_files.push(path.clone());
+                }
+            }
+        }
+        
+        // Save all state to settings
         let mut settings = settings::get_settings_mut();
         settings.set_window_size(width, height);
         settings.set_pane_dimensions(file_panel_width, terminal_height);
+        settings.set_opened_files(&opened_files);
         
         // Save settings to disk
         if let Err(e) = settings.save() {
@@ -1175,6 +1239,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             println!("Saved window size: {}x{}", width, height);
             println!("Saved file panel width: {}", file_panel_width);
             println!("Saved terminal height: {}", terminal_height);
+            println!("Saved {} opened file(s)", opened_files.len());
         }
         
         // Allow the window to close
