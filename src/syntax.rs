@@ -21,12 +21,17 @@ pub fn is_dark_mode_enabled() -> bool {
         match std::panic::catch_unwind(|| gtk4::gio::Settings::new("org.gnome.desktop.interface")) {
             Ok(gio_settings) => {
                 // Check the new color-scheme setting (Ubuntu 22.04+)
-                let color_scheme = gio_settings.string("color-scheme");
-                if color_scheme.as_str() == "prefer-dark" {
-                    return true;
-                }
-                if color_scheme.as_str() == "prefer-light" || color_scheme.as_str() == "default" {
-                    return false; // Explicitly return false for light themes - this is definitive
+                // First check if the key exists to avoid crashes on older GNOME versions
+                if let Some(schema) = gio_settings.settings_schema() {
+                    if schema.has_key("color-scheme") {
+                        let color_scheme = gio_settings.string("color-scheme");
+                        if color_scheme.as_str() == "prefer-dark" {
+                            return true;
+                        }
+                        if color_scheme.as_str() == "prefer-light" || color_scheme.as_str() == "default" {
+                            return false; // Explicitly return false for light themes - this is definitive
+                        }
+                    }
                 }
                 
                 // Check the gtk-theme setting as fallback
@@ -341,11 +346,20 @@ pub fn debug_theme_detection() {
     use gtk4::gio::prelude::*;
     match std::panic::catch_unwind(|| gtk4::gio::Settings::new("org.gnome.desktop.interface")) {
         Ok(gio_settings) => {
-            let color_scheme = gio_settings.string("color-scheme");
-            println!("GNOME color-scheme: {}", color_scheme);
-            
-            let gtk_theme = gio_settings.string("gtk-theme");
-            println!("GNOME gtk-theme: {}", gtk_theme);
+            // Check if keys exist before accessing them
+            if let Some(schema) = gio_settings.settings_schema() {
+                if schema.has_key("color-scheme") {
+                    let color_scheme = gio_settings.string("color-scheme");
+                    println!("GNOME color-scheme: {}", color_scheme);
+                } else {
+                    println!("GNOME color-scheme key not available (requires GNOME 42+/Ubuntu 22.04+)");
+                }
+                
+                if schema.has_key("gtk-theme") {
+                    let gtk_theme = gio_settings.string("gtk-theme");
+                    println!("GNOME gtk-theme: {}", gtk_theme);
+                }
+            }
         },
         Err(_) => {
             println!("GNOME desktop interface settings not available");

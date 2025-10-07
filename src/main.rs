@@ -1278,16 +1278,21 @@ fn setup_gsettings_monitor(window: &ApplicationWindow, terminal_notebook: &gtk4:
         let terminal_notebook_clone_2 = terminal_notebook_clone.clone();
         
         // Monitor color-scheme changes (prefer-dark, prefer-light, default)
-        settings.connect_changed(Some("color-scheme"), move |_, _| {
-            println!("System color-scheme changed via GSettings");
-            // Small delay to ensure the change has propagated
-            let window_clone_inner = window_clone.clone();
-            let terminal_notebook_clone_inner = terminal_notebook_clone.clone();
-            glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
-                update_all_buffer_themes(&window_clone_inner);
-                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_inner);
-            });
-        });
+        // Only set up the monitor if the key exists (GNOME 42+/Ubuntu 22.04+)
+        if let Some(schema) = settings.settings_schema() {
+            if schema.has_key("color-scheme") {
+                settings.connect_changed(Some("color-scheme"), move |_, _| {
+                    println!("System color-scheme changed via GSettings");
+                    // Small delay to ensure the change has propagated
+                    let window_clone_inner = window_clone.clone();
+                    let terminal_notebook_clone_inner = terminal_notebook_clone.clone();
+                    glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
+                        update_all_buffer_themes(&window_clone_inner);
+                        ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_inner);
+                    });
+                });
+            }
+        }
         
         // Also monitor gtk-theme changes for additional coverage
         settings.connect_changed(Some("gtk-theme"), move |_, _| {
