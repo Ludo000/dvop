@@ -217,7 +217,16 @@ pub fn stop_all_video_players() {
 }
 
 /// Helper function to enter fullscreen mode with a video widget
-fn enter_fullscreen<W: IsA<gtk4::Window>>(video_picture: &gtk4::Picture, _parent_window: &W) {
+fn enter_fullscreen<W: IsA<gtk4::Window>>(
+    video_picture: &gtk4::Picture,
+    _parent_window: &W,
+    pipeline: &Pipeline,
+    is_playing: &Rc<RefCell<bool>>,
+    play_button: &Button,
+    player_id: &str,
+    duration: &Rc<RefCell<Option<u64>>>,
+    current_position: &Rc<RefCell<u64>>,
+) {
     // Store the original parent so we can restore it later
     let original_parent = video_picture.parent();
     
@@ -260,22 +269,141 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(video_picture: &gtk4::Picture, _parent
     let fullscreen_window_clone = fullscreen_window.clone();
     let video_picture_restore = video_picture.clone();
     let original_parent_clone = original_parent.clone();
+    let pipeline_keys = pipeline.clone();
+    let is_playing_keys = is_playing.clone();
+    let play_button_keys = play_button.clone();
+    let player_id_keys = player_id.to_string();
+    let duration_keys = duration.clone();
+    let current_position_keys = current_position.clone();
+    
     key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
-        if key == gtk4::gdk::Key::Escape {
-            println!("Video: Escape pressed, exiting fullscreen");
-            
-            // Restore video to original parent
-            video_picture_restore.unparent();
-            video_picture_restore.set_can_focus(true);
-            video_picture_restore.set_focusable(true);
-            if let Some(parent) = &original_parent_clone {
-                if let Some(parent_box) = parent.downcast_ref::<GtkBox>() {
-                    parent_box.append(&video_picture_restore);
+        match key {
+            // Escape or F: Exit fullscreen
+            gtk4::gdk::Key::Escape | gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
+                println!("Video: Exiting fullscreen");
+                
+                // Restore video to original parent
+                video_picture_restore.unparent();
+                video_picture_restore.set_can_focus(true);
+                video_picture_restore.set_focusable(true);
+                if let Some(parent) = &original_parent_clone {
+                    if let Some(parent_box) = parent.downcast_ref::<GtkBox>() {
+                        parent_box.append(&video_picture_restore);
+                    }
                 }
+                
+                fullscreen_window_clone.close();
+                return glib::Propagation::Stop;
             }
             
-            fullscreen_window_clone.close();
-            return glib::Propagation::Stop;
+            // Space or K: Play/Pause toggle
+            gtk4::gdk::Key::space | gtk4::gdk::Key::k | gtk4::gdk::Key::K => {
+                let mut playing = is_playing_keys.borrow_mut();
+                if *playing {
+                    // Pause
+                    if pipeline_keys.set_state(State::Paused).is_ok() {
+                        *playing = false;
+                        let pause_icon = Image::from_icon_name("media-playback-start");
+                        play_button_keys.set_child(Some(&pause_icon));
+                        play_button_keys.set_tooltip_text(Some("Play"));
+                        println!("Video: Paused via keyboard in fullscreen");
+                    }
+                } else {
+                    // Play
+                    GLOBAL_VIDEO_MANAGER.stop_other_players(&pipeline_keys, &player_id_keys);
+                    crate::audio::stop_all_audio_players();
+                    if pipeline_keys.set_state(State::Playing).is_ok() {
+                        *playing = true;
+                        let play_icon = Image::from_icon_name("media-playback-pause");
+                        play_button_keys.set_child(Some(&play_icon));
+                        play_button_keys.set_tooltip_text(Some("Pause"));
+                        println!("Video: Playing via keyboard in fullscreen");
+                    }
+                }
+                return glib::Propagation::Stop;
+            }
+            
+            // Left arrow: Seek backward 5 seconds
+            gtk4::gdk::Key::Left => {
+                let current_pos = *current_position_keys.borrow();
+                let new_pos = current_pos.saturating_sub(5);
+                let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
+                let _ = pipeline_keys.seek_simple(
+                    gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                    seek_time,
+                );
+                println!("Video: Seeked backward to {} seconds (fullscreen)", new_pos);
+                return glib::Propagation::Stop;
+            }
+            
+            // Right arrow: Seek forward 5 seconds
+            gtk4::gdk::Key::Right => {
+                if let Some(dur) = *duration_keys.borrow() {
+                    let current_pos = *current_position_keys.borrow();
+                    let new_pos = (current_pos + 5).min(dur);
+                    let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
+                    let _ = pipeline_keys.seek_simple(
+                        gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                        seek_time,
+                    );
+                    println!("Video: Seeked forward to {} seconds (fullscreen)", new_pos);
+                }
+                return glib::Propagation::Stop;
+            }
+            
+            // J: Seek backward 10 seconds
+            gtk4::gdk::Key::j | gtk4::gdk::Key::J => {
+                let current_pos = *current_position_keys.borrow();
+                let new_pos = current_pos.saturating_sub(10);
+                let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
+                let _ = pipeline_keys.seek_simple(
+                    gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                    seek_time,
+                );
+                println!("Video: Seeked backward 10s to {} seconds (fullscreen)", new_pos);
+                return glib::Propagation::Stop;
+            }
+            
+            // L: Seek forward 10 seconds
+            gtk4::gdk::Key::l | gtk4::gdk::Key::L => {
+                if let Some(dur) = *duration_keys.borrow() {
+                    let current_pos = *current_position_keys.borrow();
+                    let new_pos = (current_pos + 10).min(dur);
+                    let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
+                    let _ = pipeline_keys.seek_simple(
+                        gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                        seek_time,
+                    );
+                    println!("Video: Seeked forward 10s to {} seconds (fullscreen)", new_pos);
+                }
+                return glib::Propagation::Stop;
+            }
+            
+            // Home or 0: Jump to beginning
+            gtk4::gdk::Key::Home | gtk4::gdk::Key::_0 => {
+                let seek_time = gstreamer::ClockTime::from_seconds(0);
+                let _ = pipeline_keys.seek_simple(
+                    gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                    seek_time,
+                );
+                println!("Video: Jumped to beginning (fullscreen)");
+                return glib::Propagation::Stop;
+            }
+            
+            // End: Jump to end (or near end)
+            gtk4::gdk::Key::End => {
+                if let Some(dur) = *duration_keys.borrow() {
+                    let seek_time = gstreamer::ClockTime::from_seconds(dur.saturating_sub(1));
+                    let _ = pipeline_keys.seek_simple(
+                        gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                        seek_time,
+                    );
+                    println!("Video: Jumped to end (fullscreen)");
+                }
+                return glib::Propagation::Stop;
+            }
+            
+            _ => {}
         }
         glib::Propagation::Proceed
     });
@@ -368,37 +496,10 @@ impl VideoPlayer {
         video_picture.set_can_shrink(true);
         video_picture.set_keep_aspect_ratio(true);
         
-        // Add double-click gesture for fullscreen
+        // Add double-click gesture for fullscreen (will be configured later with pipeline data)
         let double_click_gesture = GestureClick::new();
         double_click_gesture.set_button(1); // Left mouse button
-        let video_picture_for_fullscreen = video_picture.clone();
-        double_click_gesture.connect_pressed(move |gesture, n_press, _x, _y| {
-            if n_press == 2 { // Double-click
-                // Get the window we're in
-                if let Some(widget) = gesture.widget() {
-                    if let Some(root) = widget.root() {
-                        // Check if we're in a fullscreen window (undecorated)
-                        if let Some(window) = root.downcast_ref::<gtk4::Window>() {
-                            if !window.is_decorated() {
-                                // We're in fullscreen, close it
-                                println!("Video: Double-click in fullscreen, exiting");
-                                window.close();
-                                return;
-                            }
-                        }
-                        
-                        // Not in fullscreen, enter fullscreen
-                        println!("Video: Double-click detected, entering fullscreen");
-                        if let Some(app_window) = root.downcast_ref::<gtk4::ApplicationWindow>() {
-                            enter_fullscreen(&video_picture_for_fullscreen, app_window);
-                        } else if let Some(window) = root.downcast_ref::<gtk4::Window>() {
-                            enter_fullscreen(&video_picture_for_fullscreen, window);
-                        }
-                    }
-                }
-            }
-        });
-        video_picture.add_controller(double_click_gesture);
+        video_picture.add_controller(double_click_gesture.clone());
         
         video_box.append(&video_picture);
         
@@ -659,6 +760,60 @@ impl VideoPlayer {
             }
         ));
         
+        // Configure double-click gesture for fullscreen with pipeline and state
+        let video_picture_for_fullscreen = video_picture.clone();
+        let pipeline_fullscreen = player.pipeline.clone();
+        let is_playing_fullscreen = is_playing.clone();
+        let play_button_fullscreen = play_button.clone();
+        let player_id_fullscreen = player_id.clone();
+        let duration_fullscreen = duration.clone();
+        let current_position_fullscreen = current_position.clone();
+        
+        double_click_gesture.connect_pressed(move |gesture, n_press, _x, _y| {
+            if n_press == 2 { // Double-click
+                // Get the window we're in
+                if let Some(widget) = gesture.widget() {
+                    if let Some(root) = widget.root() {
+                        // Check if we're in a fullscreen window (undecorated)
+                        if let Some(window) = root.downcast_ref::<gtk4::Window>() {
+                            if !window.is_decorated() {
+                                // We're in fullscreen, close it
+                                println!("Video: Double-click in fullscreen, exiting");
+                                window.close();
+                                return;
+                            }
+                        }
+                        
+                        // Not in fullscreen, enter fullscreen
+                        println!("Video: Double-click detected, entering fullscreen");
+                        if let Some(app_window) = root.downcast_ref::<gtk4::ApplicationWindow>() {
+                            enter_fullscreen(
+                                &video_picture_for_fullscreen,
+                                app_window,
+                                &pipeline_fullscreen,
+                                &is_playing_fullscreen,
+                                &play_button_fullscreen,
+                                &player_id_fullscreen,
+                                &duration_fullscreen,
+                                &current_position_fullscreen,
+                            );
+                        } else if let Some(window) = root.downcast_ref::<gtk4::Window>() {
+                            enter_fullscreen(
+                                &video_picture_for_fullscreen,
+                                window,
+                                &pipeline_fullscreen,
+                                &is_playing_fullscreen,
+                                &play_button_fullscreen,
+                                &player_id_fullscreen,
+                                &duration_fullscreen,
+                                &current_position_fullscreen,
+                            );
+                        }
+                    }
+                }
+            }
+        });
+        
         // Set up pipeline volume monitoring from global audio volume
         let pipeline_volume_monitor = player.pipeline.clone();
         glib::timeout_add_local(Duration::from_millis(500), move || {
@@ -710,6 +865,165 @@ impl VideoPlayer {
             
             glib::Propagation::Proceed
         });
+        
+        // Add keyboard controls for video playback
+        let key_controller = EventControllerKey::new();
+        let video_picture_keys = video_picture.clone();
+        let pipeline_keys = player.pipeline.clone();
+        let is_playing_keys = is_playing.clone();
+        let play_button_keys = play_button.clone();
+        let player_id_keys = player_id.clone();
+        let duration_keys = duration.clone();
+        let current_position_keys = current_position.clone();
+        
+        key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
+            match key {
+                // Space or K: Play/Pause toggle
+                gtk4::gdk::Key::space | gtk4::gdk::Key::k | gtk4::gdk::Key::K => {
+                    let mut playing = is_playing_keys.borrow_mut();
+                    if *playing {
+                        // Pause
+                        if pipeline_keys.set_state(State::Paused).is_ok() {
+                            *playing = false;
+                            let pause_icon = Image::from_icon_name("media-playback-start");
+                            play_button_keys.set_child(Some(&pause_icon));
+                            play_button_keys.set_tooltip_text(Some("Play"));
+                            println!("Video: Paused via keyboard");
+                        }
+                    } else {
+                        // Play
+                        GLOBAL_VIDEO_MANAGER.stop_other_players(&pipeline_keys, &player_id_keys);
+                        crate::audio::stop_all_audio_players();
+                        if pipeline_keys.set_state(State::Playing).is_ok() {
+                            *playing = true;
+                            let play_icon = Image::from_icon_name("media-playback-pause");
+                            play_button_keys.set_child(Some(&play_icon));
+                            play_button_keys.set_tooltip_text(Some("Pause"));
+                            println!("Video: Playing via keyboard");
+                        }
+                    }
+                    return glib::Propagation::Stop;
+                }
+                
+                // Left arrow: Seek backward 5 seconds
+                gtk4::gdk::Key::Left => {
+                    let current_pos = *current_position_keys.borrow();
+                    let new_pos = current_pos.saturating_sub(5);
+                    let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
+                    let _ = pipeline_keys.seek_simple(
+                        gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                        seek_time,
+                    );
+                    println!("Video: Seeked backward to {} seconds", new_pos);
+                    return glib::Propagation::Stop;
+                }
+                
+                // Right arrow: Seek forward 5 seconds
+                gtk4::gdk::Key::Right => {
+                    if let Some(dur) = *duration_keys.borrow() {
+                        let current_pos = *current_position_keys.borrow();
+                        let new_pos = (current_pos + 5).min(dur);
+                        let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
+                        let _ = pipeline_keys.seek_simple(
+                            gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                            seek_time,
+                        );
+                        println!("Video: Seeked forward to {} seconds", new_pos);
+                    }
+                    return glib::Propagation::Stop;
+                }
+                
+                // J: Seek backward 10 seconds
+                gtk4::gdk::Key::j | gtk4::gdk::Key::J => {
+                    let current_pos = *current_position_keys.borrow();
+                    let new_pos = current_pos.saturating_sub(10);
+                    let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
+                    let _ = pipeline_keys.seek_simple(
+                        gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                        seek_time,
+                    );
+                    println!("Video: Seeked backward 10s to {} seconds", new_pos);
+                    return glib::Propagation::Stop;
+                }
+                
+                // L: Seek forward 10 seconds
+                gtk4::gdk::Key::l | gtk4::gdk::Key::L => {
+                    if let Some(dur) = *duration_keys.borrow() {
+                        let current_pos = *current_position_keys.borrow();
+                        let new_pos = (current_pos + 10).min(dur);
+                        let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
+                        let _ = pipeline_keys.seek_simple(
+                            gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                            seek_time,
+                        );
+                        println!("Video: Seeked forward 10s to {} seconds", new_pos);
+                    }
+                    return glib::Propagation::Stop;
+                }
+                
+                // Home or 0: Jump to beginning
+                gtk4::gdk::Key::Home | gtk4::gdk::Key::_0 => {
+                    let seek_time = gstreamer::ClockTime::from_seconds(0);
+                    let _ = pipeline_keys.seek_simple(
+                        gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                        seek_time,
+                    );
+                    println!("Video: Jumped to beginning");
+                    return glib::Propagation::Stop;
+                }
+                
+                // End: Jump to end (or near end)
+                gtk4::gdk::Key::End => {
+                    if let Some(dur) = *duration_keys.borrow() {
+                        let seek_time = gstreamer::ClockTime::from_seconds(dur.saturating_sub(1));
+                        let _ = pipeline_keys.seek_simple(
+                            gstreamer::SeekFlags::FLUSH | gstreamer::SeekFlags::KEY_UNIT,
+                            seek_time,
+                        );
+                        println!("Video: Jumped to end");
+                    }
+                    return glib::Propagation::Stop;
+                }
+                
+                // F: Enter fullscreen
+                gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
+                    if let Some(widget) = _controller.widget() {
+                        if let Some(root) = widget.root() {
+                            println!("Video: F key pressed, entering fullscreen");
+                            if let Some(app_window) = root.downcast_ref::<gtk4::ApplicationWindow>() {
+                                enter_fullscreen(
+                                    &video_picture_keys,
+                                    app_window,
+                                    &pipeline_keys,
+                                    &is_playing_keys,
+                                    &play_button_keys,
+                                    &player_id_keys,
+                                    &duration_keys,
+                                    &current_position_keys,
+                                );
+                            } else if let Some(window) = root.downcast_ref::<gtk4::Window>() {
+                                enter_fullscreen(
+                                    &video_picture_keys,
+                                    window,
+                                    &pipeline_keys,
+                                    &is_playing_keys,
+                                    &play_button_keys,
+                                    &player_id_keys,
+                                    &duration_keys,
+                                    &current_position_keys,
+                                );
+                            }
+                        }
+                    }
+                    return glib::Propagation::Stop;
+                }
+                
+                _ => {}
+            }
+            glib::Propagation::Proceed
+        });
+        
+        player.widget.add_controller(key_controller);
         
         // Set up periodic position updates
         let pipeline_query = player.pipeline.clone();
