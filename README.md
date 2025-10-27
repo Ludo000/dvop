@@ -145,3 +145,15 @@ After building, you can install the application system-wide by running:
     sudo cargo install --path .
    ```
 You can now run basado-text-editor from any terminal.
+
+## 📜 Legal Notice
+
+This project was developed entirely on personal time and equipment, outside of any professional or contractual duties.  
+It was not created as part of any employment relationship, nor under any instructions or using any resources, materials, or information belonging to any employer or client.
+
+The author retains full copyright ownership of the original source code.
+
+This project is distributed under the terms of the **GNU General Public License version 3 (GPLv3)**, as published by the Free Software Foundation.  
+See the `LICENSE` file for full license details.
+
+©Ludovic Scholz - 2025
