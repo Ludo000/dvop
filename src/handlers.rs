@@ -1421,6 +1421,7 @@ pub fn setup_text_editor_interaction_tracking(text_view: &gtk4::TextView) {
 
 /// Checks if any text editor in the notebook currently has focus
 /// Returns true if a text editor (SourceView) has focus, false otherwise
+#[allow(dead_code)]
 fn is_text_editor_focused(notebook: &gtk4::Notebook) -> bool {
     if let Some(current_page_num) = notebook.current_page() {
         if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, current_page_num) {
@@ -1437,6 +1438,7 @@ fn is_text_editor_focused(notebook: &gtk4::Notebook) -> bool {
 
 /// Checks if the file manager should handle clipboard operations
 /// Returns true if file manager operations should be prioritized over text operations
+#[allow(dead_code)]
 fn should_handle_file_operations(notebook: &gtk4::Notebook, file_list_box: &gtk4::ListBox) -> bool {
     let text_editor_has_focus = is_text_editor_focused(notebook);
     let file_list_has_focus = file_list_box.has_focus();

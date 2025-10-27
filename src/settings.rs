@@ -321,6 +321,7 @@ impl EditorSettings {
 
 /// Helper function to save the current folder to settings
 /// This should be called whenever the current directory changes
+#[allow(dead_code)]
 pub fn save_current_folder(folder: &Path) {
     let mut settings = get_settings_mut();
     settings.set_last_folder(folder);

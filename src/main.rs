@@ -1218,7 +1218,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let n_pages = editor_notebook_for_close.n_pages();
         let mut opened_files = Vec::new();
         for i in 0..n_pages {
-            if let Some(page) = editor_notebook_for_close.nth_page(Some(i)) {
+            if editor_notebook_for_close.nth_page(Some(i)).is_some() {
                 let page_num = i as u32;
                 if let Some(path) = file_path_manager_for_close.borrow().get(&page_num) {
                     opened_files.push(path.clone());

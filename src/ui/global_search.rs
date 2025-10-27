@@ -78,6 +78,7 @@ fn search_in_content(
 }
 
 /// Search in an open buffer instead of reading from disk
+#[allow(dead_code)]
 fn search_in_buffer(
     editor_notebook: &gtk::Notebook,
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
@@ -450,6 +451,7 @@ fn search_file(path: &Path, needle: &str, case_sensitive: bool, whole_word: bool
 
 /// Highlight all occurrences of needle in text with green background and white text
 /// For multi-line needles, only highlight the portion that appears in the text
+#[allow(dead_code)]
 fn highlight_matches(text: &str, needle: &str, case_sensitive: bool) -> String {
     if needle.is_empty() {
         return glib::markup_escape_text(text).to_string();
@@ -524,6 +526,7 @@ fn walk_dir_recursive(root: &Path, files_out: &mut Vec<PathBuf>, max_files: usiz
 }
 
 /// Reload a file in the editor if it's currently open
+#[allow(dead_code)]
 fn reload_file_in_editor(
     path: &Path,
     editor_notebook: &gtk::Notebook,
@@ -747,6 +750,7 @@ fn replace_in_buffer(
 }
 
 /// Replace a single occurrence in a file
+#[allow(dead_code)]
 fn perform_file_replace(
     path: &Path,
     line: usize,
@@ -810,6 +814,7 @@ fn perform_file_replace(
 }
 
 /// Replace all occurrences in a file
+#[allow(dead_code)]
 fn perform_file_replace_all(
     path: &Path,
     matches: &[(usize, usize, String, bool)], // (line, col, needle, case_sensitive)

@@ -27,6 +27,7 @@ pub struct SnippetData {
 
 /// Represents import completion data for a module path
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ImportData {
     pub module_path: String,
     pub items: Vec<ImportItem>,
