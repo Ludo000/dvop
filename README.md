@@ -1,5 +1,9 @@
 # Dvop
 
+<p align="center">
+  <img src="dvop.svg" alt="Dvop Logo" width="128" height="128">
+</p>
+
 ## Overview
 Dvop is an IDE built using GTK4 and Rust. It provides basic text editing functionality along with an embedded terminal and syntax highlighting for various programming languages. This guide provides steps to install dependencies, build, install, and run the application on Linux (Ubuntu), macOS, and Windows.
 
@@ -142,11 +146,33 @@ The editor supports dark mode for comfortable coding in low-light environments:
 
 ## Installing the Application
 
-After building, you can install the application system-wide by running:
+### Recommended Installation (with desktop integration)
+For proper desktop integration including application icon and menu entry:
    ```bash
-    sudo cargo install --path .
+    ./install.sh
    ```
-You can now run dvop from any terminal.
+This will:
+- Install the `dvop` binary to `~/.cargo/bin/`
+- Install the desktop file for application menu integration
+- Install the application icon
+- Update icon and desktop caches
+
+### Manual Installation
+Alternatively, you can install just the binary:
+   ```bash
+    cargo install --path .
+   ```
+
+### Uninstalling
+To uninstall the application:
+   ```bash
+    ./uninstall.sh
+   ```
+
+After installation, you can:
+- Run `dvop` from any terminal
+- Launch Dvop from your application menu
+- Pin it to your dock/taskbar
 
 ## 📜 Legal Notice
 
