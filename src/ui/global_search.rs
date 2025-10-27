@@ -29,6 +29,251 @@ fn is_text_file(path: &Path) -> bool {
     crate::utils::is_allowed_mime_type(&mime)
 }
 
+/// Search in string content (for open buffer content)
+fn search_in_content(
+    path: &Path,
+    content: &str,
+    query: &str,
+    case_sensitive: bool,
+    whole_word: bool,
+) -> Vec<SearchResult> {
+    let mut results = Vec::new();
+    let lines: Vec<&str> = content.lines().collect();
+    let query_lower = query.to_lowercase();
+    
+    for (line_num, line) in lines.iter().enumerate() {
+        let search_line = if case_sensitive { line.to_string() } else { line.to_lowercase() };
+        let search_query = if case_sensitive { query } else { &query_lower };
+        
+        let mut start = 0;
+        while let Some(pos) = search_line[start..].find(search_query) {
+            let actual_pos = start + pos;
+            
+            // Check whole word if needed
+            if whole_word {
+                let before_ok = actual_pos == 0 || !search_line.as_bytes()[actual_pos - 1].is_ascii_alphanumeric();
+                let after_idx = actual_pos + search_query.len();
+                let after_ok = after_idx >= search_line.len() || !search_line.as_bytes()[after_idx].is_ascii_alphanumeric();
+                
+                if !(before_ok && after_ok) {
+                    start = actual_pos + 1;
+                    continue;
+                }
+            }
+            
+            results.push(SearchResult {
+                path: path.to_path_buf(),
+                line: line_num + 1,
+                col: actual_pos + 1,
+                preview: line.to_string(),
+                needle: query.to_string(),
+                case_sensitive,
+            });
+            
+            start = actual_pos + 1;
+        }
+    }
+    
+    results
+}
+
+/// Search in an open buffer instead of reading from disk
+fn search_in_buffer(
+    editor_notebook: &gtk::Notebook,
+    file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    path: &Path,
+    needle: &str,
+    case_sensitive: bool,
+    whole_word: bool,
+) -> Option<Vec<SearchResult>> {
+    // Find the tab with this file
+    let file_path_map = file_path_manager.borrow();
+    let mut target_page_num: Option<u32> = None;
+    
+    for (page_num, tab_path) in file_path_map.iter() {
+        if tab_path == path {
+            target_page_num = Some(*page_num);
+            break;
+        }
+    }
+    
+    drop(file_path_map);
+    
+    let page_num = target_page_num?;
+    
+    // Get the page widget
+    let page = editor_notebook.nth_page(Some(page_num))?;
+    let scrolled = page.downcast_ref::<gtk4::ScrolledWindow>()?;
+    let child = scrolled.child()?;
+    
+    // Get buffer content
+    let content = if let Some(source_view) = child.downcast_ref::<sourceview5::View>() {
+        let buffer = source_view.buffer();
+        buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string()
+    } else if let Some(text_view) = child.downcast_ref::<gtk4::TextView>() {
+        let buffer = text_view.buffer();
+        buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string()
+    } else {
+        return None;
+    };
+    
+    // Now search in the buffer content
+    let mut results = Vec::new();
+    
+    if needle.is_empty() {
+        return Some(results);
+    }
+    
+    // Check if needle contains newlines (multi-line search)
+    if needle.contains('\n') {
+        let search_content = if case_sensitive { content.clone() } else { content.to_lowercase() };
+        let search_needle = if case_sensitive { needle.to_string() } else { needle.to_lowercase() };
+        
+        let mut search_start = 0;
+        while let Some(match_pos) = search_content[search_start..].find(&search_needle) {
+            let abs_pos = search_start + match_pos;
+            
+            // Check whole word match
+            if whole_word {
+                let match_end = abs_pos + search_needle.len();
+                let before_ok = abs_pos == 0 || !content.chars().nth(abs_pos - 1).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
+                let after_ok = match_end >= content.len() || !content.chars().nth(match_end).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
+                if !before_ok || !after_ok {
+                    search_start = abs_pos + 1;
+                    continue;
+                }
+            }
+            
+            // Calculate line and column
+            let before_match = &content[..abs_pos];
+            let line_no = before_match.matches('\n').count() + 1;
+            let last_newline = before_match.rfind('\n').map(|p| p + 1).unwrap_or(0);
+            let col = abs_pos - last_newline + 1;
+            
+            // Get preview
+            let match_end = abs_pos + needle.len();
+            let line_start = last_newline;
+            let max_lines_to_show = 5;
+            let mut preview_lines = Vec::new();
+            let mut current_pos = line_start;
+            
+            for _ in 0..max_lines_to_show {
+                if current_pos >= content.len() {
+                    break;
+                }
+                let next_newline = content[current_pos..].find('\n').map(|p| current_pos + p).unwrap_or(content.len());
+                let line_text = &content[current_pos..next_newline];
+                preview_lines.push(line_text.to_string());
+                
+                if next_newline >= match_end {
+                    break;
+                }
+                
+                current_pos = next_newline + 1;
+            }
+            
+            let match_text = &content[abs_pos..match_end.min(content.len())];
+            let num_lines = match_text.matches('\n').count();
+            
+            let preview = if preview_lines.len() > 1 {
+                let shown = preview_lines.join("\n");
+                if num_lines + 1 > preview_lines.len() {
+                    let remaining = num_lines + 1 - preview_lines.len();
+                    format!("{}... (+{} more line{})", shown.trim_end(), remaining, if remaining == 1 { "" } else { "s" })
+                } else {
+                    shown
+                }
+            } else if !preview_lines.is_empty() {
+                preview_lines[0].to_string()
+            } else {
+                String::new()
+            };
+            
+            results.push(SearchResult {
+                path: path.to_path_buf(),
+                line: line_no,
+                col,
+                preview,
+                needle: needle.to_string(),
+                case_sensitive,
+            });
+            
+            search_start = abs_pos + 1;
+        }
+    } else {
+        // Single-line search
+        let mut line_no = 0usize;
+        for line in content.lines() {
+            line_no += 1;
+            if case_sensitive {
+                let mut search_pos = 0;
+                while let Some(idx) = line[search_pos..].find(needle) {
+                    let abs_idx = search_pos + idx;
+                    if whole_word {
+                        let match_end = abs_idx + needle.len();
+                        let before_ok = abs_idx == 0 || !line.chars().nth(abs_idx - 1).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
+                        let after_ok = match_end >= line.len() || !line.chars().nth(match_end).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
+                        if before_ok && after_ok {
+                            results.push(SearchResult { 
+                                path: path.to_path_buf(), 
+                                line: line_no, 
+                                col: abs_idx + 1, 
+                                preview: line.to_string(),
+                                needle: needle.to_string(),
+                                case_sensitive,
+                            });
+                        }
+                    } else {
+                        results.push(SearchResult { 
+                            path: path.to_path_buf(), 
+                            line: line_no, 
+                            col: abs_idx + 1, 
+                            preview: line.to_string(),
+                            needle: needle.to_string(),
+                            case_sensitive,
+                        });
+                    }
+                    search_pos = abs_idx + 1;
+                }
+            } else {
+                let l = line.to_lowercase();
+                let n = needle.to_lowercase();
+                let mut search_pos = 0;
+                while let Some(idx) = l[search_pos..].find(&n) {
+                    let abs_idx = search_pos + idx;
+                    if whole_word {
+                        let match_end = abs_idx + n.len();
+                        let before_ok = abs_idx == 0 || !l.chars().nth(abs_idx - 1).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
+                        let after_ok = match_end >= l.len() || !l.chars().nth(match_end).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
+                        if before_ok && after_ok {
+                            results.push(SearchResult { 
+                                path: path.to_path_buf(), 
+                                line: line_no, 
+                                col: abs_idx + 1, 
+                                preview: line.to_string(),
+                                needle: needle.to_string(),
+                                case_sensitive,
+                            });
+                        }
+                    } else {
+                        results.push(SearchResult { 
+                            path: path.to_path_buf(), 
+                            line: line_no, 
+                            col: abs_idx + 1, 
+                            preview: line.to_string(),
+                            needle: needle.to_string(),
+                            case_sensitive,
+                        });
+                    }
+                    search_pos = abs_idx + 1;
+                }
+            }
+        }
+    }
+    
+    Some(results)
+}
+
 fn search_file(path: &Path, needle: &str, case_sensitive: bool, whole_word: bool, max_file_size_bytes: u64) -> Vec<SearchResult> {
     // Skip very large files to avoid UI stalls
     if let Ok(meta) = fs::metadata(path) {
@@ -150,7 +395,6 @@ fn search_file(path: &Path, needle: &str, case_sensitive: bool, whole_word: bool
                                     needle: needle.to_string(),
                                     case_sensitive,
                                 });
-                                break;
                             }
                         } else {
                             results.push(SearchResult { 
@@ -161,7 +405,6 @@ fn search_file(path: &Path, needle: &str, case_sensitive: bool, whole_word: bool
                                 needle: needle.to_string(),
                                 case_sensitive,
                             });
-                            break;
                         }
                         search_pos = abs_idx + 1;
                     }
@@ -185,7 +428,6 @@ fn search_file(path: &Path, needle: &str, case_sensitive: bool, whole_word: bool
                                     needle: needle.to_string(),
                                     case_sensitive,
                                 });
-                                break;
                             }
                         } else {
                             results.push(SearchResult { 
@@ -196,7 +438,6 @@ fn search_file(path: &Path, needle: &str, case_sensitive: bool, whole_word: bool
                                 needle: needle.to_string(),
                                 case_sensitive,
                             });
-                            break;
                         }
                         search_pos = abs_idx + 1;
                     }
@@ -280,6 +521,355 @@ fn walk_dir_recursive(root: &Path, files_out: &mut Vec<PathBuf>, max_files: usiz
             }
         }
     }
+}
+
+/// Reload a file in the editor if it's currently open
+fn reload_file_in_editor(
+    path: &Path,
+    editor_notebook: &gtk::Notebook,
+    file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+) {
+    println!("reload_file_in_editor called for: {}", path.display());
+    
+    // Find the tab with this file
+    let file_path_map = file_path_manager.borrow();
+    let mut target_page_num: Option<u32> = None;
+    
+    println!("Checking {} open tabs", file_path_map.len());
+    for (page_num, tab_path) in file_path_map.iter() {
+        println!("  Tab {}: {}", page_num, tab_path.display());
+        if tab_path == path {
+            target_page_num = Some(*page_num);
+            println!("  -> MATCH found at page {}", page_num);
+            break;
+        }
+    }
+    
+    drop(file_path_map); // Release the borrow
+    
+    if let Some(page_num) = target_page_num {
+        println!("File is open at page {}, attempting reload", page_num);
+        // File is open, reload its content
+        if let Some(page) = editor_notebook.nth_page(Some(page_num)) {
+            println!("Got page widget");
+            if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                println!("Page is ScrolledWindow");
+                if let Some(child) = scrolled.child() {
+                    println!("ScrolledWindow has child");
+                    // Try sourceview5::View first (most likely in this editor)
+                    if let Some(source_view) = child.downcast_ref::<sourceview5::View>() {
+                        println!("Child is SourceView");
+                        let buffer = source_view.buffer();
+                        
+                        // Read the updated file content
+                        if let Ok(new_content) = fs::read_to_string(path) {
+                            println!("Read file content: {} bytes", new_content.len());
+                            // Preserve cursor position if possible
+                            let cursor_iter = buffer.iter_at_mark(&buffer.get_insert());
+                            let cursor_offset = cursor_iter.offset();
+                            
+                            // Update buffer content
+                            buffer.set_text(&new_content);
+                            
+                            // Restore cursor position
+                            let new_cursor_iter = buffer.iter_at_offset(cursor_offset.min(buffer.char_count()));
+                            buffer.place_cursor(&new_cursor_iter);
+                            
+                            println!("✓ Reloaded file in SourceView: {}", path.display());
+                        } else {
+                            eprintln!("✗ Failed to read updated file: {}", path.display());
+                        }
+                    }
+                    // Also try TextView
+                    else if let Some(text_view) = child.downcast_ref::<gtk4::TextView>() {
+                        println!("Child is TextView");
+                        let buffer = text_view.buffer();
+                        
+                        // Read the updated file content
+                        if let Ok(new_content) = fs::read_to_string(path) {
+                            println!("Read file content: {} bytes", new_content.len());
+                            // Preserve cursor position if possible
+                            let cursor_iter = buffer.iter_at_mark(&buffer.get_insert());
+                            let cursor_offset = cursor_iter.offset();
+                            
+                            // Update buffer content
+                            buffer.set_text(&new_content);
+                            
+                            // Restore cursor position
+                            let new_cursor_iter = buffer.iter_at_offset(cursor_offset.min(buffer.char_count()));
+                            buffer.place_cursor(&new_cursor_iter);
+                            
+                            println!("✓ Reloaded file in TextView: {}", path.display());
+                        } else {
+                            eprintln!("✗ Failed to read updated file: {}", path.display());
+                        }
+                    } else {
+                        eprintln!("✗ Child widget is neither TextView nor SourceView for: {}", path.display());
+                        eprintln!("  Widget type: {:?}", child.type_());
+                    }
+                } else {
+                    eprintln!("✗ ScrolledWindow has no child for: {}", path.display());
+                }
+            } else {
+                eprintln!("✗ Page is not a ScrolledWindow for: {}", path.display());
+            }
+        } else {
+            eprintln!("✗ Could not get page {} for: {}", page_num, path.display());
+        }
+    } else {
+        println!("File is not currently open: {}", path.display());
+    }
+}
+
+/// Replace text in an open buffer (without saving to disk)
+fn replace_in_buffer(
+    editor_notebook: &gtk::Notebook,
+    file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    path: &Path,
+    line: usize,
+    col: usize,
+    needle: &str,
+    replace_text: &str,
+    case_sensitive: bool,
+) -> Result<(), String> {
+    // Find the tab with this file
+    let file_path_map = file_path_manager.borrow();
+    let mut target_page_num: Option<u32> = None;
+    
+    for (page_num, tab_path) in file_path_map.iter() {
+        if tab_path == path {
+            target_page_num = Some(*page_num);
+            break;
+        }
+    }
+    
+    drop(file_path_map);
+    
+    let page_num = target_page_num.ok_or_else(|| format!("File not open: {}", path.display()))?;
+    
+    // Get the page widget
+    let page = editor_notebook.nth_page(Some(page_num))
+        .ok_or_else(|| "Could not get page".to_string())?;
+    
+    let scrolled = page.downcast_ref::<gtk4::ScrolledWindow>()
+        .ok_or_else(|| "Page is not a ScrolledWindow".to_string())?;
+    
+    let child = scrolled.child()
+        .ok_or_else(|| "ScrolledWindow has no child".to_string())?;
+    
+    // Try SourceView first
+    if let Some(source_view) = child.downcast_ref::<sourceview5::View>() {
+        let buffer = source_view.buffer();
+        
+        // Get start iterator at the beginning of the line
+        let mut start_iter = buffer.start_iter();
+        start_iter.set_line(line.saturating_sub(1) as i32);
+        
+        // For safety, search for the needle on this line instead of using the exact column
+        // This handles cases where previous replacements shifted positions
+        let line_end = start_iter;
+        let mut line_end = line_end;
+        if !line_end.ends_line() {
+            line_end.forward_to_line_end();
+        }
+        let line_text = buffer.text(&start_iter, &line_end, false).to_string();
+        
+        // Find the needle starting from the expected column position
+        let col_offset = col.saturating_sub(1);
+        let search_start = col_offset.min(line_text.len());
+        
+        let needle_pos = if case_sensitive {
+            line_text[search_start..].find(needle).map(|p| search_start + p)
+        } else {
+            line_text[search_start..].to_lowercase().find(&needle.to_lowercase()).map(|p| search_start + p)
+        };
+        
+        if let Some(pos) = needle_pos {
+            // Position the iterators at the match
+            start_iter.set_line_offset(pos as i32);
+            let mut end_iter = start_iter;
+            end_iter.forward_chars(needle.chars().count() as i32);
+            
+            // Perform the replacement
+            buffer.delete(&mut start_iter, &mut end_iter);
+            buffer.insert(&mut start_iter, replace_text);
+            
+            return Ok(());
+        } else {
+            // If not found at expected position, it might have already been replaced
+            return Err(format!("Text '{}' not found at line {} starting from column {}", needle, line, col));
+        }
+    }
+    
+    // Try TextView
+    if let Some(text_view) = child.downcast_ref::<gtk4::TextView>() {
+        let buffer = text_view.buffer();
+        
+        // Get start iterator at the beginning of the line
+        let mut start_iter = buffer.start_iter();
+        start_iter.set_line(line.saturating_sub(1) as i32);
+        
+        // Search for the needle on this line instead of using exact column
+        let line_end = start_iter;
+        let mut line_end = line_end;
+        if !line_end.ends_line() {
+            line_end.forward_to_line_end();
+        }
+        let line_text = buffer.text(&start_iter, &line_end, false).to_string();
+        
+        // Find the needle starting from the expected column position
+        let col_offset = col.saturating_sub(1);
+        let search_start = col_offset.min(line_text.len());
+        
+        let needle_pos = if case_sensitive {
+            line_text[search_start..].find(needle).map(|p| search_start + p)
+        } else {
+            line_text[search_start..].to_lowercase().find(&needle.to_lowercase()).map(|p| search_start + p)
+        };
+        
+        if let Some(pos) = needle_pos {
+            // Position the iterators at the match
+            start_iter.set_line_offset(pos as i32);
+            let mut end_iter = start_iter;
+            end_iter.forward_chars(needle.chars().count() as i32);
+            
+            // Perform the replacement
+            buffer.delete(&mut start_iter, &mut end_iter);
+            buffer.insert(&mut start_iter, replace_text);
+            
+            return Ok(());
+        } else {
+            return Err(format!("Text '{}' not found at line {} starting from column {}", needle, line, col));
+        }
+    }
+    
+    Err("Widget is neither TextView nor SourceView".to_string())
+}
+
+/// Replace a single occurrence in a file
+fn perform_file_replace(
+    path: &Path,
+    line: usize,
+    col: usize,
+    needle: &str,
+    replace_text: &str,
+    case_sensitive: bool,
+) -> Result<(), std::io::Error> {
+    let content = fs::read_to_string(path)?;
+    let lines: Vec<&str> = content.lines().collect();
+    
+    if line == 0 || line > lines.len() {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Line out of range"));
+    }
+    
+    let target_line = lines[line - 1];
+    let col_index = col.saturating_sub(1);
+    
+    // Verify the match exists at this position
+    let match_end = col_index + needle.len();
+    if match_end > target_line.len() {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Column out of range"));
+    }
+    
+    let actual_text = &target_line[col_index..match_end];
+    let matches = if case_sensitive {
+        actual_text == needle
+    } else {
+        actual_text.to_lowercase() == needle.to_lowercase()
+    };
+    
+    if !matches {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Text doesn't match at position"));
+    }
+    
+    // Perform the replacement
+    let new_line = format!(
+        "{}{}{}",
+        &target_line[..col_index],
+        replace_text,
+        &target_line[match_end..]
+    );
+    
+    // Build new content with the replaced line
+    let mut new_content = String::new();
+    let target_line_index = line - 1;
+    for (i, line_str) in lines.iter().enumerate() {
+        if i == target_line_index {
+            new_content.push_str(&new_line);
+        } else {
+            new_content.push_str(line_str);
+        }
+        if i < lines.len() - 1 || content.ends_with('\n') {
+            new_content.push('\n');
+        }
+    }
+    
+    fs::write(path, new_content)?;
+    
+    Ok(())
+}
+
+/// Replace all occurrences in a file
+fn perform_file_replace_all(
+    path: &Path,
+    matches: &[(usize, usize, String, bool)], // (line, col, needle, case_sensitive)
+    replace_text: &str,
+) -> Result<usize, std::io::Error> {
+    let content = fs::read_to_string(path)?;
+    let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
+    
+    // Sort matches by line and column in reverse order to maintain offsets
+    let mut sorted_matches = matches.to_vec();
+    sorted_matches.sort_by(|a, b| {
+        match b.0.cmp(&a.0) {
+            std::cmp::Ordering::Equal => b.1.cmp(&a.1),
+            other => other,
+        }
+    });
+    
+    let mut replaced = 0;
+    
+    for (line, col, needle, case_sensitive) in sorted_matches {
+        if line == 0 || line > lines.len() {
+            continue;
+        }
+        
+        let line_index = line - 1;
+        let col_index = col.saturating_sub(1);
+        let target_line = &lines[line_index];
+        
+        let match_end = col_index + needle.len();
+        if match_end > target_line.len() {
+            continue;
+        }
+        
+        let actual_text = &target_line[col_index..match_end];
+        let matches = if case_sensitive {
+            actual_text == needle
+        } else {
+            actual_text.to_lowercase() == needle.to_lowercase()
+        };
+        
+        if !matches {
+            continue;
+        }
+        
+        // Perform the replacement
+        let new_line = format!(
+            "{}{}{}",
+            &target_line[..col_index],
+            replace_text,
+            &target_line[match_end..]
+        );
+        
+        lines[line_index] = new_line;
+        replaced += 1;
+    }
+    
+    let new_content = lines.join("\n");
+    fs::write(path, new_content)?;
+    
+    Ok(replaced)
 }
 
 pub fn show_global_search_dialog(
@@ -368,6 +958,22 @@ pub fn show_global_search_dialog(
     toggle_box.append(&whole_word_toggle);
     overlay.add_overlay(&toggle_box);
     
+    // Replace text area
+    let replace_buffer = TextBuffer::new(None);
+    let replace_text_view = TextView::with_buffer(&replace_buffer);
+    replace_text_view.set_wrap_mode(gtk::WrapMode::Word);
+    replace_text_view.set_accepts_tab(false);
+    replace_text_view.add_css_class("monospace");
+    
+    let replace_scroller = ScrolledWindow::builder()
+        .child(&replace_text_view)
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .vscrollbar_policy(gtk::PolicyType::Automatic)
+        .height_request(80)
+        .hexpand(true)
+        .build();
+    replace_scroller.set_margin_bottom(8);
+    
     // Controls row
     let controls = GtkBox::new(Orientation::Horizontal, 8);
     controls.set_margin_bottom(8);
@@ -378,6 +984,21 @@ pub fn show_global_search_dialog(
     search_btn.add_css_class("suggested-action");
     controls_right.append(&search_btn);
     controls.append(&controls_right);
+    
+    // Replace controls row
+    let replace_controls = GtkBox::new(Orientation::Horizontal, 8);
+    replace_controls.set_margin_bottom(8);
+    replace_controls.append(&replace_scroller);
+    
+    let replace_controls_right = GtkBox::new(Orientation::Horizontal, 4);
+    let replace_btn = Button::with_label("Replace");
+    replace_btn.set_tooltip_text(Some("Replace selected match"));
+    let replace_all_btn = Button::with_label("Replace All");
+    replace_all_btn.set_tooltip_text(Some("Replace all matches in all files"));
+    replace_all_btn.add_css_class("destructive-action");
+    replace_controls_right.append(&replace_btn);
+    replace_controls_right.append(&replace_all_btn);
+    replace_controls.append(&replace_controls_right);
 
     // Status label
     let status = Label::new(Some(""));
@@ -397,6 +1018,7 @@ pub fn show_global_search_dialog(
         .build();
 
     vbox.append(&controls);
+    vbox.append(&replace_controls);
     vbox.append(&status);
     vbox.append(&scroller);
     content.append(&vbox);
@@ -572,6 +1194,8 @@ pub fn show_global_search_dialog(
         let receiver_rc_clone = receiver_rc.clone();
         let sender_rc_clone = sender_rc.clone();
         let current_dir_clone = current_dir.clone();
+        let editor_notebook_clone = editor_notebook.clone();
+        let file_path_manager_clone = file_path_manager.clone();
         Rc::new(move |query: String, case_sensitive: bool, whole_word: bool| {
             // Clear previous results
             while let Some(child) = results_list.first_child() { results_list.remove(&child); }
@@ -586,13 +1210,45 @@ pub fn show_global_search_dialog(
 
             let root = current_dir_clone.borrow().clone();
             
+            // Get open file buffers content (must be done in main thread)
+            let mut open_files_content: std::collections::HashMap<PathBuf, String> = std::collections::HashMap::new();
+            let file_path_map = file_path_manager_clone.borrow();
+            for (page_num, path) in file_path_map.iter() {
+                if let Some(page) = editor_notebook_clone.nth_page(Some(*page_num)) {
+                    if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                        if let Some(child) = scrolled.child() {
+                            let content = if let Some(source_view) = child.downcast_ref::<sourceview5::View>() {
+                                let buffer = source_view.buffer();
+                                buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string()
+                            } else if let Some(text_view) = child.downcast_ref::<gtk4::TextView>() {
+                                let buffer = text_view.buffer();
+                                buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string()
+                            } else {
+                                continue;
+                            };
+                            open_files_content.insert(path.clone(), content);
+                        }
+                    }
+                }
+            }
+            drop(file_path_map);
+            
             // Start search in background thread
             std::thread::spawn(move || {
                 let mut files = Vec::with_capacity(2048);
                 walk_dir_recursive(&root, &mut files, 20000);
                 let mut found = 0usize;
                 for p in files {
-                    for r in search_file(&p, &query, case_sensitive, whole_word, 5 * 1024 * 1024) {
+                    // Check if we have buffer content for this file
+                    let results = if let Some(content) = open_files_content.get(&p) {
+                        // Search in buffer content
+                        search_in_content(&p, content, &query, case_sensitive, whole_word)
+                    } else {
+                        // Search in file on disk
+                        search_file(&p, &query, case_sensitive, whole_word, 5 * 1024 * 1024)
+                    };
+                    
+                    for r in results {
                         found += 1;
                         let _ = sender.send(Some(r));
                         if found >= 10000 { break; }
@@ -781,6 +1437,176 @@ pub fn show_global_search_dialog(
     });
     search_text_view.add_controller(key_controller);
 
+    // Replace button handler - replaces the first/next result automatically
+    let replace_buffer_weak = replace_buffer.downgrade();
+    let results_list_clone = results_list.clone();
+    let editor_notebook_for_replace = editor_notebook.clone();
+    let file_path_manager_for_replace = file_path_manager.clone();
+    replace_btn.connect_clicked(move |_| {
+        if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
+            let replace_text = replace_buffer.text(&replace_buffer.start_iter(), &replace_buffer.end_iter(), false).to_string();
+            
+            // Get the first row (auto-select)
+            if let Some(row) = results_list_clone.row_at_index(0) {
+                if let Some(child) = row.child() {
+                    if let Some(vbox) = child.downcast_ref::<GtkBox>() {
+                        if let Some(first_child) = vbox.first_child() {
+                            if let Some(data_label) = first_child.downcast_ref::<Label>() {
+                                if let Some(tt) = data_label.tooltip_text() {
+                                    // Format: path|line|col|needle|case_sensitive
+                                    let parts: Vec<&str> = tt.splitn(5, '|').collect();
+                                    if parts.len() >= 5 {
+                                        let path = PathBuf::from(parts[0]);
+                                        let line: usize = parts[1].parse().unwrap_or(1);
+                                        let col: usize = parts[2].parse().unwrap_or(1);
+                                        let needle = parts[3].to_string();
+                                        let case_sensitive: bool = parts[4].parse().unwrap_or(false);
+                                        
+                                        // Perform the replacement in buffer only
+                                        match replace_in_buffer(
+                                            &editor_notebook_for_replace,
+                                            &file_path_manager_for_replace,
+                                            &path,
+                                            line,
+                                            col,
+                                            &needle,
+                                            &replace_text,
+                                            case_sensitive
+                                        ) {
+                                            Ok(_) => {
+                                                // Remove the result from the list after successful replacement
+                                                results_list_clone.remove(&row);
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Failed to replace in {}: {}", path.display(), e);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Replace All button handler - replaces all matches in all files
+    let replace_buffer_weak_all = replace_buffer.downgrade();
+    let results_list_clone_all = results_list.clone();
+    let status_clone_for_replace_all = status.clone();
+    let editor_notebook_for_replace_all = editor_notebook.clone();
+    let file_path_manager_for_replace_all = file_path_manager.clone();
+    let parent_window_for_replace_all = parent_window.clone();
+    let active_tab_path_for_replace_all = active_tab_path.clone();
+    let save_button_for_replace_all = save_button.clone();
+    let save_as_button_for_replace_all = save_as_button.clone();
+    let file_list_box_for_replace_all = file_list_box.clone();
+    let current_dir_for_replace_all = current_dir.clone();
+    replace_all_btn.connect_clicked(move |_| {
+        if let Some(replace_buffer) = replace_buffer_weak_all.upgrade() {
+            let replace_text = replace_buffer.text(&replace_buffer.start_iter(), &replace_buffer.end_iter(), false).to_string();
+            
+            // Collect all results
+            let mut replacements = Vec::new();
+            let mut index = 0;
+            while let Some(row) = results_list_clone_all.row_at_index(index) {
+                if let Some(child) = row.child() {
+                    if let Some(vbox) = child.downcast_ref::<GtkBox>() {
+                        if let Some(first_child) = vbox.first_child() {
+                            if let Some(data_label) = first_child.downcast_ref::<Label>() {
+                                if let Some(tt) = data_label.tooltip_text() {
+                                    let parts: Vec<&str> = tt.splitn(5, '|').collect();
+                                    if parts.len() >= 5 {
+                                        let path = PathBuf::from(parts[0]);
+                                        let line: usize = parts[1].parse().unwrap_or(1);
+                                        let col: usize = parts[2].parse().unwrap_or(1);
+                                        let needle = parts[3].to_string();
+                                        let case_sensitive: bool = parts[4].parse().unwrap_or(false);
+                                        replacements.push((path, line, col, needle, case_sensitive));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                index += 1;
+            }
+            
+            // Group replacements by file
+            let mut files_map: std::collections::HashMap<PathBuf, Vec<(usize, usize, String, bool)>> = std::collections::HashMap::new();
+            for (path, line, col, needle, case_sensitive) in replacements {
+                files_map.entry(path).or_insert_with(Vec::new).push((line, col, needle, case_sensitive));
+            }
+            
+            // Perform replacements file by file (in buffer only)
+            let mut total_replaced = 0;
+            for (path, mut matches) in files_map {
+                // Sort matches in reverse order (bottom to top) to preserve positions
+                matches.sort_by(|a, b| {
+                    // Sort by line descending, then by column descending
+                    b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1))
+                });
+                
+                // Open file if not already open
+                let file_path_map = file_path_manager_for_replace_all.borrow();
+                let is_open = file_path_map.values().any(|p| p == &path);
+                drop(file_path_map);
+                
+                if !is_open {
+                    // Open the file first
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        let mime = mime_guess::from_path(&path).first_or_octet_stream();
+                        crate::handlers::open_or_focus_tab(
+                            &editor_notebook_for_replace_all,
+                            &path,
+                            &content,
+                            &active_tab_path_for_replace_all,
+                            &file_path_manager_for_replace_all,
+                            &save_button_for_replace_all,
+                            &save_as_button_for_replace_all,
+                            &mime,
+                            &parent_window_for_replace_all,
+                            &file_list_box_for_replace_all,
+                            &current_dir_for_replace_all,
+                            None,
+                        );
+                    } else {
+                        eprintln!("Failed to read file {}", path.display());
+                        continue;
+                    }
+                }
+                
+                // Replace all occurrences in the buffer for this file (bottom to top)
+                for (line, col, needle, case_sensitive) in matches {
+                    match replace_in_buffer(
+                        &editor_notebook_for_replace_all,
+                        &file_path_manager_for_replace_all,
+                        &path,
+                        line,
+                        col,
+                        &needle,
+                        &replace_text,
+                        case_sensitive
+                    ) {
+                        Ok(_) => total_replaced += 1,
+                        Err(e) => eprintln!("Failed to replace in {}: {}", path.display(), e),
+                    }
+                }
+            }
+            
+            // Clear all results from the list
+            while let Some(row) = results_list_clone_all.row_at_index(0) {
+                results_list_clone_all.remove(&row);
+            }
+            
+            status_clone_for_replace_all.set_text(&format!("Replaced {} occurrence{}", 
+                total_replaced, 
+                if total_replaced == 1 { "" } else { "s" }
+            ));
+        }
+    });
+
     dialog.add_button("Close", gtk::ResponseType::Close);
     dialog.connect_response(|d, _| {
         d.set_visible(false);
@@ -852,10 +1678,36 @@ pub fn create_global_search_panel(
     
     vbox.append(&search_overlay);
 
+    // Replace input with TextView for multi-line support
+    let replace_text_view = TextView::new();
+    replace_text_view.set_wrap_mode(gtk::WrapMode::Word);
+    replace_text_view.set_accepts_tab(false);
+    replace_text_view.set_height_request(60);
+    let replace_buffer = replace_text_view.buffer();
+    replace_text_view.set_margin_bottom(8);
+    vbox.append(&replace_text_view);
+
+    // Search and Replace buttons container
+    let buttons_box = GtkBox::new(Orientation::Horizontal, 4);
+    buttons_box.set_margin_bottom(8);
+    
     // Search button
     let search_btn = Button::with_label("Search");
-    search_btn.set_margin_bottom(8);
-    vbox.append(&search_btn);
+    search_btn.add_css_class("suggested-action");
+    buttons_box.append(&search_btn);
+    
+    // Replace button
+    let replace_btn = Button::with_label("Replace");
+    replace_btn.set_tooltip_text(Some("Replace selected match"));
+    buttons_box.append(&replace_btn);
+    
+    // Replace All button
+    let replace_all_btn = Button::with_label("Replace All");
+    replace_all_btn.set_tooltip_text(Some("Replace all matches in all files"));
+    replace_all_btn.add_css_class("destructive-action");
+    buttons_box.append(&replace_all_btn);
+    
+    vbox.append(&buttons_box);
 
     // Status label
     let status = Label::new(Some("Enter text to search"));
@@ -880,6 +1732,9 @@ pub fn create_global_search_panel(
     // Channel for results - will be recreated for each search
     let sender_rc: Rc<RefCell<Option<std::sync::mpsc::Sender<Option<SearchResult>>>>> = Rc::new(RefCell::new(None));
     let receiver_rc: Rc<RefCell<Option<std::sync::mpsc::Receiver<Option<SearchResult>>>>> = Rc::new(RefCell::new(None));
+
+    // Clone status label before it's moved into closures
+    let status_for_replace = status.clone();
 
     // Open result handler (row activation)
     let parent_window_c = parent_window.clone();
@@ -1006,6 +1861,8 @@ pub fn create_global_search_panel(
         let sender_rc_clone = sender_rc.clone();
         let receiver_rc_clone = receiver_rc.clone();
         let current_dir_c = current_dir.clone();
+        let editor_notebook_c = editor_notebook.clone();
+        let file_path_manager_c = file_path_manager.clone();
         
         move |needle: String, case_sensitive: bool, whole_word: bool| {
             // Clear previous results
@@ -1028,13 +1885,44 @@ pub fn create_global_search_panel(
             *sender_rc_clone.borrow_mut() = Some(sender.clone());
             *receiver_rc_clone.borrow_mut() = Some(receiver);
             
+            // Get open file buffers content (must be done in main thread)
+            let mut open_files_content: std::collections::HashMap<PathBuf, String> = std::collections::HashMap::new();
+            let file_path_map = file_path_manager_c.borrow();
+            for (page_num, path) in file_path_map.iter() {
+                if let Some(page) = editor_notebook_c.nth_page(Some(*page_num)) {
+                    if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                        if let Some(child) = scrolled.child() {
+                            let content = if let Some(source_view) = child.downcast_ref::<sourceview5::View>() {
+                                let buffer = source_view.buffer();
+                                buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string()
+                            } else if let Some(text_view) = child.downcast_ref::<gtk4::TextView>() {
+                                let buffer = text_view.buffer();
+                                buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string()
+                            } else {
+                                continue;
+                            };
+                            open_files_content.insert(path.clone(), content);
+                        }
+                    }
+                }
+            }
+            drop(file_path_map);
+            
             // Spawn search thread
             std::thread::spawn(move || {
                 let mut files = Vec::new();
                 walk_dir_recursive(&folder_to_search, &mut files, 10000);
                 
                 for file_path in files {
-                    let results = search_file(&file_path, &needle, case_sensitive, whole_word, 1_000_000);
+                    // Check if we have buffer content for this file
+                    let results = if let Some(content) = open_files_content.get(&file_path) {
+                        // Search in buffer content
+                        search_in_content(&file_path, content, &needle, case_sensitive, whole_word)
+                    } else {
+                        // Search in file on disk
+                        search_file(&file_path, &needle, case_sensitive, whole_word, 1_000_000)
+                    };
+                    
                     for sr in results {
                         let _ = sender.send(Some(sr));
                     }
@@ -1220,6 +2108,176 @@ pub fn create_global_search_panel(
         }
     });
     search_text_view.add_controller(key_controller);
+    
+    // Replace button handler - replaces the first/next result automatically
+    let replace_buffer_weak = replace_buffer.downgrade();
+    let results_list_clone = results_list.clone();
+    let editor_notebook_for_replace = editor_notebook.clone();
+    let file_path_manager_for_replace = file_path_manager.clone();
+    replace_btn.connect_clicked(move |_| {
+        if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
+            let replace_text = replace_buffer.text(&replace_buffer.start_iter(), &replace_buffer.end_iter(), false).to_string();
+            
+            // Get the first row (auto-select)
+            if let Some(row) = results_list_clone.row_at_index(0) {
+                if let Some(child) = row.child() {
+                    if let Some(vbox) = child.downcast_ref::<GtkBox>() {
+                        if let Some(first_child) = vbox.first_child() {
+                            if let Some(data_label) = first_child.downcast_ref::<Label>() {
+                                if let Some(tt) = data_label.tooltip_text() {
+                                    // Format: path|line|col|needle|case_sensitive
+                                    let parts: Vec<&str> = tt.splitn(5, '|').collect();
+                                    if parts.len() >= 5 {
+                                        let path = PathBuf::from(parts[0]);
+                                        let line: usize = parts[1].parse().unwrap_or(1);
+                                        let col: usize = parts[2].parse().unwrap_or(1);
+                                        let needle = parts[3].to_string();
+                                        let case_sensitive: bool = parts[4].parse().unwrap_or(false);
+                                        
+                                        // Perform the replacement in buffer only
+                                        match replace_in_buffer(
+                                            &editor_notebook_for_replace,
+                                            &file_path_manager_for_replace,
+                                            &path,
+                                            line,
+                                            col,
+                                            &needle,
+                                            &replace_text,
+                                            case_sensitive
+                                        ) {
+                                            Ok(_) => {
+                                                // Remove the result from the list after successful replacement
+                                                results_list_clone.remove(&row);
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Failed to replace in {}: {}", path.display(), e);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Replace All button handler - replaces all matches in all files
+    let replace_buffer_weak_all = replace_buffer.downgrade();
+    let results_list_clone_all = results_list.clone();
+    let status_clone_for_replace_all = status_for_replace.clone();
+    let editor_notebook_for_replace_all = editor_notebook.clone();
+    let file_path_manager_for_replace_all = file_path_manager.clone();
+    let parent_window_for_replace_all = parent_window.clone();
+    let active_tab_path_for_replace_all = active_tab_path.clone();
+    let save_button_for_replace_all = save_button.clone();
+    let save_as_button_for_replace_all = save_as_button.clone();
+    let file_list_box_for_replace_all = file_list_box.clone();
+    let current_dir_for_replace_all = current_dir.clone();
+    replace_all_btn.connect_clicked(move |_| {
+        if let Some(replace_buffer) = replace_buffer_weak_all.upgrade() {
+            let replace_text = replace_buffer.text(&replace_buffer.start_iter(), &replace_buffer.end_iter(), false).to_string();
+            
+            // Collect all results
+            let mut replacements = Vec::new();
+            let mut index = 0;
+            while let Some(row) = results_list_clone_all.row_at_index(index) {
+                if let Some(child) = row.child() {
+                    if let Some(vbox) = child.downcast_ref::<GtkBox>() {
+                        if let Some(first_child) = vbox.first_child() {
+                            if let Some(data_label) = first_child.downcast_ref::<Label>() {
+                                if let Some(tt) = data_label.tooltip_text() {
+                                    let parts: Vec<&str> = tt.splitn(5, '|').collect();
+                                    if parts.len() >= 5 {
+                                        let path = PathBuf::from(parts[0]);
+                                        let line: usize = parts[1].parse().unwrap_or(1);
+                                        let col: usize = parts[2].parse().unwrap_or(1);
+                                        let needle = parts[3].to_string();
+                                        let case_sensitive: bool = parts[4].parse().unwrap_or(false);
+                                        replacements.push((path, line, col, needle, case_sensitive));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                index += 1;
+            }
+            
+            // Group replacements by file
+            let mut files_map: std::collections::HashMap<PathBuf, Vec<(usize, usize, String, bool)>> = std::collections::HashMap::new();
+            for (path, line, col, needle, case_sensitive) in replacements {
+                files_map.entry(path).or_insert_with(Vec::new).push((line, col, needle, case_sensitive));
+            }
+            
+            // Perform replacements file by file (in buffer only)
+            let mut total_replaced = 0;
+            for (path, mut matches) in files_map {
+                // Sort matches in reverse order (bottom to top) to preserve positions
+                matches.sort_by(|a, b| {
+                    // Sort by line descending, then by column descending
+                    b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1))
+                });
+                
+                // Open file if not already open
+                let file_path_map = file_path_manager_for_replace_all.borrow();
+                let is_open = file_path_map.values().any(|p| p == &path);
+                drop(file_path_map);
+                
+                if !is_open {
+                    // Open the file first
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        let mime = mime_guess::from_path(&path).first_or_octet_stream();
+                        crate::handlers::open_or_focus_tab(
+                            &editor_notebook_for_replace_all,
+                            &path,
+                            &content,
+                            &active_tab_path_for_replace_all,
+                            &file_path_manager_for_replace_all,
+                            &save_button_for_replace_all,
+                            &save_as_button_for_replace_all,
+                            &mime,
+                            &parent_window_for_replace_all,
+                            &file_list_box_for_replace_all,
+                            &current_dir_for_replace_all,
+                            None,
+                        );
+                    } else {
+                        eprintln!("Failed to read file {}", path.display());
+                        continue;
+                    }
+                }
+                
+                // Replace all occurrences in the buffer for this file (bottom to top)
+                for (line, col, needle, case_sensitive) in matches {
+                    match replace_in_buffer(
+                        &editor_notebook_for_replace_all,
+                        &file_path_manager_for_replace_all,
+                        &path,
+                        line,
+                        col,
+                        &needle,
+                        &replace_text,
+                        case_sensitive
+                    ) {
+                        Ok(_) => total_replaced += 1,
+                        Err(e) => eprintln!("Failed to replace in {}: {}", path.display(), e),
+                    }
+                }
+            }
+            
+            // Clear all results from the list
+            while let Some(row) = results_list_clone_all.row_at_index(0) {
+                results_list_clone_all.remove(&row);
+            }
+            
+            status_clone_for_replace_all.set_text(&format!("Replaced {} occurrence{}", 
+                total_replaced, 
+                if total_replaced == 1 { "" } else { "s" }
+            ));
+        }
+    });
     
     // Save search state when toggle buttons change
     case_toggle.connect_toggled(|btn| {
