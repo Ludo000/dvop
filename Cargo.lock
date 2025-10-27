@@ -45,32 +45,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
-name = "basado-text-editor"
-version = "0.1.0"
-dependencies = [
- "apodize",
- "chrono",
- "gdk-pixbuf 0.18.5",
- "gdk4",
- "glib 0.20.9",
- "gstreamer",
- "gstreamer-app",
- "gtk4",
- "home",
- "hound",
- "lazy_static",
- "mime_guess",
- "once_cell",
- "regex",
- "rustfft",
- "serde",
- "serde_json",
- "sourceview5",
- "tempfile",
- "vte4",
-]
-
-[[package]]
 name = "bitflags"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -159,6 +133,32 @@ name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
+
+[[package]]
+name = "dvop"
+version = "0.1.0"
+dependencies = [
+ "apodize",
+ "chrono",
+ "gdk-pixbuf 0.18.5",
+ "gdk4",
+ "glib 0.20.9",
+ "gstreamer",
+ "gstreamer-app",
+ "gtk4",
+ "home",
+ "hound",
+ "lazy_static",
+ "mime_guess",
+ "once_cell",
+ "regex",
+ "rustfft",
+ "serde",
+ "serde_json",
+ "sourceview5",
+ "tempfile",
+ "vte4",
+]
 
 [[package]]
 name = "either"

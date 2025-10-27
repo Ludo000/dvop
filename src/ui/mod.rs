@@ -1,4 +1,4 @@
-// UI module for the Basado Text Editor
+// UI module for Dvop
 // Contains all UI component creation and layout functions
 
 pub mod terminal;
@@ -49,7 +49,7 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
         .application(app)      // Associate with the GTK application
         .default_width(window_width)    // Use saved window width
         .default_height(window_height)   // Use saved window height
-        .title("Basado Text Editor")
+        .title("Dvop")
         .build()
 }
 
@@ -183,7 +183,7 @@ pub fn create_text_view() -> (
     editor_notebook.set_show_border(true);
     
     // Add CSS class for better tab styling
-    editor_notebook.add_css_class("basado-notebook");
+    editor_notebook.add_css_class("dvop-notebook");
 
     // Create an "Add File" button similar to the terminal's add button
     let add_file_button = Button::from_icon_name("list-add-symbolic");

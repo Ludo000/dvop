@@ -1,4 +1,4 @@
-// Status logging system for the Basado Text Editor
+// Status logging system for Dvop
 // Provides a way to capture and display log messages in the status bar
 
 use gtk4::prelude::*;

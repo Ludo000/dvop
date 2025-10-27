@@ -1,7 +1,7 @@
-# Basado Text Editor
+# Dvop
 
 ## Overview
-Basado Text Editor is a simple text editor built using GTK4 and Rust. It provides basic text editing functionality along with an embedded terminal and syntax highlighting for various programming languages. This guide provides steps to install dependencies, build, install, and run the application on Linux (Ubuntu), macOS, and Windows.
+Dvop is an IDE built using GTK4 and Rust. It provides basic text editing functionality along with an embedded terminal and syntax highlighting for various programming languages. This guide provides steps to install dependencies, build, install, and run the application on Linux (Ubuntu), macOS, and Windows.
 
 ## Dependencies
 The editor uses the following main Rust crates:
@@ -24,6 +24,8 @@ Each platform requires specific system libraries to be installed before building
   ```
 
 ### Specific command for Ubuntu 25.10
+   Here is some commands I add to run on Ubuntu 25.10, it might also help you if you are concerned :
+
    ```bash
    export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
    sudo ln -s /usr/lib/x86_64-linux-gnu/pkgconfig/vte-2.91.pc /usr/lib/x86_64-linux-gnu/pkgconfig/vte-2.91-gtk4.pc
@@ -77,8 +79,8 @@ For detailed Windows setup instructions, see the [GTK-rs book](https://gtk-rs.or
 ## Building the Application
 Clone the repository:
    ```bash
-    git clone https://github.com/Ludo000/basado-text-editor.git 
-    cd basado-text-editor/
+    git clone https://github.com/Ludo000/dvop.git 
+    cd dvop/
    ```
 Build the application:
    ```bash
@@ -97,7 +99,7 @@ And then try again the ```cargo run``` command
 ## Features
 
 ### Syntax Highlighting
-Basado Text Editor now includes syntax highlighting for a wide range of programming languages:
+Dvop now includes syntax highlighting for a wide range of programming languages:
 - Rust (.rs)
 - Python (.py)
 - JavaScript (.js) 
@@ -144,7 +146,7 @@ After building, you can install the application system-wide by running:
    ```bash
     sudo cargo install --path .
    ```
-You can now run basado-text-editor from any terminal.
+You can now run dvop from any terminal.
 
 ## 📜 Legal Notice
 

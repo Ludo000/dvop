@@ -1,4 +1,4 @@
-// Settings UI module for the Basado Text Editor
+// Settings UI module for Dvop
 // Contains settings dialog and theme management functions
 
 use gtk4::prelude::*;

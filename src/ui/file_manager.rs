@@ -1,4 +1,4 @@
-// File Manager UI components for the Basado Text Editor
+// File Manager UI components for Dvop
 // Contains all file management panel and navigation components
 
 use gtk4::prelude::*;
@@ -319,8 +319,8 @@ fn sync_to_os_clipboard(file_path: &PathBuf, operation: ClipboardOperation) {
                     
                     // Simple text fallback
                     let text_content = match operation {
-                        ClipboardOperation::Copy => format!("BASADO_COPY:{}", absolute_path.to_string_lossy()),
-                        ClipboardOperation::Cut => format!("BASADO_CUT:{}", absolute_path.to_string_lossy()),
+                        ClipboardOperation::Copy => format!("DVOP_COPY:{}", absolute_path.to_string_lossy()),
+                        ClipboardOperation::Cut => format!("DVOP_CUT:{}", absolute_path.to_string_lossy()),
                     };
                     let text_provider = gdk::ContentProvider::for_bytes(
                         "text/plain", 
@@ -334,8 +334,8 @@ fn sync_to_os_clipboard(file_path: &PathBuf, operation: ClipboardOperation) {
                 Err(_) => {
                     // If canonicalization fails, just set a simple text representation
                     let simple_text = match operation {
-                        ClipboardOperation::Copy => format!("BASADO_COPY:{}", file_path.to_string_lossy()),
-                        ClipboardOperation::Cut => format!("BASADO_CUT:{}", file_path.to_string_lossy()),
+                        ClipboardOperation::Copy => format!("DVOP_COPY:{}", file_path.to_string_lossy()),
+                        ClipboardOperation::Cut => format!("DVOP_CUT:{}", file_path.to_string_lossy()),
                     };
                     clipboard.set_text(&simple_text);
                 }
@@ -431,8 +431,8 @@ fn parse_text_format(text: &str) -> Option<FileClipboard> {
     let text = text.trim();
     
     // Check if it's our custom format
-    if text.starts_with("BASADO_COPY:") {
-        if let Some(path_str) = text.strip_prefix("BASADO_COPY:") {
+    if text.starts_with("DVOP_COPY:") {
+        if let Some(path_str) = text.strip_prefix("DVOP_COPY:") {
             let file_path = PathBuf::from(path_str);
             if file_path.exists() {
                 return Some(FileClipboard {
@@ -441,8 +441,8 @@ fn parse_text_format(text: &str) -> Option<FileClipboard> {
                 });
             }
         }
-    } else if text.starts_with("BASADO_CUT:") {
-        if let Some(path_str) = text.strip_prefix("BASADO_CUT:") {
+    } else if text.starts_with("DVOP_CUT:") {
+        if let Some(path_str) = text.strip_prefix("DVOP_CUT:") {
             let file_path = PathBuf::from(path_str);
             if file_path.exists() {
                 return Some(FileClipboard {
@@ -850,7 +850,7 @@ pub fn create_path_bar() -> (GtkBox, GtkBox, Button, Button, Button, GtkBox, Sca
     path_bar.append(&terminal_button);
     
     // Add a CSS class for custom styling
-    path_bar.add_css_class("basado-path-bar");
+    path_bar.add_css_class("dvop-path-bar");
     
     // Initially hide volume controls (will be shown when music content is active)
     volume_control_box.set_visible(false);

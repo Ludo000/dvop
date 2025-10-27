@@ -1,4 +1,4 @@
-// Utility functions for the Basado Text Editor
+// Utility functions for Dvop
 // This module contains helper functions used throughout the application
 
 use gtk4::prelude::*;

@@ -1,4 +1,4 @@
-// Terminal module for the Basado Text Editor
+// Terminal module for Dvop
 // Contains terminal creation and management functions
 
 use gtk4::prelude::*;
@@ -196,7 +196,7 @@ pub fn create_terminal_notebook() -> (Notebook, Button) {
     terminal_notebook.set_show_border(true);
     
     // Add some CSS classes for better tab styling
-    terminal_notebook.add_css_class("basado-notebook");
+    terminal_notebook.add_css_class("dvop-notebook");
     
     // Create an "Add Terminal" button
     let add_terminal_button = Button::from_icon_name("list-add-symbolic");

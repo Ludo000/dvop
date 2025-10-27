@@ -33,7 +33,7 @@ fn main() {
     // Create the main GTK application with a unique application ID
     // Set flags to handle file opening
     let app = Application::builder()
-        .application_id("com.example.BasadoTextEditor")
+        .application_id("com.example.Dvop")
         .flags(gio::ApplicationFlags::HANDLES_OPEN)
         .build();
     

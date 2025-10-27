@@ -1,4 +1,4 @@
-// Event handlers and business logic for the Basado Text Editor
+// Event handlers and business logic for Dvop
 // This module contains all the event handlers and core functionality for the editor
 
 // GTK imports

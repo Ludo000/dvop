@@ -1,4 +1,4 @@
-// Audio playback functionality for the Basado Text Editor
+// Audio playback functionality for Dvop
 // This module handles audio file playback using GStreamer
 
 use gtk4::prelude::*;

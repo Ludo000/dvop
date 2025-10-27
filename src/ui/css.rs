@@ -1,4 +1,4 @@
-// CSS styling module for the Basado Text Editor
+// CSS styling module for Dvop
 // Contains all CSS styles and application logic
 
 use gtk4;
@@ -241,7 +241,7 @@ fn get_status_bar_styles() -> &'static str {
         color: @theme_fg_color;
     }
     
-    .basado-status-bar {
+    .dvop-status-bar {
         border-top: 1px solid alpha(#999, 0.3);
     }
     
@@ -284,7 +284,7 @@ fn get_status_bar_styles() -> &'static str {
     
     /* === PATH BAR STYLES === */
     
-    .basado-path-bar {
+    .dvop-path-bar {
         background-color: shade(@theme_bg_color, 0.98);
     }
     "
