@@ -11,6 +11,7 @@ const DEFAULT_LIGHT_THEME: &str = "solarized-light";
 const DEFAULT_DARK_THEME: &str = "solarized-dark";
 pub const DEFAULT_FONT_SIZE: u32 = 11;
 const DEFAULT_AUDIO_VOLUME: f64 = 0.8; // 80% volume
+const DEFAULT_VIDEO_VOLUME: f64 = 0.8; // 80% volume
 const DEFAULT_WINDOW_WIDTH: i32 = 800;
 const DEFAULT_WINDOW_HEIGHT: i32 = 600;
 const DEFAULT_FILE_PANEL_WIDTH: i32 = 200; // Width of file manager sidebar
@@ -58,6 +59,7 @@ impl EditorSettings {
         self.values.insert("dark_theme".to_owned(), DEFAULT_DARK_THEME.to_owned());
         self.values.insert("font_size".to_owned(), DEFAULT_FONT_SIZE.to_string());
         self.values.insert("audio_volume".to_owned(), DEFAULT_AUDIO_VOLUME.to_string());
+        self.values.insert("video_volume".to_owned(), DEFAULT_VIDEO_VOLUME.to_string());
         self.values.insert("window_width".to_owned(), DEFAULT_WINDOW_WIDTH.to_string());
         self.values.insert("window_height".to_owned(), DEFAULT_WINDOW_HEIGHT.to_string());
         self.values.insert("file_panel_width".to_owned(), DEFAULT_FILE_PANEL_WIDTH.to_string());
@@ -164,6 +166,21 @@ impl EditorSettings {
     pub fn set_audio_volume(&mut self, volume: f64) {
         let clamped_volume = volume.max(0.0).min(1.0);
         self.set("audio_volume", &clamped_volume.to_string());
+    }
+
+    /// Gets the video volume (0.0 to 1.0)
+    pub fn get_video_volume(&self) -> f64 {
+        self.get("video_volume")
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(DEFAULT_VIDEO_VOLUME)
+            .max(0.0)
+            .min(1.0) // Clamp to valid range
+    }
+
+    /// Sets the video volume (0.0 to 1.0)
+    pub fn set_video_volume(&mut self, volume: f64) {
+        let clamped_volume = volume.max(0.0).min(1.0);
+        self.set("video_volume", &clamped_volume.to_string());
     }
 
     /// Gets the window width

@@ -8,6 +8,7 @@ mod completion; // Code completion functionality
 mod file_cache; // File content caching for performance optimization
 mod status_log; // Status logging system
 mod audio;     // Audio file playback functionality
+mod video;     // Video file playback functionality
 mod search;    // Find and replace functionality
 
 // GTK and standard library imports
@@ -1178,9 +1179,63 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         println!("Restoring {} previously opened file(s)", saved_files.len());
         for file_path in saved_files {
             if file_path.exists() && file_path.is_file() {
-                // Open each saved file in a new tab
-                if let Ok(content) = std::fs::read_to_string(&file_path) {
-                    let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                
+                // Handle different file types appropriately
+                if mime_type.type_() == "video" {
+                    // For video files, open with empty content (don't try to read as text)
+                    println!("Restoring video file: {}", file_path.display());
+                    handlers::open_or_focus_tab(
+                        &editor_notebook,
+                        &file_path,
+                        "", // Empty content for video
+                        &active_tab_path,
+                        &file_path_manager,
+                        &save_button,
+                        &save_as_button,
+                        &mime_type,
+                        &window,
+                        &file_list_box,
+                        &current_dir,
+                        Some(&save_menu_button),
+                    );
+                } else if mime_type.type_() == "audio" {
+                    // For audio files, open with empty content
+                    println!("Restoring audio file: {}", file_path.display());
+                    handlers::open_or_focus_tab(
+                        &editor_notebook,
+                        &file_path,
+                        "", // Empty content for audio
+                        &active_tab_path,
+                        &file_path_manager,
+                        &save_button,
+                        &save_as_button,
+                        &mime_type,
+                        &window,
+                        &file_list_box,
+                        &current_dir,
+                        Some(&save_menu_button),
+                    );
+                } else if mime_type.type_() == "image" {
+                    // For image files, open with empty content
+                    println!("Restoring image file: {}", file_path.display());
+                    handlers::open_or_focus_tab(
+                        &editor_notebook,
+                        &file_path,
+                        "", // Empty content for images
+                        &active_tab_path,
+                        &file_path_manager,
+                        &save_button,
+                        &save_as_button,
+                        &mime_type,
+                        &window,
+                        &file_list_box,
+                        &current_dir,
+                        Some(&save_menu_button),
+                    );
+                } else if let Ok(content) = std::fs::read_to_string(&file_path) {
+                    // For text files, read the content
+                    println!("Restoring text file: {}", file_path.display());
                     handlers::open_or_focus_tab(
                         &editor_notebook,
                         &file_path,

@@ -563,11 +563,11 @@ pub fn create_status_bar() -> (GtkBox, Label, Label) {
 
 /// Updates the visibility of the volume control based on active tab content
 pub fn update_volume_control_visibility_for_tab(volume_control_box: &GtkBox, active_tab_path: &Option<std::path::PathBuf>) {
-    let is_music_tab = active_tab_path
+    let is_media_tab = active_tab_path
         .as_ref()
-        .map(|path| crate::audio::is_music_file(path))
+        .map(|path| crate::audio::is_music_file(path) || crate::video::is_video_file(path))
         .unwrap_or(false);
-    volume_control_box.set_visible(is_music_tab);
+    volume_control_box.set_visible(is_media_tab);
 }
 
 /// Creates and shows a log history popup window

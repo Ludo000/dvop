@@ -264,6 +264,23 @@ pub fn stop_audio_for_file(file_path: &std::path::Path) {
     GLOBAL_AUDIO_MANAGER.stop_players_for_file(file_path);
 }
 
+/// Public function to stop all currently playing audio players
+/// This should be called when a video starts playing
+pub fn stop_all_audio_players() {
+    let players = GLOBAL_AUDIO_MANAGER.active_players.lock().unwrap();
+    let mut notifications = GLOBAL_AUDIO_MANAGER.stopped_notifications.lock().unwrap();
+    
+    println!("Audio: Stopping all {} audio players", players.len());
+    
+    for (pipeline, player_id, _is_music) in players.iter() {
+        if pipeline.current_state() == gstreamer::State::Playing {
+            println!("Audio: Stopping audio player: {}", player_id);
+            let _ = pipeline.set_state(gstreamer::State::Paused);
+            notifications.push(player_id.clone());
+        }
+    }
+}
+
 /// Determines if an audio file is likely to be music content
 /// This is a heuristic-based approach using file extension and path analysis
 fn is_music_content(audio_path: &Path) -> bool {
@@ -625,6 +642,10 @@ impl AudioPlayer {
                 // Stop all other playing audio before starting this one
                 println!("Audio: About to stop other players before starting playback");
                 GLOBAL_AUDIO_MANAGER.stop_other_players(&pipeline_play, &player_id_play);
+                
+                // Stop all video players as well
+                println!("Audio: Stopping all video players");
+                crate::video::stop_all_video_players();
                 
                 // Play
                 println!("Audio: Starting playback");
