@@ -45,12 +45,60 @@ pub fn create_window(app: &Application) -> ApplicationWindow {
     let window_width = settings.get_window_width();
     let window_height = settings.get_window_height();
     
-    ApplicationWindow::builder()
+    let window = ApplicationWindow::builder()
         .application(app)      // Associate with the GTK application
         .default_width(window_width)    // Use saved window width
         .default_height(window_height)   // Use saved window height
         .title("Dvop")
-        .build()
+        .icon_name("dvop")     // Set the application icon name
+        .build();
+    
+    // Load the custom icon into the icon theme
+    if let Some(display) = gtk4::gdk::Display::default() {
+        let icon_theme = gtk4::IconTheme::for_display(&display);
+        
+        // Embedded icon data (fallback)
+        const ICON_DATA: &[u8] = include_bytes!("../../dvop.svg");
+        
+        // Try to create icon file in config directory if it doesn't exist in search paths
+        let config_dir = crate::settings::get_settings().config_dir();
+        let icon_path = config_dir.join("dvop.svg");
+        
+        // Write embedded icon to config directory if it doesn't exist
+        if !icon_path.exists() {
+            if let Ok(()) = std::fs::write(&icon_path, ICON_DATA) {
+                icon_theme.add_search_path(&config_dir);
+            }
+        } else {
+            icon_theme.add_search_path(&config_dir);
+        }
+        
+        // Try to add icon search path from executable directory (for installed version)
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(parent) = exe_path.parent() {
+                let icon_file = parent.join("dvop.svg");
+                if icon_file.exists() {
+                    icon_theme.add_search_path(parent);
+                } else {
+                    // Write embedded icon next to executable if possible
+                    let _ = std::fs::write(&icon_file, ICON_DATA);
+                    if icon_file.exists() {
+                        icon_theme.add_search_path(parent);
+                    }
+                }
+            }
+        }
+        
+        // Also try project root (for development)
+        if let Ok(current_dir) = std::env::current_dir() {
+            let dev_icon = current_dir.join("dvop.svg");
+            if dev_icon.exists() {
+                icon_theme.add_search_path(&current_dir);
+            }
+        }
+    }
+    
+    window
 }
 
 /// Creates the application header bar with action buttons

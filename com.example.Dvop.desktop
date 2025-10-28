@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Dvop
+Comment=A text editor built with GTK4 and Rust
+Exec=dvop %F
+Icon=dvop
+Terminal=false
+Type=Application
+Categories=Development;TextEditor;Utility;
+MimeType=text/plain;text/x-c;text/x-c++;text/x-java;text/x-python;text/x-rust;text/html;text/css;text/javascript;application/json;application/xml;
+Keywords=text;editor;code;programming;
+StartupNotify=true
+StartupWMClass=dvop

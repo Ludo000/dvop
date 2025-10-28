@@ -317,6 +317,11 @@ impl EditorSettings {
             .join("|");
         self.set("opened_files", &files_str);
     }
+
+    /// Gets the configuration directory path
+    pub fn config_dir(&self) -> PathBuf {
+        get_config_dir()
+    }
 }
 
 /// Helper function to save the current folder to settings
