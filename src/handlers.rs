@@ -13,6 +13,12 @@ use gtk4::{
     
     // Event handling
     GestureClick, EventControllerKey,
+    
+    // Layout
+    Box as GtkBox, Orientation,
+    
+    // GLib
+    glib,
 };
 
 // SourceView specific imports
@@ -570,6 +576,84 @@ fn actually_close_tab(
 }
 
 
+/// Enter fullscreen mode for an image
+fn enter_image_fullscreen(
+    picture: &Picture,
+) {
+    // Get the paintable from the original picture
+    let paintable = picture.paintable();
+    if paintable.is_none() {
+        println!("Image: No paintable available for fullscreen");
+        return;
+    }
+    
+    // Create fullscreen window
+    let fullscreen_window = gtk4::Window::new();
+    fullscreen_window.set_title(Some("Image - Fullscreen"));
+    fullscreen_window.set_decorated(false);
+    fullscreen_window.set_resizable(true);
+    fullscreen_window.set_modal(false);
+    
+    // Create a new picture widget for fullscreen with the same paintable
+    let fullscreen_picture = Picture::new();
+    fullscreen_picture.set_paintable(paintable.as_ref());
+    fullscreen_picture.set_can_shrink(true);
+    fullscreen_picture.set_keep_aspect_ratio(true);
+    fullscreen_picture.set_hexpand(true);
+    fullscreen_picture.set_vexpand(true);
+    
+    // Create a container for the image in fullscreen
+    let fullscreen_box = GtkBox::new(Orientation::Vertical, 0);
+    fullscreen_box.set_vexpand(true);
+    fullscreen_box.set_hexpand(true);
+    fullscreen_box.add_css_class("fullscreen-image");
+    fullscreen_box.append(&fullscreen_picture);
+    fullscreen_window.set_child(Some(&fullscreen_box));
+    
+    // Present the window first, then fullscreen
+    fullscreen_window.present();
+    
+    // Delay fullscreen to ensure proper initialization
+    let fullscreen_window_fs = fullscreen_window.clone();
+    glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
+        fullscreen_window_fs.fullscreen();
+    });
+    
+    // Add Escape and F key handler to exit fullscreen
+    let key_controller = EventControllerKey::new();
+    let fullscreen_window_keys = fullscreen_window.clone();
+    
+    key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
+        match key {
+            // Escape or F: Exit fullscreen
+            gtk4::gdk::Key::Escape | gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
+                println!("Image: Exiting fullscreen via key press");
+                fullscreen_window_keys.close();
+                return glib::Propagation::Stop;
+            }
+            _ => {}
+        }
+        glib::Propagation::Proceed
+    });
+    fullscreen_window.add_controller(key_controller);
+    
+    // Add double-click gesture to exit fullscreen on the fullscreen picture
+    let double_click_gesture = GestureClick::new();
+    double_click_gesture.set_button(1); // Left mouse button
+    let fullscreen_window_double_click = fullscreen_window.clone();
+    
+    double_click_gesture.connect_pressed(move |_gesture, n_press, _x, _y| {
+        if n_press == 2 { // Double-click
+            println!("Image: Exiting fullscreen via double-click");
+            fullscreen_window_double_click.close();
+        }
+    });
+    fullscreen_picture.add_controller(double_click_gesture);
+    
+    println!("Image: Fullscreen window created and shown");
+}
+
+
 // Helper function to open a file in a new tab or focus if already open
 pub fn open_or_focus_tab(
     notebook: &Notebook,
@@ -638,7 +722,41 @@ pub fn open_or_focus_tab(
             if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file_to_open) {
                 let picture = Picture::new();
                 picture.set_pixbuf(Some(&pixbuf));
+                picture.set_can_focus(true);
+                picture.set_focusable(true);
+                
                 new_scrolled_window.set_child(Some(&picture));
+                
+                // Add keyboard event handler on the scrolled window to catch F key
+                let key_controller = EventControllerKey::new();
+                let picture_keys = picture.clone();
+                
+                key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
+                    match key {
+                        // F: Enter fullscreen
+                        gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
+                            println!("Image: F key pressed, entering fullscreen");
+                            enter_image_fullscreen(&picture_keys);
+                            return glib::Propagation::Stop;
+                        }
+                        _ => {}
+                    }
+                    glib::Propagation::Proceed
+                });
+                new_scrolled_window.add_controller(key_controller);
+                
+                // Add double-click gesture for fullscreen
+                let double_click_gesture = GestureClick::new();
+                double_click_gesture.set_button(1); // Left mouse button
+                let picture_fullscreen = picture.clone();
+                
+                double_click_gesture.connect_pressed(move |_gesture, n_press, _x, _y| {
+                    if n_press == 2 { // Double-click
+                        println!("Image: Double-click detected, entering fullscreen");
+                        enter_image_fullscreen(&picture_fullscreen);
+                    }
+                });
+                picture.add_controller(double_click_gesture);
             } else {
                 // Failed to load image, show error
                 let error_msg = format!("Failed to load image: {}", file_name);
