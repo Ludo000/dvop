@@ -496,6 +496,10 @@ fn actually_close_tab(
         if crate::audio::is_music_file(file_path) {
             crate::audio::stop_audio_for_file(file_path);
         }
+        // Stop any video playback for this file if it's a video file
+        if crate::video::is_video_file(file_path) {
+            crate::video::stop_video_for_file(file_path);
+        }
     }
     
     notebook.remove_page(Some(page_num_to_close));
