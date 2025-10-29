@@ -20,7 +20,7 @@ use gtk4::{
     Button, HeaderBar, Label, Picture, TextView, Image, TextBuffer, Scale,
     
     // Menu components for split button functionality
-    MenuButton, PopoverMenu, gio, glib,
+    MenuButton, gio, glib,
     
     // Layout orientation for containers
     Orientation

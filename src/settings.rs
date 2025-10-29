@@ -168,20 +168,6 @@ impl EditorSettings {
         self.set("audio_volume", &clamped_volume.to_string());
     }
 
-    /// Gets the video volume (0.0 to 1.0)
-    pub fn get_video_volume(&self) -> f64 {
-        self.get("video_volume")
-            .and_then(|s| s.parse::<f64>().ok())
-            .unwrap_or(DEFAULT_VIDEO_VOLUME)
-            .max(0.0)
-            .min(1.0) // Clamp to valid range
-    }
-
-    /// Sets the video volume (0.0 to 1.0)
-    pub fn set_video_volume(&mut self, volume: f64) {
-        let clamped_volume = volume.max(0.0).min(1.0);
-        self.set("video_volume", &clamped_volume.to_string());
-    }
 
     /// Gets the window width
     pub fn get_window_width(&self) -> i32 {

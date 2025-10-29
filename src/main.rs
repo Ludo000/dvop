@@ -14,7 +14,6 @@ mod search;    // Find and replace functionality
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
 use gtk4::{Application, ApplicationWindow, Label};  // Main GTK application classes
-use gtk4::Box as GtkBox;  // Box container for layout
 use gtk4::gio;          // GIO for menu and action support
 use gtk4::glib;         // GLib for clone macro and other utilities
 use std::rc::Rc;        // Reference counting for shared ownership
@@ -211,7 +210,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let global_volume_scale = imp.global_volume_scale.get();
     let volume_label = imp.volume_label.get();
     let file_list_box = imp.file_list_box.get();
-    let search_panel = imp.search_panel.get();
+    let _search_panel = imp.search_panel.get();
     
     // Create terminal notebook with tabs
     let (terminal_notebook, _add_terminal_button) = ui::terminal::create_terminal_notebook();
@@ -437,7 +436,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     );
 
     // Get status bar components from the template
-    let (status_bar, status_label, secondary_status_label) = ui::create_status_bar(&window);
+    let (_status_bar, status_label, secondary_status_label) = ui::create_status_bar(&window);
     
     // Set up volume control handler
     let volume_icon_clone = volume_icon.clone();
