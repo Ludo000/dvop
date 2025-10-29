@@ -515,6 +515,19 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
     right_click_gesture.connect_pressed(move |_, _n_press, x, y| {
         crate::status_log::log_info("Right-click detected on tab - showing menu");
         
+        // Find which page was right-clicked by finding the page containing this tab_box
+        let mut clicked_page_num = None;
+        for page_num in 0..notebook_clone.n_pages() {
+            if let Some(page) = notebook_clone.nth_page(Some(page_num)) {
+                if let Some(tab_label) = notebook_clone.tab_label(&page) {
+                    if tab_label == tab_box_clone {
+                        clicked_page_num = Some(page_num);
+                        break;
+                    }
+                }
+            }
+        }
+        
         // Create a popover for the context menu
         let popover = gtk4::Popover::new();
         popover.set_autohide(true);
@@ -524,6 +537,44 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
         // Create a box to hold the menu items
         let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
         menu_box.add_css_class("menu");
+        
+        // Create "Close Others" button
+        let close_others_button = Button::with_label("Close Others");
+        close_others_button.set_hexpand(true);
+        
+        // Disable "Close Others" if there's only one tab
+        if notebook_clone.n_pages() <= 1 {
+            close_others_button.set_sensitive(false);
+        }
+        
+        // Clone for the button closure
+        let notebook_for_close_others = notebook_clone.clone();
+        let popover_weak_others = popover.downgrade();
+        
+        close_others_button.connect_clicked(move |_| {
+            crate::status_log::log_info("Closing other tabs...");
+            
+            // Hide the context menu first
+            if let Some(popover) = popover_weak_others.upgrade() {
+                popover.popdown();
+            }
+            
+            // Close all tabs except the clicked one
+            if let Some(keep_page) = clicked_page_num {
+                // Close tabs after the kept page first (from end to beginning)
+                while notebook_for_close_others.n_pages() > keep_page + 1 {
+                    let last_page = notebook_for_close_others.n_pages() - 1;
+                    notebook_for_close_others.remove_page(Some(last_page));
+                }
+                
+                // Close tabs before the kept page (from beginning, but now it's always index 0)
+                while keep_page > 0 && notebook_for_close_others.n_pages() > 1 {
+                    notebook_for_close_others.remove_page(Some(0));
+                }
+                
+                crate::status_log::log_success("Other tabs closed");
+            }
+        });
         
         // Create "Close All" button
         let close_all_button = Button::with_label("Close All");
@@ -550,7 +601,8 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
             crate::status_log::log_success("All tabs closed");
         });
         
-        // Add button to menu
+        // Add buttons to menu
+        menu_box.append(&close_others_button);
         menu_box.append(&close_all_button);
         
         // Set the menu box as the popover's child
