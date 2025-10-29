@@ -834,7 +834,7 @@ fn restore_path_buttons(
 /// This function adds keyboard shortcuts like Ctrl+S for saving, Ctrl+O for opening files,
 /// Ctrl+N for new files, Ctrl+Tab for navigating tabs, Ctrl+Shift+F for global search, and other standard editor shortcuts.
 pub fn setup_keyboard_shortcuts(
-    window: &ApplicationWindow, 
+    window: &(impl IsA<ApplicationWindow> + IsA<gtk4::Widget>), 
     save_button: &Button, 
     open_button: &Button, 
     new_button: &Button, 
@@ -932,7 +932,9 @@ pub fn setup_keyboard_shortcuts(
                     // For Ctrl+Q, close the entire application
                     if keyval.name().as_deref() == Some("q") {
                         println!("Keyboard shortcut: Ctrl+Q (Quit)");
-                        window_clone.close();
+                        // Close the window by emitting the close request signal
+                        let w: &gtk4::Widget = window_clone.as_ref();
+                        w.activate_action("window.close", None).ok();
                         return glib::Propagation::Stop;
                     }
                     // For Ctrl+W, we could close the current tab (not implemented here)

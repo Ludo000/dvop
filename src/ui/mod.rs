@@ -17,10 +17,10 @@ use gtk4::{
     Box as GtkBox, Notebook,
     
     // Common UI elements
-    Button, HeaderBar, Label, Picture, TextView, Image, TextBuffer,
+    Button, HeaderBar, Label, Picture, TextView, Image, TextBuffer, Scale,
     
     // Menu components for split button functionality
-    MenuButton, PopoverMenu, gio,
+    MenuButton, PopoverMenu, gio, glib,
     
     // Layout orientation for containers
     Orientation
@@ -32,147 +32,234 @@ use std::cell::RefCell;  // For interior mutability pattern
 use std::rc::Rc;         // For shared ownership
 use std::path::PathBuf;  // For file paths
 
+// Template support
+use gtk4::subclass::prelude::*;
+
 // Home directory detection
 
+mod imp {
+    use super::*;
+    use gtk4::CompositeTemplate;
 
-/// Creates the main application window with default settings
-pub fn create_window(app: &Application) -> ApplicationWindow {
-    // Apply our custom CSS styling before building the window
-    css::apply_custom_css();
-    
-    // Get saved window dimensions from settings
-    let settings = crate::settings::get_settings();
-    let window_width = settings.get_window_width();
-    let window_height = settings.get_window_height();
-    
-    let window = ApplicationWindow::builder()
-        .application(app)      // Associate with the GTK application
-        .default_width(window_width)    // Use saved window width
-        .default_height(window_height)   // Use saved window height
-        .title("Dvop")
-        .icon_name("dvop")     // Set the application icon name
-        .build();
-    
-    // Load the custom icon into the icon theme
-    if let Some(display) = gtk4::gdk::Display::default() {
-        let icon_theme = gtk4::IconTheme::for_display(&display);
+    #[derive(Debug, Default, CompositeTemplate)]
+    #[template(resource = "/com/example/Dvop/window.ui")]
+    pub struct DvopWindow {
+        // Header bar widgets
+        #[template_child]
+        pub header_bar: TemplateChild<HeaderBar>,
+        #[template_child]
+        pub settings_button: TemplateChild<Button>,
+        #[template_child]
+        pub open_button: TemplateChild<Button>,
+        #[template_child]
+        pub save_main_button: TemplateChild<Button>,
+        #[template_child]
+        pub save_menu_button: TemplateChild<MenuButton>,
         
-        // Embedded icon data (fallback)
-        const ICON_DATA: &[u8] = include_bytes!("../../dvop.svg");
+        // Path bar widgets
+        #[template_child]
+        pub path_bar: TemplateChild<GtkBox>,
+        #[template_child]
+        pub up_button: TemplateChild<Button>,
+        #[template_child]
+        pub path_box: TemplateChild<GtkBox>,
+        #[template_child]
+        pub volume_control_box: TemplateChild<GtkBox>,
+        #[template_child]
+        pub volume_icon: TemplateChild<Image>,
+        #[template_child]
+        pub global_volume_scale: TemplateChild<Scale>,
+        #[template_child]
+        pub volume_label: TemplateChild<Label>,
+        #[template_child]
+        pub refresh_button: TemplateChild<Button>,
+        #[template_child]
+        pub terminal_button: TemplateChild<Button>,
         
-        // Try to create icon file in config directory if it doesn't exist in search paths
-        let config_dir = crate::settings::get_settings().config_dir();
-        let icon_path = config_dir.join("dvop.svg");
+        // Activity bar
+        #[template_child]
+        pub activity_bar: TemplateChild<GtkBox>,
+        #[template_child]
+        pub explorer_button: TemplateChild<gtk4::ToggleButton>,
+        #[template_child]
+        pub search_button: TemplateChild<gtk4::ToggleButton>,
         
-        // Write embedded icon to config directory if it doesn't exist
-        if !icon_path.exists() {
-            if let Ok(()) = std::fs::write(&icon_path, ICON_DATA) {
+        // Main layout
+        #[template_child]
+        pub paned: TemplateChild<gtk4::Paned>,
+        #[template_child]
+        pub editor_paned: TemplateChild<gtk4::Paned>,
+        #[template_child]
+        pub sidebar_stack: TemplateChild<gtk4::Stack>,
+        
+        // File manager
+        #[template_child]
+        pub file_manager_panel: TemplateChild<GtkBox>,
+        #[template_child]
+        pub file_list_box: TemplateChild<gtk4::ListBox>,
+        
+        // Search panel
+        #[template_child]
+        pub search_panel: TemplateChild<GtkBox>,
+        
+        // Editor
+        #[template_child]
+        pub editor_notebook: TemplateChild<Notebook>,
+        #[template_child]
+        pub search_bar: TemplateChild<gtk4::SearchBar>,
+        
+        // Terminal
+        #[template_child]
+        pub terminal_notebook: TemplateChild<Notebook>,
+        #[template_child]
+        pub add_terminal_button: TemplateChild<Button>,
+        
+        // Status bar
+        #[template_child]
+        pub status_bar: TemplateChild<GtkBox>,
+        #[template_child]
+        pub status_button: TemplateChild<Button>,
+        #[template_child]
+        pub status_label: TemplateChild<Label>,
+        #[template_child]
+        pub secondary_status_label: TemplateChild<Label>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for DvopWindow {
+        const NAME: &'static str = "DvopWindow";
+        type Type = super::DvopWindow;
+        type ParentType = ApplicationWindow;
+
+        fn class_init(klass: &mut Self::Class) {
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for DvopWindow {}
+    impl WidgetImpl for DvopWindow {}
+    impl WindowImpl for DvopWindow {}
+    impl ApplicationWindowImpl for DvopWindow {}
+}
+
+glib::wrapper! {
+    pub struct DvopWindow(ObjectSubclass<imp::DvopWindow>)
+        @extends gtk4::Widget, gtk4::Window, ApplicationWindow;
+}
+
+impl DvopWindow {
+    pub fn new(app: &Application) -> Self {
+        // Apply CSS before creating the window
+        css::apply_custom_css();
+        
+        // Load resources
+        let resources = gio::Resource::load(
+            std::path::Path::new(env!("OUT_DIR")).join("resources.gresource")
+        ).expect("Could not load resources");
+        gio::resources_register(&resources);
+        
+        // Get saved window dimensions from settings
+        let settings = crate::settings::get_settings();
+        let window_width = settings.get_window_width();
+        let window_height = settings.get_window_height();
+        let file_panel_width = settings.get_file_panel_width();
+        let terminal_height = settings.get_terminal_height();
+        
+        let window: Self = glib::Object::builder()
+            .property("application", app)
+            .property("default-width", window_width)
+            .property("default-height", window_height)
+            .build();
+        
+        // Load icon
+        window.setup_icon();
+        
+        // Set paned positions
+        let imp = window.imp();
+        imp.paned.set_position(file_panel_width);
+        imp.editor_paned.set_position(terminal_height);
+        
+        // Set initial volume
+        let initial_volume = settings.get_audio_volume();
+        imp.global_volume_scale.set_value(initial_volume);
+        let volume_percent = (initial_volume * 100.0) as i32;
+        imp.volume_label.set_text(&format!("{}%", volume_percent));
+        
+        window
+    }
+    
+    fn setup_icon(&self) {
+        // Load the custom icon into the icon theme
+        if let Some(display) = gtk4::gdk::Display::default() {
+            let icon_theme = gtk4::IconTheme::for_display(&display);
+            
+            // Embedded icon data (fallback)
+            const ICON_DATA: &[u8] = include_bytes!("../../dvop.svg");
+            
+            // Try to create icon file in config directory if it doesn't exist in search paths
+            let config_dir = crate::settings::get_settings().config_dir();
+            let icon_path = config_dir.join("dvop.svg");
+            
+            // Write embedded icon to config directory if it doesn't exist
+            if !icon_path.exists() {
+                if let Ok(()) = std::fs::write(&icon_path, ICON_DATA) {
+                    icon_theme.add_search_path(&config_dir);
+                }
+            } else {
                 icon_theme.add_search_path(&config_dir);
             }
-        } else {
-            icon_theme.add_search_path(&config_dir);
-        }
-        
-        // Try to add icon search path from executable directory (for installed version)
-        if let Ok(exe_path) = std::env::current_exe() {
-            if let Some(parent) = exe_path.parent() {
-                let icon_file = parent.join("dvop.svg");
-                if icon_file.exists() {
-                    icon_theme.add_search_path(parent);
-                } else {
-                    // Write embedded icon next to executable if possible
-                    let _ = std::fs::write(&icon_file, ICON_DATA);
+            
+            // Try to add icon search path from executable directory (for installed version)
+            if let Ok(exe_path) = std::env::current_exe() {
+                if let Some(parent) = exe_path.parent() {
+                    let icon_file = parent.join("dvop.svg");
                     if icon_file.exists() {
                         icon_theme.add_search_path(parent);
+                    } else {
+                        // Write embedded icon next to executable if possible
+                        let _ = std::fs::write(&icon_file, ICON_DATA);
+                        if icon_file.exists() {
+                            icon_theme.add_search_path(parent);
+                        }
                     }
                 }
             }
-        }
-        
-        // Also try project root (for development)
-        if let Ok(current_dir) = std::env::current_dir() {
-            let dev_icon = current_dir.join("dvop.svg");
-            if dev_icon.exists() {
-                icon_theme.add_search_path(&current_dir);
+            
+            // Also try project root (for development)
+            if let Ok(current_dir) = std::env::current_dir() {
+                let dev_icon = current_dir.join("dvop.svg");
+                if dev_icon.exists() {
+                    icon_theme.add_search_path(&current_dir);
+                }
             }
         }
     }
     
-    window
+    pub fn imp(&self) -> &imp::DvopWindow {
+        imp::DvopWindow::from_obj(self)
+    }
+}
+
+/// Creates the main application window with default settings
+pub fn create_window(app: &Application) -> DvopWindow {
+    DvopWindow::new(app)
 }
 
 /// Creates the application header bar with action buttons
 ///
-/// This function creates the application's header bar with buttons for core functionality.
-/// Returns the header bar and the action buttons for connecting event handlers.
-pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button, Button, Button) {
-    // Create the main header bar
-    let header = HeaderBar::new();
-
-    // Create a Settings button with icon only (no label)
-    let settings_button = Button::new();
-    let settings_button_icon = Image::from_icon_name("preferences-system-symbolic");
-    settings_button.set_child(Some(&settings_button_icon));
-    settings_button.set_tooltip_text(Some("Editor Settings"));
-    header.pack_start(&settings_button);
-
-    // Create the Open File button with icon and label
-    let open_button = Button::new();
-    let open_button_icon = Image::from_icon_name("document-open-symbolic");
-    let open_button_label = Label::new(Some("Open"));
-    let open_button_box = GtkBox::new(Orientation::Horizontal, 5);
-    open_button_box.append(&open_button_icon);
-    open_button_box.append(&open_button_label);
-    open_button.set_child(Some(&open_button_box));
-    open_button.set_tooltip_text(Some("Open a file"));
-    header.pack_start(&open_button);
-
-    // Create a split button for Save functionality that combines:
-    // 1. A main Save button (left side)
-    // 2. A dropdown menu button (right side) with additional options
+/// This function returns references to the action buttons for connecting event handlers.
+/// The header bar is now part of the template and doesn't need to be returned.
+pub fn create_header(window: &DvopWindow) -> (Button, Button, Button, MenuButton, Button, Button, Button) {
+    let imp = window.imp();
     
-    // Create a container box for the split button with "linked" style
-    // This makes both parts of the split button appear as a single unit
-    let save_split_box = GtkBox::new(Orientation::Horizontal, 0);
-    save_split_box.add_css_class("linked"); // Makes the buttons appear connected
+    // Create hidden buttons for backward compatibility
+    let new_button = Button::new();
+    new_button.set_visible(false);
     
-    // Create the main Save button (left side) with icon and label
-    let save_main_button = Button::new();
-    let save_button_icon = Image::from_icon_name("document-save-symbolic");
-    let save_button_label = Label::new(Some("Save"));
-    let save_main_button_box = GtkBox::new(Orientation::Horizontal, 5);
-    save_main_button_box.append(&save_button_icon);
-    save_main_button_box.append(&save_button_label);
-    save_main_button.set_child(Some(&save_main_button_box));
-    save_main_button.set_tooltip_text(Some("Save the current file"));
-    
-    // Create the dropdown button (right side) with a downward arrow icon
-    let save_menu_button = MenuButton::builder()
-        .icon_name("pan-down-symbolic")
-        .tooltip_text("Additional save options")
-        .build();
-    
-    // Set minimum width for the dropdown button to make it compact
-    save_menu_button.set_size_request(20, -1);
-    
-    // Create the menu that will appear when clicking the dropdown
-    let menu = gio::Menu::new();
-    let save_as_item = gio::MenuItem::new(Some("Save As..."), Some("win.save-as"));
-    menu.append_item(&save_as_item);
-    
-    // Create a popover menu from the menu model and attach it to the button
-    let popover = PopoverMenu::from_model(Some(&menu));
-    save_menu_button.set_popover(Some(&popover));
-    
-    // Assemble the split button by adding both parts to the container
-    save_split_box.append(&save_main_button);
-    save_split_box.append(&save_menu_button);
-    
-    // Add the complete split button to the right side of the header
-    header.pack_end(&save_split_box);
-
-    // Create a hidden Save As button that will be triggered programmatically from the menu
-    // This approach allows reusing the same handler logic for both menu and direct button clicks
     let save_as_button = Button::new();
     let save_as_button_icon = Image::from_icon_name("document-save-as-symbolic");
     let save_as_button_label = Label::new(Some("Save As"));
@@ -181,19 +268,20 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
     save_as_button_box.append(&save_as_button_label);
     save_as_button.set_child(Some(&save_as_button_box));
     save_as_button.set_tooltip_text(Some("Save the current file with a new name"));
-    save_as_button.set_visible(false); // Hidden since it's only triggered programmatically
-
-    // Create a hidden regular save button for programmatic access
-    // This avoids circular reference issues when connecting signals
+    save_as_button.set_visible(false);
+    
     let save_button = Button::new();
     save_button.set_visible(false);
-
-    // Create a hidden new button for backward compatibility with existing handler code
-    let new_button = Button::new();
-    new_button.set_visible(false);
-
-    // Return the header and all action buttons (new_button is now hidden for compatibility)
-    (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button)
+    
+    (
+        new_button,
+        imp.open_button.get(),
+        imp.save_main_button.get(),
+        imp.save_menu_button.get(),
+        save_as_button,
+        save_button,
+        imp.settings_button.get(),
+    )
 }
 
 /// Creates the main text editor view components
@@ -211,7 +299,7 @@ pub fn create_header() -> (HeaderBar, Button, Button, Button, MenuButton, Button
 /// - Label: Text label for the initial tab
 /// - Button: Close button for the initial tab
 /// - Button: Add new file tab button
-pub fn create_text_view() -> (
+pub fn create_text_view(window: &DvopWindow) -> (
     gtk4::ScrolledWindow,
     gtk4::TextView,
     gtk4::TextBuffer,
@@ -225,13 +313,8 @@ pub fn create_text_view() -> (
     Button,                       // tab_close_button for the initial tab
     Button                        // add_file_button for creating new tabs
 ) {
-    // Create the tabbed notebook container with scrollable tabs
-    let editor_notebook = Notebook::new();
-    editor_notebook.set_scrollable(true);
-    editor_notebook.set_show_border(true);
-    
-    // Add CSS class for better tab styling
-    editor_notebook.add_css_class("dvop-notebook");
+    let imp = window.imp();
+    let editor_notebook = imp.editor_notebook.get();
 
     // Create an "Add File" button similar to the terminal's add button
     let add_file_button = Button::from_icon_name("list-add-symbolic");
@@ -263,6 +346,9 @@ pub fn create_text_view() -> (
     // Add the scrolled window as a page in the notebook with our custom tab widget
     editor_notebook.append_page(&scrolled_window, Some(&tab_widget));
     editor_notebook.set_tab_label(&scrolled_window, Some(&tab_widget));
+    
+    // Set action widget for add button
+    editor_notebook.set_action_widget(&add_file_button, gtk4::PackType::End);
 
     // Initialize shared state objects
     let file_path = Rc::new(RefCell::new(None)); // No file associated with initial tab
@@ -288,7 +374,7 @@ pub fn create_text_view() -> (
         error_label,       // For displaying error messages
         picture,           // For displaying images
         current_dir,       // Current working directory
-        editor_notebook,   // Main tabbed container for multiple documents
+        editor_notebook.clone(),   // Main tabbed container for multiple documents
         tab_widget,        // Container for tab components
         tab_label,         // Label showing filename in tab
         tab_close_button,  // Button to close the tab
@@ -296,124 +382,31 @@ pub fn create_text_view() -> (
     )
 }
 
-/// Creates the main application layout with activity bar and paned containers
+/// Returns references to the paned components from the template
 ///
-/// This function arranges the major UI components into a nested layout:
-/// - Activity bar on the far left with icon buttons
-/// - A stack that switches between file manager and search panel
-/// - Horizontal split between sidebar stack (left) and editor+terminal (right)
-/// - The right side has a vertical split between editor (top) and terminal (bottom)
-/// 
 /// Returns a tuple of:
-/// - GtkBox: The main container with activity bar + paned content
+/// - GtkBox: The main container with activity bar + paned content (dummy for compatibility)
 /// - gtk4::Paned: The main horizontal paned container
 /// - gtk4::Paned: The vertical paned container for editor+terminal
 /// - gtk4::ToggleButton: The explorer button from activity bar
 /// - gtk4::ToggleButton: The search button from activity bar
 /// - gtk4::Stack: The sidebar stack for switching panels
 pub fn create_paned(
-    file_manager_panel: &GtkBox,     // File browser sidebar
-    editor_notebook_box: &GtkBox,    // Editor notebook container with add button
-    terminal_box: &impl IsA<gtk4::Widget>,  // Terminal container (either ScrolledWindow or GtkBox)
+    window: &DvopWindow,
 ) -> (GtkBox, gtk4::Paned, gtk4::Paned, gtk4::ToggleButton, gtk4::ToggleButton, gtk4::Stack) {
-    // Create the activity bar with icon buttons
-    let (activity_bar, explorer_button, search_button) = activity_bar::create_activity_bar();
+    let imp = window.imp();
     
-    // Create a stack to hold different sidebar panels
-    let sidebar_stack = gtk4::Stack::new();
-    sidebar_stack.set_transition_type(gtk4::StackTransitionType::SlideLeftRight);
-    sidebar_stack.set_transition_duration(200);
+    // Create dummy box for backward compatibility (not used in template approach)
+    let dummy_box = GtkBox::new(Orientation::Horizontal, 0);
     
-    // Add file manager to stack
-    sidebar_stack.add_named(file_manager_panel, Some("explorer"));
-    
-    // Create search panel placeholder (will be populated from main.rs)
-    let search_panel = GtkBox::new(Orientation::Vertical, 0);
-    search_panel.add_css_class("search-panel");
-    sidebar_stack.add_named(&search_panel, Some("search"));
-    
-    // Start with explorer visible
-    sidebar_stack.set_visible_child_name("explorer");
-    
-    // Create the main horizontal split pane
-    let paned = gtk4::Paned::new(Orientation::Horizontal);
-    paned.set_wide_handle(true);  // Use a wider drag handle for easier resizing
-    paned.set_vexpand(true);      // Allow the paned area to expand vertically
-    
-    // Create the vertical split pane for the right side
-    let editor_paned = gtk4::Paned::new(Orientation::Vertical);
-    editor_paned.set_wide_handle(true);
-    
-    // Place editor notebook box at the top of the vertical split
-    editor_paned.set_start_child(Some(editor_notebook_box));
-    
-    // Place terminal at the bottom of the vertical split
-    editor_paned.set_end_child(Some(terminal_box));
-    
-    // Make the editor paned expand vertically
-    editor_paned.set_vexpand(true);
-    
-    // Place sidebar stack on the left side of the horizontal split
-    paned.set_start_child(Some(&sidebar_stack));
-    
-    // Place the editor+terminal vertical split on the right side
-    paned.set_end_child(Some(&editor_paned));
-    
-    // Get saved pane positions from settings
-    let settings = crate::settings::get_settings();
-    let file_panel_width = settings.get_file_panel_width();
-    let terminal_height = settings.get_terminal_height();
-    
-    // Set initial split positions
-    paned.set_position(file_panel_width);        // Width of file manager sidebar
-    editor_paned.set_position(terminal_height); // Height of editor area
-    
-    // Create main container with activity bar + paned content
-    let main_container = GtkBox::new(Orientation::Horizontal, 0);
-    main_container.append(&activity_bar);
-    main_container.append(&paned);
-    
-    // Connect explorer button to show file manager
-    let sidebar_stack_clone = sidebar_stack.clone();
-    let paned_clone = paned.clone();
-    explorer_button.connect_toggled(move |button| {
-        if button.is_active() {
-            let is_hidden = !sidebar_stack_clone.is_visible();
-            
-            // Only restore position if sidebar was hidden
-            if is_hidden {
-                let settings = crate::settings::get_settings();
-                let width = settings.get_file_panel_width();
-                paned_clone.set_position(width);
-            }
-            
-            // Switch to explorer tab
-            sidebar_stack_clone.set_visible_child_name("explorer");
-            sidebar_stack_clone.set_visible(true);
-        }
-    });
-    
-    // Connect search button to show search panel
-    let sidebar_stack_clone2 = sidebar_stack.clone();
-    let paned_clone2 = paned.clone();
-    search_button.connect_toggled(move |button| {
-        if button.is_active() {
-            let is_hidden = !sidebar_stack_clone2.is_visible();
-            
-            // Only restore position if sidebar was hidden
-            if is_hidden {
-                let settings = crate::settings::get_settings();
-                let width = settings.get_file_panel_width();
-                paned_clone2.set_position(width);
-            }
-            
-            // Switch to search tab
-            sidebar_stack_clone2.set_visible_child_name("search");
-            sidebar_stack_clone2.set_visible(true);
-        }
-    });
-    
-    (main_container, paned, editor_paned, explorer_button, search_button, sidebar_stack)
+    (
+        dummy_box,
+        imp.paned.get(),
+        imp.editor_paned.get(),
+        imp.explorer_button.get(),
+        imp.search_button.get(),
+        imp.sidebar_stack.get(),
+    )
 }
 
 /// Creates a custom tab widget with a label and close button
@@ -642,68 +635,29 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
 /// 
 /// The editor notebook is placed in a box with the search bar above it
 /// The add button is placed as an action button in the notebook's tab bar area
+/// Returns editor notebook box - no longer needed in template approach but kept for compatibility
 pub fn create_editor_notebook_box(editor_notebook: &Notebook, add_file_button: &Button) -> GtkBox {
-    let editor_box = GtkBox::new(Orientation::Vertical, 0);
-    
-    // Add the search bar at the top
-    let search_bar = crate::search::get_search_bar();
-    editor_box.append(search_bar);
-    
-    // Add the add button to the tab bar via the action widget feature
-    // This places the button in the same row as the tabs
+    // This function is now a no-op - the editor notebook box is in the template
+    // But we still need to set the action widget
     editor_notebook.set_action_widget(add_file_button, gtk4::PackType::End);
     
-    // Set the editor notebook to expand vertically
-    editor_notebook.set_vexpand(true);
-    
-    // Pack the notebook into the container box
-    editor_box.append(editor_notebook);
-    
-    // Make the entire container expand vertically
-    editor_box.set_vexpand(true);
-    
-    editor_box
+    // Return a dummy box for compatibility
+    GtkBox::new(Orientation::Vertical, 0)
 }
 
-/// Creates a status bar with operation status display
+/// Returns status bar components from the template
 ///
 /// Returns a tuple of:
 /// - GtkBox: Container for the status bar
 /// - Label: Main status text label
 /// - Label: Secondary status information (current file, line/column, etc.)
-pub fn create_status_bar() -> (GtkBox, Label, Label) {
-    // Create horizontal container for status bar
-    let status_bar = GtkBox::new(Orientation::Horizontal, 8);
-    status_bar.add_css_class("status-bar");
-    
-    // Set padding and styling
-    status_bar.set_margin_start(12);
-    status_bar.set_margin_end(12);
-    status_bar.set_margin_top(4);
-    status_bar.set_margin_bottom(4);
-    
-    // Create main status label for current operation wrapped in a button for clickability
-    let status_button = gtk4::Button::new();
-    status_button.set_has_frame(false);
-    status_button.add_css_class("status-button");
-    
-    let status_label = Label::new(Some("Ready"));
-    status_label.set_halign(gtk4::Align::Start);
-    status_label.set_hexpand(true);
-    status_label.add_css_class("status-text");
-    
-    status_button.set_child(Some(&status_label));
-    
-    // Create secondary status label for file info (right-aligned)
-    let secondary_label = Label::new(Some(""));
-    secondary_label.set_halign(gtk4::Align::End);
-    secondary_label.add_css_class("status-secondary");
-    
-    // Add widgets to status bar
-    status_bar.append(&status_button);
-    status_bar.append(&secondary_label);
-    
-    (status_bar, status_label, secondary_label)
+pub fn create_status_bar(window: &DvopWindow) -> (GtkBox, Label, Label) {
+    let imp = window.imp();
+    (
+        imp.status_bar.get(),
+        imp.status_label.get(),
+        imp.secondary_status_label.get(),
+    )
 }
 
 /// Updates the visibility of the volume control based on active tab content
@@ -719,11 +673,12 @@ pub fn update_volume_control_visibility_for_tab(volume_control_box: &GtkBox, act
 /// 
 /// # Arguments
 /// * `parent_window` - The parent window to center the popup on
-pub fn show_log_history_popup(parent_window: &gtk4::ApplicationWindow) {
+pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>) {
     use crate::status_log;
     
     // Create the dialog window as an ApplicationWindow for full window controls
-    let dialog = gtk4::ApplicationWindow::new(parent_window.application().as_ref().unwrap());
+    let app_window: &gtk4::ApplicationWindow = parent_window.upcast_ref();
+    let dialog = gtk4::ApplicationWindow::new(app_window.application().as_ref().unwrap());
     dialog.set_title(Some("Log History"));
     // Don't set as transient or modal to allow minimize/maximize
     dialog.set_default_size(600, 500);

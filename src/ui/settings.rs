@@ -22,11 +22,11 @@ use crate::ui::terminal;
 /// - Set other editor preferences
 ///
 /// Returns the dialog for display
-pub fn create_settings_dialog(parent: &ApplicationWindow) -> Dialog {
+pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
     // Create a dialog with standard buttons
     let dialog = Dialog::builder()
         .title("Editor Settings")
-        .transient_for(parent)
+        .transient_for(parent.as_ref().upcast_ref::<gtk4::Window>())
         .modal(true)
         .destroy_with_parent(true)
         .use_header_bar(1) // Use header bar

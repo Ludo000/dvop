@@ -878,7 +878,7 @@ fn perform_file_replace_all(
 }
 
 pub fn show_global_search_dialog(
-    parent_window: &gtk::ApplicationWindow,
+    parent_window: &impl IsA<gtk::ApplicationWindow>,
     current_dir: &Rc<RefCell<PathBuf>>,
     editor_notebook: &gtk::Notebook,
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
@@ -898,7 +898,7 @@ pub fn show_global_search_dialog(
     
     // Create new dialog
     let dialog = gtk::Dialog::builder()
-        .transient_for(parent_window)
+        .transient_for(parent_window.as_ref().upcast_ref::<gtk4::Window>())
         .modal(true)
         .title("Global Search")
         .resizable(true)
@@ -1622,7 +1622,7 @@ pub fn show_global_search_dialog(
 /// Creates the global search panel UI (for embedding in the activity bar sidebar)
 /// Returns the panel container that can be added to the sidebar stack
 pub fn create_global_search_panel(
-    parent_window: &gtk::ApplicationWindow,
+    parent_window: &impl IsA<gtk::ApplicationWindow>,
     current_dir: &Rc<RefCell<PathBuf>>,
     editor_notebook: &gtk::Notebook,
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,

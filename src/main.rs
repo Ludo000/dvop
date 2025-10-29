@@ -94,7 +94,7 @@ fn main() {
 }
 
 /// Updates the style scheme of all editor buffers when the system theme changes
-pub fn update_all_buffer_themes(window: &gtk4::ApplicationWindow) {
+pub fn update_all_buffer_themes(window: &impl IsA<gtk4::Widget>) {
     println!("Beginning comprehensive theme update for all buffers...");
 
     // First, let's try a more comprehensive search for notebooks
@@ -195,15 +195,50 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Debug output
     println!("build_ui called with file_to_open: {:?}", file_to_open);
     
-    // Create the main application window
+    // Create the main application window using the template
     let window = ui::create_window(app);
     
-    // Create the header bar with action buttons
-    let (header, new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button) = ui::create_header();
+    // Get references to the header bar action buttons
+    let (new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button) = ui::create_header(&window);
 
-    // Create terminal notebook with tabs instead of single terminal
-    let (terminal_notebook, add_terminal_button) = ui::terminal::create_terminal_notebook();
-    let terminal_notebook_box = ui::terminal::create_terminal_notebook_box(&terminal_notebook, &add_terminal_button);
+    // Get references to UI components from the template
+    let imp = window.imp();
+    let terminal_button = imp.terminal_button.get();
+    let up_button = imp.up_button.get();
+    let path_box = imp.path_box.get();
+    let volume_control_box = imp.volume_control_box.get();
+    let volume_icon = imp.volume_icon.get();
+    let global_volume_scale = imp.global_volume_scale.get();
+    let volume_label = imp.volume_label.get();
+    let file_list_box = imp.file_list_box.get();
+    let search_panel = imp.search_panel.get();
+    
+    // Create terminal notebook with tabs
+    let (terminal_notebook, _add_terminal_button) = ui::terminal::create_terminal_notebook();
+    let _terminal_notebook_box = ui::terminal::create_terminal_notebook_box(&terminal_notebook, &_add_terminal_button);
+    
+    // Add terminal to the template's terminal container
+    let terminal_notebook_template = imp.terminal_notebook.get();
+    let add_terminal_button = imp.add_terminal_button.get();
+    
+    // Transfer tabs from the created notebook to the template notebook
+    while terminal_notebook.n_pages() > 0 {
+        if let Some(page) = terminal_notebook.nth_page(Some(0)) {
+            if let Some(label) = terminal_notebook.tab_label(&page) {
+                terminal_notebook.remove_page(Some(0));
+                terminal_notebook_template.append_page(&page, Some(&label));
+            }
+        }
+    }
+    
+    // Action widget for add terminal button is already set in the template
+    // terminal_notebook_template.set_action_widget(&add_terminal_button, gtk4::PackType::End);
+    
+    // Connect the add terminal button click handler
+    let terminal_notebook_for_button = terminal_notebook_template.clone();
+    add_terminal_button.connect_clicked(move |_| {
+        ui::terminal::add_terminal_tab(&terminal_notebook_for_button, None);
+    });
     
     // Set up theme settings based on system preferences
     if let Some(settings) = gtk4::Settings::default() {
@@ -212,7 +247,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         
         // Clone references to update editor views when theme changes
         let window_clone = window.clone();
-        let terminal_notebook_clone = terminal_notebook.clone();
+        let terminal_notebook_clone = terminal_notebook_template.clone();
         
         // Connect to multiple theme-related signals to catch all possible theme changes
         let window_clone_2 = window_clone.clone();
@@ -254,7 +289,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         );
         
         // Set up a GSettings monitor for GNOME/Ubuntu theme changes
-        setup_gsettings_monitor(&window, &terminal_notebook);
+        setup_gsettings_monitor(&window, &terminal_notebook_template);
     }
 
     // Initialize the text editor components
@@ -272,7 +307,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         initial_tab_actual_label, // Text label showing the file name in the tab
         initial_tab_close_button, // Button for closing the tab
         add_file_button           // Button for adding new file tabs
-    ) = ui::create_text_view();
+    ) = ui::create_text_view(&window);
     
     // Debug theme detection at startup
     println!("=== Theme Detection at Startup ===");
@@ -382,16 +417,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         glib::Propagation::Proceed
     });
 
-    // Initialize the file manager panel components
-    let (file_list_box, file_list_scrolled_window) =
-        ui::file_manager::create_file_manager_panel();
-        
-    // Assemble the file manager panel from its components
-    let file_manager_panel =
-        ui::file_manager::create_file_manager_panel_container(file_list_scrolled_window);
-
-    // Create the path bar with navigation buttons and path segments
-    let (path_bar, path_box, up_button, _refresh_button, terminal_button, volume_control_box, _global_volume_scale) = ui::file_manager::create_path_bar();
+    // Get references to UI components from template (already initialized earlier)
+    // file_list_box, path_box, volume_control_box, etc. are already assigned
     
     // Set up keyboard shortcuts for common operations (including Ctrl+L for path editing)
     utils::setup_keyboard_shortcuts(
@@ -409,15 +436,34 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         Some(&file_path_manager)
     );
 
-    // Create the main container that will hold the path bar, paned content, and status bar
-    let main_container = GtkBox::new(gtk4::Orientation::Vertical, 0);
-    main_container.append(&path_bar);
-
-    // Add fixed height to the path bar section to prevent vertical layout shifts
-    path_bar.set_height_request(44); // Fixed height for the entire path bar section
-
-    // Create the status bar components
-    let (status_bar, status_label, secondary_status_label) = ui::create_status_bar();
+    // Get status bar components from the template
+    let (status_bar, status_label, secondary_status_label) = ui::create_status_bar(&window);
+    
+    // Set up volume control handler
+    let volume_icon_clone = volume_icon.clone();
+    let volume_label_clone = volume_label.clone();
+    global_volume_scale.connect_value_changed(move |scale| {
+        let volume = scale.value();
+        
+        // Update global volume via audio module
+        crate::audio::set_global_volume(volume);
+        
+        // Update percentage label
+        let percent = (volume * 100.0) as i32;
+        volume_label_clone.set_text(&format!("{}%", percent));
+        
+        // Update volume icon based on level
+        let icon_name = if volume < 0.01 {
+            "audio-volume-muted-symbolic"
+        } else if volume < 0.33 {
+            "audio-volume-low-symbolic"
+        } else if volume < 0.67 {
+            "audio-volume-medium-symbolic"
+        } else {
+            "audio-volume-high-symbolic"
+        };
+        volume_icon_clone.set_icon_name(Some(icon_name));
+    });
 
     // Set up periodic checking for volume control visibility
     let volume_control_clone = volume_control_box.clone();
@@ -430,12 +476,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Set up click handler for the status label to show log history
     // We need to get the parent button from the status label
-    if let Some(status_button) = status_label.parent().and_then(|p| p.downcast::<gtk4::Button>().ok()) {
-        let window_clone_for_status_click = window.clone();
-        status_button.connect_clicked(move |_| {
-            ui::show_log_history_popup(&window_clone_for_status_click);
-        });
-    }
+    let status_button = imp.status_button.get();
+    let window_clone_for_status_click = window.clone();
+    status_button.connect_clicked(move |_| {
+        ui::show_log_history_popup(&window_clone_for_status_click);
+    });
 
     // Register both status labels with the logging system
     crate::status_log::register_status_labels(&status_label, &secondary_status_label);
@@ -449,13 +494,10 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     }
 
     // Create the editor notebook container with add button
-    let editor_notebook_box = ui::create_editor_notebook_box(&editor_notebook, &add_file_button);
+    let _editor_notebook_box = ui::create_editor_notebook_box(&editor_notebook, &add_file_button);
 
-    // Create the main paned layout that contains:
-    // - Activity bar on the left with icon buttons  
-    // - A sidebar stack that switches between file manager and search panel
-    // - The editor notebook and terminal in a vertical split on the right
-    let (paned_content, paned, editor_paned, explorer_button, search_button, sidebar_stack) = ui::create_paned(&file_manager_panel, &editor_notebook_box, &terminal_notebook_box);
+    // Get references to paned components from the template
+    let (_paned_content, paned, editor_paned, explorer_button, search_button, sidebar_stack) = ui::create_paned(&window);
     
     // Restore active sidebar tab from settings
     let saved_sidebar_tab = settings::get_settings().get_active_sidebar_tab();
@@ -478,12 +520,47 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
     
+    // Setup explorer and search button toggle behavior
+    let search_button_clone = search_button.clone();
+    let sidebar_stack_clone = sidebar_stack.clone();
+    let paned_clone = paned.clone();
+    explorer_button.connect_toggled(move |button| {
+        if button.is_active() {
+            search_button_clone.set_active(false);
+            sidebar_stack_clone.set_visible_child_name("explorer");
+            let is_hidden = !sidebar_stack_clone.is_visible();
+            if is_hidden {
+                let settings = crate::settings::get_settings();
+                let width = settings.get_file_panel_width();
+                paned_clone.set_position(width);
+                sidebar_stack_clone.set_visible(true);
+            }
+        }
+    });
+    
+    let explorer_button_clone = explorer_button.clone();
+    let sidebar_stack_clone2 = sidebar_stack.clone();
+    let paned_clone2 = paned.clone();
+    search_button.connect_toggled(move |button| {
+        if button.is_active() {
+            explorer_button_clone.set_active(false);
+            sidebar_stack_clone2.set_visible_child_name("search");
+            let is_hidden = !sidebar_stack_clone2.is_visible();
+            if is_hidden {
+                let settings = crate::settings::get_settings();
+                let width = settings.get_file_panel_width();
+                paned_clone2.set_position(width);
+                sidebar_stack_clone2.set_visible(true);
+            }
+        }
+    });
+    
     // Get the search panel from the sidebar stack and populate it with global search UI
     if let Some(search_panel_widget) = sidebar_stack.child_by_name("search") {
         if let Some(search_panel_box) = search_panel_widget.downcast_ref::<gtk4::Box>() {
             // Create the full global search panel
             let global_search_panel = ui::global_search::create_global_search_panel(
-                &window,
+                window.upcast_ref::<ApplicationWindow>(),
                 &current_dir,
                 &editor_notebook,
                 &file_path_manager,
@@ -564,7 +641,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         editor_notebook: editor_notebook.clone(),      // The main tabbed container
         active_tab_path: active_tab_path.clone(),      // Currently active file path
         file_path_manager: file_path_manager.clone(),  // Tab-to-path mapping
-        window: window.clone(),                        // Main application window
+        window: window.clone().upcast::<ApplicationWindow>(),  // Main application window (upcast from DvopWindow)
         file_list_box: file_list_box.clone(),          // File browser list
         current_dir: current_dir.clone(),              // Current directory for file operations
         save_button: save_button.clone(),              // Save button reference
@@ -609,11 +686,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Note: Removed click-outside detection as it was interfering with normal file selection
     // The file manager highlighting will revert naturally when tabs are switched
 
-    // Add the paned content to the main container
-    main_container.append(&paned_content);
-    
-    // Add the status bar at the bottom
-    main_container.append(&status_bar);
+    // The main container, paned content, and status bar are now part of the template, no need to append them
 
     // Define GIO actions for save operations to be used by the menu
     let save_action = gio::SimpleAction::new("save", None);
@@ -636,10 +709,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         save_as_button_clone_for_action.emit_clicked();
     });
     
-    // Register the actions with the application window
-    // This makes them available to be triggered by menu items
-    window.add_action(&save_action);
-    window.add_action(&save_as_action);
+    // Register the actions with the application window (upcast first)
+    // This makes them available to be triggered by menu items  
+    let window_as_app_window: &ApplicationWindow = window.upcast_ref();
+    window_as_app_window.add_action(&save_action);
+    window_as_app_window.add_action(&save_as_action);
     
     // Set up direct save functionality for the main save button
     // Instead of circular references between buttons, implement the save logic directly here
@@ -714,8 +788,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
-    // Set the custom header bar as the window's titlebar
-    window.set_titlebar(Some(&header));
+    // The window titlebar and main container are now part of the template, no need to set them
 
     // Initialize the file browser panel with the current directory contents
     // Initially there's no active file selection since we start with an empty "Untitled" tab
@@ -727,9 +800,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Set up the save menu button visibility for the default text plain content type
     // This is appropriate for the initial empty "Untitled" document
     utils::update_save_menu_button_visibility(&save_menu_button, Some(mime_guess::mime::TEXT_PLAIN_UTF_8));
-    
-    // Set the main container (with paned layout and status bar) as the window's content
-    window.set_child(Some(&main_container));
 
     // Set up the tab switching handler to update UI state when changing tabs
     // Clone all required references for use in the closure
@@ -1023,8 +1093,23 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    // Set up the refresh button handler to update the file list
+    let file_list_box_for_refresh = file_list_box.clone();
+    let current_dir_for_refresh = current_dir.clone();
+    let active_tab_path_for_refresh = active_tab_path.clone();
+    let refresh_button = imp.refresh_button.get();
+    refresh_button.connect_clicked(move |_| {
+        utils::update_file_list(
+            &file_list_box_for_refresh,
+            &current_dir_for_refresh.borrow(),
+            &active_tab_path_for_refresh.borrow(),
+            utils::FileSelectionSource::TabSwitch
+        );
+        crate::status_log::log_info("File list refreshed");
+    });
+
     // Set up the terminal button handler to open a new terminal in the current directory
-    let terminal_notebook_clone_for_terminal_button = terminal_notebook.clone();
+    let terminal_notebook_clone_for_terminal_button = imp.terminal_notebook.get();
     let current_dir_clone_for_terminal_button = current_dir.clone();
     terminal_button.connect_clicked(move |_| {
         // Add a new terminal tab in the current directory
@@ -1047,7 +1132,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             editor_notebook: editor_notebook_clone_for_add_file.clone(),
             active_tab_path: active_tab_path_clone_for_add_file.clone(),
             file_path_manager: file_path_manager_clone_for_add_file.clone(),
-            window: window_clone_for_add_file.clone(),
+            window: window_clone_for_add_file.clone().upcast::<ApplicationWindow>(),
             file_list_box: file_list_box_clone_for_add_file.clone(),
             current_dir: current_dir_clone_for_add_file.clone(),
             save_button: save_button_clone_for_add_file.clone(),
@@ -1320,7 +1405,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
 /// Sets up a GSettings monitor to detect Ubuntu/GNOME theme changes
 /// This provides better integration with system theme switching on Ubuntu
-fn setup_gsettings_monitor(window: &ApplicationWindow, terminal_notebook: &gtk4::Notebook) {
+fn setup_gsettings_monitor(window: &impl IsA<gtk4::Widget>, terminal_notebook: &gtk4::Notebook) {
     use gio::prelude::*;
     
     let window_clone = window.clone();
