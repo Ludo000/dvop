@@ -30,6 +30,7 @@ use crate::syntax;
 use std::cell::RefCell;  // For interior mutability pattern
 use std::rc::Rc;         // For shared ownership
 use std::path::PathBuf;  // For file paths
+use std::collections::HashMap;  // For file path manager
 
 // Template support
 use gtk4::subclass::prelude::*;
@@ -326,8 +327,7 @@ pub fn create_text_view(window: &DvopWindow) -> (
     // Add middle mouse click support for the tab
     setup_tab_middle_click(&tab_widget, &tab_close_button);
     
-    // Add right-click context menu support for the tab
-    setup_tab_right_click(&tab_widget, &editor_notebook);
+    // Note: Right-click menu setup is deferred until after dependencies are created in main.rs
     
     // Create a source view with syntax highlighting instead of a standard text view
     let (source_view, source_buffer) = syntax::create_source_view();
@@ -492,7 +492,16 @@ pub fn setup_tab_middle_click(tab_box: &GtkBox, close_button: &Button) {
 ///
 /// This function sets up a gesture click controller that listens for
 /// right mouse button clicks on the tab and displays a context menu.
-pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
+pub fn setup_tab_right_click(
+    tab_box: &GtkBox,
+    notebook: &Notebook,
+    window: &ApplicationWindow,
+    file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    file_list_box: &gtk4::ListBox,
+    new_tab_deps: Option<crate::handlers::NewTabDependencies>,
+) {
     use gtk4::prelude::*;
     
     // Create a gesture click controller that responds to right mouse button clicks
@@ -502,6 +511,12 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
     // Clone the notebook and tab_box for the closure
     let notebook_clone = notebook.clone();
     let tab_box_clone = tab_box.clone();
+    let window_clone = window.clone();
+    let file_path_manager_clone = file_path_manager.clone();
+    let active_tab_path_clone = active_tab_path.clone();
+    let current_dir_clone = current_dir.clone();
+    let file_list_box_clone = file_list_box.clone();
+    let new_tab_deps_clone = new_tab_deps.clone();
     
     // Connect the pressed signal to show context menu
     right_click_gesture.connect_pressed(move |_, _n_press, x, y| {
@@ -544,6 +559,8 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
         // Clone for the button closure
         let notebook_for_close_others = notebook_clone.clone();
         let popover_weak_others = popover.downgrade();
+        let window_for_close_others = window_clone.clone();
+        let file_path_manager_for_close_others = file_path_manager_clone.clone();
         
         close_others_button.connect_clicked(move |_| {
             crate::status_log::log_info("Closing other tabs...");
@@ -555,18 +572,89 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
             
             // Close all tabs except the clicked one
             if let Some(keep_page) = clicked_page_num {
-                // Close tabs after the kept page first (from end to beginning)
-                while notebook_for_close_others.n_pages() > keep_page + 1 {
-                    let last_page = notebook_for_close_others.n_pages() - 1;
-                    notebook_for_close_others.remove_page(Some(last_page));
+                // Check if any tabs (except the kept one) have unsaved changes
+                let mut unsaved_files = Vec::new();
+                for page_num in 0..notebook_for_close_others.n_pages() {
+                    if page_num != keep_page {
+                        if let Some(page_widget) = notebook_for_close_others.nth_page(Some(page_num)) {
+                            if let Some(tab_label_widget) = notebook_for_close_others.tab_label(&page_widget) {
+                                if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                                    if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                        if label.text().starts_with('*') {
+                                            // Found an unsaved file
+                                            let filename = file_path_manager_for_close_others.borrow()
+                                                .get(&page_num)
+                                                .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
+                                                .unwrap_or_else(|| "Untitled".to_string());
+                                            unsaved_files.push(filename);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 
-                // Close tabs before the kept page (from beginning, but now it's always index 0)
-                while keep_page > 0 && notebook_for_close_others.n_pages() > 1 {
-                    notebook_for_close_others.remove_page(Some(0));
+                // If there are unsaved files, show confirmation dialog
+                if !unsaved_files.is_empty() {
+                    let message = if unsaved_files.len() == 1 {
+                        format!("You have unsaved changes in {}.\n\nAre you sure you want to close other tabs without saving?", unsaved_files[0])
+                    } else {
+                        format!("You have unsaved changes in {} files:\n• {}\n\nAre you sure you want to close other tabs without saving?", 
+                                unsaved_files.len(), 
+                                unsaved_files.join("\n• "))
+                    };
+                    
+                    let dialog = gtk4::MessageDialog::new(
+                        Some(&window_for_close_others),
+                        gtk4::DialogFlags::MODAL | gtk4::DialogFlags::DESTROY_WITH_PARENT,
+                        gtk4::MessageType::Warning,
+                        gtk4::ButtonsType::None,
+                        &message
+                    );
+                    
+                    dialog.add_buttons(&[
+                        ("Cancel", gtk4::ResponseType::Cancel),
+                        ("Close Others Anyway", gtk4::ResponseType::Yes),
+                    ]);
+                    
+                    dialog.set_default_response(gtk4::ResponseType::Cancel);
+                    
+                    let notebook_clone = notebook_for_close_others.clone();
+                    dialog.connect_response(move |d, response| {
+                        if response == gtk4::ResponseType::Yes {
+                            // User confirmed - close other tabs without saving
+                            // Close tabs after the kept page first (from end to beginning)
+                            while notebook_clone.n_pages() > keep_page + 1 {
+                                let last_page = notebook_clone.n_pages() - 1;
+                                notebook_clone.remove_page(Some(last_page));
+                            }
+                            
+                            // Close tabs before the kept page (from beginning, but now it's always index 0)
+                            while keep_page > 0 && notebook_clone.n_pages() > 1 {
+                                notebook_clone.remove_page(Some(0));
+                            }
+                            crate::status_log::log_success("Other tabs closed");
+                        }
+                        d.close();
+                    });
+                    
+                    dialog.show();
+                } else {
+                    // No unsaved files, close other tabs directly
+                    // Close tabs after the kept page first (from end to beginning)
+                    while notebook_for_close_others.n_pages() > keep_page + 1 {
+                        let last_page = notebook_for_close_others.n_pages() - 1;
+                        notebook_for_close_others.remove_page(Some(last_page));
+                    }
+                    
+                    // Close tabs before the kept page (from beginning, but now it's always index 0)
+                    while keep_page > 0 && notebook_for_close_others.n_pages() > 1 {
+                        notebook_for_close_others.remove_page(Some(0));
+                    }
+                    
+                    crate::status_log::log_success("Other tabs closed");
                 }
-                
-                crate::status_log::log_success("Other tabs closed");
             }
         });
         
@@ -579,6 +667,8 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
         // Clone notebook for the button closure
         let notebook_for_close = notebook_clone.clone();
         let popover_weak = popover.downgrade();
+        let window_for_close = window_clone.clone();
+        let file_path_manager_for_close = file_path_manager_clone.clone();
         
         close_all_button.connect_clicked(move |_| {
             crate::status_log::log_info("Closing all tabs...");
@@ -588,13 +678,74 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
                 popover.popdown();
             }
             
-            // Close all tabs from the end to the beginning
-            while notebook_for_close.n_pages() > 0 {
-                let last_page = notebook_for_close.n_pages() - 1;
-                notebook_for_close.remove_page(Some(last_page));
+            // Check if any tabs have unsaved changes
+            let mut unsaved_files = Vec::new();
+            for page_num in 0..notebook_for_close.n_pages() {
+                if let Some(page_widget) = notebook_for_close.nth_page(Some(page_num)) {
+                    if let Some(tab_label_widget) = notebook_for_close.tab_label(&page_widget) {
+                        if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                            if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                if label.text().starts_with('*') {
+                                    // Found an unsaved file
+                                    let filename = file_path_manager_for_close.borrow()
+                                        .get(&page_num)
+                                        .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
+                                        .unwrap_or_else(|| "Untitled".to_string());
+                                    unsaved_files.push(filename);
+                                }
+                            }
+                        }
+                    }
+                }
             }
             
-            crate::status_log::log_success("All tabs closed");
+            // If there are unsaved files, show confirmation dialog
+            if !unsaved_files.is_empty() {
+                let message = if unsaved_files.len() == 1 {
+                    format!("You have unsaved changes in {}.\n\nAre you sure you want to close all tabs without saving?", unsaved_files[0])
+                } else {
+                    format!("You have unsaved changes in {} files:\n• {}\n\nAre you sure you want to close all tabs without saving?", 
+                            unsaved_files.len(), 
+                            unsaved_files.join("\n• "))
+                };
+                
+                let dialog = gtk4::MessageDialog::new(
+                    Some(&window_for_close),
+                    gtk4::DialogFlags::MODAL | gtk4::DialogFlags::DESTROY_WITH_PARENT,
+                    gtk4::MessageType::Warning,
+                    gtk4::ButtonsType::None,
+                    &message
+                );
+                
+                dialog.add_buttons(&[
+                    ("Cancel", gtk4::ResponseType::Cancel),
+                    ("Close All Anyway", gtk4::ResponseType::Yes),
+                ]);
+                
+                dialog.set_default_response(gtk4::ResponseType::Cancel);
+                
+                let notebook_clone = notebook_for_close.clone();
+                dialog.connect_response(move |d, response| {
+                    if response == gtk4::ResponseType::Yes {
+                        // User confirmed - close all tabs without saving
+                        while notebook_clone.n_pages() > 0 {
+                            let last_page = notebook_clone.n_pages() - 1;
+                            notebook_clone.remove_page(Some(last_page));
+                        }
+                        crate::status_log::log_success("All tabs closed");
+                    }
+                    d.close();
+                });
+                
+                dialog.show();
+            } else {
+                // No unsaved files, close all tabs directly
+                while notebook_for_close.n_pages() > 0 {
+                    let last_page = notebook_for_close.n_pages() - 1;
+                    notebook_for_close.remove_page(Some(last_page));
+                }
+                crate::status_log::log_success("All tabs closed");
+            }
         });
         
         // Add buttons to menu
