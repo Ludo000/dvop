@@ -244,6 +244,9 @@ pub fn create_text_view() -> (
     // Add middle mouse click support for the tab
     setup_tab_middle_click(&tab_widget, &tab_close_button);
     
+    // Add right-click context menu support for the tab
+    setup_tab_right_click(&tab_widget, &editor_notebook);
+    
     // Create a source view with syntax highlighting instead of a standard text view
     let (source_view, source_buffer) = syntax::create_source_view();
     
@@ -491,6 +494,92 @@ pub fn setup_tab_middle_click(tab_box: &GtkBox, close_button: &Button) {
     
     // Add the gesture controller to the tab box
     tab_box.add_controller(middle_click_gesture);
+}
+
+/// Adds right-click context menu support to a tab widget with "Close All" option
+///
+/// This function sets up a gesture click controller that listens for
+/// right mouse button clicks on the tab and displays a context menu.
+pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
+    use gtk4::prelude::*;
+    
+    // Create a gesture click controller that responds to right mouse button clicks
+    let right_click_gesture = gtk4::GestureClick::new();
+    right_click_gesture.set_button(3); // Right mouse button
+    
+    // Clone the notebook and tab_box for the closure
+    let notebook_clone = notebook.clone();
+    let tab_box_clone = tab_box.clone();
+    
+    // Connect the pressed signal to show context menu
+    right_click_gesture.connect_pressed(move |_, _n_press, x, y| {
+        crate::status_log::log_info("Right-click detected on tab - showing menu");
+        
+        // Create a popover for the context menu
+        let popover = gtk4::Popover::new();
+        popover.set_autohide(true);
+        popover.set_has_arrow(true);
+        popover.set_can_focus(false);
+        
+        // Create a box to hold the menu items
+        let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+        menu_box.add_css_class("menu");
+        
+        // Create "Close All" button
+        let close_all_button = Button::with_label("Close All");
+        close_all_button.set_hexpand(true);
+        
+        // Clone notebook for the button closure
+        let notebook_for_close = notebook_clone.clone();
+        let popover_weak = popover.downgrade();
+        
+        close_all_button.connect_clicked(move |_| {
+            crate::status_log::log_info("Closing all tabs...");
+            
+            // Hide the context menu first
+            if let Some(popover) = popover_weak.upgrade() {
+                popover.popdown();
+            }
+            
+            // Close all tabs from the end to the beginning
+            while notebook_for_close.n_pages() > 0 {
+                let last_page = notebook_for_close.n_pages() - 1;
+                notebook_for_close.remove_page(Some(last_page));
+            }
+            
+            crate::status_log::log_success("All tabs closed");
+        });
+        
+        // Add button to menu
+        menu_box.append(&close_all_button);
+        
+        // Set the menu box as the popover's child
+        popover.set_child(Some(&menu_box));
+        
+        // Set the popover's parent to the notebook (not the tab_box)
+        // This prevents the tab from expanding when the popover is shown
+        popover.set_parent(&notebook_clone);
+        
+        // Convert coordinates from tab_box to notebook coordinate space
+        if let Some((notebook_x, notebook_y)) = tab_box_clone.translate_coordinates(&notebook_clone, x, y) {
+            let rect = gtk4::gdk::Rectangle::new(notebook_x as i32, notebook_y as i32, 1, 1);
+            popover.set_pointing_to(Some(&rect));
+        }
+        
+        // Properly handle cleanup when the popover is closed
+        let popover_weak_cleanup = popover.downgrade();
+        popover.connect_closed(move |_| {
+            if let Some(popover) = popover_weak_cleanup.upgrade() {
+                popover.unparent();
+            }
+        });
+        
+        // Show the popover
+        popover.popup();
+    });
+    
+    // Add the gesture controller to the tab box
+    tab_box.add_controller(right_click_gesture);
 }
 
 /// Creates a container box for the editor notebook with the add button and search bar
