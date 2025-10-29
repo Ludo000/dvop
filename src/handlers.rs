@@ -171,6 +171,9 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     // Add middle mouse click support for the tab
     crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
     
+    // Add right-click context menu support for the tab
+    crate::ui::setup_tab_right_click(&tab_widget, &deps.editor_notebook);
+    
     // Add the new tab to the notebook and switch to it
     let new_page_num = deps.editor_notebook.append_page(&new_scrolled_window, Some(&tab_widget));
     // Setting current page after append ensures the switch_page signal is emitted properly
@@ -740,6 +743,9 @@ pub fn open_or_focus_tab(
         
         // Add middle mouse click support for the tab
         crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
+        
+        // Add right-click context menu support for the tab
+        crate::ui::setup_tab_right_click(&tab_widget, notebook);
         
         let new_scrolled_window = ScrolledWindow::builder()
             .vexpand(true)
