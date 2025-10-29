@@ -6,7 +6,6 @@ pub mod file_manager;
 pub mod css;
 pub mod settings;
 pub mod global_search;
-pub mod activity_bar;
 
 use gtk4::prelude::*;
 use gtk4::{
