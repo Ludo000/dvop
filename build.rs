@@ -3,8 +3,16 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-    // Tell Cargo to rerun this build script if the logo changes
+    // Tell Cargo to rerun this build script if resources change
     println!("cargo:rerun-if-changed=dvop.svg");
+    println!("cargo:rerun-if-changed=resources");
+    
+    // Compile GResources
+    glib_build_tools::compile_resources(
+        &["resources"],
+        "resources/resources.gresource.xml",
+        "resources.gresource",
+    );
     
     // Get the output directory where the binary will be placed
     let out_dir = env::var("OUT_DIR").unwrap();

@@ -303,7 +303,7 @@ pub fn update_tab_label_after_save(notebook: &Notebook, page_num: u32, new_name_
 pub fn handle_close_tab_request(
     notebook: &Notebook,
     page_num_to_close: u32,
-    window: &ApplicationWindow,
+    window: &impl IsA<ApplicationWindow>,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
     current_dir: &Rc<RefCell<PathBuf>>, // New
@@ -346,7 +346,7 @@ pub fn handle_close_tab_request(
                     .to_owned()
             };
             let dialog = MessageDialog::new(
-                Some(window),
+                Some(window.as_ref().upcast_ref::<gtk4::Window>()),
                 DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                 MessageType::Question,
                 ButtonsType::None,
@@ -397,7 +397,7 @@ pub fn handle_close_tab_request(
                                 }
                             } else { // Untitled file, need to "Save As"
                                 let save_as_dialog = gtk4::FileChooserDialog::new(
-                                    Some("Save File As"), Some(&window_clone), gtk4::FileChooserAction::Save,
+                                    Some("Save File As"), Some(window_clone.as_ref().upcast_ref::<gtk4::Window>()), gtk4::FileChooserAction::Save,
                                     &[("Cancel", gtk4::ResponseType::Cancel), ("Save", gtk4::ResponseType::Accept)]);
                                 
                                 save_as_dialog.set_default_response(gtk4::ResponseType::Cancel);
@@ -697,7 +697,7 @@ pub fn open_or_focus_tab(
     save_button: &Button,
     save_as_button: &Button, 
     _mime_type: &mime_guess::Mime, // Used now for save menu button visibility
-    window: &ApplicationWindow, // Added for dialogs and NewTabDependencies
+    window: &impl IsA<ApplicationWindow>, // Added for dialogs and NewTabDependencies
     file_list_box: &ListBox,
     current_dir: &Rc<RefCell<PathBuf>>,
     _save_menu_button: Option<&MenuButton>, // Added save_menu_button parameter
@@ -1083,7 +1083,7 @@ pub fn open_or_focus_tab(
             editor_notebook: notebook.clone(),
             active_tab_path: active_tab_path_ref_clone.clone(),
             file_path_manager: file_path_manager_clone.clone(),
-            window: window_clone.clone(),
+            window: window_clone.clone().upcast::<ApplicationWindow>(),
             file_list_box: file_list_box.clone(),
             current_dir: current_dir.clone(),
             save_button: save_button.clone(),
@@ -1126,7 +1126,7 @@ pub fn setup_button_handlers(
     _initial_text_buffer: &TextBuffer, 
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
-    window: &ApplicationWindow, // Already present, good.
+    window: &impl IsA<ApplicationWindow>, // Accept any type that implements ApplicationWindow
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &ListBox,
     editor_notebook: &Notebook, 
@@ -1216,7 +1216,7 @@ fn setup_new_button_handler(
     current_dir: &Rc<RefCell<PathBuf>>, // To update file list
     save_button: &Button,
     save_as_button: &Button,
-    window: &ApplicationWindow, // Added for NewTabDependencies
+    window: &impl IsA<ApplicationWindow>, // Added for NewTabDependencies
 ) {
     let editor_notebook_clone = editor_notebook.clone(); // Clone for the main closure
     let active_tab_path_ref_clone = active_tab_path_ref.clone();
@@ -1235,7 +1235,7 @@ fn setup_new_button_handler(
             editor_notebook: editor_notebook_clone.clone(),
             active_tab_path: active_tab_path_ref_clone.clone(),
             file_path_manager: file_path_manager_clone.clone(),
-            window: window_clone.clone(),
+            window: window_clone.clone().upcast::<ApplicationWindow>(),
             file_list_box: file_list_box_clone.clone(),
             current_dir: current_dir_clone.clone(),
             save_button: save_button_clone.clone(),
@@ -1251,7 +1251,7 @@ fn setup_new_button_handler(
 fn setup_open_button_handler(
     open_button: &Button,
     editor_notebook: &Notebook,
-    window: &ApplicationWindow,
+    window: &impl IsA<ApplicationWindow>,
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &ListBox,
     error_label: &Label, // For showing errors if a tab can't display content
@@ -1283,7 +1283,7 @@ fn setup_open_button_handler(
         
         let dialog = gtk4::FileChooserDialog::new(
             Some("Open File"),
-            Some(&window),
+            Some(window.as_ref().upcast_ref::<gtk4::Window>()),
             gtk4::FileChooserAction::Open,
             &[("Cancel", gtk4::ResponseType::Cancel), ("Open", gtk4::ResponseType::Accept)],
         );
@@ -1497,7 +1497,7 @@ fn setup_save_button_handler(
     editor_notebook: &Notebook,
     active_tab_path_ref: &Rc<RefCell<Option<PathBuf>>>,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
-    window: &ApplicationWindow,
+    window: &impl IsA<ApplicationWindow>,
     file_list_box: &ListBox, // To update selection
     current_dir: &Rc<RefCell<PathBuf>>, // To update file list path
 ) {
@@ -1560,7 +1560,7 @@ fn setup_save_button_handler(
                 
                 let dialog = gtk4::FileChooserDialog::new(
                     Some("Save File"),
-                    Some(&window),
+                    Some(window.as_ref().upcast_ref::<gtk4::Window>()),
                     gtk4::FileChooserAction::Save,
                     &[("Cancel", gtk4::ResponseType::Cancel), ("Save", gtk4::ResponseType::Accept)],
                 );
@@ -1643,7 +1643,7 @@ fn setup_save_as_button_handler(
     editor_notebook: &Notebook,
     active_tab_path_ref: &Rc<RefCell<Option<PathBuf>>>,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
-    window: &ApplicationWindow,
+    window: &impl IsA<ApplicationWindow>,
     current_dir: &Rc<RefCell<PathBuf>>, // To set initial dialog directory and update after save
     file_list_box: &ListBox, // To update file list
 ) {
@@ -1667,7 +1667,7 @@ fn setup_save_as_button_handler(
 
             let dialog = gtk4::FileChooserDialog::new(
                 Some("Save File As"),
-                Some(&window),
+                Some(window.as_ref().upcast_ref::<gtk4::Window>()),
                 gtk4::FileChooserAction::Save,
                 &[("Cancel", gtk4::ResponseType::Cancel), ("Save As", gtk4::ResponseType::Accept)],
             );
@@ -1871,7 +1871,7 @@ fn setup_file_selection_handler(
     picture: &Picture, // Needs tab-specific handling
     save_button: &Button,
     save_as_button: &Button,
-    window: &ApplicationWindow, // Added for NewTabDependencies
+    window: &impl IsA<ApplicationWindow>, // Added for NewTabDependencies
     _save_menu_button: Option<&MenuButton>, // Prefix with _ to acknowledge it's unused currently
     path_box: Option<&gtk4::Box>, // Optional path box for status bar with clickable segments
     current_selection_source: &Rc<RefCell<utils::FileSelectionSource>>, // Track selection source for click-outside detection
@@ -1974,7 +1974,7 @@ fn setup_file_selection_handler(
                     if crate::ui::file_manager::has_clipboard_content() {
                         crate::ui::file_manager::paste_file_from_clipboard(
                             &current_dir_for_key.borrow(),
-                            &window_for_key,
+                            window_for_key.upcast_ref::<ApplicationWindow>(),
                             &file_list_box_for_key,
                             &current_dir_for_key,
                             &active_tab_path_for_key,
@@ -2424,7 +2424,7 @@ pub fn close_empty_untitled_tabs(notebook: &Notebook, file_path_manager: &Rc<Ref
 /// the file list is refreshed.
 pub fn handle_file_deletion(
     file_path: &PathBuf,
-    window: &ApplicationWindow,
+    window: &impl IsA<ApplicationWindow>,
     file_list_box: &ListBox,
     current_dir: &Rc<RefCell<PathBuf>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
@@ -2460,7 +2460,7 @@ pub fn handle_file_deletion(
             
             // Tab was successfully closed (or wasn't open), proceed with file deletion confirmation
             let dialog = MessageDialog::new(
-                Some(&window_clone),
+                Some(window_clone.as_ref().upcast_ref::<gtk4::Window>()),
                 DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                 MessageType::Warning,
                 ButtonsType::None,
@@ -2496,7 +2496,7 @@ pub fn handle_file_deletion(
                             
                             // Show error dialog
                             let error_dialog = MessageDialog::new(
-                                Some(&window_inner),
+                                Some(window_inner.as_ref().upcast_ref::<gtk4::Window>()),
                                 DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                                 MessageType::Error,
                                 ButtonsType::Ok,
@@ -2524,7 +2524,7 @@ fn close_tab_if_file_open_with_save_prompt(
     file_path: &PathBuf,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
-    window: &ApplicationWindow,
+    window: &impl IsA<ApplicationWindow>,
     _current_dir: &Rc<RefCell<PathBuf>>,
     _file_list_box: &ListBox,
     callback: impl Fn(bool) + 'static, // Callback to indicate success/cancellation
@@ -2569,7 +2569,7 @@ fn close_tab_if_file_open_with_save_prompt(
                         .unwrap_or_else(|| "Unknown file".to_string());
                         
                     let dialog = MessageDialog::new(
-                        Some(window),
+                        Some(window.as_ref().upcast_ref::<gtk4::Window>()),
                         DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                         MessageType::Question,
                         ButtonsType::None,
@@ -2657,7 +2657,7 @@ fn close_tab_if_file_open_with_save_prompt(
 /// on a file in the file manager. Currently supports file deletion.
 fn show_file_context_menu(
     file_path: &PathBuf,
-    window: &ApplicationWindow,
+    window: &impl IsA<ApplicationWindow>,
     file_list_box: &ListBox,
     current_dir: &Rc<RefCell<PathBuf>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
@@ -2753,7 +2753,7 @@ fn show_file_context_menu(
         
         crate::ui::file_manager::paste_file_from_clipboard(
             &current_dir_paste.borrow(),
-            &window_paste,
+            window_paste.upcast_ref::<ApplicationWindow>(),
             &file_list_box_paste,
             &current_dir_paste,
             &active_tab_path_paste,
@@ -2834,7 +2834,7 @@ fn show_file_context_menu(
 /// This function creates and displays a context menu for general file manager actions
 /// like creating new files when clicking in empty space.
 fn show_file_manager_background_context_menu(
-    window: &ApplicationWindow,
+    window: &impl IsA<ApplicationWindow>,
     file_list_box: &ListBox,
     current_dir: &Rc<RefCell<PathBuf>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
@@ -2887,7 +2887,7 @@ fn show_file_manager_background_context_menu(
         
         crate::ui::file_manager::paste_file_from_clipboard(
             &current_dir_paste.borrow(),
-            &window_paste,
+            window_paste.upcast_ref::<ApplicationWindow>(),
             &file_list_box_paste,
             &current_dir_paste,
             &active_tab_path_paste,
@@ -2916,7 +2916,7 @@ fn show_file_manager_background_context_menu(
         // Create new empty tab
         let new_tab_deps = NewTabDependencies {
             editor_notebook: editor_notebook_clone.clone(),
-            window: window_clone.clone(),
+            window: window_clone.clone().upcast::<ApplicationWindow>(),
             file_list_box: file_list_box_clone.clone(),
             active_tab_path: active_tab_path_clone.clone(),
             file_path_manager: file_path_manager_clone.clone(),
