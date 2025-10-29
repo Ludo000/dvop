@@ -18,7 +18,7 @@ use gtk4::{
     Box as GtkBox, Orientation,
     
     // GLib
-    glib,
+    glib::{self, clone},
 };
 
 // SourceView specific imports
@@ -577,6 +577,7 @@ fn actually_close_tab(
 
 
 /// Enter fullscreen mode for an image
+/// For animated GIFs, we need to share the Picture widget data, not just copy the paintable
 fn enter_image_fullscreen(
     picture: &Picture,
 ) {
@@ -597,10 +598,39 @@ fn enter_image_fullscreen(
     // Create a new picture widget for fullscreen with the same paintable
     let fullscreen_picture = Picture::new();
     fullscreen_picture.set_paintable(paintable.as_ref());
-    fullscreen_picture.set_can_shrink(true);
+    fullscreen_picture.set_can_shrink(true); // Allow shrinking to fit
     fullscreen_picture.set_keep_aspect_ratio(true);
     fullscreen_picture.set_hexpand(true);
     fullscreen_picture.set_vexpand(true);
+    fullscreen_picture.set_halign(gtk4::Align::Center);
+    fullscreen_picture.set_valign(gtk4::Align::Center);
+    
+    // For animated GIFs, we need to keep updating the fullscreen picture
+    // when the original picture updates at high frequency for smooth animation
+    let original_picture = picture.clone();
+    let fullscreen_picture_clone = fullscreen_picture.clone();
+    let fullscreen_window_for_update = fullscreen_window.clone();
+    
+    // Poll for updates at 60fps (16ms) for smooth animation
+    glib::timeout_add_local(std::time::Duration::from_millis(16), clone!(
+        #[weak] original_picture,
+        #[weak] fullscreen_picture_clone,
+        #[weak] fullscreen_window_for_update,
+        #[upgrade_or] glib::ControlFlow::Break,
+        move || {
+            // Stop if fullscreen window is closed
+            if !fullscreen_window_for_update.is_visible() {
+                return glib::ControlFlow::Break;
+            }
+            
+            // Sync the paintable from original to fullscreen
+            if let Some(paintable) = original_picture.paintable() {
+                fullscreen_picture_clone.set_paintable(Some(&paintable));
+            }
+            
+            glib::ControlFlow::Continue
+        }
+    ));
     
     // Create a container for the image in fullscreen
     let fullscreen_box = GtkBox::new(Orientation::Vertical, 0);
@@ -718,50 +748,225 @@ pub fn open_or_focus_tab(
             
         // Handle different file types
         if mime_type.type_() == "image" {
-            // Handle image file
-            if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file_to_open) {
-                let picture = Picture::new();
-                picture.set_pixbuf(Some(&pixbuf));
-                picture.set_can_focus(true);
-                picture.set_focusable(true);
+            // Handle image file - check if it's a GIF animation
+            let is_gif = file_to_open.extension()
+                .and_then(|e| e.to_str())
+                .map(|s| s.to_lowercase() == "gif")
+                .unwrap_or(false);
+            
+            if is_gif {
+                // Check file size to decide loading strategy
+                let file_size = std::fs::metadata(&file_to_open)
+                    .map(|m| m.len())
+                    .unwrap_or(0);
                 
-                new_scrolled_window.set_child(Some(&picture));
-                
-                // Add keyboard event handler on the scrolled window to catch F key
-                let key_controller = EventControllerKey::new();
-                let picture_keys = picture.clone();
-                
-                key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
-                    match key {
-                        // F: Enter fullscreen
-                        gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
-                            println!("Image: F key pressed, entering fullscreen");
-                            enter_image_fullscreen(&picture_keys);
-                            return glib::Propagation::Stop;
+                if file_size > 10 * 1024 * 1024 { // > 10MB
+                    // Large GIF - load only first frame to prevent crash
+                    if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file_to_open) {
+                        let picture = Picture::new();
+                        picture.set_pixbuf(Some(&pixbuf));
+                        picture.set_can_focus(true);
+                        picture.set_focusable(true);
+                        
+                        // Show warning label
+                        let info_label = Label::new(Some(&format!(
+                            "GIF is {:.1} MB - showing first frame only to prevent crash",
+                            file_size as f64 / (1024.0 * 1024.0)
+                        )));
+                        info_label.add_css_class("dim-label");
+                        
+                        let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 5);
+                        vbox.set_margin_top(10);
+                        vbox.set_margin_bottom(10);
+                        vbox.append(&info_label);
+                        vbox.append(&picture);
+                        
+                        // Add keyboard event handler
+                        let key_controller = EventControllerKey::new();
+                        let picture_keys = picture.clone();
+                        
+                        key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
+                            match key {
+                                gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
+                                    enter_image_fullscreen(&picture_keys);
+                                    return glib::Propagation::Stop;
+                                }
+                                _ => {}
+                            }
+                            glib::Propagation::Proceed
+                        });
+                        new_scrolled_window.add_controller(key_controller);
+                        
+                        // Add double-click gesture
+                        let double_click_gesture = GestureClick::new();
+                        double_click_gesture.set_button(1);
+                        let picture_fullscreen = picture.clone();
+                        
+                        double_click_gesture.connect_pressed(move |_gesture, n_press, _x, _y| {
+                            if n_press == 2 {
+                                enter_image_fullscreen(&picture_fullscreen);
+                            }
+                        });
+                        picture.add_controller(double_click_gesture);
+                        
+                        new_scrolled_window.set_child(Some(&vbox));
+                    } else {
+                        let error_label = Label::new(Some("Failed to load large GIF"));
+                        error_label.add_css_class("error");
+                        new_scrolled_window.set_child(Some(&error_label));
+                    }
+                } else {
+                    // Normal/small GIF - animate it
+                    let loading_label = Label::new(Some("Loading GIF..."));
+                    loading_label.add_css_class("dim-label");
+                    new_scrolled_window.set_child(Some(&loading_label));
+                    
+                    let file_path_clone = file_to_open.clone();
+                    let new_scrolled_window_clone = new_scrolled_window.clone();
+                    
+                    // Load with idle priority to keep UI responsive
+                    glib::idle_add_local_once(move || {
+                        match gtk4::gdk_pixbuf::PixbufAnimation::from_file(&file_path_clone) {
+                            Ok(animation) => {
+                                let picture = Picture::new();
+                                
+                                if animation.is_static_image() {
+                                    // Static image
+                                    if let Some(pixbuf) = animation.static_image() {
+                                        picture.set_pixbuf(Some(&pixbuf));
+                                    }
+                                } else {
+                                    // Animated GIF - use native timing
+                                    if let Some(pixbuf) = animation.static_image() {
+                                        picture.set_pixbuf(Some(&pixbuf));
+                                    }
+                                    
+                                    let picture_anim = picture.clone();
+                                    let iter = animation.iter(None);
+                                    let iter_rc = Rc::new(RefCell::new(iter));
+                                    
+                                    // Use GIF's native delay, capped at 60fps
+                                    let delay_ms: u64 = {
+                                        let iter_borrow = iter_rc.borrow();
+                                        iter_borrow.delay_time()
+                                            .map(|d| d.as_millis() as u64)
+                                            .unwrap_or(100)
+                                            .max(16) // Cap at 60fps (16ms)
+                                    };
+                                    
+                                    // Animation loop
+                                    glib::timeout_add_local(std::time::Duration::from_millis(delay_ms), clone!(
+                                        #[weak] picture_anim,
+                                        #[strong] iter_rc,
+                                        #[upgrade_or] glib::ControlFlow::Break,
+                                        move || {
+                                            // Stop if widget destroyed or not mapped (tab not visible)
+                                            if !picture_anim.is_visible() || !picture_anim.is_mapped() {
+                                                return glib::ControlFlow::Break;
+                                            }
+                                            
+                                            // Advance and display next frame
+                                            use std::time::SystemTime;
+                                            let mut iter = iter_rc.borrow_mut();
+                                            iter.advance(SystemTime::now());
+                                            let pixbuf = iter.pixbuf();
+                                            drop(iter);
+                                            
+                                            picture_anim.set_pixbuf(Some(&pixbuf));
+                                            
+                                            glib::ControlFlow::Continue
+                                        }
+                                    ));
+                                }
+                                
+                                picture.set_can_focus(true);
+                                picture.set_focusable(true);
+                                
+                                // Add keyboard event handler
+                                let key_controller = EventControllerKey::new();
+                                let picture_keys = picture.clone();
+                                
+                                key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
+                                    match key {
+                                        gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
+                                            enter_image_fullscreen(&picture_keys);
+                                            return glib::Propagation::Stop;
+                                        }
+                                        _ => {}
+                                    }
+                                    glib::Propagation::Proceed
+                                });
+                                new_scrolled_window_clone.add_controller(key_controller);
+                                
+                                // Add double-click gesture
+                                let double_click_gesture = GestureClick::new();
+                                double_click_gesture.set_button(1);
+                                let picture_fullscreen = picture.clone();
+                                
+                                double_click_gesture.connect_pressed(move |_gesture, n_press, _x, _y| {
+                                    if n_press == 2 {
+                                        enter_image_fullscreen(&picture_fullscreen);
+                                    }
+                                });
+                                picture.add_controller(double_click_gesture);
+                                
+                                new_scrolled_window_clone.set_child(Some(&picture));
+                            }
+                            Err(e) => {
+                                let error_msg = format!("Failed to load GIF: {}", e);
+                                let error_label = Label::new(Some(&error_msg));
+                                error_label.add_css_class("error");
+                                new_scrolled_window_clone.set_child(Some(&error_label));
+                            }
                         }
-                        _ => {}
-                    }
-                    glib::Propagation::Proceed
-                });
-                new_scrolled_window.add_controller(key_controller);
-                
-                // Add double-click gesture for fullscreen
-                let double_click_gesture = GestureClick::new();
-                double_click_gesture.set_button(1); // Left mouse button
-                let picture_fullscreen = picture.clone();
-                
-                double_click_gesture.connect_pressed(move |_gesture, n_press, _x, _y| {
-                    if n_press == 2 { // Double-click
-                        println!("Image: Double-click detected, entering fullscreen");
-                        enter_image_fullscreen(&picture_fullscreen);
-                    }
-                });
-                picture.add_controller(double_click_gesture);
+                    });
+                }
             } else {
-                // Failed to load image, show error
-                let error_msg = format!("Failed to load image: {}", file_name);
-                let error_label = Label::new(Some(&error_msg));
-                new_scrolled_window.set_child(Some(&error_label));
+                // Load as static image for non-GIF files
+                if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file_to_open) {
+                    let picture = Picture::new();
+                    picture.set_pixbuf(Some(&pixbuf));
+                    picture.set_can_focus(true);
+                    picture.set_focusable(true);
+                    
+                    new_scrolled_window.set_child(Some(&picture));
+                    
+                    // Add keyboard event handler on the scrolled window to catch F key
+                    let key_controller = EventControllerKey::new();
+                    let picture_keys = picture.clone();
+                    
+                    key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
+                        match key {
+                            // F: Enter fullscreen
+                            gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
+                                println!("Image: F key pressed, entering fullscreen");
+                                enter_image_fullscreen(&picture_keys);
+                                return glib::Propagation::Stop;
+                            }
+                            _ => {}
+                        }
+                        glib::Propagation::Proceed
+                    });
+                    new_scrolled_window.add_controller(key_controller);
+                    
+                    // Add double-click gesture for fullscreen
+                    let double_click_gesture = GestureClick::new();
+                    double_click_gesture.set_button(1); // Left mouse button
+                    let picture_fullscreen = picture.clone();
+                    
+                    double_click_gesture.connect_pressed(move |_gesture, n_press, _x, _y| {
+                        if n_press == 2 { // Double-click
+                            println!("Image: Double-click detected, entering fullscreen");
+                            enter_image_fullscreen(&picture_fullscreen);
+                        }
+                    });
+                    picture.add_controller(double_click_gesture);
+                } else {
+                    // Failed to load image, show error
+                    let error_msg = format!("Failed to load image: {}", file_name);
+                    let error_label = Label::new(Some(&error_msg));
+                    new_scrolled_window.set_child(Some(&error_label));
+                }
             }
         } else if mime_type.type_() == "audio" {
             // Handle audio file
