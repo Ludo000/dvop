@@ -1442,7 +1442,7 @@ pub fn show_global_search_dialog(
     });
     search_text_view.add_controller(key_controller);
 
-    // Replace button handler - replaces the first/next result automatically
+    // Replace button handler - replaces the selected result
     let replace_buffer_weak = replace_buffer.downgrade();
     let results_list_clone = results_list.clone();
     let editor_notebook_for_replace = editor_notebook.clone();
@@ -1451,8 +1451,8 @@ pub fn show_global_search_dialog(
         if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
             let replace_text = replace_buffer.text(&replace_buffer.start_iter(), &replace_buffer.end_iter(), false).to_string();
             
-            // Get the first row (auto-select)
-            if let Some(row) = results_list_clone.row_at_index(0) {
+            // Get the selected row
+            if let Some(row) = results_list_clone.selected_row() {
                 if let Some(child) = row.child() {
                     if let Some(vbox) = child.downcast_ref::<GtkBox>() {
                         if let Some(first_child) = vbox.first_child() {
@@ -2114,7 +2114,7 @@ pub fn create_global_search_panel(
     });
     search_text_view.add_controller(key_controller);
     
-    // Replace button handler - replaces the first/next result automatically
+    // Replace button handler - replaces the selected result
     let replace_buffer_weak = replace_buffer.downgrade();
     let results_list_clone = results_list.clone();
     let editor_notebook_for_replace = editor_notebook.clone();
@@ -2123,8 +2123,8 @@ pub fn create_global_search_panel(
         if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
             let replace_text = replace_buffer.text(&replace_buffer.start_iter(), &replace_buffer.end_iter(), false).to_string();
             
-            // Get the first row (auto-select)
-            if let Some(row) = results_list_clone.row_at_index(0) {
+            // Get the selected row
+            if let Some(row) = results_list_clone.selected_row() {
                 if let Some(child) = row.child() {
                     if let Some(vbox) = child.downcast_ref::<GtkBox>() {
                         if let Some(first_child) = vbox.first_child() {
