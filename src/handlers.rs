@@ -2674,20 +2674,26 @@ fn show_file_context_menu(
     let popover = gtk4::Popover::new();
     
     // Create a box to hold the button
-    let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
     menu_box.add_css_class("menu");
     
     // Create copy button
     let copy_button = Button::with_label("Copy");
+    copy_button.add_css_class("flat");
     copy_button.set_hexpand(true);
+    copy_button.set_halign(gtk4::Align::Start);
     
     // Create cut button
     let cut_button = Button::with_label("Cut");
+    cut_button.add_css_class("flat");
     cut_button.set_hexpand(true);
+    cut_button.set_halign(gtk4::Align::Start);
     
     // Create paste button (if there's content in clipboard)
     let paste_button = Button::with_label("Paste");
+    paste_button.add_css_class("flat");
     paste_button.set_hexpand(true);
+    paste_button.set_halign(gtk4::Align::Start);
     paste_button.set_sensitive(crate::ui::file_manager::has_clipboard_content());
     
     // Add separator
@@ -2695,8 +2701,10 @@ fn show_file_context_menu(
     
     // Create delete button
     let delete_button = Button::with_label("Delete");
+    delete_button.add_css_class("flat");
     delete_button.add_css_class("destructive-action");
     delete_button.set_hexpand(true);
+    delete_button.set_halign(gtk4::Align::Start);
     
     // Clone variables for the copy button closure
     let file_path_copy = file_path.clone();
@@ -2843,16 +2851,20 @@ fn show_file_manager_background_context_menu(
     let popover = gtk4::Popover::new();
     
     // Create a box to hold the menu items
-    let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
     menu_box.add_css_class("menu");
     
     // Create "New File" button
     let new_file_button = Button::with_label("New File");
+    new_file_button.add_css_class("flat");
     new_file_button.set_hexpand(true);
+    new_file_button.set_halign(gtk4::Align::Start);
     
     // Create "Paste" button (if there's content in clipboard)
     let paste_button = Button::with_label("Paste");
+    paste_button.add_css_class("flat");
     paste_button.set_hexpand(true);
+    paste_button.set_halign(gtk4::Align::Start);
     paste_button.set_sensitive(crate::ui::file_manager::has_clipboard_content());
     
     // Add separator
