@@ -648,6 +648,18 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         _save_menu_button: Some(save_menu_button.clone()), // Split button menu component (currently unused)
     };
 
+    // Now that dependencies are available, set up right-click menu for the initial tab
+    ui::setup_tab_right_click(
+        &_initial_tab_widget,
+        &editor_notebook,
+        &window.clone().upcast::<ApplicationWindow>(),
+        &file_path_manager,
+        &active_tab_path,
+        &current_dir,
+        &file_list_box,
+        Some(deps_for_new_tab_creation.clone()),
+    );
+
     // Set up the close button handler for the initial tab
     // Clone all necessary references for the closure
     let initial_tab_close_button_clone = initial_tab_close_button.clone();

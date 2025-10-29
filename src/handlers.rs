@@ -172,7 +172,16 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
     
     // Add right-click context menu support for the tab
-    crate::ui::setup_tab_right_click(&tab_widget, &deps.editor_notebook);
+    crate::ui::setup_tab_right_click(
+        &tab_widget,
+        &deps.editor_notebook,
+        &deps.window,
+        &deps.file_path_manager,
+        &deps.active_tab_path,
+        &deps.current_dir,
+        &deps.file_list_box,
+        Some(deps.clone()),
+    );
     
     // Add the new tab to the notebook and switch to it
     let new_page_num = deps.editor_notebook.append_page(&new_scrolled_window, Some(&tab_widget));
@@ -745,7 +754,28 @@ pub fn open_or_focus_tab(
         crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
         
         // Add right-click context menu support for the tab
-        crate::ui::setup_tab_right_click(&tab_widget, notebook);
+        // Create NewTabDependencies for right-click menu
+        let new_tab_deps_for_context = NewTabDependencies {
+            editor_notebook: notebook.clone(),
+            active_tab_path: active_tab_path_ref.clone(),
+            file_path_manager: file_path_manager.clone(),
+            window: window.clone().upcast::<ApplicationWindow>(),
+            file_list_box: file_list_box.clone(),
+            current_dir: current_dir.clone(),
+            save_button: save_button.clone(),
+            save_as_button: save_as_button.clone(),
+            _save_menu_button: _save_menu_button.cloned(),
+        };
+        crate::ui::setup_tab_right_click(
+            &tab_widget,
+            notebook,
+            &window.clone().upcast::<ApplicationWindow>(),
+            file_path_manager,
+            active_tab_path_ref,
+            current_dir,
+            file_list_box,
+            Some(new_tab_deps_for_context),
+        );
         
         let new_scrolled_window = ScrolledWindow::builder()
             .vexpand(true)

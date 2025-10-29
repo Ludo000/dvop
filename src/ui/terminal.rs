@@ -246,8 +246,8 @@ pub fn add_terminal_tab(terminal_notebook: &Notebook, working_dir: Option<PathBu
     // Add middle mouse click support for the tab
     crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
     
-    // Add right-click context menu support for the tab
-    crate::ui::setup_tab_right_click(&tab_widget, terminal_notebook);
+    // Note: Right-click menu with close all/close others is not added for terminal tabs
+    // as they don't have file paths or unsaved state to check
     
     // Append the terminal to the notebook
     let page_num = terminal_notebook.append_page(&terminal_box, Some(&tab_widget));
