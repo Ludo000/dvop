@@ -668,8 +668,7 @@ fn replace_in_buffer(
         let mut start_iter = buffer.start_iter();
         start_iter.set_line(line.saturating_sub(1) as i32);
         
-        // For safety, search for the needle on this line instead of using the exact column
-        // This handles cases where previous replacements shifted positions
+        // Get the line text to verify the match
         let line_end = start_iter;
         let mut line_end = line_end;
         if !line_end.ends_line() {
@@ -677,31 +676,38 @@ fn replace_in_buffer(
         }
         let line_text = buffer.text(&start_iter, &line_end, false).to_string();
         
-        // Find the needle starting from the expected column position
+        // Check if needle exists at the EXACT expected column (not searching)
         let col_offset = col.saturating_sub(1);
-        let search_start = col_offset.min(line_text.len());
+        if col_offset >= line_text.len() {
+            return Err(format!("Column {} is beyond line length {} at line {}", col, line_text.len(), line));
+        }
         
-        let needle_pos = if case_sensitive {
-            line_text[search_start..].find(needle).map(|p| search_start + p)
+        let match_end = col_offset + needle.len();
+        if match_end > line_text.len() {
+            return Err(format!("Match would extend beyond line end at line {} col {}", line, col));
+        }
+        
+        let actual_text = &line_text[col_offset..match_end];
+        let matches = if case_sensitive {
+            actual_text == needle
         } else {
-            line_text[search_start..].to_lowercase().find(&needle.to_lowercase()).map(|p| search_start + p)
+            actual_text.to_lowercase() == needle.to_lowercase()
         };
         
-        if let Some(pos) = needle_pos {
-            // Position the iterators at the match
-            start_iter.set_line_offset(pos as i32);
-            let mut end_iter = start_iter;
-            end_iter.forward_chars(needle.chars().count() as i32);
-            
-            // Perform the replacement
-            buffer.delete(&mut start_iter, &mut end_iter);
-            buffer.insert(&mut start_iter, replace_text);
-            
-            return Ok(());
-        } else {
-            // If not found at expected position, it might have already been replaced
-            return Err(format!("Text '{}' not found at line {} starting from column {}", needle, line, col));
+        if !matches {
+            return Err(format!("Text '{}' not found at exact position line {} col {} (found '{}')", needle, line, col, actual_text));
         }
+        
+        // Position the iterators at the exact match
+        start_iter.set_line_offset(col_offset as i32);
+        let mut end_iter = start_iter;
+        end_iter.forward_chars(needle.chars().count() as i32);
+        
+        // Perform the replacement
+        buffer.delete(&mut start_iter, &mut end_iter);
+        buffer.insert(&mut start_iter, replace_text);
+        
+        return Ok(());
     }
     
     // Try TextView
@@ -712,7 +718,7 @@ fn replace_in_buffer(
         let mut start_iter = buffer.start_iter();
         start_iter.set_line(line.saturating_sub(1) as i32);
         
-        // Search for the needle on this line instead of using exact column
+        // Get the line text to verify the match
         let line_end = start_iter;
         let mut line_end = line_end;
         if !line_end.ends_line() {
@@ -720,30 +726,38 @@ fn replace_in_buffer(
         }
         let line_text = buffer.text(&start_iter, &line_end, false).to_string();
         
-        // Find the needle starting from the expected column position
+        // Check if needle exists at the EXACT expected column (not searching)
         let col_offset = col.saturating_sub(1);
-        let search_start = col_offset.min(line_text.len());
+        if col_offset >= line_text.len() {
+            return Err(format!("Column {} is beyond line length {} at line {}", col, line_text.len(), line));
+        }
         
-        let needle_pos = if case_sensitive {
-            line_text[search_start..].find(needle).map(|p| search_start + p)
+        let match_end = col_offset + needle.len();
+        if match_end > line_text.len() {
+            return Err(format!("Match would extend beyond line end at line {} col {}", line, col));
+        }
+        
+        let actual_text = &line_text[col_offset..match_end];
+        let matches = if case_sensitive {
+            actual_text == needle
         } else {
-            line_text[search_start..].to_lowercase().find(&needle.to_lowercase()).map(|p| search_start + p)
+            actual_text.to_lowercase() == needle.to_lowercase()
         };
         
-        if let Some(pos) = needle_pos {
-            // Position the iterators at the match
-            start_iter.set_line_offset(pos as i32);
-            let mut end_iter = start_iter;
-            end_iter.forward_chars(needle.chars().count() as i32);
-            
-            // Perform the replacement
-            buffer.delete(&mut start_iter, &mut end_iter);
-            buffer.insert(&mut start_iter, replace_text);
-            
-            return Ok(());
-        } else {
-            return Err(format!("Text '{}' not found at line {} starting from column {}", needle, line, col));
+        if !matches {
+            return Err(format!("Text '{}' not found at exact position line {} col {} (found '{}')", needle, line, col, actual_text));
         }
+        
+        // Position the iterators at the exact match
+        start_iter.set_line_offset(col_offset as i32);
+        let mut end_iter = start_iter;
+        end_iter.forward_chars(needle.chars().count() as i32);
+        
+        // Perform the replacement
+        buffer.delete(&mut start_iter, &mut end_iter);
+        buffer.insert(&mut start_iter, replace_text);
+        
+        return Ok(());
     }
     
     Err("Widget is neither TextView nor SourceView".to_string())
@@ -1268,11 +1282,13 @@ pub fn show_global_search_dialog(
             let status_c = status.clone();
             let receiver_rc_c = receiver_rc_clone.clone();
             let result_count_c = result_count_clone.clone();
+            let max_results = 500usize; // Limit displayed results to prevent UI slowdown
             glib::timeout_add_local(std::time::Duration::from_millis(30), move || {
                 let mut finished = false;
                 let mut processed = 0usize;
+                let current_count = *result_count_c.borrow();
                 if let Some(rx) = receiver_rc_c.borrow().as_ref() {
-                    while processed < 200 {
+                    while processed < 50 && current_count + processed < max_results {
                         match rx.try_recv() {
                             Ok(Some(sr)) => {
                                 let row = ListBoxRow::new();
@@ -1352,7 +1368,11 @@ pub fn show_global_search_dialog(
                                 
                                 *result_count_c.borrow_mut() += 1;
                                 let count = *result_count_c.borrow();
-                                status_c.set_text(&format!("Found {} result{}", count, if count == 1 { "" } else { "s" }));
+                                if count >= max_results {
+                                    status_c.set_text(&format!("Showing first {} results (more available)", max_results));
+                                } else {
+                                    status_c.set_text(&format!("Found {} result{}", count, if count == 1 { "" } else { "s" }));
+                                }
                                 
                                 processed += 1;
                             }
@@ -1364,10 +1384,23 @@ pub fn show_global_search_dialog(
                 } else {
                     finished = true;
                 }
+                
+                // Check if we hit the limit
+                let count = *result_count_c.borrow();
+                if count >= max_results {
+                    // Drain any remaining results from channel without processing
+                    if let Some(rx) = receiver_rc_c.borrow().as_ref() {
+                        while rx.try_recv().is_ok() {}
+                    }
+                    finished = true;
+                }
+                
                 if finished {
                     let count = *result_count_c.borrow();
                     if count == 0 {
                         status_c.set_text("No results found");
+                    } else if count >= max_results {
+                        status_c.set_text(&format!("Showing first {} results (search stopped at limit)", max_results));
                     } else {
                         status_c.set_text(&format!("Search complete - {} result{} found", count, if count == 1 { "" } else { "s" }));
                     }
@@ -1496,7 +1529,7 @@ pub fn show_global_search_dialog(
         }
     });
 
-    // Replace All button handler - replaces all matches in all files
+    // Replace All button handler - replaces all matches in all files (async in thread)
     let replace_buffer_weak_all = replace_buffer.downgrade();
     let results_list_clone_all = results_list.clone();
     let status_clone_for_replace_all = status.clone();
@@ -1538,77 +1571,145 @@ pub fn show_global_search_dialog(
                 index += 1;
             }
             
-            // Group replacements by file
-            let mut files_map: std::collections::HashMap<PathBuf, Vec<(usize, usize, String, bool)>> = std::collections::HashMap::new();
-            for (path, line, col, needle, case_sensitive) in replacements {
-                files_map.entry(path).or_insert_with(Vec::new).push((line, col, needle, case_sensitive));
+            println!("Replace All (dialog): collected {} replacements from UI", replacements.len());
+            
+            if replacements.is_empty() {
+                status_clone_for_replace_all.set_text("No results to replace");
+                return;
             }
             
-            // Perform replacements file by file (in buffer only)
-            let mut total_replaced = 0;
-            for (path, mut matches) in files_map {
-                // Sort matches in reverse order (bottom to top) to preserve positions
-                matches.sort_by(|a, b| {
-                    // Sort by line descending, then by column descending
-                    b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1))
-                });
+            status_clone_for_replace_all.set_text("Processing replacements...");
+            
+            // Group replacements by file in background thread
+            let editor_notebook_clone = editor_notebook_for_replace_all.clone();
+            let file_path_manager_clone = file_path_manager_for_replace_all.clone();
+            let parent_window_clone = parent_window_for_replace_all.clone();
+            let active_tab_path_clone = active_tab_path_for_replace_all.clone();
+            let save_button_clone = save_button_for_replace_all.clone();
+            let save_as_button_clone = save_as_button_for_replace_all.clone();
+            let file_list_box_clone = file_list_box_for_replace_all.clone();
+            let current_dir_clone = current_dir_for_replace_all.clone();
+            let results_list_for_clear = results_list_clone_all.clone();
+            let status_for_update = status_clone_for_replace_all.clone();
+            
+            let (tx, rx) = std::sync::mpsc::channel::<(PathBuf, Vec<(usize, usize, String, bool)>)>();
+            let (done_tx, done_rx) = std::sync::mpsc::channel::<usize>();
+            
+            // Spawn thread to group replacements and read file contents
+            std::thread::spawn(move || {
+                let mut files_map: std::collections::HashMap<PathBuf, Vec<(usize, usize, String, bool)>> = std::collections::HashMap::new();
+                for (path, line, col, needle, case_sensitive) in replacements {
+                    files_map.entry(path).or_insert_with(Vec::new).push((line, col, needle, case_sensitive));
+                }
                 
-                // Open file if not already open
-                let file_path_map = file_path_manager_for_replace_all.borrow();
-                let is_open = file_path_map.values().any(|p| p == &path);
-                drop(file_path_map);
+                // Send each file's replacements to main thread
+                for (path, matches) in files_map {
+                    let _ = tx.send((path, matches));
+                }
                 
-                if !is_open {
-                    // Open the file first
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        let mime = mime_guess::from_path(&path).first_or_octet_stream();
-                        crate::handlers::open_or_focus_tab(
-                            &editor_notebook_for_replace_all,
-                            &path,
-                            &content,
-                            &active_tab_path_for_replace_all,
-                            &file_path_manager_for_replace_all,
-                            &save_button_for_replace_all,
-                            &save_as_button_for_replace_all,
-                            &mime,
-                            &parent_window_for_replace_all,
-                            &file_list_box_for_replace_all,
-                            &current_dir_for_replace_all,
-                            None,
-                        );
-                    } else {
-                        eprintln!("Failed to read file {}", path.display());
-                        continue;
+                // Signal completion
+                let _ = done_tx.send(0);
+            });
+            
+            // Process replacements on main thread
+            let total_replaced = Rc::new(RefCell::new(0usize));
+            let total_replaced_clone = total_replaced.clone();
+            let thread_done = Rc::new(RefCell::new(false));
+            let thread_done_clone = thread_done.clone();
+            
+            glib::timeout_add_local(std::time::Duration::from_millis(10), move || {
+                // Check if thread signaled completion (only once)
+                if !*thread_done_clone.borrow() && done_rx.try_recv().is_ok() {
+                    *thread_done_clone.borrow_mut() = true;
+                    println!("Dialog: Background thread completed");
+                }
+                
+                // Process a batch of file replacements
+                let mut processed = 0;
+                while processed < 5 {
+                    match rx.try_recv() {
+                        Ok((path, mut matches)) => {
+                            println!("Dialog: Processing {} matches in file: {}", matches.len(), path.display());
+                            
+                            // Sort matches in reverse order (bottom to top) to preserve positions
+                            matches.sort_by(|a, b| {
+                                b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1))
+                            });
+                            
+                            // Open file if not already open
+                            let file_path_map = file_path_manager_clone.borrow();
+                            let is_open = file_path_map.values().any(|p| p == &path);
+                            drop(file_path_map);
+                            
+                            if !is_open {
+                                // Open the file first
+                                if let Ok(content) = std::fs::read_to_string(&path) {
+                                    let mime = mime_guess::from_path(&path).first_or_octet_stream();
+                                    crate::handlers::open_or_focus_tab(
+                                        &editor_notebook_clone,
+                                        &path,
+                                        &content,
+                                        &active_tab_path_clone,
+                                        &file_path_manager_clone,
+                                        &save_button_clone,
+                                        &save_as_button_clone,
+                                        &mime,
+                                        &parent_window_clone,
+                                        &file_list_box_clone,
+                                        &current_dir_clone,
+                                        None,
+                                    );
+                                } else {
+                                    eprintln!("Failed to read file {}", path.display());
+                                    processed += 1;
+                                    continue;
+                                }
+                            }
+                            
+                            // Replace all occurrences in the buffer for this file (bottom to top)
+                            for (line, col, needle, case_sensitive) in matches {
+                                match replace_in_buffer(
+                                    &editor_notebook_clone,
+                                    &file_path_manager_clone,
+                                    &path,
+                                    line,
+                                    col,
+                                    &needle,
+                                    &replace_text,
+                                    case_sensitive
+                                ) {
+                                    Ok(_) => {
+                                        *total_replaced_clone.borrow_mut() += 1;
+                                        println!("Dialog: Successfully replaced at {}:{} in {}", line, col, path.display());
+                                    }
+                                    Err(e) => eprintln!("Dialog: Failed to replace at {}:{} in {}: {}", line, col, path.display(), e),
+                                }
+                            }
+                            
+                            processed += 1;
+                        }
+                        Err(std::sync::mpsc::TryRecvError::Empty) => break,
+                        Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
                     }
                 }
                 
-                // Replace all occurrences in the buffer for this file (bottom to top)
-                for (line, col, needle, case_sensitive) in matches {
-                    match replace_in_buffer(
-                        &editor_notebook_for_replace_all,
-                        &file_path_manager_for_replace_all,
-                        &path,
-                        line,
-                        col,
-                        &needle,
-                        &replace_text,
-                        case_sensitive
-                    ) {
-                        Ok(_) => total_replaced += 1,
-                        Err(e) => eprintln!("Failed to replace in {}: {}", path.display(), e),
+                // Check if we're completely done (thread finished AND no more data)
+                if *thread_done_clone.borrow() && rx.try_recv().is_err() {
+                    // Clear all results from the list
+                    while let Some(row) = results_list_for_clear.row_at_index(0) {
+                        results_list_for_clear.remove(&row);
                     }
+                    
+                    let total = *total_replaced_clone.borrow();
+                    status_for_update.set_text(&format!("Replaced {} occurrence{}", 
+                        total, 
+                        if total == 1 { "" } else { "s" }
+                    ));
+                    return glib::ControlFlow::Break;
                 }
-            }
-            
-            // Clear all results from the list
-            while let Some(row) = results_list_clone_all.row_at_index(0) {
-                results_list_clone_all.remove(&row);
-            }
-            
-            status_clone_for_replace_all.set_text(&format!("Replaced {} occurrence{}", 
-                total_replaced, 
-                if total_replaced == 1 { "" } else { "s" }
-            ));
+                
+                glib::ControlFlow::Continue
+            });
         }
     });
 
@@ -1941,11 +2042,13 @@ pub fn create_global_search_panel(
             let status_c = status.clone();
             let receiver_rc_c = receiver_rc_clone.clone();
             let result_count_c = result_count_clone.clone();
+            let max_results = 500usize; // Limit displayed results to prevent UI slowdown
             glib::timeout_add_local(std::time::Duration::from_millis(30), move || {
                 let mut finished = false;
                 let mut processed = 0usize;
+                let current_count = *result_count_c.borrow();
                 if let Some(rx) = receiver_rc_c.borrow().as_ref() {
-                    while processed < 200 {
+                    while processed < 50 && current_count + processed < max_results {
                         match rx.try_recv() {
                             Ok(Some(sr)) => {
                                 let row = ListBoxRow::new();
@@ -2025,7 +2128,11 @@ pub fn create_global_search_panel(
                                 
                                 *result_count_c.borrow_mut() += 1;
                                 let count = *result_count_c.borrow();
-                                status_c.set_text(&format!("Found {} result{}", count, if count == 1 { "" } else { "s" }));
+                                if count >= max_results {
+                                    status_c.set_text(&format!("Showing first {} results (more available)", max_results));
+                                } else {
+                                    status_c.set_text(&format!("Found {} result{}", count, if count == 1 { "" } else { "s" }));
+                                }
                                 
                                 processed += 1;
                             }
@@ -2036,10 +2143,22 @@ pub fn create_global_search_panel(
                     }
                 }
                 
+                // Check if we hit the limit
+                let count = *result_count_c.borrow();
+                if count >= max_results {
+                    // Drain any remaining results from channel without processing
+                    if let Some(rx) = receiver_rc_c.borrow().as_ref() {
+                        while rx.try_recv().is_ok() {}
+                    }
+                    finished = true;
+                }
+                
                 if finished {
                     let count = *result_count_c.borrow();
                     if count == 0 {
                         status_c.set_text("No results found");
+                    } else if count >= max_results {
+                        status_c.set_text(&format!("Showing first {} results (search stopped at limit)", max_results));
                     } else {
                         status_c.set_text(&format!("Search complete - {} result{} found", count, if count == 1 { "" } else { "s" }));
                     }
@@ -2168,7 +2287,7 @@ pub fn create_global_search_panel(
         }
     });
 
-    // Replace All button handler - replaces all matches in all files
+    // Replace All button handler - replaces all matches in all files (async in thread)
     let replace_buffer_weak_all = replace_buffer.downgrade();
     let results_list_clone_all = results_list.clone();
     let status_clone_for_replace_all = status_for_replace.clone();
@@ -2210,77 +2329,145 @@ pub fn create_global_search_panel(
                 index += 1;
             }
             
-            // Group replacements by file
-            let mut files_map: std::collections::HashMap<PathBuf, Vec<(usize, usize, String, bool)>> = std::collections::HashMap::new();
-            for (path, line, col, needle, case_sensitive) in replacements {
-                files_map.entry(path).or_insert_with(Vec::new).push((line, col, needle, case_sensitive));
+            println!("Replace All (panel): collected {} replacements from UI", replacements.len());
+            
+            if replacements.is_empty() {
+                status_clone_for_replace_all.set_text("No results to replace");
+                return;
             }
             
-            // Perform replacements file by file (in buffer only)
-            let mut total_replaced = 0;
-            for (path, mut matches) in files_map {
-                // Sort matches in reverse order (bottom to top) to preserve positions
-                matches.sort_by(|a, b| {
-                    // Sort by line descending, then by column descending
-                    b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1))
-                });
+            status_clone_for_replace_all.set_text("Processing replacements...");
+            
+            // Group replacements by file in background thread
+            let editor_notebook_clone = editor_notebook_for_replace_all.clone();
+            let file_path_manager_clone = file_path_manager_for_replace_all.clone();
+            let parent_window_clone = parent_window_for_replace_all.clone();
+            let active_tab_path_clone = active_tab_path_for_replace_all.clone();
+            let save_button_clone = save_button_for_replace_all.clone();
+            let save_as_button_clone = save_as_button_for_replace_all.clone();
+            let file_list_box_clone = file_list_box_for_replace_all.clone();
+            let current_dir_clone = current_dir_for_replace_all.clone();
+            let results_list_for_clear = results_list_clone_all.clone();
+            let status_for_update = status_clone_for_replace_all.clone();
+            
+            let (tx, rx) = std::sync::mpsc::channel::<(PathBuf, Vec<(usize, usize, String, bool)>)>();
+            let (done_tx, done_rx) = std::sync::mpsc::channel::<usize>();
+            
+            // Spawn thread to group replacements and read file contents
+            std::thread::spawn(move || {
+                let mut files_map: std::collections::HashMap<PathBuf, Vec<(usize, usize, String, bool)>> = std::collections::HashMap::new();
+                for (path, line, col, needle, case_sensitive) in replacements {
+                    files_map.entry(path).or_insert_with(Vec::new).push((line, col, needle, case_sensitive));
+                }
                 
-                // Open file if not already open
-                let file_path_map = file_path_manager_for_replace_all.borrow();
-                let is_open = file_path_map.values().any(|p| p == &path);
-                drop(file_path_map);
+                // Send each file's replacements to main thread
+                for (path, matches) in files_map {
+                    let _ = tx.send((path, matches));
+                }
                 
-                if !is_open {
-                    // Open the file first
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        let mime = mime_guess::from_path(&path).first_or_octet_stream();
-                        crate::handlers::open_or_focus_tab(
-                            &editor_notebook_for_replace_all,
-                            &path,
-                            &content,
-                            &active_tab_path_for_replace_all,
-                            &file_path_manager_for_replace_all,
-                            &save_button_for_replace_all,
-                            &save_as_button_for_replace_all,
-                            &mime,
-                            &parent_window_for_replace_all,
-                            &file_list_box_for_replace_all,
-                            &current_dir_for_replace_all,
-                            None,
-                        );
-                    } else {
-                        eprintln!("Failed to read file {}", path.display());
-                        continue;
+                // Signal completion
+                let _ = done_tx.send(0);
+            });
+            
+            // Process replacements on main thread
+            let total_replaced = Rc::new(RefCell::new(0usize));
+            let total_replaced_clone = total_replaced.clone();
+            let thread_done = Rc::new(RefCell::new(false));
+            let thread_done_clone = thread_done.clone();
+            
+            glib::timeout_add_local(std::time::Duration::from_millis(10), move || {
+                // Check if thread signaled completion (only once)
+                if !*thread_done_clone.borrow() && done_rx.try_recv().is_ok() {
+                    *thread_done_clone.borrow_mut() = true;
+                    println!("Panel: Background thread completed");
+                }
+                
+                // Process a batch of file replacements
+                let mut processed = 0;
+                while processed < 5 {
+                    match rx.try_recv() {
+                        Ok((path, mut matches)) => {
+                            println!("Panel: Processing {} matches in file: {}", matches.len(), path.display());
+                            
+                            // Sort matches in reverse order (bottom to top) to preserve positions
+                            matches.sort_by(|a, b| {
+                                b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1))
+                            });
+                            
+                            // Open file if not already open
+                            let file_path_map = file_path_manager_clone.borrow();
+                            let is_open = file_path_map.values().any(|p| p == &path);
+                            drop(file_path_map);
+                            
+                            if !is_open {
+                                // Open the file first
+                                if let Ok(content) = std::fs::read_to_string(&path) {
+                                    let mime = mime_guess::from_path(&path).first_or_octet_stream();
+                                    crate::handlers::open_or_focus_tab(
+                                        &editor_notebook_clone,
+                                        &path,
+                                        &content,
+                                        &active_tab_path_clone,
+                                        &file_path_manager_clone,
+                                        &save_button_clone,
+                                        &save_as_button_clone,
+                                        &mime,
+                                        &parent_window_clone,
+                                        &file_list_box_clone,
+                                        &current_dir_clone,
+                                        None,
+                                    );
+                                } else {
+                                    eprintln!("Failed to read file {}", path.display());
+                                    processed += 1;
+                                    continue;
+                                }
+                            }
+                            
+                            // Replace all occurrences in the buffer for this file (bottom to top)
+                            for (line, col, needle, case_sensitive) in matches {
+                                match replace_in_buffer(
+                                    &editor_notebook_clone,
+                                    &file_path_manager_clone,
+                                    &path,
+                                    line,
+                                    col,
+                                    &needle,
+                                    &replace_text,
+                                    case_sensitive
+                                ) {
+                                    Ok(_) => {
+                                        *total_replaced_clone.borrow_mut() += 1;
+                                        println!("Panel: Successfully replaced at {}:{} in {}", line, col, path.display());
+                                    }
+                                    Err(e) => eprintln!("Panel: Failed to replace at {}:{} in {}: {}", line, col, path.display(), e),
+                                }
+                            }
+                            
+                            processed += 1;
+                        }
+                        Err(std::sync::mpsc::TryRecvError::Empty) => break,
+                        Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
                     }
                 }
                 
-                // Replace all occurrences in the buffer for this file (bottom to top)
-                for (line, col, needle, case_sensitive) in matches {
-                    match replace_in_buffer(
-                        &editor_notebook_for_replace_all,
-                        &file_path_manager_for_replace_all,
-                        &path,
-                        line,
-                        col,
-                        &needle,
-                        &replace_text,
-                        case_sensitive
-                    ) {
-                        Ok(_) => total_replaced += 1,
-                        Err(e) => eprintln!("Failed to replace in {}: {}", path.display(), e),
+                // Check if we're completely done (thread finished AND no more data)
+                if *thread_done_clone.borrow() && rx.try_recv().is_err() {
+                    // Clear all results from the list
+                    while let Some(row) = results_list_for_clear.row_at_index(0) {
+                        results_list_for_clear.remove(&row);
                     }
+                    
+                    let total = *total_replaced_clone.borrow();
+                    status_for_update.set_text(&format!("Replaced {} occurrence{}", 
+                        total, 
+                        if total == 1 { "" } else { "s" }
+                    ));
+                    return glib::ControlFlow::Break;
                 }
-            }
-            
-            // Clear all results from the list
-            while let Some(row) = results_list_clone_all.row_at_index(0) {
-                results_list_clone_all.remove(&row);
-            }
-            
-            status_clone_for_replace_all.set_text(&format!("Replaced {} occurrence{}", 
-                total_replaced, 
-                if total_replaced == 1 { "" } else { "s" }
-            ));
+                
+                glib::ControlFlow::Continue
+            });
         }
     });
     
