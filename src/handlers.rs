@@ -873,7 +873,7 @@ pub fn open_or_focus_tab(
                                             
                                             // Advance and display next frame
                                             use std::time::SystemTime;
-                                            let mut iter = iter_rc.borrow_mut();
+                                            let iter = iter_rc.borrow_mut();
                                             iter.advance(SystemTime::now());
                                             let pixbuf = iter.pixbuf();
                                             drop(iter);

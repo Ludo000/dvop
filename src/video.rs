@@ -171,15 +171,6 @@ impl GlobalVideoManager {
 use once_cell::sync::Lazy;
 static GLOBAL_VIDEO_MANAGER: Lazy<GlobalVideoManager> = Lazy::new(|| GlobalVideoManager::new());
 
-/// Public function to update global volume from UI components
-pub fn set_global_volume(volume: f64) {
-    crate::audio::set_global_volume(volume);
-}
-
-/// Public function to get current global volume
-pub fn get_global_volume() -> f64 {
-    crate::audio::get_global_volume()
-}
 
 /// Public function to check if a file path represents video content
 pub fn is_video_file(path: &std::path::Path) -> bool {
@@ -1080,11 +1071,6 @@ impl VideoPlayer {
         });
         
         Ok(player)
-    }
-    
-    /// Destroys the video player and cleans up resources
-    pub fn destroy(&self) {
-        let _ = self.pipeline.set_state(State::Null);
     }
 }
 

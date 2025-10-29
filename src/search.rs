@@ -645,8 +645,5 @@ pub fn hide_search() {
     search_state.hide_search();
 }
 
-/// Gets the search bar widget for embedding in the UI
-pub fn get_search_bar() -> &'static SearchBar {
-    let search_state = get_search_state();
-    &search_state.search_bar
-}
+
+
