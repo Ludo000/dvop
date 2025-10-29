@@ -535,12 +535,14 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
         popover.set_can_focus(false);
         
         // Create a box to hold the menu items
-        let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+        let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
         menu_box.add_css_class("menu");
         
         // Create "Close Others" button
         let close_others_button = Button::with_label("Close Others");
+        close_others_button.add_css_class("flat");
         close_others_button.set_hexpand(true);
+        close_others_button.set_halign(gtk4::Align::Start);
         
         // Disable "Close Others" if there's only one tab
         if notebook_clone.n_pages() <= 1 {
@@ -578,7 +580,9 @@ pub fn setup_tab_right_click(tab_box: &GtkBox, notebook: &Notebook) {
         
         // Create "Close All" button
         let close_all_button = Button::with_label("Close All");
+        close_all_button.add_css_class("flat");
         close_all_button.set_hexpand(true);
+        close_all_button.set_halign(gtk4::Align::Start);
         
         // Clone notebook for the button closure
         let notebook_for_close = notebook_clone.clone();
