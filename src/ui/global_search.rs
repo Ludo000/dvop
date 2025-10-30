@@ -1487,6 +1487,10 @@ pub fn show_global_search_dialog(
     let results_list_clone = results_list.clone();
     let editor_notebook_for_replace = editor_notebook.clone();
     let file_path_manager_for_replace = file_path_manager.clone();
+    let search_buffer_for_refresh = search_buffer.clone();
+    let case_toggle_for_refresh = case_toggle.clone();
+    let whole_word_toggle_for_refresh = whole_word_toggle.clone();
+    let start_search_for_refresh = start_search.clone();
     replace_btn.connect_clicked(move |_| {
         if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
             let replace_text = replace_buffer.text(&replace_buffer.start_iter(), &replace_buffer.end_iter(), false).to_string();
@@ -1530,6 +1534,12 @@ pub fn show_global_search_dialog(
                                                     results_list_clone.select_row(Some(&next_row));
                                                     // Trigger the activation to open the file and jump to the position
                                                     next_row.activate();
+                                                }
+                                                
+                                                // Refresh the search to update results
+                                                let search_text = search_buffer_for_refresh.text(&search_buffer_for_refresh.start_iter(), &search_buffer_for_refresh.end_iter(), false).to_string();
+                                                if !search_text.trim().is_empty() {
+                                                    (start_search_for_refresh)(search_text, case_toggle_for_refresh.is_active(), whole_word_toggle_for_refresh.is_active());
                                                 }
                                             }
                                             Err(e) => {
@@ -1727,6 +1737,32 @@ pub fn show_global_search_dialog(
                 
                 glib::ControlFlow::Continue
             });
+        }
+    });
+    
+    // Clone search elements for refresh after Replace All
+    let search_buffer_for_refresh_all = search_buffer.clone();
+    let case_toggle_for_refresh_all = case_toggle.clone();
+    let whole_word_toggle_for_refresh_all = whole_word_toggle.clone();
+    let start_search_for_refresh_all = start_search.clone();
+    
+    // Connect to refresh search after Replace All completes
+    let status_for_watch = status.clone();
+    glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
+        let status_text = status_for_watch.text();
+        if status_text.starts_with("Replaced") && status_text.contains("occurrence") {
+            // Replace All just completed, refresh search
+            let search_text = search_buffer_for_refresh_all.text(&search_buffer_for_refresh_all.start_iter(), &search_buffer_for_refresh_all.end_iter(), false).to_string();
+            if !search_text.trim().is_empty() {
+                (start_search_for_refresh_all)(search_text, case_toggle_for_refresh_all.is_active(), whole_word_toggle_for_refresh_all.is_active());
+            }
+            glib::ControlFlow::Break
+        } else if status_text.starts_with("Processing replacements") {
+            // Still processing, keep watching
+            glib::ControlFlow::Continue
+        } else {
+            // Not in replace mode, stop watching
+            glib::ControlFlow::Break
         }
     });
 
@@ -2262,6 +2298,10 @@ pub fn create_global_search_panel(
     let results_list_clone = results_list.clone();
     let editor_notebook_for_replace = editor_notebook.clone();
     let file_path_manager_for_replace = file_path_manager.clone();
+    let search_buffer_for_refresh = search_buffer.clone();
+    let case_toggle_for_refresh = case_toggle.clone();
+    let whole_word_toggle_for_refresh = whole_word_toggle.clone();
+    let start_search_for_refresh = start_search.clone();
     replace_btn.connect_clicked(move |_| {
         if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
             let replace_text = replace_buffer.text(&replace_buffer.start_iter(), &replace_buffer.end_iter(), false).to_string();
@@ -2306,6 +2346,12 @@ pub fn create_global_search_panel(
                                                     // Trigger the activation to open the file and jump to the position
                                                     next_row.activate();
                                                 }
+                                                
+                                                // Refresh the search to update results
+                                                let search_text = search_buffer_for_refresh.text(&search_buffer_for_refresh.start_iter(), &search_buffer_for_refresh.end_iter(), false).to_string();
+                                                if !search_text.trim().is_empty() {
+                                                    (start_search_for_refresh)(search_text, case_toggle_for_refresh.is_active(), whole_word_toggle_for_refresh.is_active());
+                                                }
                                             }
                                             Err(e) => {
                                                 eprintln!("Failed to replace in {}: {}", path.display(), e);
@@ -2333,6 +2379,10 @@ pub fn create_global_search_panel(
     let save_as_button_for_replace_all = save_as_button.clone();
     let file_list_box_for_replace_all = file_list_box.clone();
     let current_dir_for_replace_all = current_dir.clone();
+    let search_buffer_for_replace_all = search_buffer.clone();
+    let case_toggle_for_replace_all = case_toggle.clone();
+    let whole_word_toggle_for_replace_all = whole_word_toggle.clone();
+    let start_search_for_replace_all = start_search.clone();
     replace_all_btn.connect_clicked(move |_| {
         if let Some(replace_buffer) = replace_buffer_weak_all.upgrade() {
             let replace_text = replace_buffer.text(&replace_buffer.start_iter(), &replace_buffer.end_iter(), false).to_string();
@@ -2408,6 +2458,12 @@ pub fn create_global_search_panel(
             let total_replaced_clone = total_replaced.clone();
             let thread_done = Rc::new(RefCell::new(false));
             let thread_done_clone = thread_done.clone();
+            
+            // Clone search elements before moving into timeout closure
+            let search_buffer_timeout = search_buffer_for_replace_all.clone();
+            let case_toggle_timeout = case_toggle_for_replace_all.clone();
+            let whole_word_toggle_timeout = whole_word_toggle_for_replace_all.clone();
+            let start_search_timeout = start_search_for_replace_all.clone();
             
             glib::timeout_add_local(std::time::Duration::from_millis(10), move || {
                 // Check if thread signaled completion (only once)
@@ -2497,6 +2553,19 @@ pub fn create_global_search_panel(
                         total, 
                         if total == 1 { "" } else { "s" }
                     ));
+                    
+                    // Refresh the search after replace all completes
+                    let search_buffer_inner = search_buffer_timeout.clone();
+                    let case_toggle_inner = case_toggle_timeout.clone();
+                    let whole_word_toggle_inner = whole_word_toggle_timeout.clone();
+                    let start_search_inner = start_search_timeout.clone();
+                    glib::idle_add_local_once(move || {
+                        let search_text = search_buffer_inner.text(&search_buffer_inner.start_iter(), &search_buffer_inner.end_iter(), false).to_string();
+                        if !search_text.trim().is_empty() {
+                            (start_search_inner)(search_text, case_toggle_inner.is_active(), whole_word_toggle_inner.is_active());
+                        }
+                    });
+                    
                     return glib::ControlFlow::Break;
                 }
                 
