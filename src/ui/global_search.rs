@@ -1374,6 +1374,13 @@ pub fn show_global_search_dialog(
                                     status_c.set_text(&format!("Found {} result{}", count, if count == 1 { "" } else { "s" }));
                                 }
                                 
+                                // Select the first result automatically
+                                if count == 1 {
+                                    results_list_c.select_row(Some(&row));
+                                    // Activate the row to open the file and jump to the occurrence
+                                    row.activate();
+                                }
+                                
                                 processed += 1;
                             }
                             Ok(None) => { finished = true; break; }
@@ -1486,6 +1493,9 @@ pub fn show_global_search_dialog(
             
             // Get the selected row
             if let Some(row) = results_list_clone.selected_row() {
+                // Get the index of the current row before removing it
+                let current_index = row.index();
+                
                 if let Some(child) = row.child() {
                     if let Some(vbox) = child.downcast_ref::<GtkBox>() {
                         if let Some(first_child) = vbox.first_child() {
@@ -1514,6 +1524,13 @@ pub fn show_global_search_dialog(
                                             Ok(_) => {
                                                 // Remove the result from the list after successful replacement
                                                 results_list_clone.remove(&row);
+                                                
+                                                // Select the next row (which now has the same index as the removed row)
+                                                if let Some(next_row) = results_list_clone.row_at_index(current_index) {
+                                                    results_list_clone.select_row(Some(&next_row));
+                                                    // Trigger the activation to open the file and jump to the position
+                                                    next_row.activate();
+                                                }
                                             }
                                             Err(e) => {
                                                 eprintln!("Failed to replace in {}: {}", path.display(), e);
@@ -2134,6 +2151,13 @@ pub fn create_global_search_panel(
                                     status_c.set_text(&format!("Found {} result{}", count, if count == 1 { "" } else { "s" }));
                                 }
                                 
+                                // Select the first result automatically
+                                if count == 1 {
+                                    results_list_c.select_row(Some(&row));
+                                    // Activate the row to open the file and jump to the occurrence
+                                    row.activate();
+                                }
+                                
                                 processed += 1;
                             }
                             Ok(None) => { finished = true; break; }
@@ -2244,6 +2268,9 @@ pub fn create_global_search_panel(
             
             // Get the selected row
             if let Some(row) = results_list_clone.selected_row() {
+                // Get the index of the current row before removing it
+                let current_index = row.index();
+                
                 if let Some(child) = row.child() {
                     if let Some(vbox) = child.downcast_ref::<GtkBox>() {
                         if let Some(first_child) = vbox.first_child() {
@@ -2272,6 +2299,13 @@ pub fn create_global_search_panel(
                                             Ok(_) => {
                                                 // Remove the result from the list after successful replacement
                                                 results_list_clone.remove(&row);
+                                                
+                                                // Select the next row (which now has the same index as the removed row)
+                                                if let Some(next_row) = results_list_clone.row_at_index(current_index) {
+                                                    results_list_clone.select_row(Some(&next_row));
+                                                    // Trigger the activation to open the file and jump to the position
+                                                    next_row.activate();
+                                                }
                                             }
                                             Err(e) => {
                                                 eprintln!("Failed to replace in {}: {}", path.display(), e);
