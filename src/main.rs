@@ -496,13 +496,16 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let _editor_notebook_box = ui::create_editor_notebook_box(&editor_notebook, &add_file_button);
 
     // Get references to paned components from the template
-    let (_paned_content, paned, editor_paned, explorer_button, search_button, sidebar_stack) = ui::create_paned(&window);
+    let (_paned_content, paned, editor_paned, explorer_button, search_button, git_diff_button, sidebar_stack) = ui::create_paned(&window);
     
     // Restore active sidebar tab from settings
     let saved_sidebar_tab = settings::get_settings().get_active_sidebar_tab();
     if saved_sidebar_tab == "search" {
         search_button.set_active(true);
         sidebar_stack.set_visible_child_name("search");
+    } else if saved_sidebar_tab == "git-diff" {
+        git_diff_button.set_active(true);
+        sidebar_stack.set_visible_child_name("git-diff");
     } else {
         explorer_button.set_active(true);
         sidebar_stack.set_visible_child_name("explorer");
@@ -521,11 +524,13 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     
     // Setup explorer and search button toggle behavior
     let search_button_clone = search_button.clone();
+    let git_diff_button_clone = git_diff_button.clone();
     let sidebar_stack_clone = sidebar_stack.clone();
     let paned_clone = paned.clone();
     explorer_button.connect_toggled(move |button| {
         if button.is_active() {
             search_button_clone.set_active(false);
+            git_diff_button_clone.set_active(false);
             sidebar_stack_clone.set_visible_child_name("explorer");
             let is_hidden = !sidebar_stack_clone.is_visible();
             if is_hidden {
@@ -538,11 +543,13 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
     
     let explorer_button_clone = explorer_button.clone();
+    let git_diff_button_clone2 = git_diff_button.clone();
     let sidebar_stack_clone2 = sidebar_stack.clone();
     let paned_clone2 = paned.clone();
     search_button.connect_toggled(move |button| {
         if button.is_active() {
             explorer_button_clone.set_active(false);
+            git_diff_button_clone2.set_active(false);
             sidebar_stack_clone2.set_visible_child_name("search");
             let is_hidden = !sidebar_stack_clone2.is_visible();
             if is_hidden {
@@ -550,6 +557,25 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 let width = settings.get_file_panel_width();
                 paned_clone2.set_position(width);
                 sidebar_stack_clone2.set_visible(true);
+            }
+        }
+    });
+    
+    let explorer_button_clone2 = explorer_button.clone();
+    let search_button_clone2 = search_button.clone();
+    let sidebar_stack_clone3 = sidebar_stack.clone();
+    let paned_clone3 = paned.clone();
+    git_diff_button.connect_toggled(move |button| {
+        if button.is_active() {
+            explorer_button_clone2.set_active(false);
+            search_button_clone2.set_active(false);
+            sidebar_stack_clone3.set_visible_child_name("git-diff");
+            let is_hidden = !sidebar_stack_clone3.is_visible();
+            if is_hidden {
+                let settings = crate::settings::get_settings();
+                let width = settings.get_file_panel_width();
+                paned_clone3.set_position(width);
+                sidebar_stack_clone3.set_visible(true);
             }
         }
     });
@@ -574,6 +600,26 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 search_panel_box.remove(&child);
             }
             search_panel_box.append(&global_search_panel);
+        }
+    }
+    
+    // Get the git diff panel from the sidebar stack and populate it
+    if let Some(git_diff_panel_widget) = sidebar_stack.child_by_name("git-diff") {
+        if let Some(git_diff_panel_box) = git_diff_panel_widget.downcast_ref::<gtk4::Box>() {
+            // Create the full git diff panel
+            let git_diff_panel = ui::git_diff::create_git_diff_panel(
+                window.upcast_ref::<ApplicationWindow>(),
+                &current_dir,
+                &editor_notebook,
+                &file_path_manager,
+                &active_tab_path,
+            );
+            
+            // Clear placeholder and add the real git diff panel
+            while let Some(child) = git_diff_panel_box.first_child() {
+                git_diff_panel_box.remove(&child);
+            }
+            git_diff_panel_box.append(&git_diff_panel);
         }
     }
     
