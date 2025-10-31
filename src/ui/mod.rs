@@ -6,6 +6,7 @@ pub mod file_manager;
 pub mod css;
 pub mod settings;
 pub mod global_search;
+pub mod git_diff;
 
 use gtk4::prelude::*;
 use gtk4::{
@@ -83,6 +84,8 @@ mod imp {
         pub explorer_button: TemplateChild<gtk4::ToggleButton>,
         #[template_child]
         pub search_button: TemplateChild<gtk4::ToggleButton>,
+        #[template_child]
+        pub git_diff_button: TemplateChild<gtk4::ToggleButton>,
         
         // Main layout
         #[template_child]
@@ -101,6 +104,10 @@ mod imp {
         // Search panel
         #[template_child]
         pub search_panel: TemplateChild<GtkBox>,
+        
+        // Git diff panel
+        #[template_child]
+        pub git_diff_panel: TemplateChild<GtkBox>,
         
         // Editor
         #[template_child]
@@ -389,10 +396,11 @@ pub fn create_text_view(window: &DvopWindow) -> (
 /// - gtk4::Paned: The vertical paned container for editor+terminal
 /// - gtk4::ToggleButton: The explorer button from activity bar
 /// - gtk4::ToggleButton: The search button from activity bar
+/// - gtk4::ToggleButton: The git diff button from activity bar
 /// - gtk4::Stack: The sidebar stack for switching panels
 pub fn create_paned(
     window: &DvopWindow,
-) -> (GtkBox, gtk4::Paned, gtk4::Paned, gtk4::ToggleButton, gtk4::ToggleButton, gtk4::Stack) {
+) -> (GtkBox, gtk4::Paned, gtk4::Paned, gtk4::ToggleButton, gtk4::ToggleButton, gtk4::ToggleButton, gtk4::Stack) {
     let imp = window.imp();
     
     // Create dummy box for backward compatibility (not used in template approach)
@@ -404,6 +412,7 @@ pub fn create_paned(
         imp.editor_paned.get(),
         imp.explorer_button.get(),
         imp.search_button.get(),
+        imp.git_diff_button.get(),
         imp.sidebar_stack.get(),
     )
 }
@@ -430,14 +439,15 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     tab_box.set_margin_start(4); 
     tab_box.set_margin_end(2);
     
-    // Set a comfortable minimum width for the tab box
-    tab_box.set_size_request(120, -1);
+    // Set a fixed width for the tab box (not minimum, but fixed)
+    tab_box.set_size_request(200, -1);
+    tab_box.set_hexpand(false); // Prevent expansion
     
     // Create label with the provided title
     let label = Label::new(Some(tab_title));
-    label.set_margin_start(3);
-    label.set_width_chars(10); // Increased width for longer tabs
     label.set_ellipsize(gtk4::pango::EllipsizeMode::End); // Add ellipsis if text overflows
+    label.set_xalign(0.0); // Align text to the left
+    label.set_hexpand(true); // Expand to fill available space
     label.add_css_class("tab-label"); // Add custom CSS class for styling
     
     // Create close button with a standard X icon
@@ -446,15 +456,16 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     // Use a comfortably sized button
     close_button.add_css_class("circular"); // Make button more rounded
     close_button.set_valign(gtk4::Align::Center);
+    close_button.set_halign(gtk4::Align::End); // Align button to the right
+    close_button.set_hexpand(false); // Don't expand
     
     // Set comfortable button margins
-    close_button.set_margin_start(2);
-    close_button.set_margin_end(1);
+    close_button.set_margin_start(4);
     
     // Make the button a comfortable size
     close_button.set_size_request(20, 20);
     
-    // Assemble tab components
+    // Assemble tab components: label and close button (no spacer)
     tab_box.append(&label);
     tab_box.append(&close_button);
     
@@ -513,10 +524,10 @@ pub fn setup_tab_right_click(
     let tab_box_clone = tab_box.clone();
     let window_clone = window.clone();
     let file_path_manager_clone = file_path_manager.clone();
-    let active_tab_path_clone = active_tab_path.clone();
-    let current_dir_clone = current_dir.clone();
-    let file_list_box_clone = file_list_box.clone();
-    let new_tab_deps_clone = new_tab_deps.clone();
+    let _active_tab_path_clone = active_tab_path.clone();
+    let _current_dir_clone = current_dir.clone();
+    let _file_list_box_clone = file_list_box.clone();
+    let _new_tab_deps_clone = new_tab_deps.clone();
     
     // Connect the pressed signal to show context menu
     right_click_gesture.connect_pressed(move |_, _n_press, x, y| {

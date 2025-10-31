@@ -58,6 +58,7 @@ fn get_notebook_tab_styles() -> &'static str {
     tab {
         padding: 3px 6px;
         min-width: 120px;
+        max-width: 250px;
         min-height: 26px;
         border-radius: 5px 5px 0 0;
         border-bottom: 3px solid transparent;
@@ -66,6 +67,13 @@ fn get_notebook_tab_styles() -> &'static str {
         transition: all 0.2s ease;
         margin: 1px 2px 0 2px;
         margin-bottom: -1px;
+        -gtk-icon-transform: none;
+    }
+    
+    /* Prevent tabs from expanding to fill space */
+    tab box {
+        min-width: 120px;
+        max-width: 250px;
     }
     
     /* Active/selected tab styling */
@@ -74,6 +82,11 @@ fn get_notebook_tab_styles() -> &'static str {
         background-color: shade(@theme_bg_color, 1.15);
         border-bottom: 3px solid @theme_selected_bg_color;
         box-shadow: 0 -2px 3px -1px shade(@theme_bg_color, 1.2) inset;
+    }
+    
+    /* Tab box (container for label and close button) */
+    .tab-box {
+        min-width: 120px;
     }
     
     /* Tab label styling */
@@ -611,6 +624,13 @@ fn get_activity_bar_styles() -> &'static str {
     .activity-bar-button:focus {
         outline: none;
         box-shadow: none;
+    }
+    
+    /* Git branch icon styling */
+    .git-branch-icon {
+        font-size: 20px;
+        font-weight: normal;
+        color: @theme_fg_color;
     }
     "
 }

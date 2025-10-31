@@ -188,6 +188,20 @@
                     <property name="tooltip-text">Search (Ctrl+Shift+F)</property>
                   </object>
                 </child>
+                <child>
+                  <object class="GtkToggleButton" id="git_diff_button">
+                    <property name="css-classes">activity-bar-button</property>
+                    <property name="tooltip-text">Source Control (Ctrl+Shift+G)</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">⎇</property>
+                        <style>
+                          <class name="git-branch-icon"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
               </object>
             </child>
             <child>
@@ -233,6 +247,17 @@
                         <property name="child">
                           <object class="GtkBox" id="search_panel">
                             <property name="css-classes">search-panel</property>
+                            <property name="orientation">vertical</property>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkStackPage">
+                        <property name="name">git-diff</property>
+                        <property name="child">
+                          <object class="GtkBox" id="git_diff_panel">
+                            <property name="css-classes">git-diff-panel</property>
                             <property name="orientation">vertical</property>
                           </object>
                         </property>
