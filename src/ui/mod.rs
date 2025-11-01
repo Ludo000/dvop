@@ -7,6 +7,9 @@ pub mod css;
 pub mod settings;
 pub mod global_search;
 pub mod git_diff;
+pub mod search_panel_template;
+pub mod git_diff_panel_template;
+pub mod settings_dialog_template;
 
 use gtk4::prelude::*;
 use gtk4::{

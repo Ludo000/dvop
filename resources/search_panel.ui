@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="DvopSearchPanel" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <property name="spacing">8</property>
+    <property name="margin-start">12</property>
+    <property name="margin-end">12</property>
+    <property name="margin-top">12</property>
+    <property name="margin-bottom">12</property>
+    
+    <!-- Search input container with overlay for case sensitive button -->
+    <child>
+      <object class="GtkOverlay" id="search_overlay">
+        <property name="margin-bottom">8</property>
+        <child>
+          <object class="GtkTextView" id="search_text_view">
+            <property name="wrap-mode">word</property>
+            <property name="accepts-tab">false</property>
+            <property name="height-request">80</property>
+          </object>
+        </child>
+        <child type="overlay">
+          <object class="GtkBox" id="toggle_box">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">2</property>
+            <property name="halign">end</property>
+            <property name="valign">start</property>
+            <property name="margin-end">4</property>
+            <property name="margin-top">4</property>
+            <child>
+              <object class="GtkToggleButton" id="case_toggle">
+                <property name="label">Aa</property>
+                <property name="tooltip-text">Match case</property>
+                <property name="css-classes">case-toggle-button</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton" id="whole_word_toggle">
+                <property name="label">Ab</property>
+                <property name="tooltip-text">Match whole word</property>
+                <property name="css-classes">case-toggle-button</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    
+    <!-- Replace input -->
+    <child>
+      <object class="GtkTextView" id="replace_text_view">
+        <property name="wrap-mode">word</property>
+        <property name="accepts-tab">false</property>
+        <property name="height-request">60</property>
+        <property name="margin-bottom">8</property>
+      </object>
+    </child>
+    
+    <!-- Search and Replace buttons container -->
+    <child>
+      <object class="GtkBox" id="buttons_box">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">4</property>
+        <property name="margin-bottom">8</property>
+        <child>
+          <object class="GtkButton" id="search_btn">
+            <property name="label">Search</property>
+            <property name="css-classes">suggested-action</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="replace_btn">
+            <property name="label">Replace</property>
+            <property name="tooltip-text">Replace selected match</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="replace_all_btn">
+            <property name="label">Replace All</property>
+            <property name="tooltip-text">Replace all matches in all files</property>
+            <property name="css-classes">destructive-action</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    
+    <!-- Status label -->
+    <child>
+      <object class="GtkLabel" id="status">
+        <property name="label">Enter text to search</property>
+        <property name="xalign">0.0</property>
+        <property name="css-classes">dim-label</property>
+        <property name="margin-bottom">4</property>
+      </object>
+    </child>
+    
+    <!-- Results list -->
+    <child>
+      <object class="GtkScrolledWindow" id="scroller">
+        <property name="vexpand">true</property>
+        <property name="hexpand">true</property>
+        <child>
+          <object class="GtkListBox" id="results_list">
+            <property name="selection-mode">single</property>
+            <property name="css-classes">boxed-list zebra-list</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
