@@ -3,13 +3,14 @@
 
 use gtk4::prelude::*;
 use gtk4::{
-    Box as GtkBox, Button, Label, ListBoxRow, Orientation, pango,
+    Box as GtkBox, Button, Label, ListBoxRow, Orientation, pango, DrawingArea,
 };
 use sourceview5::prelude::{BufferExt, ViewExt};
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::rc::Rc;
+use gtk4::glib;
 
 use super::git_diff_panel_template::GitDiffPanel;
 
@@ -562,6 +563,231 @@ fn setup_copy_handler(view: &sourceview5::View, buffer: &sourceview5::Buffer) {
     view.add_controller(key_controller);
 }
 
+/// Represents a line change type for minimap display
+#[derive(Clone, Debug, PartialEq)]
+enum LineChangeType {
+    Unchanged,
+    Added,
+    Deleted,
+    Modified,
+}
+
+/// Compute line changes for minimap display
+fn compute_line_changes(old_content: &str, new_content: &str, old_width: usize, new_width: usize) -> Vec<LineChangeType> {
+    let old_lines: Vec<&str> = old_content.lines().collect();
+    let new_lines: Vec<&str> = new_content.lines().collect();
+    
+    // Helper function to strip line number prefix from a line
+    let strip_line_number = |line: &str, width: usize| -> String {
+        let skip_chars = width + 2;
+        if line.len() > skip_chars {
+            line[skip_chars..].to_string()
+        } else {
+            String::new()
+        }
+    };
+    
+    // Strip line numbers for comparison
+    let old_lines_stripped: Vec<String> = old_lines.iter().map(|line| strip_line_number(line, old_width)).collect();
+    let new_lines_stripped: Vec<String> = new_lines.iter().map(|line| strip_line_number(line, new_width)).collect();
+    
+    let mut changes = Vec::new();
+    let max_lines = old_lines_stripped.len().max(new_lines_stripped.len());
+    
+    for i in 0..max_lines {
+        let old_line = old_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
+        let new_line = new_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
+        
+        if old_line.is_empty() && !new_line.is_empty() {
+            changes.push(LineChangeType::Added);
+        } else if !old_line.is_empty() && new_line.is_empty() {
+            changes.push(LineChangeType::Deleted);
+        } else if old_line != new_line && !old_line.is_empty() && !new_line.is_empty() {
+            changes.push(LineChangeType::Modified);
+        } else {
+            changes.push(LineChangeType::Unchanged);
+        }
+    }
+    
+    changes
+}
+
+/// Set up minimap drawing and click handler
+fn setup_minimap_drawing(
+    minimap: &DrawingArea,
+    scrolled: &gtk4::ScrolledWindow,
+    buffer: &sourceview5::Buffer,
+    line_changes: &Rc<RefCell<Vec<LineChangeType>>>,
+    _is_left: bool,
+) {
+    let scrolled_weak = scrolled.downgrade();
+    let buffer_weak = buffer.downgrade();
+    let line_changes_clone = line_changes.clone();
+    
+    // Draw the minimap
+    minimap.set_draw_func(move |widget, cr, width, height| {
+        let Some(scrolled) = scrolled_weak.upgrade() else { return; };
+        let Some(buffer) = buffer_weak.upgrade() else { return; };
+        
+        // Get theme colors from the widget's style context
+        let style_context = widget.style_context();
+        let color = style_context.color();
+        let bg_color = style_context.lookup_color("view_bg_color")
+            .or_else(|| style_context.lookup_color("theme_bg_color"))
+            .unwrap_or_else(|| {
+                // Fallback: determine if dark or light theme based on text color luminance
+                let luminance = color.red() * 0.299 + color.green() * 0.587 + color.blue() * 0.114;
+                if luminance > 0.5 {
+                    // Light theme
+                    gtk4::gdk::RGBA::new(0.95, 0.95, 0.95, 1.0)
+                } else {
+                    // Dark theme
+                    gtk4::gdk::RGBA::new(0.2, 0.2, 0.2, 1.0)
+                }
+            });
+        
+        // Background with theme color
+        cr.set_source_rgba(bg_color.red() as f64, bg_color.green() as f64, bg_color.blue() as f64, bg_color.alpha() as f64);
+        let _ = cr.paint();
+        
+        let line_count = buffer.line_count() as usize;
+        if line_count == 0 {
+            return;
+        }
+        
+        let changes = line_changes_clone.borrow();
+        if changes.is_empty() {
+            return;
+        }
+        
+        let line_height = height as f64 / line_count as f64;
+        
+        // Determine if we're in dark mode
+        let is_dark_theme = bg_color.red() < 0.5;
+        
+        // Draw colored bars for each line
+        for (i, change) in changes.iter().enumerate() {
+            let y = i as f64 * line_height;
+            
+            match change {
+                LineChangeType::Added => {
+                    // Green for added lines (muted colors)
+                    if is_dark_theme {
+                        cr.set_source_rgba(0.3, 0.55, 0.3, 0.7);
+                    } else {
+                        cr.set_source_rgba(0.4, 0.65, 0.4, 0.7);
+                    }
+                }
+                LineChangeType::Deleted => {
+                    // Red for deleted lines (muted colors)
+                    if is_dark_theme {
+                        cr.set_source_rgba(0.65, 0.3, 0.3, 0.7);
+                    } else {
+                        cr.set_source_rgba(0.75, 0.35, 0.35, 0.7);
+                    }
+                }
+                LineChangeType::Modified => {
+                    // Yellow/Orange for modified lines (muted colors)
+                    if is_dark_theme {
+                        cr.set_source_rgba(0.65, 0.55, 0.3, 0.7);
+                    } else {
+                        cr.set_source_rgba(0.75, 0.6, 0.35, 0.7);
+                    }
+                }
+                LineChangeType::Unchanged => {
+                    // Slightly different shade for unchanged lines
+                    if is_dark_theme {
+                        cr.set_source_rgba(0.25, 0.25, 0.25, 0.5);
+                    } else {
+                        cr.set_source_rgba(0.85, 0.85, 0.85, 0.5);
+                    }
+                }
+            }
+            
+            let _ = cr.rectangle(0.0, y, width as f64, line_height.max(1.0));
+            let _ = cr.fill();
+        }
+        
+        // Draw viewport indicator (showing visible area)
+        let vadj = scrolled.vadjustment();
+        let visible_start = vadj.value();
+        let visible_size = vadj.page_size();
+        let total_size = vadj.upper();
+        
+        if total_size > 0.0 {
+            let viewport_start = (visible_start / total_size) * height as f64;
+            let viewport_height = (visible_size / total_size) * height as f64;
+            
+            // Semi-transparent overlay for viewport (adapted to theme)
+            if is_dark_theme {
+                cr.set_source_rgba(1.0, 1.0, 1.0, 0.15);
+            } else {
+                cr.set_source_rgba(0.0, 0.0, 0.0, 0.15);
+            }
+            let _ = cr.rectangle(0.0, viewport_start, width as f64, viewport_height);
+            let _ = cr.fill();
+            
+            // Border for viewport
+            if is_dark_theme {
+                cr.set_source_rgba(1.0, 1.0, 1.0, 0.4);
+            } else {
+                cr.set_source_rgba(0.0, 0.0, 0.0, 0.4);
+            }
+            cr.set_line_width(1.0);
+            let _ = cr.rectangle(0.0, viewport_start, width as f64, viewport_height);
+            let _ = cr.stroke();
+        }
+    });
+    
+    // Add drag handler for continuous scrolling
+    let scrolled_weak2 = scrolled.downgrade();
+    let minimap_clone = minimap.clone();
+    let drag_gesture = gtk4::GestureDrag::new();
+    
+    // Helper closure to handle scrolling
+    let scroll_to_position = move |y: f64| {
+        let Some(scrolled) = scrolled_weak2.upgrade() else { return; };
+        
+        let vadj = scrolled.vadjustment();
+        let total_height = vadj.upper();
+        let minimap_height = y;
+        
+        // Get minimap widget height
+        let widget_height = minimap_clone.height() as f64;
+        
+        if widget_height > 0.0 {
+            // Calculate scroll position
+            let scroll_position = (minimap_height / widget_height) * total_height;
+            let scroll_centered = scroll_position - vadj.page_size() / 2.0;
+            
+            // Clamp to valid range
+            let clamped = scroll_centered.max(0.0).min(total_height - vadj.page_size());
+            vadj.set_value(clamped);
+        }
+    };
+    
+    let scroll_to_position_rc = Rc::new(RefCell::new(scroll_to_position));
+    let scroll_to_position_clone = scroll_to_position_rc.clone();
+    
+    // On drag begin, scroll to initial position
+    drag_gesture.connect_drag_begin(move |_, _start_x, start_y| {
+        let scroll_fn = scroll_to_position_clone.borrow();
+        scroll_fn(start_y);
+    });
+    
+    // On drag update, continuously scroll
+    let scroll_to_position_clone2 = scroll_to_position_rc.clone();
+    drag_gesture.connect_drag_update(move |gesture, _offset_x, offset_y| {
+        if let Some((_start_x, start_y)) = gesture.start_point() {
+            let current_y = start_y + offset_y;
+            let scroll_fn = scroll_to_position_clone2.borrow();
+            scroll_fn(current_y);
+        }
+    });
+    
+    minimap.add_controller(drag_gesture);
+}
+
 /// Helper function to create a diff tab
 fn create_diff_tab(
     editor_notebook: &gtk4::Notebook,
@@ -580,6 +806,9 @@ fn create_diff_tab(
     paned.set_wide_handle(true);
     paned.set_shrink_start_child(false);
     paned.set_shrink_end_child(false);
+    
+    // Track line change types for minimap
+    let line_changes = Rc::new(RefCell::new(Vec::new()));
     
     // Create left side (old version)
     let (left_view, left_buffer) = crate::syntax::create_source_view();
@@ -603,10 +832,26 @@ fn create_diff_tab(
     left_header.set_margin_top(5);
     left_header.set_margin_bottom(5);
     
+    // Create minimap container (left side with minimap + content)
+    let left_container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    left_container.set_hexpand(true);
+    
+    // Create minimap for left side
+    let left_minimap = DrawingArea::new();
+    left_minimap.set_width_request(30);
+    left_minimap.set_vexpand(true);
+    left_minimap.set_valign(gtk4::Align::Fill);
+    
     let left_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     left_box.set_hexpand(true);
     left_box.append(&left_header);
-    left_box.append(&left_scrolled);
+    
+    let left_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    left_content_box.set_hexpand(true);
+    left_content_box.append(&left_scrolled);
+    left_content_box.append(&left_minimap);
+    
+    left_box.append(&left_content_box);
     
     // Create right side (new version)
     let (right_view, right_buffer) = crate::syntax::create_source_view();
@@ -630,10 +875,22 @@ fn create_diff_tab(
     right_header.set_margin_top(5);
     right_header.set_margin_bottom(5);
     
+    // Create minimap for right side
+    let right_minimap = DrawingArea::new();
+    right_minimap.set_width_request(30);
+    right_minimap.set_vexpand(true);
+    right_minimap.set_valign(gtk4::Align::Fill);
+    
     let right_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     right_box.set_hexpand(true);
     right_box.append(&right_header);
-    right_box.append(&right_scrolled);
+    
+    let right_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    right_content_box.set_hexpand(true);
+    right_content_box.append(&right_scrolled);
+    right_content_box.append(&right_minimap);
+    
+    right_box.append(&right_content_box);
     
     // Detect language from file extension
     let lang_manager = sourceview5::LanguageManager::new();
@@ -644,7 +901,9 @@ fn create_diff_tab(
         }
     }
     
-    // Apply diff highlighting using aligned content
+    // Apply diff highlighting using aligned content and collect line changes
+    let changes = compute_line_changes(&aligned_old, &aligned_new, old_width, new_width);
+    *line_changes.borrow_mut() = changes.clone();
     apply_diff_highlighting(&left_buffer, &right_buffer, &aligned_old, &aligned_new, old_width, new_width);
     
     // Make line numbers non-selectable (invisible to selection/copy)
@@ -656,14 +915,26 @@ fn create_diff_tab(
     let right_vadj = right_scrolled.vadjustment();
     
     let right_vadj_clone = right_vadj.clone();
+    let left_minimap_clone = left_minimap.clone();
+    let right_minimap_clone = right_minimap.clone();
     left_vadj.connect_value_changed(move |adj| {
         right_vadj_clone.set_value(adj.value());
+        left_minimap_clone.queue_draw();
+        right_minimap_clone.queue_draw();
     });
     
     let left_vadj_clone = left_vadj.clone();
+    let left_minimap_clone2 = left_minimap.clone();
+    let right_minimap_clone2 = right_minimap.clone();
     right_vadj.connect_value_changed(move |adj| {
         left_vadj_clone.set_value(adj.value());
+        left_minimap_clone2.queue_draw();
+        right_minimap_clone2.queue_draw();
     });
+    
+    // Set up minimap drawing
+    setup_minimap_drawing(&left_minimap, &left_scrolled, &left_buffer, &line_changes, true);
+    setup_minimap_drawing(&right_minimap, &right_scrolled, &right_buffer, &line_changes, false);
     
     // Add both sides to the paned widget
     paned.set_start_child(Some(&left_box));
