@@ -4,16 +4,15 @@
 use gtk4::prelude::*;
 use gtk4::{
     ApplicationWindow, 
-    Box as GtkBox, 
-    Label, 
     Dialog,
-    Orientation,
     Notebook
 };
 use sourceview5::StyleSchemeManager;
 use crate::syntax;
 use crate::settings;
 use crate::ui::terminal;
+
+use super::settings_dialog_template::SettingsDialog;
 
 /// Creates a settings dialog for configuring editor preferences
 ///
@@ -23,45 +22,25 @@ use crate::ui::terminal;
 ///
 /// Returns the dialog for display
 pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
-    // Create a dialog with standard buttons
-    let dialog = Dialog::builder()
-        .title("Editor Settings")
-        .transient_for(parent.as_ref().upcast_ref::<gtk4::Window>())
-        .modal(true)
-        .destroy_with_parent(true)
-        .use_header_bar(1) // Use header bar
-        .build();
+    // Create the template-based dialog
+    let dialog = SettingsDialog::new(parent);
     
-    // Get the content area to add our widgets
-    let content_area = dialog.content_area();
-    content_area.set_margin_top(10);
-    content_area.set_margin_bottom(10);
-    content_area.set_margin_start(10);
-    content_area.set_margin_end(10);
-    content_area.set_spacing(10);
+    // Get references to widgets
+    let theme_info = dialog.theme_info();
+    let light_theme_dropdown = dialog.light_theme_dropdown();
+    let dark_theme_dropdown = dialog.dark_theme_dropdown();
+    let font_size_spin = dialog.font_size_spin();
+    let terminal_font_size_spin = dialog.terminal_font_size_spin();
     
-    // Create a container for the settings
-    let settings_box = GtkBox::new(Orientation::Vertical, 10);
     
-    // Create a section for syntax highlighting themes
-    let themes_label = Label::new(Some("Syntax Highlighting Themes"));
-    themes_label.set_halign(gtk4::Align::Start);
-    themes_label.set_margin_bottom(5);
-    themes_label.add_css_class("heading");
-    settings_box.append(&themes_label);
-    
-    // Add info about current system theme mode
+    // Update theme info label
     let system_mode = if syntax::is_dark_mode_enabled() {
         "dark mode"
     } else {
         "light mode" 
     };
     let current_system_theme_name = syntax::get_preferred_style_scheme();
-    let theme_info = Label::new(Some(&format!("Current system theme: {} (using {})", current_system_theme_name, system_mode)));
-    theme_info.set_halign(gtk4::Align::Start);
-    theme_info.set_margin_bottom(10);
-    theme_info.add_css_class("caption");
-    settings_box.append(&theme_info);
+    theme_info.set_text(&format!("Current system theme: {} (using {})", current_system_theme_name, system_mode));
     
     // Get available color schemes
     let scheme_manager = StyleSchemeManager::new();
@@ -87,66 +66,46 @@ pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
     // Get current theme based on system theme
     let current_system_theme = syntax::get_preferred_style_scheme();
     
-    // Create dropdowns for light and dark themes
-    // Select the appropriate theme based on the current system state
-    let light_theme_box = if !syntax::is_dark_mode_enabled() {
-        // If we're in light mode, prioritize the current system theme for the light theme dropdown
-        create_theme_selection_box("Light Mode Theme:", &available_schemes, current_system_theme.clone())
-    } else {
-        create_theme_selection_box("Light Mode Theme:", &available_schemes, current_light_theme)
-    };
+    // Setup dropdown models and selections
+    setup_theme_dropdown(&light_theme_dropdown, &available_schemes, 
+        if !syntax::is_dark_mode_enabled() { current_system_theme.clone() } else { current_light_theme });
     
-    let dark_theme_box = if syntax::is_dark_mode_enabled() {
-        // If we're in dark mode, prioritize the current system theme for the dark theme dropdown
-        create_theme_selection_box("Dark Mode Theme:", &available_schemes, current_system_theme.clone())
-    } else {
-        create_theme_selection_box("Dark Mode Theme:", &available_schemes, current_dark_theme)
-    };
+    setup_theme_dropdown(&dark_theme_dropdown, &available_schemes,
+        if syntax::is_dark_mode_enabled() { current_system_theme.clone() } else { current_dark_theme });
     
-    settings_box.append(&light_theme_box.0);
-    settings_box.append(&dark_theme_box.0);
-    
-    // Add font size setting section
-    let font_size_box = create_font_size_setting();
-    settings_box.append(&font_size_box.0);
-    
-    // Add the settings box to the content area
-    content_area.append(&settings_box);
-    
-    // Add save and cancel buttons
-    dialog.add_button("Cancel", gtk4::ResponseType::Cancel);
-    dialog.add_button("Save", gtk4::ResponseType::Accept);
-    dialog.set_default_response(gtk4::ResponseType::Accept);
+    // Get current font size settings
+    let settings_instance = settings::get_settings();
+    font_size_spin.set_value(settings_instance.get_font_size() as f64);
+    // Use editor font size for terminal if no separate terminal setting exists
+    terminal_font_size_spin.set_value(settings_instance.get_font_size() as f64);
     
     // Handle the dialog response
-    // We need to capture the dropdowns and available_schemes to get their values when the user clicks Save
-    let light_dropdown = light_theme_box.1;
-    let dark_dropdown = dark_theme_box.1;
-    let font_size_spinbutton = font_size_box.1;
     let available_schemes_clone = available_schemes.clone();
     
     dialog.connect_response(move |dialog, response| {
         if response == gtk4::ResponseType::Accept {
             // Get the selected theme values from the position in the dropdown
-            let light_position = light_dropdown.selected() as usize;
+            let light_position = light_theme_dropdown.selected() as usize;
             if light_position < available_schemes_clone.len() {
                 let light_theme = available_schemes_clone[light_position].clone();
                 let mut settings = settings::get_settings_mut();
                 settings.set_light_theme(&light_theme);
             }
             
-            let dark_position = dark_dropdown.selected() as usize;
+            let dark_position = dark_theme_dropdown.selected() as usize;
             if dark_position < available_schemes_clone.len() {
                 let dark_theme = available_schemes_clone[dark_position].clone();
                 let mut settings = settings::get_settings_mut();
                 settings.set_dark_theme(&dark_theme);
             }
             
-            // Get the font size value and save it
-            let font_size = font_size_spinbutton.value() as u32;
+            // Get the font size values and save them
+            let font_size = font_size_spin.value() as u32;
+            let _terminal_font_size = terminal_font_size_spin.value() as u32;
             {
                 let mut settings = settings::get_settings_mut();
                 settings.set_font_size(font_size);
+                // Note: Terminal font size setting not yet implemented in EditorSettings
             }
             
             // Save settings to disk
@@ -175,35 +134,19 @@ pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
         dialog.close();
     });
     
-    dialog
+    dialog.upcast::<Dialog>()
 }
 
-/// Creates a theme selection dropdown with label
-///
-/// Returns a tuple containing:
-/// - A container with the label and dropdown
-/// - The dropdown widget for connecting signals
-fn create_theme_selection_box(label_text: &str, available_themes: &[String], current_theme: String) 
-    -> (GtkBox, gtk4::DropDown) 
-{
-    let box_container = GtkBox::new(Orientation::Horizontal, 10);
-    
-    // Add label
-    let label = Label::new(Some(label_text));
-    label.set_halign(gtk4::Align::Start);
-    label.set_width_chars(20);
-    label.set_xalign(0.0);
-    box_container.append(&label);
-    
+/// Sets up a theme dropdown with available themes and current selection
+fn setup_theme_dropdown(dropdown: &gtk4::DropDown, available_themes: &[String], current_theme: String) {
     // Create a string list model for the dropdown
     let model = gtk4::StringList::new(&[]);
     for theme in available_themes {
         model.append(theme);
     }
     
-    // Create dropdown
-    let dropdown = gtk4::DropDown::new(Some(model), None::<gtk4::Expression>);
-    dropdown.set_hexpand(true);
+    // Set the model
+    dropdown.set_model(Some(&model));
     
     // Set current selection
     for (idx, theme) in available_themes.iter().enumerate() {
@@ -212,66 +155,6 @@ fn create_theme_selection_box(label_text: &str, available_themes: &[String], cur
             break;
         }
     }
-    
-    box_container.append(&dropdown);
-    
-    (box_container, dropdown)
-}
-
-/// Creates a font size setting control
-///
-/// Returns a tuple containing:
-/// - A container with the label and spin button
-/// - The spin button widget for getting the value
-fn create_font_size_setting() -> (GtkBox, gtk4::SpinButton) {
-    let box_container = GtkBox::new(Orientation::Vertical, 5);
-    
-    // Add section title
-    let title_label = Label::new(Some("Editor Font Size"));
-    title_label.set_halign(gtk4::Align::Start);
-    title_label.set_margin_top(10);
-    title_label.set_margin_bottom(5);
-    title_label.add_css_class("heading");
-    box_container.append(&title_label);
-    
-    // Create horizontal box for the control
-    let control_box = GtkBox::new(Orientation::Horizontal, 10);
-    
-    // Add label
-    let label = Label::new(Some("Font Size:"));
-    label.set_halign(gtk4::Align::Start);
-    label.set_width_chars(20);
-    label.set_xalign(0.0);
-    control_box.append(&label);
-    
-    // Get current font size from settings
-    let current_font_size = settings::get_settings().get_font_size();
-    
-    // Create spin button for font size (range 6-72pt)
-    let adjustment = gtk4::Adjustment::new(
-        current_font_size as f64, // current value
-        6.0,  // minimum
-        72.0, // maximum
-        1.0,  // step increment
-        5.0,  // page increment
-        0.0   // page size
-    );
-    
-    let spin_button = gtk4::SpinButton::new(Some(&adjustment), 1.0, 0);
-    spin_button.set_value(current_font_size as f64);
-    spin_button.set_width_chars(5);
-    
-    control_box.append(&spin_button);
-    
-    // Add size hint label
-    let size_hint = Label::new(Some("pt (6-72)"));
-    size_hint.set_halign(gtk4::Align::Start);
-    size_hint.add_css_class("caption");
-    control_box.append(&size_hint);
-    
-    box_container.append(&control_box);
-    
-    (box_container, spin_button)
 }
 
 /// Updates themes throughout the application

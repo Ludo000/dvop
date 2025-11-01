@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="DvopSettingsDialog" parent="GtkDialog">
+    <property name="title">Editor Settings</property>
+    <property name="modal">true</property>
+    <property name="destroy-with-parent">true</property>
+    <property name="use-header-bar">1</property>
+    <child internal-child="content_area">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
+        <property name="margin-top">10</property>
+        <property name="margin-bottom">10</property>
+        <property name="margin-start">10</property>
+        <property name="margin-end">10</property>
+        
+        <child>
+          <object class="GtkBox" id="settings_box">
+            <property name="orientation">vertical</property>
+            <property name="spacing">10</property>
+            
+            <!-- Syntax Highlighting Themes Section -->
+            <child>
+              <object class="GtkLabel" id="themes_label">
+                <property name="label">Syntax Highlighting Themes</property>
+                <property name="halign">start</property>
+                <property name="margin-bottom">5</property>
+                <property name="css-classes">heading</property>
+              </object>
+            </child>
+            
+            <child>
+              <object class="GtkLabel" id="theme_info">
+                <property name="halign">start</property>
+                <property name="margin-bottom">10</property>
+                <property name="css-classes">caption</property>
+                <property name="wrap">true</property>
+              </object>
+            </child>
+            
+            <!-- Light Mode Theme Selection -->
+            <child>
+              <object class="GtkBox" id="light_theme_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">10</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">Light Mode Theme:</property>
+                    <property name="halign">start</property>
+                    <property name="width-chars">20</property>
+                    <property name="xalign">0.0</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkDropDown" id="light_theme_dropdown">
+                    <property name="hexpand">true</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <!-- Dark Mode Theme Selection -->
+            <child>
+              <object class="GtkBox" id="dark_theme_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">10</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">Dark Mode Theme:</property>
+                    <property name="halign">start</property>
+                    <property name="width-chars">20</property>
+                    <property name="xalign">0.0</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkDropDown" id="dark_theme_dropdown">
+                    <property name="hexpand">true</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <!-- Font Size Section -->
+            <child>
+              <object class="GtkBox" id="font_size_container">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">Editor Font Size</property>
+                    <property name="halign">start</property>
+                    <property name="margin-top">10</property>
+                    <property name="margin-bottom">5</property>
+                    <property name="css-classes">heading</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox" id="font_size_control">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">10</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Font Size:</property>
+                        <property name="halign">start</property>
+                        <property name="width-chars">20</property>
+                        <property name="xalign">0.0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSpinButton" id="font_size_spin">
+                        <property name="adjustment">
+                          <object class="GtkAdjustment">
+                            <property name="lower">6</property>
+                            <property name="upper">72</property>
+                            <property name="step-increment">1</property>
+                            <property name="page-increment">5</property>
+                            <property name="value">11</property>
+                          </object>
+                        </property>
+                        <property name="climb-rate">1</property>
+                        <property name="digits">0</property>
+                        <property name="numeric">true</property>
+                        <property name="update-policy">if-valid</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">pt (6-72)</property>
+                        <property name="halign">start</property>
+                        <property name="css-classes">caption</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <!-- Terminal Section -->
+            <child>
+              <object class="GtkBox" id="terminal_container">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">Terminal Settings</property>
+                    <property name="halign">start</property>
+                    <property name="margin-top">10</property>
+                    <property name="margin-bottom">5</property>
+                    <property name="css-classes">heading</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox" id="terminal_font_control">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">10</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Terminal Font Size:</property>
+                        <property name="halign">start</property>
+                        <property name="width-chars">20</property>
+                        <property name="xalign">0.0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSpinButton" id="terminal_font_size_spin">
+                        <property name="adjustment">
+                          <object class="GtkAdjustment">
+                            <property name="lower">6</property>
+                            <property name="upper">72</property>
+                            <property name="step-increment">1</property>
+                            <property name="page-increment">5</property>
+                            <property name="value">11</property>
+                          </object>
+                        </property>
+                        <property name="climb-rate">1</property>
+                        <property name="digits">0</property>
+                        <property name="numeric">true</property>
+                        <property name="update-policy">if-valid</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">pt (6-72)</property>
+                        <property name="halign">start</property>
+                        <property name="css-classes">caption</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

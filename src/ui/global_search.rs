@@ -2,12 +2,15 @@
 
 use gtk4::prelude::*;
 use gtk4::{self as gtk, Box as GtkBox, Button, Label, ListBox, ListBoxRow, Orientation, ScrolledWindow, pango, TextView, TextBuffer, EventControllerKey, gdk};
+use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use glib::{self};
 use std::cell::RefCell;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+
+use super::search_panel_template::SearchPanel;
 
 // Thread-local storage for the global search dialog to maintain state
 thread_local! {
@@ -1785,46 +1788,20 @@ pub fn create_global_search_panel(
     save_as_button: &gtk::Button,
     file_list_box: &gtk::ListBox,
 ) -> GtkBox {
-    // Main container
-    let vbox = GtkBox::new(Orientation::Vertical, 8);
-    vbox.set_margin_start(12);
-    vbox.set_margin_end(12);
-    vbox.set_margin_top(12);
-    vbox.set_margin_bottom(12);
-
-    // Search input container with overlay for case sensitive button
-    let search_overlay = gtk::Overlay::new();
+    // Create the template-based panel
+    let panel = SearchPanel::new();
     
-    // Search input with TextView for multi-line support
-    let search_text_view = TextView::new();
-    search_text_view.set_wrap_mode(gtk::WrapMode::Word);
-    search_text_view.set_accepts_tab(false);
-    search_text_view.set_height_request(80);
-    let search_buffer = search_text_view.buffer();
-    
-    search_overlay.set_child(Some(&search_text_view));
-    
-    // Toggle buttons overlaid at top-right
-    let toggle_box = GtkBox::new(Orientation::Horizontal, 2);
-    toggle_box.set_halign(gtk::Align::End);
-    toggle_box.set_valign(gtk::Align::Start);
-    toggle_box.set_margin_end(4);
-    toggle_box.set_margin_top(4);
-    
-    let case_toggle = gtk::ToggleButton::new();
-    case_toggle.set_label("Aa");
-    case_toggle.set_tooltip_text(Some("Match case"));
-    case_toggle.add_css_class("case-toggle-button");
-    
-    let whole_word_toggle = gtk::ToggleButton::new();
-    whole_word_toggle.set_label("Ab");
-    whole_word_toggle.set_tooltip_text(Some("Match whole word"));
-    whole_word_toggle.add_css_class("case-toggle-button");
-    
-    toggle_box.append(&case_toggle);
-    toggle_box.append(&whole_word_toggle);
-    search_overlay.add_overlay(&toggle_box);
-    search_overlay.set_margin_bottom(8);
+    // Get references to widgets
+    let search_buffer = panel.search_buffer();
+    let search_text_view = panel.imp().search_text_view.get();  // Get the TextView widget
+    let replace_buffer = panel.replace_buffer();
+    let case_toggle = panel.case_toggle();
+    let whole_word_toggle = panel.whole_word_toggle();
+    let search_btn = panel.search_btn();
+    let replace_btn = panel.replace_btn();
+    let replace_all_btn = panel.replace_all_btn();
+    let status = panel.status_label();
+    let results_list = panel.results_list();
     
     // Restore search state from settings
     let settings = crate::settings::get_settings();
@@ -1834,59 +1811,6 @@ pub fn create_global_search_panel(
     if !saved_query.is_empty() {
         search_buffer.set_text(&saved_query);
     }
-    
-    vbox.append(&search_overlay);
-
-    // Replace input with TextView for multi-line support
-    let replace_text_view = TextView::new();
-    replace_text_view.set_wrap_mode(gtk::WrapMode::Word);
-    replace_text_view.set_accepts_tab(false);
-    replace_text_view.set_height_request(60);
-    let replace_buffer = replace_text_view.buffer();
-    replace_text_view.set_margin_bottom(8);
-    vbox.append(&replace_text_view);
-
-    // Search and Replace buttons container
-    let buttons_box = GtkBox::new(Orientation::Horizontal, 4);
-    buttons_box.set_margin_bottom(8);
-    
-    // Search button
-    let search_btn = Button::with_label("Search");
-    search_btn.add_css_class("suggested-action");
-    buttons_box.append(&search_btn);
-    
-    // Replace button
-    let replace_btn = Button::with_label("Replace");
-    replace_btn.set_tooltip_text(Some("Replace selected match"));
-    buttons_box.append(&replace_btn);
-    
-    // Replace All button
-    let replace_all_btn = Button::with_label("Replace All");
-    replace_all_btn.set_tooltip_text(Some("Replace all matches in all files"));
-    replace_all_btn.add_css_class("destructive-action");
-    buttons_box.append(&replace_all_btn);
-    
-    vbox.append(&buttons_box);
-
-    // Status label
-    let status = Label::new(Some("Enter text to search"));
-    status.set_xalign(0.0);
-    status.add_css_class("dim-label");
-    status.set_margin_bottom(4);
-    vbox.append(&status);
-
-    // Results list
-    let results_list = ListBox::new();
-    results_list.set_selection_mode(gtk::SelectionMode::Single);
-    results_list.add_css_class("boxed-list");
-    results_list.add_css_class("zebra-list");
-    let scroller = ScrolledWindow::builder()
-        .vexpand(true)
-        .hexpand(true)
-        .child(&results_list)
-        .build();
-
-    vbox.append(&scroller);
 
     // Channel for results - will be recreated for each search
     let sender_rc: Rc<RefCell<Option<std::sync::mpsc::Sender<Option<SearchResult>>>>> = Rc::new(RefCell::new(None));
@@ -2599,5 +2523,6 @@ pub fn create_global_search_panel(
         });
     });
 
-    vbox
+    // Return the panel as a GtkBox
+    panel.upcast::<GtkBox>()
 }

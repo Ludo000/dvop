@@ -3,14 +3,15 @@
 
 use gtk4::prelude::*;
 use gtk4::{
-    Box as GtkBox, Button, Label, ListBox, ListBoxRow, Orientation, ScrolledWindow,
-    Separator, pango,
+    Box as GtkBox, Button, Label, ListBoxRow, Orientation, pango,
 };
 use sourceview5::prelude::{BufferExt, ViewExt};
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::rc::Rc;
+
+use super::git_diff_panel_template::GitDiffPanel;
 
 #[derive(Clone, Debug)]
 struct GitFileChange {
@@ -717,108 +718,16 @@ pub fn create_git_diff_panel(
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) -> GtkBox {
-    // Main container
-    let vbox = GtkBox::new(Orientation::Vertical, 8);
-    vbox.set_margin_start(12);
-    vbox.set_margin_end(12);
-    vbox.set_margin_top(12);
-    vbox.set_margin_bottom(12);
-
-    // Header with repository info
-    let header_box = GtkBox::new(Orientation::Vertical, 4);
-    header_box.set_margin_bottom(8);
-
-    let repo_label = Label::new(Some("Source Control"));
-    repo_label.set_xalign(0.0);
-    repo_label.add_css_class("heading");
-    header_box.append(&repo_label);
-
-    let branch_label = Label::new(Some("No repository"));
-    branch_label.set_xalign(0.0);
-    branch_label.add_css_class("dim-label");
-    header_box.append(&branch_label);
-
-    vbox.append(&header_box);
-
-    // Action buttons
-    let action_box = GtkBox::new(Orientation::Horizontal, 4);
-    action_box.set_margin_bottom(8);
-
-    let refresh_button = Button::new();
-    let refresh_box = GtkBox::new(Orientation::Horizontal, 4);
-    let refresh_icon = gtk4::Image::from_icon_name("view-refresh-symbolic");
-    let refresh_label = Label::new(Some("Refresh"));
-    refresh_box.append(&refresh_icon);
-    refresh_box.append(&refresh_label);
-    refresh_button.set_child(Some(&refresh_box));
-    refresh_button.set_tooltip_text(Some("Refresh git status"));
-    action_box.append(&refresh_button);
-
-    let stage_all_button = Button::new();
-    let stage_all_box = GtkBox::new(Orientation::Horizontal, 4);
-    let stage_all_icon = gtk4::Image::from_icon_name("list-add-symbolic");
-    let stage_all_label = Label::new(Some("Stage All"));
-    stage_all_box.append(&stage_all_icon);
-    stage_all_box.append(&stage_all_label);
-    stage_all_button.set_child(Some(&stage_all_box));
-    stage_all_button.set_tooltip_text(Some("Stage all changes"));
-    action_box.append(&stage_all_button);
-
-    vbox.append(&action_box);
-
-    // Separator
-    let separator = Separator::new(Orientation::Horizontal);
-    separator.set_margin_bottom(8);
-    vbox.append(&separator);
-
-    // Staged changes section
-    let staged_label = Label::new(Some("Staged Changes"));
-    staged_label.set_xalign(0.0);
-    staged_label.add_css_class("heading");
-    staged_label.set_margin_bottom(4);
-    vbox.append(&staged_label);
-
-    let staged_files_list = ListBox::new();
-    staged_files_list.set_selection_mode(gtk4::SelectionMode::Single);
-    staged_files_list.add_css_class("boxed-list");
-
-    let staged_scroller = ScrolledWindow::builder()
-        .hscrollbar_policy(gtk4::PolicyType::Never)
-        .vscrollbar_policy(gtk4::PolicyType::Automatic)
-        .vexpand(true)
-        .hexpand(true)
-        .min_content_height(100)
-        .child(&staged_files_list)
-        .build();
-
-    vbox.append(&staged_scroller);
-
-    // Unstaged changes section
-    let unstaged_separator = Separator::new(Orientation::Horizontal);
-    unstaged_separator.set_margin_top(8);
-    unstaged_separator.set_margin_bottom(8);
-    vbox.append(&unstaged_separator);
-
-    let unstaged_label = Label::new(Some("Unstaged Changes"));
-    unstaged_label.set_xalign(0.0);
-    unstaged_label.add_css_class("heading");
-    unstaged_label.set_margin_bottom(4);
-    vbox.append(&unstaged_label);
-
-    // Changed files list
-    let files_list = ListBox::new();
-    files_list.set_selection_mode(gtk4::SelectionMode::Single);
-    files_list.add_css_class("boxed-list");
-
-    let files_scroller = ScrolledWindow::builder()
-        .hscrollbar_policy(gtk4::PolicyType::Never)
-        .vscrollbar_policy(gtk4::PolicyType::Automatic)
-        .vexpand(true)
-        .hexpand(true)
-        .child(&files_list)
-        .build();
-
-    vbox.append(&files_scroller);
+    // Create the template-based panel
+    let panel = GitDiffPanel::new();
+    
+    // Get references to widgets
+    let _repo_label = panel.repo_label();
+    let branch_label = panel.branch_label();
+    let refresh_button = panel.refresh_button();
+    let stage_all_button = panel.stage_all_button();
+    let staged_files_list = panel.staged_files_list();
+    let files_list = panel.files_list();
 
     // State for the panel
     let repo_path_rc: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
@@ -1368,5 +1277,9 @@ pub fn create_git_diff_panel(
         glib::ControlFlow::Continue
     });
 
-    vbox
+    // Trigger initial update
+    update_git_status();
+
+    // Return the panel as a GtkBox
+    panel.upcast::<GtkBox>()
 }

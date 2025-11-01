@@ -2,5 +2,8 @@
 <gresources>
   <gresource prefix="/com/example/Dvop">
     <file compressed="true" preprocess="xml-stripblanks">window.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">search_panel.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">git_diff_panel.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">settings_dialog.ui</file>
   </gresource>
 </gresources>
