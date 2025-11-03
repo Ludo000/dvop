@@ -442,15 +442,17 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     tab_box.set_margin_start(4); 
     tab_box.set_margin_end(2);
     
-    // Set a fixed width for the tab box (not minimum, but fixed)
-    tab_box.set_size_request(200, -1);
-    tab_box.set_hexpand(false); // Prevent expansion
+    // Set responsive sizing - min and max width for better adaptability
+    tab_box.set_size_request(100, -1);  // Minimum width
+    tab_box.set_hexpand(false); // Prevent excessive expansion
     
     // Create label with the provided title
     let label = Label::new(Some(tab_title));
     label.set_ellipsize(gtk4::pango::EllipsizeMode::End); // Add ellipsis if text overflows
     label.set_xalign(0.0); // Align text to the left
     label.set_hexpand(true); // Expand to fill available space
+    label.set_max_width_chars(20); // Limit maximum width for better responsiveness
+    label.set_width_chars(12); // Preferred width
     label.add_css_class("tab-label"); // Add custom CSS class for styling
     
     // Create close button with a standard X icon

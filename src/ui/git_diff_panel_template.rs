@@ -14,6 +14,8 @@ mod imp {
         #[template_child]
         pub branch_label: TemplateChild<Label>,
         #[template_child]
+        pub action_box: TemplateChild<GtkBox>,
+        #[template_child]
         pub refresh_button: TemplateChild<Button>,
         #[template_child]
         pub stage_all_button: TemplateChild<Button>,
@@ -63,6 +65,10 @@ impl GitDiffPanel {
 
     pub fn branch_label(&self) -> Label {
         self.imp().branch_label.get()
+    }
+
+    pub fn action_box(&self) -> GtkBox {
+        self.imp().action_box.get()
     }
 
     pub fn refresh_button(&self) -> Button {
