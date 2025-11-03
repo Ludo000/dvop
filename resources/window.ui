@@ -210,57 +210,69 @@
                 <property name="wide-handle">true</property>
                 <property name="vexpand">true</property>
                 <property name="position">250</property>
+                <property name="shrink-start-child">true</property>
+                <property name="shrink-end-child">true</property>
+                <property name="resize-start-child">true</property>
+                <property name="resize-end-child">true</property>
                 <child>
-                  <object class="GtkStack" id="sidebar_stack">
-                    <property name="transition-type">slide-left-right</property>
-                    <property name="transition-duration">200</property>
+                  <object class="GtkScrolledWindow" id="sidebar_scrolled">
+                    <property name="hscrollbar-policy">automatic</property>
+                    <property name="vscrollbar-policy">automatic</property>
+                    <property name="hexpand">false</property>
+                    <property name="vexpand">true</property>
                     <child>
-                      <object class="GtkStackPage">
-                        <property name="name">explorer</property>
-                        <property name="child">
-                          <object class="GtkBox" id="file_manager_panel">
-                            <property name="css-classes">file-manager-panel</property>
-                            <property name="orientation">vertical</property>
-                            <property name="spacing">5</property>
-                            <property name="vexpand">true</property>
-                            <child>
-                              <object class="GtkScrolledWindow">
-                                <property name="hscrollbar-policy">never</property>
-                                <property name="vscrollbar-policy">automatic</property>
+                      <object class="GtkStack" id="sidebar_stack">
+                        <property name="transition-type">slide-left-right</property>
+                        <property name="transition-duration">200</property>
+                        <child>
+                          <object class="GtkStackPage">
+                            <property name="name">explorer</property>
+                            <property name="child">
+                              <object class="GtkBox" id="file_manager_panel">
+                                <property name="css-classes">file-manager-panel</property>
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">5</property>
                                 <property name="vexpand">true</property>
                                 <child>
-                                  <object class="GtkListBox" id="file_list_box">
-                                    <property name="selection-mode">single</property>
-                                    <property name="can-focus">true</property>
-                                    <property name="focusable">true</property>
+                                  <object class="GtkScrolledWindow">
+                                    <property name="hscrollbar-policy">automatic</property>
+                                    <property name="vscrollbar-policy">automatic</property>
+                                    <property name="vexpand">true</property>
+                                    <child>
+                                      <object class="GtkListBox" id="file_list_box">
+                                        <property name="selection-mode">single</property>
+                                        <property name="can-focus">true</property>
+                                        <property name="focusable">true</property>
+                                      </object>
+                                    </child>
                                   </object>
                                 </child>
                               </object>
-                            </child>
+                            </property>
                           </object>
-                        </property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkStackPage">
-                        <property name="name">search</property>
-                        <property name="child">
-                          <object class="GtkBox" id="search_panel">
-                            <property name="css-classes">search-panel</property>
-                            <property name="orientation">vertical</property>
+                        </child>
+                        <child>
+                          <object class="GtkStackPage">
+                            <property name="name">search</property>
+                            <property name="child">
+                              <object class="GtkBox" id="search_panel">
+                                <property name="css-classes">search-panel</property>
+                                <property name="orientation">vertical</property>
+                              </object>
+                            </property>
                           </object>
-                        </property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkStackPage">
-                        <property name="name">git-diff</property>
-                        <property name="child">
-                          <object class="GtkBox" id="git_diff_panel">
-                            <property name="css-classes">git-diff-panel</property>
-                            <property name="orientation">vertical</property>
+                        </child>
+                        <child>
+                          <object class="GtkStackPage">
+                            <property name="name">git-diff</property>
+                            <property name="child">
+                              <object class="GtkBox" id="git_diff_panel">
+                                <property name="css-classes">git-diff-panel</property>
+                                <property name="orientation">vertical</property>
+                              </object>
+                            </property>
                           </object>
-                        </property>
+                        </child>
                       </object>
                     </child>
                   </object>
@@ -271,6 +283,10 @@
                     <property name="wide-handle">true</property>
                     <property name="vexpand">true</property>
                     <property name="position">500</property>
+                    <property name="shrink-start-child">true</property>
+                    <property name="shrink-end-child">true</property>
+                    <property name="resize-start-child">true</property>
+                    <property name="resize-end-child">true</property>
                     <child>
                       <object class="GtkBox" id="editor_notebook_box">
                         <property name="orientation">vertical</property>

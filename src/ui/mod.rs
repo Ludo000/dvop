@@ -802,8 +802,7 @@ pub fn setup_tab_right_click(
 /// Returns editor notebook box - no longer needed in template approach but kept for compatibility
 pub fn create_editor_notebook_box(editor_notebook: &Notebook, add_file_button: &Button) -> GtkBox {
     // This function is now a no-op - the editor notebook box is in the template
-    // But we still need to set the action widget
-    editor_notebook.set_action_widget(add_file_button, gtk4::PackType::End);
+    // Action widget already set during text view creation; avoid setting it twice
     
     // Return a dummy box for compatibility
     GtkBox::new(Orientation::Vertical, 0)
