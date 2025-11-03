@@ -58,7 +58,6 @@ fn get_notebook_tab_styles() -> &'static str {
     tab {
         padding: 3px 6px;
         min-width: 120px;
-        max-width: 250px;
         min-height: 26px;
         border-radius: 5px 5px 0 0;
         border-bottom: 3px solid transparent;
@@ -73,7 +72,6 @@ fn get_notebook_tab_styles() -> &'static str {
     /* Prevent tabs from expanding to fill space */
     tab box {
         min-width: 120px;
-        max-width: 250px;
     }
     
     /* Active/selected tab styling */

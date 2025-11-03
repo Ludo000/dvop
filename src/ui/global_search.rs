@@ -1319,6 +1319,8 @@ pub fn show_global_search_dialog(
                                 let file_label = Label::new(None);
                                 file_label.set_markup(&format!("<b>{}</b>", glib::markup_escape_text(file_name)));
                                 file_label.set_xalign(0.0);
+                                file_label.set_ellipsize(pango::EllipsizeMode::End);
+                                file_label.set_hexpand(true);
                                 file_label.add_css_class("accent");
                                 
                                 let line_col_label = Label::new(Some(&format!("  {}:{}", sr.line, sr.col)));
@@ -1353,6 +1355,7 @@ pub fn show_global_search_dialog(
                                         preview_label.set_ellipsize(pango::EllipsizeMode::End);
                                         preview_label.set_max_width_chars(80);
                                     }
+                                    preview_label.set_hexpand(true);
                                     preview_label.add_css_class("monospace");
                                     preview_label.set_margin_top(2);
                                     result_vbox.append(&preview_label);
@@ -2053,6 +2056,8 @@ pub fn create_global_search_panel(
                                 let file_label = Label::new(None);
                                 file_label.set_markup(&format!("<b>{}</b>", glib::markup_escape_text(file_name)));
                                 file_label.set_xalign(0.0);
+                                file_label.set_ellipsize(pango::EllipsizeMode::End);
+                                file_label.set_hexpand(true);
                                 file_label.add_css_class("accent");
                                 
                                 let line_col_label = Label::new(Some(&format!("  {}:{}", sr.line, sr.col)));
@@ -2087,6 +2092,7 @@ pub fn create_global_search_panel(
                                         preview_label.set_ellipsize(pango::EllipsizeMode::End);
                                         preview_label.set_max_width_chars(80);
                                     }
+                                    preview_label.set_hexpand(true);
                                     preview_label.add_css_class("monospace");
                                     preview_label.set_margin_top(2);
                                     result_vbox.append(&preview_label);
