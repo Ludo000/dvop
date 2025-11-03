@@ -3,7 +3,7 @@
 
 use gtk4::prelude::*;
 use gtk4::{
-    Box as GtkBox, Button, Label, ListBoxRow, Orientation, pango, DrawingArea,
+    Box as GtkBox, Button, Label, ListBoxRow, Orientation, pango, DrawingArea, Widget,
 };
 use sourceview5::prelude::{BufferExt, ViewExt};
 use std::cell::RefCell;
@@ -995,6 +995,7 @@ pub fn create_git_diff_panel(
     // Get references to widgets
     let _repo_label = panel.repo_label();
     let branch_label = panel.branch_label();
+    let action_box = panel.action_box();
     let refresh_button = panel.refresh_button();
     let stage_all_button = panel.stage_all_button();
     let staged_files_list = panel.staged_files_list();
@@ -1550,6 +1551,66 @@ pub fn create_git_diff_panel(
 
     // Trigger initial update
     update_git_status();
+
+    // Make buttons responsive - switch to vertical layout when panel is narrow
+    let action_box_for_responsive = action_box.clone();
+    let last_width: Rc<RefCell<i32>> = Rc::new(RefCell::new(-1)); // -1 means not initialized
+    let last_log_time: Rc<RefCell<std::time::Instant>> = Rc::new(RefCell::new(std::time::Instant::now()));
+    
+    glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
+        // Walk up the widget tree to find the actual resizable container (GtkScrolledWindow or GtkPaned)
+        let mut resizable_widget: Option<Widget> = Some(action_box_for_responsive.clone().upcast::<Widget>());
+        while let Some(current_widget) = resizable_widget.clone() {
+            if current_widget.type_().name() == "GtkScrolledWindow" || current_widget.type_().name() == "GtkPaned" {
+                break;
+            }
+            resizable_widget = current_widget.parent();
+        }
+        
+        if let Some(container) = resizable_widget {
+            let current_width = container.allocated_width();
+            let mut last_w = last_width.borrow_mut();
+            
+            // Debug output every second
+            let now = std::time::Instant::now();
+            if now.duration_since(*last_log_time.borrow()).as_secs() >= 1 {
+                println!("Git diff panel - Resizable container width: {}", current_width);
+                *last_log_time.borrow_mut() = now;
+            }
+            
+            // Check if this is first run or if width changed
+            let threshold = 250;
+            let is_first_run = *last_w == -1;
+            
+            if is_first_run {
+                // Set initial orientation based on current width
+                if current_width < threshold {
+                    action_box_for_responsive.set_orientation(Orientation::Vertical);
+                    action_box_for_responsive.set_homogeneous(true);
+                    println!("Git diff panel - Initial VERTICAL layout (width: {})", current_width);
+                } else {
+                    action_box_for_responsive.set_orientation(Orientation::Horizontal);
+                    action_box_for_responsive.set_homogeneous(false);
+                    println!("Git diff panel - Initial HORIZONTAL layout (width: {})", current_width);
+                }
+                *last_w = current_width;
+            } else if *last_w != current_width {
+                // Width changed - check if we crossed the threshold
+                if current_width < threshold && *last_w >= threshold {
+                    action_box_for_responsive.set_orientation(Orientation::Vertical);
+                    action_box_for_responsive.set_homogeneous(true);
+                    println!("Git diff panel - Switching to VERTICAL layout (width: {})", current_width);
+                } else if current_width >= threshold && *last_w < threshold {
+                    action_box_for_responsive.set_orientation(Orientation::Horizontal);
+                    action_box_for_responsive.set_homogeneous(false);
+                    println!("Git diff panel - Switching to HORIZONTAL layout (width: {})", current_width);
+                }
+                *last_w = current_width;
+            }
+        }
+        
+        glib::ControlFlow::Continue
+    });
 
     // Return the panel as a GtkBox
     panel.upcast::<GtkBox>()

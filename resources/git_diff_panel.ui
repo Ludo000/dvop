@@ -7,6 +7,8 @@
     <property name="margin-end">12</property>
     <property name="margin-top">12</property>
     <property name="margin-bottom">12</property>
+    <property name="width-request">0</property>
+    <property name="hexpand">true</property>
     
     <!-- Header section -->
     <child>
@@ -37,13 +39,18 @@
         <property name="orientation">horizontal</property>
         <property name="spacing">4</property>
         <property name="margin-bottom">8</property>
+        <property name="homogeneous">false</property>
+        <property name="hexpand">true</property>
         <child>
           <object class="GtkButton" id="refresh_button">
             <property name="tooltip-text">Refresh git status</property>
+            <property name="width-request">0</property>
+            <property name="hexpand">true</property>
             <child>
               <object class="GtkBox">
                 <property name="orientation">horizontal</property>
                 <property name="spacing">4</property>
+                <property name="halign">center</property>
                 <child>
                   <object class="GtkImage">
                     <property name="icon-name">view-refresh-symbolic</property>
@@ -61,10 +68,13 @@
         <child>
           <object class="GtkButton" id="stage_all_button">
             <property name="tooltip-text">Stage all changes</property>
+            <property name="width-request">0</property>
+            <property name="hexpand">true</property>
             <child>
               <object class="GtkBox">
                 <property name="orientation">horizontal</property>
                 <property name="spacing">4</property>
+                <property name="halign">center</property>
                 <child>
                   <object class="GtkImage">
                     <property name="icon-name">list-add-symbolic</property>

@@ -7,16 +7,21 @@
     <property name="margin-end">12</property>
     <property name="margin-top">12</property>
     <property name="margin-bottom">12</property>
+    <property name="width-request">0</property>
+    <property name="hexpand">true</property>
     
     <!-- Search input container with overlay for case sensitive button -->
     <child>
       <object class="GtkOverlay" id="search_overlay">
         <property name="margin-bottom">8</property>
+        <property name="hexpand">true</property>
         <child>
           <object class="GtkTextView" id="search_text_view">
             <property name="wrap-mode">word</property>
             <property name="accepts-tab">false</property>
             <property name="height-request">80</property>
+            <property name="width-request">0</property>
+            <property name="hexpand">true</property>
           </object>
         </child>
         <child type="overlay">
@@ -52,26 +57,33 @@
         <property name="wrap-mode">word</property>
         <property name="accepts-tab">false</property>
         <property name="height-request">60</property>
+        <property name="width-request">0</property>
         <property name="margin-bottom">8</property>
+        <property name="hexpand">true</property>
       </object>
     </child>
     
-    <!-- Search and Replace buttons container -->
+    <!-- Search and Replace buttons container - wraps to column when narrow -->
     <child>
       <object class="GtkBox" id="buttons_box">
         <property name="orientation">horizontal</property>
         <property name="spacing">4</property>
         <property name="margin-bottom">8</property>
+        <property name="homogeneous">true</property>
         <child>
           <object class="GtkButton" id="search_btn">
             <property name="label">Search</property>
             <property name="css-classes">suggested-action</property>
+            <property name="width-request">0</property>
+            <property name="hexpand">true</property>
           </object>
         </child>
         <child>
           <object class="GtkButton" id="replace_btn">
             <property name="label">Replace</property>
             <property name="tooltip-text">Replace selected match</property>
+            <property name="width-request">0</property>
+            <property name="hexpand">true</property>
           </object>
         </child>
         <child>
@@ -79,6 +91,8 @@
             <property name="label">Replace All</property>
             <property name="tooltip-text">Replace all matches in all files</property>
             <property name="css-classes">destructive-action</property>
+            <property name="width-request">0</property>
+            <property name="hexpand">true</property>
           </object>
         </child>
       </object>

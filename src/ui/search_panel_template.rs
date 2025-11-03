@@ -19,6 +19,8 @@ mod imp {
         #[template_child]
         pub replace_text_view: TemplateChild<TextView>,
         #[template_child]
+        pub buttons_box: TemplateChild<GtkBox>,
+        #[template_child]
         pub search_btn: TemplateChild<Button>,
         #[template_child]
         pub replace_btn: TemplateChild<Button>,
@@ -76,6 +78,10 @@ impl SearchPanel {
 
     pub fn whole_word_toggle(&self) -> gtk4::ToggleButton {
         self.imp().whole_word_toggle.get()
+    }
+
+    pub fn buttons_box(&self) -> GtkBox {
+        self.imp().buttons_box.get()
     }
 
     pub fn search_btn(&self) -> Button {

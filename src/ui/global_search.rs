@@ -1316,10 +1316,13 @@ pub fn show_global_search_dialog(
                                     .unwrap_or("unknown");
                                 
                                 let location_box = GtkBox::new(Orientation::Horizontal, 4);
+                                location_box.set_hexpand(true);
+                                
                                 let file_label = Label::new(None);
                                 file_label.set_markup(&format!("<b>{}</b>", glib::markup_escape_text(file_name)));
                                 file_label.set_xalign(0.0);
-                                file_label.set_ellipsize(pango::EllipsizeMode::End);
+                                file_label.set_wrap(true);
+                                file_label.set_wrap_mode(pango::WrapMode::WordChar);
                                 file_label.set_hexpand(true);
                                 file_label.add_css_class("accent");
                                 
@@ -1350,11 +1353,10 @@ pub fn show_global_search_dialog(
                                 if !sanitized_preview.is_empty() {
                                     let preview_label = Label::new(Some(&sanitized_preview));
                                     preview_label.set_xalign(0.0);
-                                    // Don't ellipsize if it's a multi-line match preview (already truncated)
-                                    if !sanitized_preview.contains("more line") {
-                                        preview_label.set_ellipsize(pango::EllipsizeMode::End);
-                                        preview_label.set_max_width_chars(80);
-                                    }
+                                    preview_label.set_wrap(true);
+                                    preview_label.set_wrap_mode(pango::WrapMode::WordChar);
+                                    preview_label.set_lines(2);
+                                    preview_label.set_ellipsize(pango::EllipsizeMode::End);
                                     preview_label.set_hexpand(true);
                                     preview_label.add_css_class("monospace");
                                     preview_label.set_margin_top(2);
@@ -1800,11 +1802,72 @@ pub fn create_global_search_panel(
     let replace_buffer = panel.replace_buffer();
     let case_toggle = panel.case_toggle();
     let whole_word_toggle = panel.whole_word_toggle();
+    let buttons_box = panel.buttons_box();
     let search_btn = panel.search_btn();
     let replace_btn = panel.replace_btn();
     let replace_all_btn = panel.replace_all_btn();
     let status = panel.status_label();
     let results_list = panel.results_list();
+    
+    // Add responsive behavior: walk up widget tree to find the resizable container
+    let buttons_box_for_responsive = buttons_box.clone();
+    let last_width: Rc<RefCell<i32>> = Rc::new(RefCell::new(-1)); // -1 means not initialized
+    let last_log_time: Rc<RefCell<std::time::Instant>> = Rc::new(RefCell::new(std::time::Instant::now()));
+    
+    glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
+        // Walk up the widget tree to find the actual resizable container (GtkScrolledWindow or GtkPaned)
+        let mut resizable_widget: Option<gtk4::Widget> = Some(buttons_box_for_responsive.clone().upcast::<gtk4::Widget>());
+        while let Some(current_widget) = resizable_widget.clone() {
+            if current_widget.type_().name() == "GtkScrolledWindow" || current_widget.type_().name() == "GtkPaned" {
+                break;
+            }
+            resizable_widget = current_widget.parent();
+        }
+        
+        if let Some(container) = resizable_widget {
+            let current_width = container.allocated_width();
+            let mut last_w = last_width.borrow_mut();
+            
+            // Debug output every second
+            let now = std::time::Instant::now();
+            if now.duration_since(*last_log_time.borrow()).as_secs() >= 1 {
+                println!("Search panel - Resizable container width: {}", current_width);
+                *last_log_time.borrow_mut() = now;
+            }
+            
+            // Check if this is first run or if width changed
+            let threshold = 250;
+            let is_first_run = *last_w == -1;
+            
+            if is_first_run {
+                // Set initial orientation based on current width
+                if current_width < threshold {
+                    buttons_box_for_responsive.set_orientation(gtk4::Orientation::Vertical);
+                    buttons_box_for_responsive.set_homogeneous(true);
+                    println!("Search panel - Initial VERTICAL layout (width: {})", current_width);
+                } else {
+                    buttons_box_for_responsive.set_orientation(gtk4::Orientation::Horizontal);
+                    buttons_box_for_responsive.set_homogeneous(false);
+                    println!("Search panel - Initial HORIZONTAL layout (width: {})", current_width);
+                }
+                *last_w = current_width;
+            } else if *last_w != current_width {
+                // Width changed - check if we crossed the threshold
+                if current_width < threshold && *last_w >= threshold {
+                    buttons_box_for_responsive.set_orientation(gtk4::Orientation::Vertical);
+                    buttons_box_for_responsive.set_homogeneous(true);
+                    println!("Search panel - Switching to VERTICAL layout (width: {})", current_width);
+                } else if current_width >= threshold && *last_w < threshold {
+                    buttons_box_for_responsive.set_orientation(gtk4::Orientation::Horizontal);
+                    buttons_box_for_responsive.set_homogeneous(false);
+                    println!("Search panel - Switching to HORIZONTAL layout (width: {})", current_width);
+                }
+                *last_w = current_width;
+            }
+        }
+        
+        glib::ControlFlow::Continue
+    });
     
     // Restore search state from settings
     let settings = crate::settings::get_settings();
@@ -2053,10 +2116,13 @@ pub fn create_global_search_panel(
                                     .unwrap_or("unknown");
                                 
                                 let location_box = GtkBox::new(Orientation::Horizontal, 4);
+                                location_box.set_hexpand(true);
+                                
                                 let file_label = Label::new(None);
                                 file_label.set_markup(&format!("<b>{}</b>", glib::markup_escape_text(file_name)));
                                 file_label.set_xalign(0.0);
-                                file_label.set_ellipsize(pango::EllipsizeMode::End);
+                                file_label.set_wrap(true);
+                                file_label.set_wrap_mode(pango::WrapMode::WordChar);
                                 file_label.set_hexpand(true);
                                 file_label.add_css_class("accent");
                                 
@@ -2087,11 +2153,10 @@ pub fn create_global_search_panel(
                                 if !sanitized_preview.is_empty() {
                                     let preview_label = Label::new(Some(&sanitized_preview));
                                     preview_label.set_xalign(0.0);
-                                    // Don't ellipsize if it's a multi-line match preview (already truncated)
-                                    if !sanitized_preview.contains("more line") {
-                                        preview_label.set_ellipsize(pango::EllipsizeMode::End);
-                                        preview_label.set_max_width_chars(80);
-                                    }
+                                    preview_label.set_wrap(true);
+                                    preview_label.set_wrap_mode(pango::WrapMode::WordChar);
+                                    preview_label.set_lines(2);
+                                    preview_label.set_ellipsize(pango::EllipsizeMode::End);
                                     preview_label.set_hexpand(true);
                                     preview_label.add_css_class("monospace");
                                     preview_label.set_margin_top(2);

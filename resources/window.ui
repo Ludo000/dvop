@@ -233,6 +233,8 @@
                                 <property name="orientation">vertical</property>
                                 <property name="spacing">5</property>
                                 <property name="vexpand">true</property>
+                                <property name="width-request">0</property>
+                                <property name="hexpand">true</property>
                                 <child>
                                   <object class="GtkScrolledWindow">
                                     <property name="hscrollbar-policy">automatic</property>
@@ -258,6 +260,8 @@
                               <object class="GtkBox" id="search_panel">
                                 <property name="css-classes">search-panel</property>
                                 <property name="orientation">vertical</property>
+                                <property name="width-request">0</property>
+                                <property name="hexpand">true</property>
                               </object>
                             </property>
                           </object>
@@ -269,6 +273,8 @@
                               <object class="GtkBox" id="git_diff_panel">
                                 <property name="css-classes">git-diff-panel</property>
                                 <property name="orientation">vertical</property>
+                                <property name="width-request">0</property>
+                                <property name="hexpand">true</property>
                               </object>
                             </property>
                           </object>
