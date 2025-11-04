@@ -178,7 +178,6 @@
                     <property name="icon-name">folder-symbolic</property>
                     <property name="css-classes">activity-bar-button</property>
                     <property name="tooltip-text">Explorer (Ctrl+Shift+E)</property>
-                    <property name="active">true</property>
                   </object>
                 </child>
                 <child>
