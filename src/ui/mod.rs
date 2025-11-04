@@ -797,19 +797,6 @@ pub fn setup_tab_right_click(
     tab_box.add_controller(right_click_gesture);
 }
 
-/// Creates a container box for the editor notebook with the add button and search bar
-/// 
-/// The editor notebook is placed in a box with the search bar above it
-/// The add button is placed as an action button in the notebook's tab bar area
-/// Returns editor notebook box - no longer needed in template approach but kept for compatibility
-pub fn create_editor_notebook_box(editor_notebook: &Notebook, add_file_button: &Button) -> GtkBox {
-    // This function is now a no-op - the editor notebook box is in the template
-    // Action widget already set during text view creation; avoid setting it twice
-    
-    // Return a dummy box for compatibility
-    GtkBox::new(Orientation::Vertical, 0)
-}
-
 /// Returns status bar components from the template
 ///
 /// Returns a tuple of:

@@ -49,30 +49,6 @@ impl GitStatus {
             _ => None,
         }
     }
-
-    fn display_name(&self) -> &str {
-        match self {
-            GitStatus::Modified => "Modified",
-            GitStatus::Added => "Added (Staged)",
-            GitStatus::Deleted => "Deleted",
-            GitStatus::Renamed => "Renamed",
-            GitStatus::Untracked => "Untracked",
-            GitStatus::Staged => "Staged",
-            GitStatus::ModifiedStaged => "Staged+Modified",
-        }
-    }
-
-    fn icon(&self) -> &str {
-        match self {
-            GitStatus::Modified => "📝",
-            GitStatus::Added => "✅",
-            GitStatus::Deleted => "❌",
-            GitStatus::Renamed => "🔄",
-            GitStatus::Untracked => "❓",
-            GitStatus::Staged => "✅",
-            GitStatus::ModifiedStaged => "⚠️",
-        }
-    }
 }
 
 /// Check if a directory is a git repository

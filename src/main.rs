@@ -492,9 +492,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         secondary_status_label.set_text("");
     }
 
-    // Create the editor notebook container with add button
-    let _editor_notebook_box = ui::create_editor_notebook_box(&editor_notebook, &add_file_button);
-
     // Get references to paned components from the template
     let (_paned_content, paned, editor_paned, explorer_button, search_button, git_diff_button, sidebar_stack) = ui::create_paned(&window);
     
