@@ -54,6 +54,8 @@ mod imp {
         #[template_child]
         pub menu_button: TemplateChild<MenuButton>,
         #[template_child]
+        pub menu_search_entry: TemplateChild<gtk4::SearchEntry>,
+        #[template_child]
         pub open_button: TemplateChild<Button>,
         #[template_child]
         pub save_main_button: TemplateChild<Button>,

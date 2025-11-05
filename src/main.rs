@@ -22,6 +22,190 @@ use std::collections::HashMap;   // For efficient mapping of tab indices to file
 use std::path::PathBuf;        // File system path representation
 use std::io::Write;            // File writing capabilities
 
+/// Menu command structure for consistent command definitions
+#[derive(Clone)]
+struct MenuCommand {
+    label: &'static str,
+    action: &'static str,
+    keywords: Vec<&'static str>,
+}
+
+/// Get the list of all menu commands
+/// This single source of truth is used by both the menu search and can be used for menu generation
+fn get_menu_commands() -> Vec<MenuCommand> {
+    vec![
+        MenuCommand { label: "New File", action: "win.new-file", keywords: vec!["new", "file", "create"] },
+        MenuCommand { label: "Open...", action: "win.open", keywords: vec!["open", "file", "load"] },
+        MenuCommand { label: "Save", action: "win.save", keywords: vec!["save", "write"] },
+        MenuCommand { label: "Save As...", action: "win.save-as", keywords: vec!["save", "as", "copy"] },
+        MenuCommand { label: "Close Tab", action: "win.close-tab", keywords: vec!["close", "tab"] },
+        MenuCommand { label: "Close All Tabs", action: "win.close-all-tabs", keywords: vec!["close", "all", "tabs"] },
+        MenuCommand { label: "Quit", action: "app.quit", keywords: vec!["quit", "exit", "close"] },
+        MenuCommand { label: "Find...", action: "win.find", keywords: vec!["find", "search"] },
+        MenuCommand { label: "Find and Replace...", action: "win.find-replace", keywords: vec!["find", "replace", "search"] },
+        MenuCommand { label: "Preferences...", action: "win.preferences", keywords: vec!["preferences", "settings", "options"] },
+        MenuCommand { label: "Explorer", action: "win.toggle-explorer", keywords: vec!["explorer", "files", "sidebar"] },
+        MenuCommand { label: "Search", action: "win.toggle-search", keywords: vec!["search", "find", "sidebar"] },
+        MenuCommand { label: "Source Control", action: "win.toggle-git", keywords: vec!["git", "source", "control", "version"] },
+        MenuCommand { label: "Refresh File List", action: "win.refresh", keywords: vec!["refresh", "reload", "files"] },
+        MenuCommand { label: "Toggle Terminal", action: "win.toggle-terminal", keywords: vec!["terminal", "toggle", "console"] },
+        MenuCommand { label: "About Dvop", action: "win.about", keywords: vec!["about", "info", "version"] },
+    ]
+}
+
+/// Sets up the menu search functionality
+/// 
+/// This function creates a searchable command palette that allows users to quickly
+/// find and execute menu commands by typing their names
+fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindow) {
+    // Get the shared list of menu commands
+    let menu_commands = get_menu_commands();
+    
+    // Create a popover for showing search results
+    let popover = gtk4::Popover::new();
+    popover.set_parent(search_entry);
+    popover.set_autohide(false);
+    popover.set_can_focus(false);
+    
+    let listbox = gtk4::ListBox::new();
+    listbox.add_css_class("navigation-sidebar");
+    listbox.set_can_focus(false);
+    listbox.set_focus_on_click(false);
+    listbox.set_size_request(300, -1); // Fixed width, natural height
+    popover.set_child(Some(&listbox));
+    
+    let window_weak = window.downgrade();
+    let commands_clone = menu_commands.clone();
+    let popover_clone = popover.clone();
+    let entry_clone = search_entry.clone();
+    
+    // Handle item selection from the list
+    let window_weak_for_activate = window_weak.clone();
+    let popover_clone_for_activate = popover_clone.clone();
+    let entry_clone_for_activate = entry_clone.clone();
+    listbox.connect_row_activated(move |_, row| {
+        if let Some(label) = row.child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+            let text = label.text();
+            
+            // Find and execute the matching command
+            for cmd in &commands_clone {
+                if cmd.label == text.as_str() {
+                    if let Some(window) = window_weak_for_activate.upgrade() {
+                        if cmd.action.starts_with("app.") {
+                            if let Some(app) = window.application() {
+                                app.activate_action(&cmd.action[4..], None);
+                            }
+                        } else if cmd.action.starts_with("win.") {
+                            gtk4::prelude::ActionGroupExt::activate_action(&window, &cmd.action[4..], None);
+                        }
+                    }
+                    entry_clone_for_activate.set_text("");
+                    popover_clone_for_activate.popdown();
+                    break;
+                }
+            }
+        }
+    });
+    
+    let commands_for_search = menu_commands.clone();
+    let popover_for_search = popover.clone();
+    let listbox_for_search = listbox.clone();
+    
+    // Update search results as user types
+    search_entry.connect_search_changed(move |entry| {
+        let search_text = entry.text().to_lowercase();
+        
+        // Clear previous results
+        while let Some(child) = listbox_for_search.first_child() {
+            listbox_for_search.remove(&child);
+        }
+        
+        // Reset size to allow natural sizing
+        listbox_for_search.set_size_request(300, -1);
+        
+        if search_text.is_empty() {
+            popover_for_search.popdown();
+            return;
+        }
+        
+        // Find matching commands
+        let mut found_any = false;
+        for cmd in &commands_for_search {
+            let name_lower = cmd.label.to_lowercase();
+            let matches = name_lower.contains(&search_text) || 
+                         cmd.keywords.iter().any(|k| k.contains(&search_text));
+            
+            if matches {
+                let label = gtk4::Label::new(Some(cmd.label));
+                label.set_xalign(0.0);
+                label.set_margin_start(8);
+                label.set_margin_end(8);
+                label.set_margin_top(4);
+                label.set_margin_bottom(4);
+                
+                let row = gtk4::ListBoxRow::new();
+                row.set_child(Some(&label));
+                listbox_for_search.append(&row);
+                found_any = true;
+            }
+        }
+        
+        if found_any {
+            // Force popover to close and reopen to recalculate size
+            popover_for_search.popdown();
+            glib::idle_add_local_once({
+                let popover = popover_for_search.clone();
+                move || {
+                    popover.popup();
+                }
+            });
+        } else {
+            popover_for_search.popdown();
+        }
+    });
+    
+    // Handle Enter key to execute first result
+    let popover_for_activate = popover.clone();
+    let listbox_for_activate = listbox.clone();
+    let commands_for_enter = menu_commands.clone();
+    let window_weak_for_enter = window_weak.clone();
+    search_entry.connect_activate(move |entry| {
+        // Manually trigger the first row's action
+        if let Some(first_row) = listbox_for_activate.first_child().and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok()) {
+            // Select and activate the first row
+            listbox_for_activate.select_row(Some(&first_row));
+            // Trigger the row-activated signal
+            if let Some(label) = first_row.child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                let text = label.text();
+                
+                // Find and execute the matching command
+                for cmd in &commands_for_enter {
+                    if cmd.label == text.as_str() {
+                        if let Some(window) = window_weak_for_enter.upgrade() {
+                            if cmd.action.starts_with("app.") {
+                                if let Some(app) = window.application() {
+                                    app.activate_action(&cmd.action[4..], None);
+                                }
+                            } else if cmd.action.starts_with("win.") {
+                                gtk4::prelude::ActionGroupExt::activate_action(&window, &cmd.action[4..], None);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        entry.set_text("");
+        popover_for_activate.popdown();
+    });
+    
+    // Close popover when search is stopped
+    let popover_for_stop = popover.clone();
+    search_entry.connect_stop_search(move |_| {
+        popover_for_stop.popdown();
+    });
+}
+
 /// Application entry point - initializes the GTK application and runs the main loop
 fn main() {
     // Initialize user settings first
@@ -210,6 +394,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Get references to UI components from the template
     let imp = window.imp();
+    let menu_search_entry = imp.menu_search_entry.get();
     let terminal_button = imp.terminal_button.get();
     let up_button = imp.up_button.get();
     let path_box = imp.path_box.get();
@@ -922,6 +1107,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     window_as_app_window.add_action(&refresh_action);
     window_as_app_window.add_action(&toggle_terminal_action);
     window_as_app_window.add_action(&about_action);
+    
+    // Set up menu search functionality
+    setup_menu_search(&menu_search_entry, window_as_app_window);
     
     // Set up direct save functionality for the main save button
     // Instead of circular references between buttons, implement the save logic directly here
