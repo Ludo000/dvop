@@ -76,61 +76,99 @@ pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
     // Get current font size settings
     let settings_instance = settings::get_settings();
     font_size_spin.set_value(settings_instance.get_font_size() as f64);
-    // Use editor font size for terminal if no separate terminal setting exists
-    terminal_font_size_spin.set_value(settings_instance.get_font_size() as f64);
+    terminal_font_size_spin.set_value(settings_instance.get_terminal_font_size() as f64);
+    drop(settings_instance);
     
-    // Handle the dialog response
-    let available_schemes_clone = available_schemes.clone();
+    // Get the parent window as a concrete ApplicationWindow for callbacks
+    let parent_window = parent.clone().upcast::<ApplicationWindow>();
     
-    dialog.connect_response(move |dialog, response| {
-        if response == gtk4::ResponseType::Accept {
-            // Get the selected theme values from the position in the dropdown
-            let light_position = light_theme_dropdown.selected() as usize;
-            if light_position < available_schemes_clone.len() {
-                let light_theme = available_schemes_clone[light_position].clone();
-                let mut settings = settings::get_settings_mut();
-                settings.set_light_theme(&light_theme);
-            }
+    // Connect light theme dropdown change handler
+    let available_schemes_light = available_schemes.clone();
+    let parent_window_light = parent_window.clone();
+    light_theme_dropdown.connect_selected_notify(move |dropdown| {
+        let position = dropdown.selected() as usize;
+        if position < available_schemes_light.len() {
+            let theme = &available_schemes_light[position];
+            println!("Light theme changed to: {}", theme);
             
-            let dark_position = dark_theme_dropdown.selected() as usize;
-            if dark_position < available_schemes_clone.len() {
-                let dark_theme = available_schemes_clone[dark_position].clone();
-                let mut settings = settings::get_settings_mut();
-                settings.set_dark_theme(&dark_theme);
-            }
-            
-            // Get the font size values and save them
-            let font_size = font_size_spin.value() as u32;
-            let _terminal_font_size = terminal_font_size_spin.value() as u32;
-            {
-                let mut settings = settings::get_settings_mut();
-                settings.set_font_size(font_size);
-                // Note: Terminal font size setting not yet implemented in EditorSettings
-            }
-            
-            // Save settings to disk
-            if let Err(e) = settings::get_settings_mut().save() {
+            let mut settings = settings::get_settings_mut();
+            settings.set_light_theme(theme);
+            if let Err(e) = settings.save() {
                 eprintln!("Failed to save settings: {}", e);
             }
+            drop(settings);
             
-            // Release the mutex before refreshing settings
-            drop(settings::get_settings_mut());
-            
-            // Refresh settings across the application
             settings::refresh_settings();
             
-            // Apply font size changes globally
-            crate::syntax::apply_font_size_globally(font_size);
-            
-            // Get a reference to the parent window to update themes
-            if let Some(parent) = dialog.transient_for() {
-                if let Ok(parent_window) = parent.downcast::<ApplicationWindow>() {
-                    // Apply theme changes throughout the application
-                    apply_theme_changes_globally(&parent_window);
-                }
-            }
+            apply_theme_changes_globally(&parent_window_light);
         }
+    });
+    
+    // Connect dark theme dropdown change handler
+    let available_schemes_dark = available_schemes.clone();
+    let parent_window_dark = parent_window.clone();
+    dark_theme_dropdown.connect_selected_notify(move |dropdown| {
+        let position = dropdown.selected() as usize;
+        if position < available_schemes_dark.len() {
+            let theme = &available_schemes_dark[position];
+            println!("Dark theme changed to: {}", theme);
+            
+            let mut settings = settings::get_settings_mut();
+            settings.set_dark_theme(theme);
+            if let Err(e) = settings.save() {
+                eprintln!("Failed to save settings: {}", e);
+            }
+            drop(settings);
+            
+            settings::refresh_settings();
+            
+            apply_theme_changes_globally(&parent_window_dark);
+        }
+    });
+    
+    // Connect font size change handler
+    font_size_spin.connect_value_changed(move |spin| {
+        let font_size = spin.value() as u32;
+        println!("Font size changed to: {}", font_size);
         
+        let mut settings = settings::get_settings_mut();
+        settings.set_font_size(font_size);
+        if let Err(e) = settings.save() {
+            eprintln!("Failed to save settings: {}", e);
+        }
+        drop(settings);
+        
+        settings::refresh_settings();
+        crate::syntax::apply_font_size_globally(font_size);
+    });
+    
+    // Connect terminal font size change handler (currently just saves, not applied)
+    let parent_window_terminal = parent_window.clone();
+    terminal_font_size_spin.connect_value_changed(move |spin| {
+        let font_size = spin.value() as u32;
+        println!("Terminal font size changed to: {}", font_size);
+        
+        let mut settings = settings::get_settings_mut();
+        settings.set_terminal_font_size(font_size);
+        if let Err(e) = settings.save() {
+            eprintln!("Failed to save settings: {}", e);
+        }
+        drop(settings);
+        
+        settings::refresh_settings();
+        
+        // Apply terminal font size to all terminal instances
+        println!("Looking for terminal notebook...");
+        if let Some(terminal_notebook) = find_terminal_notebook(&parent_window_terminal) {
+            println!("Found terminal notebook, updating font sizes...");
+            terminal::update_all_terminal_font_sizes(&terminal_notebook);
+        } else {
+            println!("WARNING: Could not find terminal notebook!");
+        }
+    });
+    
+    // Handle dialog close
+    dialog.connect_response(move |dialog, _response| {
         dialog.close();
     });
     
@@ -191,16 +229,64 @@ pub fn apply_theme_changes_globally(parent_window: &ApplicationWindow) {
 
 /// Finds the terminal notebook within a window
 fn find_terminal_notebook(window: &ApplicationWindow) -> Option<Notebook> {
-    // Look through the window structure to find the terminal notebook
-    // This is specific to the structure of our application window
+    // Search recursively for all notebooks in the window
+    fn find_all_notebooks(widget: &gtk4::Widget) -> Vec<Notebook> {
+        let mut notebooks = Vec::new();
+        
+        // Check if this widget is a notebook
+        if let Some(notebook) = widget.downcast_ref::<Notebook>() {
+            notebooks.push(notebook.clone());
+        }
+        
+        // Recursively search children
+        let mut child = widget.first_child();
+        while let Some(current_child) = child {
+            notebooks.extend(find_all_notebooks(&current_child));
+            child = current_child.next_sibling();
+        }
+        
+        notebooks
+    }
     
-    window.child()
-        .and_then(|main_box| main_box.first_child())  // Main content box
-        .and_then(|paned| paned.last_child())         // The horizontal paned container
-        .and_then(|editor_paned| editor_paned.last_child()) // The vertical paned container
-        .and_then(|terminal_box| terminal_box.first_child())
-        .and_then(|child| {
-            // Check if this is our terminal notebook
-            child.downcast::<Notebook>().ok()
-        })
+    println!("Searching for terminal notebook by checking all notebooks...");
+    let all_notebooks = find_all_notebooks(window.upcast_ref::<gtk4::Widget>());
+    println!("Found {} notebooks total", all_notebooks.len());
+    
+    // Find the notebook that contains terminal widgets
+    for (idx, notebook) in all_notebooks.iter().enumerate() {
+        println!("Checking notebook {}", idx);
+        if notebook.n_pages() > 0 {
+            if let Some(page) = notebook.nth_page(Some(0)) {
+                // Check if this page contains a VteTerminal
+                if contains_terminal(&page) {
+                    println!("Found terminal notebook at index {}", idx);
+                    return Some(notebook.clone());
+                }
+            }
+        }
+    }
+    
+    println!("No terminal notebook found");
+    None
+}
+
+/// Helper function to check if a widget or its children contain a VteTerminal
+fn contains_terminal(widget: &gtk4::Widget) -> bool {
+    use vte4::Terminal as VteTerminal;
+    
+    // Check if this widget is a terminal
+    if widget.is::<VteTerminal>() {
+        return true;
+    }
+    
+    // Recursively check children
+    let mut child = widget.first_child();
+    while let Some(current_child) = child {
+        if contains_terminal(&current_child) {
+            return true;
+        }
+        child = current_child.next_sibling();
+    }
+    
+    false
 }
