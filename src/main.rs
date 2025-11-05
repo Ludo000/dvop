@@ -59,6 +59,14 @@ fn main() {
         completion::initialize_completion();
     });
     
+    // Add application-level quit action
+    let quit_action = gio::SimpleAction::new("quit", None);
+    let app_for_quit = app.clone();
+    quit_action.connect_activate(move |_, _| {
+        app_for_quit.quit();
+    });
+    app.add_action(&quit_action);
+    
     // Connect the activate signal to the build_ui function
     app.connect_activate(move |app| {
         println!("activate signal called!");
@@ -211,6 +219,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let volume_label = imp.volume_label.get();
     let file_list_box = imp.file_list_box.get();
     let _search_panel = imp.search_panel.get();
+    let search_bar = imp.search_bar.get();
+    let refresh_button = imp.refresh_button.get();
     
     // Create terminal notebook with tabs
     let (terminal_notebook, _add_terminal_button) = ui::terminal::create_terminal_notebook();
@@ -763,11 +773,155 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         save_as_button_clone_for_action.emit_clicked();
     });
     
+    // Define additional menu actions
+    let new_file_action = gio::SimpleAction::new("new-file", None);
+    let open_action = gio::SimpleAction::new("open", None);
+    let close_tab_action = gio::SimpleAction::new("close-tab", None);
+    let close_all_tabs_action = gio::SimpleAction::new("close-all-tabs", None);
+    let find_action = gio::SimpleAction::new("find", None);
+    let find_replace_action = gio::SimpleAction::new("find-replace", None);
+    let preferences_action = gio::SimpleAction::new("preferences", None);
+    let toggle_explorer_action = gio::SimpleAction::new("toggle-explorer", None);
+    let toggle_search_action = gio::SimpleAction::new("toggle-search", None);
+    let toggle_git_action = gio::SimpleAction::new("toggle-git", None);
+    let refresh_action = gio::SimpleAction::new("refresh", None);
+    let toggle_terminal_action = gio::SimpleAction::new("toggle-terminal", None);
+    let about_action = gio::SimpleAction::new("about", None);
+    
+    // Clone necessary references for action handlers
+    let add_file_button_clone = add_file_button.clone();
+    let open_button_clone = open_button.clone();
+    let editor_notebook_clone_for_close = editor_notebook.clone();
+    let file_path_manager_clone_for_close = file_path_manager.clone();
+    let editor_notebook_clone_for_close_all = editor_notebook.clone();
+    let file_path_manager_clone_for_close_all = file_path_manager.clone();
+    let search_bar_clone = search_bar.clone();
+    let settings_button_clone = settings_button.clone();
+    let explorer_button_clone_for_action = explorer_button.clone();
+    let search_button_clone_for_action = search_button.clone();
+    let git_diff_button_clone_for_action = git_diff_button.clone();
+    let refresh_button_clone = refresh_button.clone();
+    let editor_paned_clone = editor_paned.clone();
+    let window_clone_for_about = window.clone();
+    
+    // Connect new file action
+    new_file_action.connect_activate(move |_, _| {
+        add_file_button_clone.emit_clicked();
+    });
+    
+    // Connect open action
+    open_action.connect_activate(move |_, _| {
+        open_button_clone.emit_clicked();
+    });
+    
+    // Connect close tab action
+    close_tab_action.connect_activate(move |_, _| {
+        if let Some(current_page) = editor_notebook_clone_for_close.current_page() {
+            // Remove from file path manager
+            file_path_manager_clone_for_close.borrow_mut().remove(&current_page);
+            // Close the tab
+            editor_notebook_clone_for_close.remove_page(Some(current_page));
+        }
+    });
+    
+    // Connect close all tabs action
+    close_all_tabs_action.connect_activate(move |_, _| {
+        let num_pages = editor_notebook_clone_for_close_all.n_pages();
+        // Close all tabs from last to first to avoid index issues
+        for _ in 0..num_pages {
+            if editor_notebook_clone_for_close_all.n_pages() > 0 {
+                let last_page = editor_notebook_clone_for_close_all.n_pages() - 1;
+                file_path_manager_clone_for_close_all.borrow_mut().remove(&last_page);
+                editor_notebook_clone_for_close_all.remove_page(Some(last_page));
+            }
+        }
+        // Clear the file path manager
+        file_path_manager_clone_for_close_all.borrow_mut().clear();
+    });
+    
+    // Connect find action
+    find_action.connect_activate(move |_, _| {
+        search_bar_clone.set_search_mode(true);
+    });
+    
+    // Connect find and replace action (same as find for now)
+    let search_bar_clone2 = search_bar.clone();
+    find_replace_action.connect_activate(move |_, _| {
+        search_bar_clone2.set_search_mode(true);
+    });
+    
+    // Connect preferences action
+    preferences_action.connect_activate(move |_, _| {
+        settings_button_clone.emit_clicked();
+    });
+    
+    // Connect toggle explorer action
+    toggle_explorer_action.connect_activate(move |_, _| {
+        explorer_button_clone_for_action.set_active(!explorer_button_clone_for_action.is_active());
+    });
+    
+    // Connect toggle search action
+    toggle_search_action.connect_activate(move |_, _| {
+        search_button_clone_for_action.set_active(!search_button_clone_for_action.is_active());
+    });
+    
+    // Connect toggle git action
+    toggle_git_action.connect_activate(move |_, _| {
+        git_diff_button_clone_for_action.set_active(!git_diff_button_clone_for_action.is_active());
+    });
+    
+    // Connect refresh action
+    refresh_action.connect_activate(move |_, _| {
+        refresh_button_clone.emit_clicked();
+    });
+    
+    // Connect toggle terminal action
+    toggle_terminal_action.connect_activate(move |_, _| {
+        let current_pos = editor_paned_clone.position();
+        let max_pos = editor_paned_clone.allocation().height();
+        if current_pos >= max_pos - 50 {
+            // Terminal is hidden, show it
+            editor_paned_clone.set_position((max_pos as f64 * 0.6) as i32);
+        } else {
+            // Terminal is visible, hide it
+            editor_paned_clone.set_position(max_pos);
+        }
+    });
+    
+    // Connect about action
+    about_action.connect_activate(move |_, _| {
+        let about_dialog = gtk4::AboutDialog::builder()
+            .program_name("Dvop")
+            .version("0.1.0")
+            .comments("A modern, lightweight code editor")
+            .website("https://github.com/Ludo000/dvop")
+            .authors(vec!["Ludovic Scholz".to_string()])
+            .copyright("Copyright © 2024-2025 Ludovic Scholz")
+            .license_type(gtk4::License::Gpl30)
+            .transient_for(&window_clone_for_about)
+            .modal(true)
+            .build();
+        about_dialog.present();
+    });
+    
     // Register the actions with the application window (upcast first)
     // This makes them available to be triggered by menu items  
     let window_as_app_window: &ApplicationWindow = window.upcast_ref();
     window_as_app_window.add_action(&save_action);
     window_as_app_window.add_action(&save_as_action);
+    window_as_app_window.add_action(&new_file_action);
+    window_as_app_window.add_action(&open_action);
+    window_as_app_window.add_action(&close_tab_action);
+    window_as_app_window.add_action(&close_all_tabs_action);
+    window_as_app_window.add_action(&find_action);
+    window_as_app_window.add_action(&find_replace_action);
+    window_as_app_window.add_action(&preferences_action);
+    window_as_app_window.add_action(&toggle_explorer_action);
+    window_as_app_window.add_action(&toggle_search_action);
+    window_as_app_window.add_action(&toggle_git_action);
+    window_as_app_window.add_action(&refresh_action);
+    window_as_app_window.add_action(&toggle_terminal_action);
+    window_as_app_window.add_action(&about_action);
     
     // Set up direct save functionality for the main save button
     // Instead of circular references between buttons, implement the save logic directly here

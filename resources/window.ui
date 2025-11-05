@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <template class="DvopWindow" parent="GtkApplicationWindow">
-    <property name="title">Dvop</property>
     <property name="default-width">1200</property>
     <property name="default-height">800</property>
     <property name="icon-name">dvop</property>
     <child type="titlebar">
       <object class="GtkHeaderBar" id="header_bar">
+        <property name="show-title-buttons">true</property>
+        <property name="title-widget">
+          <object class="GtkLabel">
+            <property name="visible">false</property>
+          </object>
+        </property>
         <child type="start">
-          <object class="GtkButton" id="settings_button">
-            <property name="icon-name">preferences-system-symbolic</property>
-            <property name="tooltip-text">Editor Settings</property>
+          <object class="GtkMenuButton" id="menu_button">
+            <property name="icon-name">open-menu-symbolic</property>
+            <property name="menu-model">primary_menu</property>
+            <property name="tooltip-text">Application Menu</property>
           </object>
         </child>
         <child type="start">
@@ -374,5 +380,118 @@
         <attribute name="action">win.save-as</attribute>
       </item>
     </section>
+  </menu>
+  <menu id="primary_menu">
+    <submenu>
+      <attribute name="label">File</attribute>
+      <section>
+        <item>
+          <attribute name="label">New File</attribute>
+          <attribute name="action">win.new-file</attribute>
+          <attribute name="accel">&lt;Primary&gt;n</attribute>
+        </item>
+        <item>
+          <attribute name="label">Open...</attribute>
+          <attribute name="action">win.open</attribute>
+          <attribute name="accel">&lt;Primary&gt;o</attribute>
+        </item>
+      </section>
+      <section>
+        <item>
+          <attribute name="label">Save</attribute>
+          <attribute name="action">win.save</attribute>
+          <attribute name="accel">&lt;Primary&gt;s</attribute>
+        </item>
+        <item>
+          <attribute name="label">Save As...</attribute>
+          <attribute name="action">win.save-as</attribute>
+          <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;s</attribute>
+        </item>
+      </section>
+      <section>
+        <item>
+          <attribute name="label">Close Tab</attribute>
+          <attribute name="action">win.close-tab</attribute>
+          <attribute name="accel">&lt;Primary&gt;w</attribute>
+        </item>
+        <item>
+          <attribute name="label">Close All Tabs</attribute>
+          <attribute name="action">win.close-all-tabs</attribute>
+          <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;w</attribute>
+        </item>
+      </section>
+      <section>
+        <item>
+          <attribute name="label">Quit</attribute>
+          <attribute name="action">app.quit</attribute>
+          <attribute name="accel">&lt;Primary&gt;q</attribute>
+        </item>
+      </section>
+    </submenu>
+    <submenu>
+      <attribute name="label">Edit</attribute>
+      <section>
+        <item>
+          <attribute name="label">Find...</attribute>
+          <attribute name="action">win.find</attribute>
+          <attribute name="accel">&lt;Primary&gt;f</attribute>
+        </item>
+        <item>
+          <attribute name="label">Find and Replace...</attribute>
+          <attribute name="action">win.find-replace</attribute>
+          <attribute name="accel">&lt;Primary&gt;h</attribute>
+        </item>
+      </section>
+      <section>
+        <item>
+          <attribute name="label">Preferences...</attribute>
+          <attribute name="action">win.preferences</attribute>
+          <attribute name="accel">&lt;Primary&gt;comma</attribute>
+        </item>
+      </section>
+    </submenu>
+    <submenu>
+      <attribute name="label">View</attribute>
+      <section>
+        <item>
+          <attribute name="label">Explorer</attribute>
+          <attribute name="action">win.toggle-explorer</attribute>
+          <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;e</attribute>
+        </item>
+        <item>
+          <attribute name="label">Search</attribute>
+          <attribute name="action">win.toggle-search</attribute>
+          <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;f</attribute>
+        </item>
+        <item>
+          <attribute name="label">Source Control</attribute>
+          <attribute name="action">win.toggle-git</attribute>
+          <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;g</attribute>
+        </item>
+      </section>
+      <section>
+        <item>
+          <attribute name="label">Refresh File List</attribute>
+          <attribute name="action">win.refresh</attribute>
+          <attribute name="accel">F5</attribute>
+        </item>
+      </section>
+      <section>
+        <item>
+          <attribute name="label">Toggle Terminal</attribute>
+          <attribute name="action">win.toggle-terminal</attribute>
+          <attribute name="accel">&lt;Primary&gt;grave</attribute>
+        </item>
+      </section>
+    </submenu>
+    <submenu>
+      <attribute name="label">Help</attribute>
+      <section>
+        <item>
+          <attribute name="label">About Dvop</attribute>
+          <attribute name="action">win.about</attribute>
+        </item>
+      </section>
+    </submenu>
   </menu>
 </interface>
