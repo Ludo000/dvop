@@ -7,6 +7,7 @@ use gtk4::{
     Orientation, PackType
 };
 use gtk4::gdk;
+use gtk4::pango;
 use std::env;
 use std::path::PathBuf;
 
@@ -27,6 +28,9 @@ pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
     
     // Set terminal colors to match the editor's theme
     setup_terminal_theme(&terminal);
+    
+    // Apply font size from settings
+    apply_terminal_font_size(&terminal);
     
     // Get the user's default shell from environment variables
     if let Ok(shell) = env::var("SHELL") {
@@ -324,4 +328,45 @@ pub fn update_all_terminal_themes(terminal_notebook: &Notebook) {
         println!("Terminal colors updated. Dark mode is now: {}", 
             if is_dark { "enabled" } else { "disabled" });
     }
+}
+
+/// Applies font size setting to a terminal
+///
+/// Reads the terminal font size from settings and applies it to the given terminal
+pub fn apply_terminal_font_size(terminal: &VteTerminal) {
+    let settings = crate::settings::get_settings();
+    let font_size = settings.get_terminal_font_size();
+    
+    // Create a Pango font description with the specified size
+    let font_desc = format!("monospace {}", font_size);
+    if let Some(font) = pango::FontDescription::from_string(&font_desc).into() {
+        terminal.set_font(Some(&font));
+        println!("Applied terminal font size: {}", font_size);
+    }
+}
+
+/// Updates font size for all terminals in the terminal notebook
+///
+/// This should be called when the terminal font size setting changes
+pub fn update_all_terminal_font_sizes(terminal_notebook: &Notebook) {
+    println!("Updating font sizes for all terminal tabs...");
+    
+    // Go through all tabs in the terminal notebook
+    for page_num in 0..terminal_notebook.n_pages() {
+        if let Some(page) = terminal_notebook.nth_page(Some(page_num)) {
+            // Try to find ScrolledWindow which contains our terminal
+            if let Some(scrolled_window) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                if let Some(child) = scrolled_window.child() {
+                    // Check if the child is a VteTerminal
+                    if let Some(terminal) = child.downcast_ref::<VteTerminal>() {
+                        println!("Updating font size for terminal tab {}", page_num);
+                        apply_terminal_font_size(terminal);
+                        terminal.queue_draw();
+                    }
+                }
+            }
+        }
+    }
+    
+    terminal_notebook.queue_draw();
 }

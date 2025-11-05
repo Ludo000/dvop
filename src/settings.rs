@@ -10,6 +10,7 @@ use home::home_dir;
 const DEFAULT_LIGHT_THEME: &str = "solarized-light";
 const DEFAULT_DARK_THEME: &str = "solarized-dark";
 pub const DEFAULT_FONT_SIZE: u32 = 11;
+pub const DEFAULT_TERMINAL_FONT_SIZE: u32 = 11;
 const DEFAULT_AUDIO_VOLUME: f64 = 0.8; // 80% volume
 const DEFAULT_VIDEO_VOLUME: f64 = 0.8; // 80% volume
 const DEFAULT_WINDOW_WIDTH: i32 = 800;
@@ -58,6 +59,7 @@ impl EditorSettings {
         self.values.insert("light_theme".to_owned(), DEFAULT_LIGHT_THEME.to_owned());
         self.values.insert("dark_theme".to_owned(), DEFAULT_DARK_THEME.to_owned());
         self.values.insert("font_size".to_owned(), DEFAULT_FONT_SIZE.to_string());
+        self.values.insert("terminal_font_size".to_owned(), DEFAULT_TERMINAL_FONT_SIZE.to_string());
         self.values.insert("audio_volume".to_owned(), DEFAULT_AUDIO_VOLUME.to_string());
         self.values.insert("video_volume".to_owned(), DEFAULT_VIDEO_VOLUME.to_string());
         self.values.insert("window_width".to_owned(), DEFAULT_WINDOW_WIDTH.to_string());
@@ -108,7 +110,12 @@ impl EditorSettings {
             contents.push_str(&format!("{}={}\n", key, value));
         }
 
-        fs::write(&self.config_path, contents)
+        fs::write(&self.config_path, contents)?;
+        
+        // Invalidate the file cache so next load reads fresh from disk
+        crate::file_cache::invalidate_file_cache(&self.config_path);
+        
+        Ok(())
     }
 
     /// Gets a setting value as a string
@@ -151,6 +158,18 @@ impl EditorSettings {
     /// Sets the font size
     pub fn set_font_size(&mut self, size: u32) {
         self.set("font_size", &size.to_string());
+    }
+
+    /// Gets the terminal font size
+    pub fn get_terminal_font_size(&self) -> u32 {
+        self.get("terminal_font_size")
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(DEFAULT_TERMINAL_FONT_SIZE)
+    }
+
+    /// Sets the terminal font size
+    pub fn set_terminal_font_size(&mut self, size: u32) {
+        self.set("terminal_font_size", &size.to_string());
     }
 
     /// Gets the audio volume (0.0 to 1.0)
