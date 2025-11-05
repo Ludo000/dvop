@@ -48,6 +48,7 @@ fn get_menu_commands() -> Vec<MenuCommand> {
         MenuCommand { label: "Search", action: "win.toggle-search", keywords: vec!["search", "find", "sidebar"] },
         MenuCommand { label: "Source Control", action: "win.toggle-git", keywords: vec!["git", "source", "control", "version"] },
         MenuCommand { label: "Refresh File List", action: "win.refresh", keywords: vec!["refresh", "reload", "files"] },
+        MenuCommand { label: "New Terminal", action: "win.new-terminal", keywords: vec!["new", "terminal", "console", "create"] },
         MenuCommand { label: "Toggle Terminal", action: "win.toggle-terminal", keywords: vec!["terminal", "toggle", "console"] },
         MenuCommand { label: "About Dvop", action: "win.about", keywords: vec!["about", "info", "version"] },
     ]
@@ -422,85 +423,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
     
-    // Create terminal notebook with tabs
-    let (terminal_notebook, _add_terminal_button) = ui::terminal::create_terminal_notebook();
-    let _terminal_notebook_box = ui::terminal::create_terminal_notebook_box(&terminal_notebook, &_add_terminal_button);
+    // Terminal setup will be done after editor_paned is created (see below)
     
-    // Add terminal to the template's terminal container
-    let terminal_notebook_template = imp.terminal_notebook.get();
-    let add_terminal_button = imp.add_terminal_button.get();
-    
-    // Transfer tabs from the created notebook to the template notebook
-    while terminal_notebook.n_pages() > 0 {
-        if let Some(page) = terminal_notebook.nth_page(Some(0)) {
-            if let Some(label) = terminal_notebook.tab_label(&page) {
-                terminal_notebook.remove_page(Some(0));
-                terminal_notebook_template.append_page(&page, Some(&label));
-            }
-        }
-    }
-    
-    // Action widget for add terminal button is already set in the template
-    // terminal_notebook_template.set_action_widget(&add_terminal_button, gtk4::PackType::End);
-    
-    // Connect the add terminal button click handler
-    let terminal_notebook_for_button = terminal_notebook_template.clone();
-    add_terminal_button.connect_clicked(move |_| {
-        ui::terminal::add_terminal_tab(&terminal_notebook_for_button, None);
-    });
-    
-    // Set up theme settings based on system preferences
-    if let Some(settings) = gtk4::Settings::default() {
-        // Don't override the system preference - let GTK handle it naturally
-        // This allows the app to respond to system theme changes automatically
-        
-        // Clone references to update editor views when theme changes
-        let window_clone = window.clone();
-        let terminal_notebook_clone = terminal_notebook_template.clone();
-        
-        // Connect to multiple theme-related signals to catch all possible theme changes
-        let window_clone_2 = window_clone.clone();
-        let terminal_notebook_clone_2 = terminal_notebook_clone.clone();
-        let window_clone_3 = window_clone.clone();
-        let terminal_notebook_clone_3 = terminal_notebook_clone.clone();
-        
-        // Primary signal for dark theme preference changes
-        settings.connect_notify_local(
-            Some("gtk-application-prefer-dark-theme"),
-            move |_, _| {
-                println!("Theme changed via gtk-application-prefer-dark-theme signal");
-                syntax::sync_gtk_with_system_theme();
-                update_all_buffer_themes(&window_clone);
-                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone);
-            }
-        );
-        
-        // Secondary signal for general theme name changes (catches more theme switches)
-        settings.connect_notify_local(
-            Some("gtk-theme-name"),
-            move |_, _| {
-                println!("Theme changed via gtk-theme-name signal");
-                syntax::sync_gtk_with_system_theme();
-                update_all_buffer_themes(&window_clone_2);
-                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_2);
-            }
-        );
-        
-        // Monitor icon theme changes which often accompany theme switches
-        settings.connect_notify_local(
-            Some("gtk-icon-theme-name"),
-            move |_, _| {
-                println!("Icon theme changed - may indicate system theme change");
-                syntax::sync_gtk_with_system_theme();
-                update_all_buffer_themes(&window_clone_3);
-                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_3);
-            }
-        );
-        
-        // Set up a GSettings monitor for GNOME/Ubuntu theme changes
-        setup_gsettings_monitor(&window, &terminal_notebook_template);
-    }
-
     // Initialize the text editor components
     // Returns multiple widgets and associated state for the editor UI
     let (
@@ -704,6 +628,72 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Get references to paned components from the template
     let (_paned_content, paned, editor_paned, explorer_button, search_button, git_diff_button, sidebar_stack) = ui::create_paned(&window);
+    
+    // Setup terminal notebook now that we have editor_paned
+    let terminal_notebook_template = imp.terminal_notebook.get();
+    let add_terminal_button = imp.add_terminal_button.get();
+    
+    // Create the first terminal tab directly in the template notebook with paned support
+    ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_template, None, &editor_paned);
+    
+    // Connect the add terminal button click handler with paned support for toggling
+    let terminal_notebook_for_button = terminal_notebook_template.clone();
+    let editor_paned_for_button = editor_paned.clone();
+    add_terminal_button.connect_clicked(move |_| {
+        ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_for_button, None, &editor_paned_for_button);
+    });
+    
+    // Set up theme settings based on system preferences
+    if let Some(settings) = gtk4::Settings::default() {
+        // Don't override the system preference - let GTK handle it naturally
+        // This allows the app to respond to system theme changes automatically
+        
+        // Clone references to update editor views when theme changes
+        let window_clone = window.clone();
+        let terminal_notebook_clone = terminal_notebook_template.clone();
+        
+        // Connect to multiple theme-related signals to catch all possible theme changes
+        let window_clone_2 = window_clone.clone();
+        let terminal_notebook_clone_2 = terminal_notebook_clone.clone();
+        let window_clone_3 = window_clone.clone();
+        let terminal_notebook_clone_3 = terminal_notebook_clone.clone();
+        
+        // Primary signal for dark theme preference changes
+        settings.connect_notify_local(
+            Some("gtk-application-prefer-dark-theme"),
+            move |_, _| {
+                println!("Theme changed via gtk-application-prefer-dark-theme signal");
+                syntax::sync_gtk_with_system_theme();
+                update_all_buffer_themes(&window_clone);
+                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone);
+            }
+        );
+        
+        // Secondary signal for general theme name changes (catches more theme switches)
+        settings.connect_notify_local(
+            Some("gtk-theme-name"),
+            move |_, _| {
+                println!("Theme changed via gtk-theme-name signal");
+                syntax::sync_gtk_with_system_theme();
+                update_all_buffer_themes(&window_clone_2);
+                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_2);
+            }
+        );
+        
+        // Monitor icon theme changes which often accompany theme switches
+        settings.connect_notify_local(
+            Some("gtk-icon-theme-name"),
+            move |_, _| {
+                println!("Icon theme changed - may indicate system theme change");
+                syntax::sync_gtk_with_system_theme();
+                update_all_buffer_themes(&window_clone_3);
+                ui::terminal::update_all_terminal_themes(&terminal_notebook_clone_3);
+            }
+        );
+        
+        // Set up a GSettings monitor for GNOME/Ubuntu theme changes
+        setup_gsettings_monitor(&window, &terminal_notebook_template);
+    }
     
     // Restore active sidebar tab from settings
     let saved_sidebar_tab = settings::get_settings().get_active_sidebar_tab();
@@ -985,6 +975,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let toggle_search_action = gio::SimpleAction::new("toggle-search", None);
     let toggle_git_action = gio::SimpleAction::new("toggle-git", None);
     let refresh_action = gio::SimpleAction::new("refresh", None);
+    let new_terminal_action = gio::SimpleAction::new("new-terminal", None);
     let toggle_terminal_action = gio::SimpleAction::new("toggle-terminal", None);
     let about_action = gio::SimpleAction::new("about", None);
     
@@ -1000,6 +991,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let search_button_clone_for_action = search_button.clone();
     let git_diff_button_clone_for_action = git_diff_button.clone();
     let refresh_button_clone = refresh_button.clone();
+    let terminal_notebook_clone_for_new_terminal = terminal_notebook_template.clone();
+    let editor_paned_clone_for_new_terminal = editor_paned.clone();
     let editor_paned_clone = editor_paned.clone();
     let window_clone_for_about = window.clone();
     
@@ -1099,6 +1092,19 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         refresh_button_clone.emit_clicked();
     });
     
+    // Connect new terminal action
+    new_terminal_action.connect_activate(move |_, _| {
+        // Show terminal if hidden
+        let max_pos = editor_paned_clone_for_new_terminal.allocation().height();
+        let current_pos = editor_paned_clone_for_new_terminal.position();
+        if current_pos >= max_pos - 50 {
+            // Terminal is hidden, show it
+            editor_paned_clone_for_new_terminal.set_position((max_pos as f64 * 0.6) as i32);
+        }
+        // Add a new terminal tab
+        ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_clone_for_new_terminal, None, &editor_paned_clone_for_new_terminal);
+    });
+    
     // Connect toggle terminal action
     toggle_terminal_action.connect_activate(move |_, _| {
         let current_pos = editor_paned_clone.position();
@@ -1106,6 +1112,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         if current_pos >= max_pos - 50 {
             // Terminal is hidden, show it
             editor_paned_clone.set_position((max_pos as f64 * 0.6) as i32);
+            
+            // If there are no terminals, the view will show just the add button
+            // which is already visible in the notebook's action widget area
         } else {
             // Terminal is visible, hide it
             editor_paned_clone.set_position(max_pos);
@@ -1144,6 +1153,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     window_as_app_window.add_action(&toggle_search_action);
     window_as_app_window.add_action(&toggle_git_action);
     window_as_app_window.add_action(&refresh_action);
+    window_as_app_window.add_action(&new_terminal_action);
     window_as_app_window.add_action(&toggle_terminal_action);
     window_as_app_window.add_action(&about_action);
     
