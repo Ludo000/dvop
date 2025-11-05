@@ -140,10 +140,11 @@ thread_local! {
 pub fn get_preferred_style_scheme() -> String {
     // Prevent recursive calls when refresh_settings calls back into this function
     if GETTING_STYLE.with(|flag| flag.get()) {
+        // Use generic fallback themes that are always available
         return if is_dark_mode_enabled() {
-            "solarized-dark".to_string()
+            "classic-dark".to_string()
         } else {
-            "solarized-light".to_string()
+            "classic".to_string()
         };
     }
     
