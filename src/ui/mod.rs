@@ -52,7 +52,7 @@ mod imp {
         #[template_child]
         pub header_bar: TemplateChild<HeaderBar>,
         #[template_child]
-        pub settings_button: TemplateChild<Button>,
+        pub menu_button: TemplateChild<MenuButton>,
         #[template_child]
         pub open_button: TemplateChild<Button>,
         #[template_child]
@@ -283,6 +283,9 @@ pub fn create_header(window: &DvopWindow) -> (Button, Button, Button, MenuButton
     let save_button = Button::new();
     save_button.set_visible(false);
     
+    let settings_button = Button::new();
+    settings_button.set_visible(false);
+    
     (
         new_button,
         imp.open_button.get(),
@@ -290,7 +293,7 @@ pub fn create_header(window: &DvopWindow) -> (Button, Button, Button, MenuButton
         imp.save_menu_button.get(),
         save_as_button,
         save_button,
-        imp.settings_button.get(),
+        settings_button,
     )
 }
 
