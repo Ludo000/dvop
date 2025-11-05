@@ -479,6 +479,11 @@
       </section>
       <section>
         <item>
+          <attribute name="label">New Terminal</attribute>
+          <attribute name="action">win.new-terminal</attribute>
+          <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;grave</attribute>
+        </item>
+        <item>
           <attribute name="label">Toggle Terminal</attribute>
           <attribute name="action">win.toggle-terminal</attribute>
           <attribute name="accel">&lt;Primary&gt;grave</attribute>

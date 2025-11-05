@@ -226,9 +226,27 @@ pub fn create_terminal_notebook() -> (Notebook, Button) {
 /// Parameters:
 /// - terminal_notebook: The notebook to add the terminal tab to
 /// - working_dir: Optional working directory to start the terminal in
+/// - editor_paned: Optional reference to the editor paned for toggling terminal visibility
 ///
 /// Returns the page number of the new tab
 pub fn add_terminal_tab(terminal_notebook: &Notebook, working_dir: Option<PathBuf>) -> u32 {
+    add_terminal_tab_with_paned(terminal_notebook, working_dir, None)
+}
+
+/// Adds a new terminal tab with paned support for toggling terminal visibility
+/// 
+/// This version allows the terminal tab close button to hide the terminal view
+/// when the last tab is closed.
+pub fn add_terminal_tab_with_toggle(
+    terminal_notebook: &Notebook,
+    working_dir: Option<PathBuf>,
+    editor_paned: &gtk4::Paned
+) -> u32 {
+    add_terminal_tab_with_paned(terminal_notebook, working_dir, Some(editor_paned))
+}
+
+/// Internal function to add a terminal tab with optional paned reference
+fn add_terminal_tab_with_paned(terminal_notebook: &Notebook, working_dir: Option<PathBuf>, editor_paned: Option<&gtk4::Paned>) -> u32 {
     // Use the last folder name from the path for the tab title, or "Home" for default tabs
     let tab_title = if let Some(dir_path) = &working_dir {
         // Get the last component of the path (the folder name)
@@ -260,11 +278,20 @@ pub fn add_terminal_tab(terminal_notebook: &Notebook, working_dir: Option<PathBu
     // Connect the close button
     let notebook_clone = terminal_notebook.clone();
     let terminal_box_clone = terminal_box.clone();
+    let editor_paned_clone = editor_paned.cloned();
     tab_close_button.connect_clicked(move |_| {
         // Find the current page number for this tab's content - it may have changed since creation
         if let Some(current_page_num) = notebook_clone.page_num(&terminal_box_clone) {
-            // Remove the terminal tab regardless of whether it's the last one
+            // Remove the terminal tab
             notebook_clone.remove_page(Some(current_page_num));
+            
+            // If this was the last terminal, hide the terminal view
+            if notebook_clone.n_pages() == 0 {
+                if let Some(paned) = &editor_paned_clone {
+                    let max_pos = paned.allocation().height();
+                    paned.set_position(max_pos);
+                }
+            }
         }
     });
     
