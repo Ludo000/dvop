@@ -8,8 +8,9 @@
       <object class="GtkHeaderBar" id="header_bar">
         <property name="show-title-buttons">true</property>
         <property name="title-widget">
-          <object class="GtkLabel">
-            <property name="visible">false</property>
+          <object class="GtkSearchEntry" id="menu_search_entry">
+            <property name="placeholder-text">Search commands...</property>
+            <property name="width-request">300</property>
           </object>
         </property>
         <child type="start">
