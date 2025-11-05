@@ -997,46 +997,43 @@ pub fn setup_keyboard_shortcuts(
                     }
                     return glib::Propagation::Proceed;
                 },
-                // Ctrl+F: Find - Placeholder for future implementation
+                // Ctrl+F: Find
                 Some("f") => {
                     println!("Keyboard shortcut: Ctrl+F (Find)");
                     let search_state = crate::search::get_search_state();
                     let is_open = search_state.search_bar.is_search_mode();
-                    let is_replace = *search_state.replace_mode.borrow();
+                    let replace_visible = search_state.replace_box.is_visible();
 
                     if !is_open {
-                        // Open in find mode
+                        // Search UI is closed -> Open in find-only mode (without replace)
                         if let Some(notebook) = &editor_notebook_clone {
                             if let Some((text_view, text_buffer)) = crate::handlers::get_active_text_view_and_buffer(notebook) {
                                 if let Ok(source_buffer) = text_buffer.downcast::<sourceview5::Buffer>() {
                                     if let Ok(source_view) = text_view.downcast::<sourceview5::View>() {
-                                        crate::search::show_search_for_buffer(Some(&source_buffer), Some(&source_view));
+                                        crate::search::show_find_only_for_buffer(Some(&source_buffer), Some(&source_view));
                                     } else {
-                                        crate::search::show_search_for_buffer(Some(&source_buffer), None);
+                                        crate::search::show_find_only_for_buffer(Some(&source_buffer), None);
                                     }
                                 } else {
-                                    crate::search::show_search_for_buffer(None, None);
+                                    crate::search::show_find_only_for_buffer(None, None);
                                 }
                             } else {
-                                crate::search::show_search_for_buffer(None, None);
+                                crate::search::show_find_only_for_buffer(None, None);
                             }
                         } else {
-                            crate::search::show_search_for_buffer(None, None);
+                            crate::search::show_find_only_for_buffer(None, None);
                         }
-                        // Ensure replace mode off
-                        search_state.replace_toggle.set_active(false);
+                        return glib::Propagation::Stop;
+                    } else if replace_visible {
+                        // Search UI is open with replace visible -> Hide replace controls (switch to find-only)
+                        search_state.replace_box.set_visible(false);
+                        search_state.search_entry.grab_focus();
+                        println!("Keyboard shortcut: Ctrl+F - Hiding replace controls");
                         return glib::Propagation::Stop;
                     } else {
-                        if is_replace {
-                            // Switch to find mode (turn off replace)
-                            search_state.replace_toggle.set_active(false);
-                            *search_state.replace_mode.borrow_mut() = false;
-                            return glib::Propagation::Stop;
-                        } else {
-                            // Already in find mode -> close panel
-                            crate::search::hide_search();
-                            return glib::Propagation::Stop;
-                        }
+                        // Search UI is open in find-only mode -> Close panel
+                        crate::search::hide_search();
+                        return glib::Propagation::Stop;
                     }
                 },
                 // Ctrl+Shift+F: Global search in folder
@@ -1069,44 +1066,49 @@ pub fn setup_keyboard_shortcuts(
                     }
                     return glib::Propagation::Proceed;
                 },
-                // Ctrl+H: Replace - Placeholder for future implementation
+                // Ctrl+H: Replace
                 Some("h") => {
                     println!("Keyboard shortcut: Ctrl+H (Replace)");
                     let search_state = crate::search::get_search_state();
                     let is_open = search_state.search_bar.is_search_mode();
-                    let is_replace = *search_state.replace_mode.borrow();
+                    let replace_visible = search_state.replace_box.is_visible();
 
                     if !is_open {
-                        // Open directly in replace mode
+                        // Search UI is closed -> Open find/replace UI
                         if let Some(notebook) = &editor_notebook_clone {
                             if let Some((text_view, text_buffer)) = crate::handlers::get_active_text_view_and_buffer(notebook) {
                                 if let Ok(source_buffer) = text_buffer.downcast::<sourceview5::Buffer>() {
                                     if let Ok(source_view) = text_view.downcast::<sourceview5::View>() {
-                                        crate::search::show_replace_for_buffer(Some(&source_buffer), Some(&source_view));
+                                        crate::search::show_search_for_buffer(Some(&source_buffer), Some(&source_view));
                                     } else {
-                                        crate::search::show_replace_for_buffer(Some(&source_buffer), None);
+                                        crate::search::show_search_for_buffer(Some(&source_buffer), None);
                                     }
                                 } else {
-                                    crate::search::show_replace_for_buffer(None, None);
+                                    crate::search::show_search_for_buffer(None, None);
                                 }
                             } else {
-                                crate::search::show_replace_for_buffer(None, None);
+                                crate::search::show_search_for_buffer(None, None);
                             }
                         } else {
-                            crate::search::show_replace_for_buffer(None, None);
+                            crate::search::show_search_for_buffer(None, None);
                         }
+                        // Focus the replace entry after opening
+                        glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
+                            let state = crate::search::get_search_state();
+                            state.replace_entry.grab_focus();
+                        });
+                        return glib::Propagation::Stop;
+                    } else if !replace_visible {
+                        // Search UI is open but replace is hidden (find-only mode) -> Show replace controls
+                        search_state.replace_box.set_visible(true);
+                        search_state.replace_entry.grab_focus();
+                        println!("Keyboard shortcut: Ctrl+H - Showing replace controls");
                         return glib::Propagation::Stop;
                     } else {
-                        if is_replace {
-                            // Already in replace mode -> close
-                            crate::search::hide_search();
-                            return glib::Propagation::Stop;
-                        } else {
-                            // Switch from find to replace mode
-                            search_state.replace_toggle.set_active(true);
-                            *search_state.replace_mode.borrow_mut() = true;
-                            return glib::Propagation::Stop;
-                        }
+                        // Search UI is open and replace is visible -> Close the entire UI
+                        crate::search::hide_search();
+                        println!("Keyboard shortcut: Ctrl+H - Closing search UI");
+                        return glib::Propagation::Stop;
                     }
                 },
                 // Ctrl+Z: Undo - Managed by GtkTextView but log for debugging

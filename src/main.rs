@@ -404,8 +404,23 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let volume_label = imp.volume_label.get();
     let file_list_box = imp.file_list_box.get();
     let _search_panel = imp.search_panel.get();
-    let search_bar = imp.search_bar.get();
+    let _search_bar_template = imp.search_bar.get();  // Template search bar (will be replaced)
     let refresh_button = imp.refresh_button.get();
+    
+    // Initialize the in-file search/replace UI
+    // The search state creates its own SearchBar with all the controls
+    let search_state = crate::search::get_search_state();
+    
+    // We need to replace the template's search_bar with the one from search_state
+    // First, get the parent container (editor_notebook_box)
+    if let Some(parent) = _search_bar_template.parent() {
+        if let Some(editor_box) = parent.downcast_ref::<gtk4::Box>() {
+            // Remove the template's empty search bar
+            editor_box.remove(&_search_bar_template);
+            // Insert the functional search bar at the beginning (before the notebook)
+            editor_box.prepend(&search_state.search_bar);
+        }
+    }
     
     // Create terminal notebook with tabs
     let (terminal_notebook, _add_terminal_button) = ui::terminal::create_terminal_notebook();
@@ -980,7 +995,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let file_path_manager_clone_for_close = file_path_manager.clone();
     let editor_notebook_clone_for_close_all = editor_notebook.clone();
     let file_path_manager_clone_for_close_all = file_path_manager.clone();
-    let search_bar_clone = search_bar.clone();
     let settings_button_clone = settings_button.clone();
     let explorer_button_clone_for_action = explorer_button.clone();
     let search_button_clone_for_action = search_button.clone();
@@ -1024,15 +1038,40 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         file_path_manager_clone_for_close_all.borrow_mut().clear();
     });
     
-    // Connect find action
+    // Connect find action - opens in-file find (without replace)
+    let editor_notebook_for_find = editor_notebook.clone();
     find_action.connect_activate(move |_, _| {
-        search_bar_clone.set_search_mode(true);
+        if let Some((text_view, text_buffer)) = handlers::get_active_text_view_and_buffer(&editor_notebook_for_find) {
+            if let Ok(source_buffer) = text_buffer.downcast::<sourceview5::Buffer>() {
+                if let Ok(source_view) = text_view.downcast::<sourceview5::View>() {
+                    crate::search::show_find_only_for_buffer(Some(&source_buffer), Some(&source_view));
+                } else {
+                    crate::search::show_find_only_for_buffer(Some(&source_buffer), None);
+                }
+            } else {
+                crate::search::show_find_only_for_buffer(None, None);
+            }
+        } else {
+            crate::search::show_find_only_for_buffer(None, None);
+        }
     });
     
-    // Connect find and replace action (same as find for now)
-    let search_bar_clone2 = search_bar.clone();
+    // Connect find and replace action - opens in-file find/replace (same as find now)
+    let editor_notebook_for_replace = editor_notebook.clone();
     find_replace_action.connect_activate(move |_, _| {
-        search_bar_clone2.set_search_mode(true);
+        if let Some((text_view, text_buffer)) = handlers::get_active_text_view_and_buffer(&editor_notebook_for_replace) {
+            if let Ok(source_buffer) = text_buffer.downcast::<sourceview5::Buffer>() {
+                if let Ok(source_view) = text_view.downcast::<sourceview5::View>() {
+                    crate::search::show_search_for_buffer(Some(&source_buffer), Some(&source_view));
+                } else {
+                    crate::search::show_search_for_buffer(Some(&source_buffer), None);
+                }
+            } else {
+                crate::search::show_search_for_buffer(None, None);
+            }
+        } else {
+            crate::search::show_search_for_buffer(None, None);
+        }
     });
     
     // Connect preferences action
