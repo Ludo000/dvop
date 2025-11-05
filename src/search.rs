@@ -11,7 +11,6 @@ use gtk4::{
     SearchEntry,
     Orientation,
     Revealer,
-    ToggleButton,
 };
 use sourceview5::prelude::*;
 use sourceview5::SearchSettings;
@@ -24,12 +23,11 @@ pub struct SearchState {
     pub search_bar: SearchBar,
     pub search_entry: SearchEntry,
     pub replace_entry: Entry,
+    pub replace_box: GtkBox,
     pub search_context: Rc<RefCell<Option<SearchContext>>>,
     pub current_match_label: Label,
-    pub replace_mode: Rc<RefCell<bool>>,
     pub revealer: Revealer,
     pub source_view: Rc<RefCell<Option<sourceview5::View>>>,
-    pub replace_toggle: ToggleButton,
 }
 
 impl SearchState {
@@ -51,11 +49,10 @@ impl SearchState {
         search_entry.set_hexpand(true);
         search_entry.set_placeholder_text(Some("Find..."));
         
-        // Create replace entry (initially hidden)
+        // Create replace entry
         let replace_entry = Entry::new();
         replace_entry.set_hexpand(true);
         replace_entry.set_placeholder_text(Some("Replace with..."));
-        replace_entry.set_visible(false);
         
         // Create navigation buttons
         let prev_button = Button::from_icon_name("go-up-symbolic");
@@ -67,11 +64,15 @@ impl SearchState {
         // Create replace buttons
         let replace_button = Button::with_label("Replace");
         replace_button.set_tooltip_text(Some("Replace current match"));
-        replace_button.set_visible(false);
         
         let replace_all_button = Button::with_label("Replace All");
         replace_all_button.set_tooltip_text(Some("Replace all matches"));
-        replace_all_button.set_visible(false);
+        
+        // Create a box for replace controls (entry and buttons)
+        let replace_box = GtkBox::new(Orientation::Horizontal, 8);
+        replace_box.append(&replace_entry);
+        replace_box.append(&replace_button);
+        replace_box.append(&replace_all_button);
         
         // Create match counter label
         let current_match_label = Label::new(Some(""));
@@ -81,19 +82,12 @@ impl SearchState {
         let close_button = Button::from_icon_name("window-close-symbolic");
         close_button.set_tooltip_text(Some("Close search (Escape)"));
         
-        // Create toggle button for replace mode
-    let replace_toggle = ToggleButton::with_label("Replace Mode");
-    replace_toggle.set_tooltip_text(Some("Toggle replace mode (Ctrl+H)"));
-        
         // Assemble the search container
         search_container.append(&search_entry);
-        search_container.append(&replace_entry);
+        search_container.append(&replace_box);
         search_container.append(&prev_button);
         search_container.append(&next_button);
-        search_container.append(&replace_button);
-        search_container.append(&replace_all_button);
         search_container.append(&current_match_label);
-        search_container.append(&replace_toggle);
         search_container.append(&close_button);
         
         // Create revealer to animate the search bar appearance
@@ -106,19 +100,17 @@ impl SearchState {
         search_bar.set_child(Some(&revealer));
         
         let search_context = Rc::new(RefCell::new(None));
-        let replace_mode = Rc::new(RefCell::new(false));
         let source_view = Rc::new(RefCell::new(None));
         
         let search_state = SearchState {
             search_bar,
             search_entry: search_entry.clone(),
             replace_entry: replace_entry.clone(),
+            replace_box: replace_box.clone(),
             search_context: search_context.clone(),
             current_match_label: current_match_label.clone(),
-            replace_mode: replace_mode.clone(),
             revealer: revealer.clone(),
             source_view: source_view.clone(),
-            replace_toggle: replace_toggle.clone(),
         };
         
         // Setup event handlers
@@ -128,7 +120,6 @@ impl SearchState {
             replace_button,
             replace_all_button,
             close_button,
-            replace_toggle,
         );
         
         search_state
@@ -142,12 +133,10 @@ impl SearchState {
         replace_button: Button,
         replace_all_button: Button,
         close_button: Button,
-        replace_toggle: ToggleButton,
     ) {
         let search_context = self.search_context.clone();
         let current_match_label = self.current_match_label.clone();
         let search_entry = self.search_entry.clone();
-        let replace_mode = self.replace_mode.clone();
         let replace_entry = self.replace_entry.clone();
         let search_bar = self.search_bar.clone();
         let revealer = self.revealer.clone();
@@ -173,36 +162,28 @@ impl SearchState {
         // Handle Enter key to find next
         let search_context_clone = search_context.clone();
         let current_match_label_clone = current_match_label.clone();
-        let replace_mode_for_activate = replace_mode.clone();
-        let replace_entry_for_activate = replace_entry.clone();
         search_entry.connect_activate(move |_| {
             if let Some(context) = search_context_clone.borrow().as_ref() {
-                if *replace_mode_for_activate.borrow() {
-                    // Replace current and advance
-                    let replace_text = replace_entry_for_activate.text();
-                    Self::replace_current(context, &replace_text);
-                } else {
-                    // Find mode: ensure we don't require a double Enter when no selection yet
-                    let buffer = context.buffer();
-                    let search_text = context.settings().search_text().unwrap_or_default();
-                    if !search_text.is_empty() {
-                        let mut selection_matches = false;
-                        if buffer.has_selection() {
-                            if let Some((s, e)) = buffer.selection_bounds() {
-                                let sel = buffer.text(&s, &e, false);
-                                if sel.as_str() == search_text { selection_matches = true; }
-                            }
+                // Find mode: ensure we don't require a double Enter when no selection yet
+                let buffer = context.buffer();
+                let search_text = context.settings().search_text().unwrap_or_default();
+                if !search_text.is_empty() {
+                    let mut selection_matches = false;
+                    if buffer.has_selection() {
+                        if let Some((s, e)) = buffer.selection_bounds() {
+                            let sel = buffer.text(&s, &e, false);
+                            if sel.as_str() == search_text { selection_matches = true; }
                         }
-                        if !selection_matches {
-                            // First time: highlight first match
-                            let total = Self::count_matches(context);
-                            Self::highlight_first_match(context);
-                            // If more than one match, advance immediately so first Enter goes to 2nd
-                            if total > 1 { Self::find_next(context); }
-                        } else {
-                            // Already on a match, go to next
-                            Self::find_next(context);
-                        }
+                    }
+                    if !selection_matches {
+                        // First time: highlight first match
+                        let total = Self::count_matches(context);
+                        Self::highlight_first_match(context);
+                        // If more than one match, advance immediately so first Enter goes to 2nd
+                        if total > 1 { Self::find_next(context); }
+                    } else {
+                        // Already on a match, go to next
+                        Self::find_next(context);
                     }
                 }
                 Self::update_match_count(&current_match_label_clone, context);
@@ -272,19 +253,6 @@ impl SearchState {
             revealer_clone.set_reveal_child(false);
         });
         
-        // Handle replace mode toggle
-        let replace_mode_clone = replace_mode.clone();
-        let replace_entry_clone = replace_entry.clone();
-        replace_toggle.connect_toggled(move |toggle| {
-            let is_replace_mode = toggle.is_active();
-            *replace_mode_clone.borrow_mut() = is_replace_mode;
-            
-            // Show/hide replace controls
-            replace_entry_clone.set_visible(is_replace_mode);
-            replace_button.set_visible(is_replace_mode);
-            replace_all_button.set_visible(is_replace_mode);
-        });
-        
         // Handle Escape key to close search
         let search_bar_clone = search_bar.clone();
         let revealer_clone = revealer.clone();
@@ -303,6 +271,20 @@ impl SearchState {
     
     /// Shows the search bar and focuses the search entry
     pub fn show_search(&self, text_buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>) {
+        self.show_search_internal(text_buffer, source_view, true);
+    }
+    
+    /// Shows only the find functionality (without replace)
+    pub fn show_find_only(&self, text_buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>) {
+        self.show_search_internal(text_buffer, source_view, false);
+    }
+    
+    /// Internal method to show the search bar with optional replace functionality
+    fn show_search_internal(&self, text_buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>, show_replace: bool) {
+        // Show or hide replace controls
+        println!("DEBUG: Setting replace_box visibility to: {}", show_replace);
+        self.replace_box.set_visible(show_replace);
+        
         // Create search context if we have a buffer
         if let Some(buffer) = text_buffer {
             let settings = SearchSettings::new();
@@ -374,15 +356,6 @@ impl SearchState {
         *self.search_context.borrow_mut() = None;
         
         println!("Search bar hidden");
-    }
-    
-    /// Shows the search bar in replace mode
-    pub fn show_replace(&self, text_buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>) {
-        self.show_search(text_buffer, source_view);
-        *self.replace_mode.borrow_mut() = true;
-        
-        // Activate toggle to ensure buttons/entry visibility sync
-        self.replace_toggle.set_active(true);
     }
     
     /// Updates the match count display
@@ -633,10 +606,10 @@ pub fn show_search_for_buffer(buffer: Option<&sourceview5::Buffer>, source_view:
     search_state.show_search(buffer, source_view);
 }
 
-/// Shows the replace dialog for the current active text buffer
-pub fn show_replace_for_buffer(buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>) {
+/// Shows only the find functionality (without replace) for the current active text buffer
+pub fn show_find_only_for_buffer(buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>) {
     let search_state = get_search_state();
-    search_state.show_replace(buffer, source_view);
+    search_state.show_find_only(buffer, source_view);
 }
 
 /// Hides the search bar
@@ -644,6 +617,5 @@ pub fn hide_search() {
     let search_state = get_search_state();
     search_state.hide_search();
 }
-
 
 
