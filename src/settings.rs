@@ -7,8 +7,10 @@ use std::path::{Path, PathBuf};
 use home::home_dir;
 
 // Default settings values
-const DEFAULT_LIGHT_THEME: &str = "solarized-light";
-const DEFAULT_DARK_THEME: &str = "solarized-dark";
+// Note: These are fallback values. The application will attempt to detect
+// and use the OS default theme on first startup.
+const FALLBACK_LIGHT_THEME: &str = "classic";
+const FALLBACK_DARK_THEME: &str = "classic-dark";
 pub const DEFAULT_FONT_SIZE: u32 = 11;
 pub const DEFAULT_TERMINAL_FONT_SIZE: u32 = 11;
 const DEFAULT_AUDIO_VOLUME: f64 = 0.8; // 80% volume
@@ -56,8 +58,10 @@ impl EditorSettings {
 
     /// Sets up default values for all settings
     fn set_defaults(&mut self) {
-        self.values.insert("light_theme".to_owned(), DEFAULT_LIGHT_THEME.to_owned());
-        self.values.insert("dark_theme".to_owned(), DEFAULT_DARK_THEME.to_owned());
+        // Detect OS default themes on first startup
+        let (default_light, default_dark) = detect_os_default_themes();
+        self.values.insert("light_theme".to_owned(), default_light);
+        self.values.insert("dark_theme".to_owned(), default_dark);
         self.values.insert("font_size".to_owned(), DEFAULT_FONT_SIZE.to_string());
         self.values.insert("terminal_font_size".to_owned(), DEFAULT_TERMINAL_FONT_SIZE.to_string());
         self.values.insert("audio_volume".to_owned(), DEFAULT_AUDIO_VOLUME.to_string());
@@ -130,12 +134,12 @@ impl EditorSettings {
 
     /// Gets the preferred light theme
     pub fn get_light_theme(&self) -> String {
-        self.get("light_theme").map_or(DEFAULT_LIGHT_THEME.to_string(), |s| s.clone())
+        self.get("light_theme").map_or_else(|| detect_os_default_themes().0, |s| s.clone())
     }
 
     /// Gets the preferred dark theme
     pub fn get_dark_theme(&self) -> String {
-        self.get("dark_theme").map_or(DEFAULT_DARK_THEME.to_string(), |s| s.clone())
+        self.get("dark_theme").map_or_else(|| detect_os_default_themes().1, |s| s.clone())
     }
 
     /// Sets the preferred light theme
@@ -449,4 +453,58 @@ pub fn refresh_settings() {
     
     // Reset the refreshing flag
     REFRESHING.with(|flag| flag.set(false));
+}
+
+/// Detects the OS default theme based on the current GTK theme
+/// 
+/// Returns a tuple of (light_theme, dark_theme) based on what's available
+/// and what the OS is currently using. Prioritizes OS-native themes.
+fn detect_os_default_themes() -> (String, String) {
+    // Try to detect the current GTK theme name
+    let gtk_theme = std::env::var("GTK_THEME")
+        .or_else(|_| {
+            // Try to get from GIO settings for GNOME
+            use gtk4::gio::prelude::*;
+            match std::panic::catch_unwind(|| gtk4::gio::Settings::new("org.gnome.desktop.interface")) {
+                Ok(gio_settings) => {
+                    if let Some(schema) = gio_settings.settings_schema() {
+                        if schema.has_key("gtk-theme") {
+                            return Ok(gio_settings.string("gtk-theme").to_string());
+                        }
+                    }
+                    Err(())
+                },
+                Err(_) => Err(())
+            }
+        })
+        .unwrap_or_else(|_| String::from(""));
+    
+    let theme_lower = gtk_theme.to_lowercase();
+    
+    // Determine the appropriate light/dark theme pair based on the OS theme
+    let (light, dark) = if theme_lower.contains("yaru") {
+        ("Yaru", "Yaru-dark")
+    } else if theme_lower.contains("adwaita") {
+        ("Adwaita", "Adwaita-dark")
+    } else {
+        // Check desktop environment for better defaults
+        let desktop_env = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
+        
+        if desktop_env.contains("GNOME") || desktop_env.contains("Ubuntu") {
+            // Ubuntu/GNOME: prefer Yaru on Ubuntu, Adwaita on GNOME
+            if desktop_env.contains("Ubuntu") {
+                ("Yaru", "Yaru-dark")
+            } else {
+                ("Adwaita", "Adwaita-dark")
+            }
+        } else if desktop_env.contains("KDE") {
+            ("kate", "kate-dark")
+        } else {
+            // Generic fallback to classic themes (available everywhere)
+            (FALLBACK_LIGHT_THEME, FALLBACK_DARK_THEME)
+        }
+    };
+    
+    println!("Detected OS default themes: Light='{}', Dark='{}'", light, dark);
+    (light.to_string(), dark.to_string())
 }
