@@ -17,10 +17,24 @@
         <property name="spacing">4</property>
         <property name="margin-bottom">8</property>
         <child>
-          <object class="GtkLabel" id="repo_label">
-            <property name="label">Source Control</property>
-            <property name="xalign">0.0</property>
-            <property name="css-classes">heading</property>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkLabel" id="repo_label">
+                <property name="label">Source Control</property>
+                <property name="xalign">0.0</property>
+                <property name="css-classes">heading</property>
+                <property name="hexpand">true</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="refresh_button">
+                <property name="icon-name">view-refresh-symbolic</property>
+                <property name="tooltip-text">Refresh git status</property>
+                <property name="valign">center</property>
+              </object>
+            </child>
           </object>
         </child>
         <child>
@@ -28,65 +42,6 @@
             <property name="label">No repository</property>
             <property name="xalign">0.0</property>
             <property name="css-classes">dim-label</property>
-          </object>
-        </child>
-      </object>
-    </child>
-    
-    <!-- Action buttons -->
-    <child>
-      <object class="GtkBox" id="action_box">
-        <property name="orientation">horizontal</property>
-        <property name="spacing">4</property>
-        <property name="margin-bottom">8</property>
-        <property name="homogeneous">false</property>
-        <property name="hexpand">true</property>
-        <child>
-          <object class="GtkButton" id="refresh_button">
-            <property name="tooltip-text">Refresh git status</property>
-            <property name="width-request">0</property>
-            <property name="hexpand">true</property>
-            <child>
-              <object class="GtkBox">
-                <property name="orientation">horizontal</property>
-                <property name="spacing">4</property>
-                <property name="halign">center</property>
-                <child>
-                  <object class="GtkImage">
-                    <property name="icon-name">view-refresh-symbolic</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkLabel">
-                    <property name="label">Refresh</property>
-                  </object>
-                </child>
-              </object>
-            </child>
-          </object>
-        </child>
-        <child>
-          <object class="GtkButton" id="stage_all_button">
-            <property name="tooltip-text">Stage all changes</property>
-            <property name="width-request">0</property>
-            <property name="hexpand">true</property>
-            <child>
-              <object class="GtkBox">
-                <property name="orientation">horizontal</property>
-                <property name="spacing">4</property>
-                <property name="halign">center</property>
-                <child>
-                  <object class="GtkImage">
-                    <property name="icon-name">list-add-symbolic</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkLabel">
-                    <property name="label">Stage All</property>
-                  </object>
-                </child>
-              </object>
-            </child>
           </object>
         </child>
       </object>
@@ -136,11 +91,25 @@
     </child>
     
     <child>
-      <object class="GtkLabel" id="unstaged_label">
-        <property name="label">Unstaged Changes</property>
-        <property name="xalign">0.0</property>
-        <property name="css-classes">heading</property>
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">8</property>
         <property name="margin-bottom">4</property>
+        <child>
+          <object class="GtkLabel" id="unstaged_label">
+            <property name="label">Unstaged Changes</property>
+            <property name="xalign">0.0</property>
+            <property name="css-classes">heading</property>
+            <property name="hexpand">true</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="stage_all_button">
+            <property name="icon-name">list-add-symbolic</property>
+            <property name="tooltip-text">Stage all changes</property>
+            <property name="valign">center</property>
+          </object>
+        </child>
       </object>
     </child>
     
