@@ -1643,6 +1643,7 @@ pub fn create_git_diff_panel(
     let update_git_status_for_commit = update_git_status.clone();
     let commit_message_view_for_commit = commit_message_view.clone();
     let changes_for_commit = changes_rc.clone();
+    let show_placeholder_for_commit = show_placeholder.clone();
     
     commit_button.connect_clicked(move |button| {
         let repo = match repo_path_for_commit.borrow().as_ref() {
@@ -1664,7 +1665,8 @@ pub fn create_git_diff_panel(
             let end = buffer.end_iter();
             let message = buffer.text(&start, &end, false);
             
-            if message.trim().is_empty() {
+            // Skip if message is just the placeholder
+            if message.trim().is_empty() || message == "Commit message" {
                 crate::status_log::log_error("Commit message cannot be empty");
                 return;
             }
@@ -1673,8 +1675,9 @@ pub fn create_git_diff_panel(
             match commit_changes(&repo, &message) {
                 Ok(()) => {
                     crate::status_log::log_success("Changes committed successfully");
-                    // Clear commit message
+                    // Clear commit message and restore placeholder
                     buffer.set_text("");
+                    show_placeholder_for_commit();
                     // Refresh git status
                     let update = update_git_status_for_commit.clone();
                     glib::idle_add_local_once(move || {
