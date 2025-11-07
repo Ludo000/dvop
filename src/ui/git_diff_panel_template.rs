@@ -10,8 +10,6 @@ mod imp {
     #[template(resource = "/com/example/Dvop/git_diff_panel.ui")]
     pub struct GitDiffPanel {
         #[template_child]
-        pub repo_label: TemplateChild<Label>,
-        #[template_child]
         pub branch_label: TemplateChild<Label>,
         #[template_child]
         pub refresh_button: TemplateChild<Button>,
@@ -55,10 +53,6 @@ glib::wrapper! {
 impl GitDiffPanel {
     pub fn new() -> Self {
         glib::Object::builder().build()
-    }
-
-    pub fn repo_label(&self) -> Label {
-        self.imp().repo_label.get()
     }
 
     pub fn branch_label(&self) -> Label {
