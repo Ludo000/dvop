@@ -23,6 +23,10 @@ mod imp {
         pub staged_scroller: TemplateChild<ScrolledWindow>,
         #[template_child]
         pub files_scroller: TemplateChild<ScrolledWindow>,
+        #[template_child]
+        pub commit_message_view: TemplateChild<gtk4::TextView>,
+        #[template_child]
+        pub commit_button: TemplateChild<Button>,
     }
 
     #[glib::object_subclass]
@@ -73,5 +77,13 @@ impl GitDiffPanel {
 
     pub fn files_list(&self) -> ListBox {
         self.imp().files_list.get()
+    }
+
+    pub fn commit_message_view(&self) -> gtk4::TextView {
+        self.imp().commit_message_view.get()
+    }
+
+    pub fn commit_button(&self) -> Button {
+        self.imp().commit_button.get()
     }
 }
