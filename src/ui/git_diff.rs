@@ -483,6 +483,61 @@ fn discard_changes(repo_path: &Path, file_path: &Path) -> Result<(), String> {
     }
 }
 
+/// Commit staged changes with a message
+fn commit_changes(repo_path: &Path, message: &str) -> Result<(), String> {
+    if message.trim().is_empty() {
+        return Err("Commit message cannot be empty".to_string());
+    }
+
+    let output = Command::new("git")
+        .arg("commit")
+        .arg("-m")
+        .arg(message)
+        .current_dir(repo_path)
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// Push commits to remote
+fn push_changes(repo_path: &Path) -> Result<(), String> {
+    let output = Command::new("git")
+        .arg("push")
+        .current_dir(repo_path)
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// Count the number of unpushed commits
+fn count_unpushed_commits(repo_path: &Path) -> usize {
+    let output = Command::new("git")
+        .arg("rev-list")
+        .arg("--count")
+        .arg("@{u}..")
+        .current_dir(repo_path)
+        .output();
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            let count_str = String::from_utf8_lossy(&output.stdout);
+            return count_str.trim().parse().unwrap_or(0);
+        }
+    }
+    
+    0
+}
+
 /// Set up a copy handler that strips line numbers from copied text
 fn setup_copy_handler(view: &sourceview5::View, buffer: &sourceview5::Buffer) {
     let buffer_clone = buffer.clone();
@@ -974,6 +1029,8 @@ pub fn create_git_diff_panel(
     let stage_all_button = panel.stage_all_button();
     let staged_files_list = panel.staged_files_list();
     let files_list = panel.files_list();
+    let commit_message_view = panel.commit_message_view();
+    let commit_button = panel.commit_button();
 
     // State for the panel
     let repo_path_rc: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
@@ -987,6 +1044,7 @@ pub fn create_git_diff_panel(
         let branch_label = branch_label.clone();
         let staged_files_list = staged_files_list.clone();
         let files_list = files_list.clone();
+        let commit_button = commit_button.clone();
 
         Rc::new(move || {
             // Clear previous content
@@ -1033,6 +1091,23 @@ pub fn create_git_diff_panel(
                             staged_changes.push(change.clone());
                             unstaged_changes.push(change.clone());
                         }
+                    }
+                }
+
+                // Update commit button text based on state
+                if !staged_changes.is_empty() {
+                    // There are staged changes - show "Commit"
+                    commit_button.set_label("Commit");
+                    commit_button.set_tooltip_text(Some("Commit staged changes"));
+                } else {
+                    // No staged changes - check for unpushed commits
+                    let unpushed_count = count_unpushed_commits(&repo);
+                    if unpushed_count > 0 {
+                        commit_button.set_label(&format!("Push ({})", unpushed_count));
+                        commit_button.set_tooltip_text(Some(&format!("Push {} unpushed commit{}", unpushed_count, if unpushed_count == 1 { "" } else { "s" })));
+                    } else {
+                        commit_button.set_label("Commit");
+                        commit_button.set_tooltip_text(Some("No changes to commit"));
                     }
                 }
 
@@ -1505,6 +1580,74 @@ pub fn create_git_diff_panel(
     });
 
     staged_files_list.add_controller(staged_gesture);
+
+    // Smart commit/push button handler
+    let repo_path_for_commit = repo_path_rc.clone();
+    let update_git_status_for_commit = update_git_status.clone();
+    let commit_message_view_for_commit = commit_message_view.clone();
+    let changes_for_commit = changes_rc.clone();
+    
+    commit_button.connect_clicked(move |button| {
+        let repo = match repo_path_for_commit.borrow().as_ref() {
+            Some(r) => r.clone(),
+            None => {
+                crate::status_log::log_error("Not in a git repository");
+                return;
+            }
+        };
+        
+        // Check if we have staged changes
+        let changes = changes_for_commit.borrow();
+        let has_staged = changes.iter().any(|c| matches!(c.status, GitStatus::Staged | GitStatus::Added | GitStatus::ModifiedStaged));
+        
+        if has_staged {
+            // We have staged changes - perform commit
+            let buffer = commit_message_view_for_commit.buffer();
+            let start = buffer.start_iter();
+            let end = buffer.end_iter();
+            let message = buffer.text(&start, &end, false);
+            
+            if message.trim().is_empty() {
+                crate::status_log::log_error("Commit message cannot be empty");
+                return;
+            }
+            
+            // Perform commit
+            match commit_changes(&repo, &message) {
+                Ok(()) => {
+                    crate::status_log::log_success("Changes committed successfully");
+                    // Clear commit message
+                    buffer.set_text("");
+                    // Refresh git status
+                    let update = update_git_status_for_commit.clone();
+                    glib::idle_add_local_once(move || {
+                        update();
+                    });
+                }
+                Err(e) => {
+                    crate::status_log::log_error(&format!("Commit failed: {}", e));
+                }
+            }
+        } else if button.label().as_ref().map(|s| s.starts_with("Push")).unwrap_or(false) {
+            // No staged changes but button says "Push" - perform push
+            crate::status_log::log_info("Pushing to remote...");
+            match push_changes(&repo) {
+                Ok(()) => {
+                    crate::status_log::log_success("Pushed to remote successfully");
+                    // Refresh git status
+                    let update = update_git_status_for_commit.clone();
+                    glib::idle_add_local_once(move || {
+                        update();
+                    });
+                }
+                Err(e) => {
+                    crate::status_log::log_error(&format!("Push failed: {}", e));
+                }
+            }
+        } else {
+            crate::status_log::log_info("No changes to commit or push");
+        }
+    });
 
     // Update when current directory changes (periodic check)
     let current_dir_for_check = current_dir.clone();
