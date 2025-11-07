@@ -1032,6 +1032,63 @@ pub fn create_git_diff_panel(
     let commit_message_view = panel.commit_message_view();
     let commit_button = panel.commit_button();
 
+    // Set up placeholder text behavior for commit message
+    let buffer = commit_message_view.buffer();
+    
+    // Create placeholder styling
+    let placeholder_tag = buffer.create_tag(
+        Some("placeholder"),
+        &[("foreground", &"gray"), ("style", &pango::Style::Italic)],
+    ).expect("Failed to create placeholder tag");
+    
+    // Helper to show placeholder
+    let show_placeholder = {
+        let buffer = buffer.clone();
+        let placeholder_tag = placeholder_tag.clone();
+        move || {
+            let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+            if text.is_empty() {
+                buffer.set_text("Commit message");
+                let start = buffer.start_iter();
+                let end = buffer.end_iter();
+                buffer.apply_tag(&placeholder_tag, &start, &end);
+            }
+        }
+    };
+    
+    // Helper to hide placeholder
+    let hide_placeholder = {
+        let buffer = buffer.clone();
+        move || {
+            let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+            if text == "Commit message" {
+                buffer.set_text("");
+            }
+        }
+    };
+    
+    // Initialize with placeholder
+    show_placeholder();
+    
+    // Use focus controller for GTK4
+    let focus_controller = gtk4::EventControllerFocus::new();
+    
+    let hide_placeholder_clone = hide_placeholder.clone();
+    focus_controller.connect_enter(move |_| {
+        hide_placeholder_clone();
+    });
+    
+    let show_placeholder_clone = show_placeholder.clone();
+    let buffer_clone = buffer.clone();
+    focus_controller.connect_leave(move |_| {
+        let text = buffer_clone.text(&buffer_clone.start_iter(), &buffer_clone.end_iter(), false);
+        if text.is_empty() {
+            show_placeholder_clone();
+        }
+    });
+    
+    commit_message_view.add_controller(focus_controller);
+
     // State for the panel
     let repo_path_rc: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let changes_rc: Rc<RefCell<Vec<GitFileChange>>> = Rc::new(RefCell::new(Vec::new()));
