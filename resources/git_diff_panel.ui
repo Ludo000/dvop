@@ -13,35 +13,22 @@
     <!-- Header section -->
     <child>
       <object class="GtkBox" id="header_box">
-        <property name="orientation">vertical</property>
-        <property name="spacing">4</property>
+        <property name="orientation">horizontal</property>
+        <property name="spacing">8</property>
         <property name="margin-bottom">8</property>
-        <child>
-          <object class="GtkBox">
-            <property name="orientation">horizontal</property>
-            <property name="spacing">8</property>
-            <child>
-              <object class="GtkLabel" id="repo_label">
-                <property name="label">Source Control</property>
-                <property name="xalign">0.0</property>
-                <property name="css-classes">heading</property>
-                <property name="hexpand">true</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkButton" id="refresh_button">
-                <property name="icon-name">view-refresh-symbolic</property>
-                <property name="tooltip-text">Refresh git status</property>
-                <property name="valign">center</property>
-              </object>
-            </child>
-          </object>
-        </child>
         <child>
           <object class="GtkLabel" id="branch_label">
             <property name="label">No repository</property>
             <property name="xalign">0.0</property>
-            <property name="css-classes">dim-label</property>
+            <property name="hexpand">true</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="refresh_button">
+            <property name="icon-name">view-refresh-symbolic</property>
+            <property name="tooltip-text">Refresh git status</property>
+            <property name="valign">center</property>
+            <property name="halign">end</property>
           </object>
         </child>
       </object>
@@ -60,7 +47,6 @@
       <object class="GtkLabel" id="staged_label">
         <property name="label">Staged Changes</property>
         <property name="xalign">0.0</property>
-        <property name="css-classes">heading</property>
         <property name="margin-bottom">4</property>
       </object>
     </child>
@@ -99,7 +85,6 @@
           <object class="GtkLabel" id="unstaged_label">
             <property name="label">Unstaged Changes</property>
             <property name="xalign">0.0</property>
-            <property name="css-classes">heading</property>
             <property name="hexpand">true</property>
           </object>
         </child>
@@ -108,6 +93,7 @@
             <property name="icon-name">list-add-symbolic</property>
             <property name="tooltip-text">Stage all changes</property>
             <property name="valign">center</property>
+            <property name="halign">end</property>
           </object>
         </child>
       </object>

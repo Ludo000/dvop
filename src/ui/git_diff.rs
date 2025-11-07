@@ -969,7 +969,6 @@ pub fn create_git_diff_panel(
     let panel = GitDiffPanel::new();
     
     // Get references to widgets
-    let _repo_label = panel.repo_label();
     let branch_label = panel.branch_label();
     let refresh_button = panel.refresh_button();
     let stage_all_button = panel.stage_all_button();
@@ -1008,9 +1007,9 @@ pub fn create_git_diff_panel(
 
                 // Get branch name
                 if let Some(branch) = get_current_branch(&repo) {
-                    branch_label.set_text(&format!("⎇ Branch: {}", branch));
+                    branch_label.set_text(&format!("⎇ {}", branch));
                 } else {
-                    branch_label.set_text("⎇ Branch: (unknown)");
+                    branch_label.set_text("⎇ (unknown)");
                 }
 
                 // Get changes
