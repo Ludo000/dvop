@@ -1747,22 +1747,49 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                         Some(&save_menu_button),
                     );
                 } else if mime_type.type_() == "image" {
-                    // For image files, open with empty content
-                    println!("Restoring image file: {}", file_path.display());
-                    handlers::open_or_focus_tab(
-                        &editor_notebook,
-                        &file_path,
-                        "", // Empty content for images
-                        &active_tab_path,
-                        &file_path_manager,
-                        &save_button,
-                        &save_as_button,
-                        &mime_type,
-                        &window,
-                        &file_list_box,
-                        &current_dir,
-                        Some(&save_menu_button),
-                    );
+                    // Check if it's an SVG file (which needs content for split view)
+                    let is_svg = file_path.extension()
+                        .and_then(|e| e.to_str())
+                        .map(|s| s.to_lowercase() == "svg")
+                        .unwrap_or(false);
+                    
+                    if is_svg {
+                        // SVG files need content for the code editor
+                        if let Ok(content) = std::fs::read_to_string(&file_path) {
+                            println!("Restoring SVG file: {}", file_path.display());
+                            handlers::open_or_focus_tab(
+                                &editor_notebook,
+                                &file_path,
+                                &content,
+                                &active_tab_path,
+                                &file_path_manager,
+                                &save_button,
+                                &save_as_button,
+                                &mime_type,
+                                &window,
+                                &file_list_box,
+                                &current_dir,
+                                Some(&save_menu_button),
+                            );
+                        }
+                    } else {
+                        // For other image files, open with empty content
+                        println!("Restoring image file: {}", file_path.display());
+                        handlers::open_or_focus_tab(
+                            &editor_notebook,
+                            &file_path,
+                            "", // Empty content for images
+                            &active_tab_path,
+                            &file_path_manager,
+                            &save_button,
+                            &save_as_button,
+                            &mime_type,
+                            &window,
+                            &file_list_box,
+                            &current_dir,
+                            Some(&save_menu_button),
+                        );
+                    }
                 } else if let Ok(content) = std::fs::read_to_string(&file_path) {
                     // For text files, read the content
                     println!("Restoring text file: {}", file_path.display());

@@ -286,7 +286,7 @@ pub fn set_language_for_file(buffer: &Buffer, file_path: &Path) -> bool {
         "sh" => "sh",
         "rb" => "ruby",
         "php" => "php",
-        "xml" | "ui" => "xml",
+        "xml" | "ui" | "svg" => "xml",
         "json" => "json",
         "md" => "markdown",
         "txt" => "text",

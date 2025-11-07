@@ -73,7 +73,23 @@ pub fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView,
 pub fn get_text_view_and_buffer_for_page(notebook: &Notebook, page_num: u32) -> Option<(TextView, TextBuffer)> {
     // Get the page widget for the specified page number
     notebook.nth_page(Some(page_num)).and_then(|page_widget| {
-        // Check if the page contains a ScrolledWindow
+        // First, check if the page is a Paned widget (for SVG split view)
+        if let Some(paned) = page_widget.downcast_ref::<gtk4::Paned>() {
+            // Get the left child (which contains the code editor)
+            if let Some(left_child) = paned.start_child() {
+                // The left child should be a ScrolledWindow containing the TextView
+                if let Some(scrolled_window) = left_child.downcast_ref::<ScrolledWindow>() {
+                    if let Some(child) = scrolled_window.child() {
+                        if let Some(text_view) = child.downcast_ref::<TextView>() {
+                            return Some((text_view.clone(), text_view.buffer()));
+                        }
+                    }
+                }
+            }
+            return None;
+        }
+        
+        // Check if the page contains a ScrolledWindow (normal text files)
         if let Some(scrolled_window) = page_widget.downcast_ref::<ScrolledWindow>() {
             // Get the child of the ScrolledWindow
             scrolled_window.child().and_then(|child| {
@@ -695,6 +711,138 @@ fn enter_image_fullscreen(
     println!("Image: Fullscreen window created and shown");
 }
 
+/// Creates a split view for SVG files with code on the left and rendered image on the right
+/// 
+/// This function creates a horizontal paned widget with:
+/// - Left side: Source code editor with XML syntax highlighting
+/// - Right side: Rendered SVG image
+fn create_svg_split_view(
+    content: &str,
+    file_path: &std::path::Path,
+    tab_actual_label: &Label,
+    file_name: &str,
+) -> gtk4::Paned {
+    // Create the paned widget for split view
+    let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
+    paned.set_wide_handle(true);
+    paned.set_shrink_start_child(false);
+    paned.set_shrink_end_child(false);
+    paned.set_resize_start_child(true);
+    paned.set_resize_end_child(true);
+    
+    // LEFT SIDE: Code editor
+    let (source_view, source_buffer) = crate::syntax::create_source_view();
+    source_buffer.set_text(content);
+    
+    // Apply XML syntax highlighting for SVG
+    crate::syntax::set_language_for_file(&source_buffer, file_path);
+    
+    // Setup completion for XML/SVG
+    crate::completion::setup_completion_for_file(&source_view, Some(file_path));
+    crate::completion::setup_completion_shortcuts(&source_view);
+    
+    // Set up interaction tracking for the text editor
+    let text_view = source_view.clone().upcast::<TextView>();
+    setup_text_editor_interaction_tracking(&text_view);
+    
+    let left_scrolled = crate::syntax::create_source_view_scrolled(&source_view);
+    left_scrolled.set_vexpand(true);
+    left_scrolled.set_hexpand(true);
+    
+    // Track changes for dirty state
+    let tab_label_weak = tab_actual_label.downgrade();
+    let file_name_clone = file_name.to_string();
+    let text_buffer = source_buffer.clone().upcast::<TextBuffer>();
+    text_buffer.connect_changed(move |_buffer| {
+        LAST_ACTIVE_AREA.with(|area| {
+            *area.borrow_mut() = LastActiveArea::TextEditor;
+        });
+        
+        if let Some(label) = tab_label_weak.upgrade() {
+            let current_text = label.text();
+            if !current_text.starts_with('*') {
+                label.set_text(&format!("*{}", file_name_clone));
+                crate::status_log::log_info(&format!("{} modified", file_name_clone));
+            }
+        }
+    });
+    
+    // RIGHT SIDE: Rendered SVG image
+    let right_box = GtkBox::new(Orientation::Vertical, 0);
+    right_box.set_vexpand(true);
+    right_box.set_hexpand(true);
+    
+    // Add a label to indicate this is the preview
+    let preview_label = Label::new(Some("Preview"));
+    preview_label.set_halign(gtk4::Align::Start);
+    preview_label.set_margin_start(10);
+    preview_label.set_margin_top(5);
+    preview_label.set_margin_bottom(5);
+    preview_label.add_css_class("dim-label");
+    right_box.append(&preview_label);
+    
+    // Create Picture widget for SVG rendering
+    let picture = Picture::new();
+    
+    // Load SVG from file
+    if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(file_path) {
+        picture.set_pixbuf(Some(&pixbuf));
+        picture.set_can_focus(true);
+        picture.set_focusable(true);
+        
+        // Add fullscreen support (F key and double-click)
+        let key_controller = EventControllerKey::new();
+        let picture_keys = picture.clone();
+        
+        key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
+            match key {
+                gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
+                    enter_image_fullscreen(&picture_keys);
+                    return glib::Propagation::Stop;
+                }
+                _ => {}
+            }
+            glib::Propagation::Proceed
+        });
+        picture.add_controller(key_controller);
+        
+        let double_click_gesture = GestureClick::new();
+        double_click_gesture.set_button(1);
+        let picture_fullscreen = picture.clone();
+        
+        double_click_gesture.connect_pressed(move |_gesture, n_press, _x, _y| {
+            if n_press == 2 {
+                enter_image_fullscreen(&picture_fullscreen);
+            }
+        });
+        picture.add_controller(double_click_gesture);
+    } else {
+        // If loading fails, show error message
+        let error_label = Label::new(Some("Failed to render SVG"));
+        error_label.add_css_class("error");
+        right_box.append(&error_label);
+    }
+    
+    // Put picture in a scrolled window
+    let right_scrolled = ScrolledWindow::builder()
+        .hscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vexpand(true)
+        .hexpand(true)
+        .build();
+    right_scrolled.set_child(Some(&picture));
+    right_box.append(&right_scrolled);
+    
+    // Add both sides to the paned widget
+    paned.set_start_child(Some(&left_scrolled));
+    paned.set_end_child(Some(&right_box));
+    
+    // Set initial position to 50/50 split
+    paned.set_position(400); // Default split position (will adjust based on window width)
+    
+    paned
+}
+
 
 // Helper function to open a file in a new tab or focus if already open
 pub fn open_or_focus_tab(
@@ -777,12 +925,75 @@ pub fn open_or_focus_tab(
             Some(new_tab_deps_for_context),
         );
         
+        // Check if this is an SVG file - handle with split view
+        let is_svg = file_to_open.extension()
+            .and_then(|e| e.to_str())
+            .map(|s| s.to_lowercase() == "svg")
+            .unwrap_or(false);
+            
+        if is_svg {
+            // Create split view for SVG (code on left, preview on right)
+            let svg_paned = create_svg_split_view(content, file_to_open, &tab_actual_label, &file_name);
+            
+            // Add the paned widget directly to the notebook (no scrolled window wrapper)
+            let new_page_num = notebook.append_page(&svg_paned, Some(&tab_widget));
+            notebook.set_current_page(Some(new_page_num));
+            
+            // Update state
+            file_path_manager.borrow_mut().insert(new_page_num, file_to_open.clone());
+            *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+            
+            // Log successful opening
+            crate::status_log::log_success(&format!("Opened {}", filename));
+            
+            // Connect close button
+            let notebook_clone = notebook.clone();
+            let window_clone = window.clone();
+            let file_path_manager_clone = file_path_manager.clone();
+            let active_tab_path_ref_clone = active_tab_path_ref.clone();
+            
+            let deps_for_new_tab_creation = NewTabDependencies {
+                editor_notebook: notebook.clone(),
+                active_tab_path: active_tab_path_ref_clone.clone(),
+                file_path_manager: file_path_manager_clone.clone(),
+                window: window_clone.clone().upcast::<ApplicationWindow>(),
+                file_list_box: file_list_box.clone(),
+                current_dir: current_dir.clone(),
+                save_button: save_button.clone(),
+                save_as_button: save_as_button.clone(),
+                _save_menu_button: _save_menu_button.cloned(),
+            };
+            
+            let svg_paned_for_close = svg_paned.clone();
+            tab_close_button.connect_clicked(move |_| {
+                if let Some(current_idx_for_this_tab) = notebook_clone.page_num(&svg_paned_for_close) {
+                    handle_close_tab_request(
+                        &notebook_clone,
+                        current_idx_for_this_tab,
+                        &window_clone,
+                        &file_path_manager_clone,
+                        &active_tab_path_ref_clone,
+                        &deps_for_new_tab_creation.current_dir,
+                        &deps_for_new_tab_creation.file_list_box,
+                        Some(deps_for_new_tab_creation.clone())
+                    );
+                }
+            });
+            
+            // Enable save buttons for SVG files (they're editable text)
+            utils::update_save_buttons_visibility(save_button, save_as_button, Some(mime_guess::mime::TEXT_PLAIN));
+            if let Some(save_menu_btn) = _save_menu_button {
+                utils::update_save_menu_button_visibility(save_menu_btn, Some(mime_guess::mime::TEXT_PLAIN));
+            }
+            
+            return; // Exit early for SVG files
+        }
+        
         let new_scrolled_window = ScrolledWindow::builder()
             .vexpand(true)
             .hexpand(true)
             .build();
             
-        // Handle different file types
         if mime_type.type_() == "image" {
             // Handle image file - check if it's a GIF animation
             let is_gif = file_to_open.extension()
@@ -2264,11 +2475,25 @@ fn setup_file_selection_handler(
                         );
                     }
                 } else if mime_type.type_() == "image" {
+                    // Check if it's an SVG file (which needs content for split view)
+                    let is_svg = path_from_list.extension()
+                        .and_then(|e| e.to_str())
+                        .map(|s| s.to_lowercase() == "svg")
+                        .unwrap_or(false);
+                    
+                    let content = if is_svg {
+                        // SVG files need content for the code editor
+                        std::fs::read_to_string(&path_from_list).unwrap_or_default()
+                    } else {
+                        // Other images don't need content
+                        String::new()
+                    };
+                    
                     // Use open_or_focus_tab for images
                     open_or_focus_tab(
                         &editor_notebook_for_handler, 
                         &path_from_list,
-                        "", // Empty content for images
+                        &content,
                         &active_tab_path_for_handler, 
                         &file_path_manager_for_handler,   
                         &save_button_for_handler,
