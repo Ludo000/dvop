@@ -168,7 +168,7 @@ pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
     });
     
     // Handle dialog close
-    dialog.connect_response(move |dialog, _response| {
+    gtk4::prelude::DialogExt::connect_response(&dialog, move |dialog, _response| {
         dialog.close();
     });
     

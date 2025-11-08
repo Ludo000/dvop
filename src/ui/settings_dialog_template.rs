@@ -2,7 +2,7 @@
 
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, CompositeTemplate, Dialog, Label, SpinButton, DropDown};
+use gtk4::{glib, gio, CompositeTemplate, Dialog, Label, SpinButton, DropDown};
 
 mod imp {
     use super::*;
@@ -45,7 +45,9 @@ mod imp {
 
 glib::wrapper! {
     pub struct SettingsDialog(ObjectSubclass<imp::SettingsDialog>)
-        @extends gtk4::Widget, gtk4::Window, Dialog;
+        @extends gtk4::Widget, gtk4::Window, Dialog,
+        @implements gio::ActionGroup, gio::ActionMap, gtk4::Accessible, gtk4::Buildable,
+                    gtk4::ConstraintTarget, gtk4::Native, gtk4::Root, gtk4::ShortcutManager;
 }
 
 impl SettingsDialog {

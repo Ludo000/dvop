@@ -160,7 +160,9 @@ mod imp {
 
 glib::wrapper! {
     pub struct DvopWindow(ObjectSubclass<imp::DvopWindow>)
-        @extends gtk4::Widget, gtk4::Window, ApplicationWindow;
+        @extends gtk4::Widget, gtk4::Window, ApplicationWindow,
+        @implements gio::ActionGroup, gio::ActionMap, gtk4::Accessible, gtk4::Buildable,
+                    gtk4::ConstraintTarget, gtk4::Native, gtk4::Root, gtk4::ShortcutManager;
 }
 
 impl DvopWindow {

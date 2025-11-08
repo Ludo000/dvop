@@ -53,7 +53,8 @@ mod imp {
 
 glib::wrapper! {
     pub struct GitDiffPanel(ObjectSubclass<imp::GitDiffPanel>)
-        @extends gtk4::Widget, GtkBox;
+        @extends gtk4::Widget, GtkBox,
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget, gtk4::Orientable;
 }
 
 impl GitDiffPanel {
