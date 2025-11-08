@@ -1,0 +1,663 @@
+{
+  "language": "svelte",
+  "description": "Svelte framework completion data for reactive web components",
+  "keywords": [
+    {
+      "keyword": "script",
+      "type": "keyword",
+      "description": "script - Script tag for component logic. Use lang=\"ts\" for TypeScript support.",
+      "example": "<script>\n  let count = 0;\n</script>",
+      "category": "component_structure"
+    },
+    {
+      "keyword": "style",
+      "type": "keyword",
+      "description": "style - Scoped CSS styles for the component. Automatically scoped to this component only.",
+      "example": "<style>\n  h1 { color: blue; }\n</style>",
+      "category": "component_structure"
+    },
+    {
+      "keyword": "svelte:head",
+      "type": "keyword",
+      "description": "svelte:head - Insert elements into document <head>. Useful for title and meta tags.",
+      "example": "<svelte:head>\n  <title>Page Title</title>\n</svelte:head>",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "svelte:window",
+      "type": "keyword",
+      "description": "svelte:window - Add event listeners to the window object. Automatically cleaned up.",
+      "example": "<svelte:window on:keydown={handleKeydown} />",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "svelte:body",
+      "type": "keyword",
+      "description": "svelte:body - Add event listeners to document.body. Useful for mouseenter/mouseleave.",
+      "example": "<svelte:body on:mouseenter={handleMouseEnter} />",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "svelte:document",
+      "type": "keyword",
+      "description": "svelte:document - Add event listeners to the document. For selectionchange, visibilitychange.",
+      "example": "<svelte:document on:visibilitychange={handleVisibilityChange} />",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "svelte:component",
+      "type": "keyword",
+      "description": "svelte:component - Dynamically render a component. Use 'this' prop to specify component.",
+      "example": "<svelte:component this={CurrentComponent} {...props} />",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "svelte:self",
+      "type": "keyword",
+      "description": "svelte:self - Allows a component to recursively include itself.",
+      "example": "<svelte:self {...props} />",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "svelte:element",
+      "type": "keyword",
+      "description": "svelte:element - Dynamically render an HTML element. Use 'this' prop to specify tag name.",
+      "example": "<svelte:element this={tag} {...props} />",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "svelte:options",
+      "type": "keyword",
+      "description": "svelte:options - Specify per-component compiler options like immutable or accessors.",
+      "example": "<svelte:options immutable={true} />",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "svelte:fragment",
+      "type": "keyword",
+      "description": "svelte:fragment - Allows content to be placed in a named slot without a wrapper element.",
+      "example": "<svelte:fragment slot=\"header\">Content</svelte:fragment>",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "on:click",
+      "type": "keyword",
+      "description": "on:click - Click event handler. Add modifiers like preventDefault or stopPropagation.",
+      "example": "<button on:click={handleClick}>Click me</button>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:submit",
+      "type": "keyword",
+      "description": "on:submit - Form submit event handler. Often used with preventDefault modifier.",
+      "example": "<form on:submit|preventDefault={handleSubmit}>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:input",
+      "type": "keyword",
+      "description": "on:input - Input event handler. Fires when input value changes.",
+      "example": "<input on:input={handleInput} />",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:change",
+      "type": "keyword",
+      "description": "on:change - Change event handler. Fires when input loses focus after value changed.",
+      "example": "<select on:change={handleChange}>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "bind:value",
+      "type": "keyword",
+      "description": "bind:value - Two-way binding for input values. Updates variable when input changes.",
+      "example": "<input bind:value={name} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:checked",
+      "type": "keyword",
+      "description": "bind:checked - Two-way binding for checkbox/radio button checked state.",
+      "example": "<input type=\"checkbox\" bind:checked={agreed} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:group",
+      "type": "keyword",
+      "description": "bind:group - Bind radio buttons or checkboxes to the same variable.",
+      "example": "<input type=\"radio\" bind:group={selected} value={option} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:this",
+      "type": "keyword",
+      "description": "bind:this - Get a reference to a DOM element or component instance.",
+      "example": "<canvas bind:this={canvas} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "class:",
+      "type": "keyword",
+      "description": "class: - Conditionally apply CSS classes. Shorthand: class:active={isActive}",
+      "example": "<div class:active={isActive}>Content</div>",
+      "category": "directives"
+    },
+    {
+      "keyword": "use:",
+      "type": "keyword",
+      "description": "use: - Apply an action to an element. Actions run when element is created.",
+      "example": "<div use:tooltip={{ text: 'Tooltip' }}>Hover me</div>",
+      "category": "directives"
+    },
+    {
+      "keyword": "transition:",
+      "type": "keyword",
+      "description": "transition: - Apply bidirectional transition when element enters/leaves DOM.",
+      "example": "<div transition:fade={{ duration: 300 }}>Content</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "in:",
+      "type": "keyword",
+      "description": "in: - Apply transition when element enters the DOM.",
+      "example": "<div in:fly={{ x: 200, duration: 500 }}>Content</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "out:",
+      "type": "keyword",
+      "description": "out: - Apply transition when element leaves the DOM.",
+      "example": "<div out:fade={{ duration: 200 }}>Content</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "animate:",
+      "type": "keyword",
+      "description": "animate: - Apply animation when element's position changes in a keyed each block.",
+      "example": "<div animate:flip={{ duration: 300 }}>Item</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "let:",
+      "type": "keyword",
+      "description": "let: - Expose values from a component to its slot content.",
+      "example": "<Component let:item>{item.name}</Component>",
+      "category": "slots"
+    },
+    {
+      "keyword": "slot",
+      "type": "keyword",
+      "description": "slot - Define a slot for child content. Can be named with name attribute.",
+      "example": "<slot name=\"header\">Default header</slot>",
+      "category": "slots"
+    },
+    {
+      "keyword": "$:",
+      "type": "keyword",
+      "description": "$: - Reactive statement. Runs whenever referenced values change.",
+      "example": "$: doubled = count * 2;",
+      "category": "reactivity"
+    },
+    {
+      "keyword": "$store",
+      "type": "keyword",
+      "description": "$store - Auto-subscribe to a store. Automatically unsubscribes on component destroy.",
+      "example": "<p>Count: {$count}</p>",
+      "category": "stores"
+    },
+    {
+      "keyword": "export let",
+      "type": "keyword",
+      "description": "export let - Declare a component prop. Can have default values.",
+      "example": "export let name = 'World';",
+      "category": "props"
+    },
+    {
+      "keyword": "export const",
+      "type": "keyword",
+      "description": "export const - Export a constant that can be imported by other modules.",
+      "example": "export const API_URL = 'https://api.example.com';",
+      "category": "exports"
+    },
+    {
+      "keyword": "export function",
+      "type": "keyword",
+      "description": "export function - Export a function that can be called from parent via bind:this.",
+      "example": "export function reset() { count = 0; }",
+      "category": "exports"
+    },
+    {
+      "keyword": "{#if}",
+      "type": "keyword",
+      "description": "{#if} - Conditional rendering. Can be combined with {:else if} and {:else}.",
+      "example": "{#if condition}Content{/if}",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "{:else if}",
+      "type": "keyword",
+      "description": "{:else if} - Else-if clause in conditional rendering.",
+      "example": "{:else if otherCondition}Other content{/if}",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "{:else}",
+      "type": "keyword",
+      "description": "{:else} - Else clause in conditional rendering or await blocks.",
+      "example": "{:else}Default content{/if}",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "{#each}",
+      "type": "keyword",
+      "description": "{#each} - Iterate over an array. Use (item, index) for index access.",
+      "example": "{#each items as item, i}\n  <p>{i}: {item}</p>\n{/each}",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "{#await}",
+      "type": "keyword",
+      "description": "{#await} - Handle promises with pending, then, and catch states.",
+      "example": "{#await promise}\n  Loading...\n{:then value}\n  {value}\n{:catch error}\n  {error.message}\n{/await}",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "{:then}",
+      "type": "keyword",
+      "description": "{:then} - Handle resolved promise value in await block.",
+      "example": "{:then data}Success: {data}{/await}",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "{:catch}",
+      "type": "keyword",
+      "description": "{:catch} - Handle promise rejection in await block.",
+      "example": "{:catch error}Error: {error.message}{/await}",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "{#key}",
+      "type": "keyword",
+      "description": "{#key} - Destroy and recreate contents when expression changes.",
+      "example": "{#key value}\n  <Component />\n{/key}",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "@html",
+      "type": "keyword",
+      "description": "@html - Render HTML string. WARNING: Can expose to XSS attacks. Sanitize first!",
+      "example": "{@html htmlString}",
+      "category": "special_tags"
+    },
+    {
+      "keyword": "@debug",
+      "type": "keyword",
+      "description": "@debug - Trigger debugger when variables change. Useful for debugging.",
+      "example": "{@debug count, name}",
+      "category": "special_tags"
+    },
+    {
+      "keyword": "@const",
+      "type": "keyword",
+      "description": "@const - Define local constants in markup. Scoped to current block.",
+      "example": "{@const total = price * quantity}",
+      "category": "special_tags"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "svelte:component",
+      "description": "Basic Svelte component template with script, markup, and styles",
+      "content": "<script>\n\t${1:// Component logic here}\n\tlet ${2:count} = ${3:0};\n</script>\n\n${4:<h1>Hello {${2:count}}!</h1>}\n\n<style>\n\t${5:h1 {\n\t\tcolor: #ff3e00;\n\t\\}}\n</style>",
+      "category": "component"
+    },
+    {
+      "trigger": "svelte:ts",
+      "description": "Svelte component with TypeScript",
+      "content": "<script lang=\"ts\">\n\t${1:// TypeScript component logic}\n\tlet ${2:count}: number = ${3:0};\n</script>\n\n${4:<h1>Count: {${2:count}}</h1>}\n\n<style>\n\t${5:/* Scoped styles */}\n</style>",
+      "category": "component"
+    },
+    {
+      "trigger": "svelte:props",
+      "description": "Component with props (properties)",
+      "content": "<script>\n\texport let ${1:name} = ${2:'World'};\n\texport let ${3:size} = ${4:16};\n</script>\n\n<h1 style=\"font-size: {${3:size}}px\">Hello {${1:name}}!</h1>",
+      "category": "props"
+    },
+    {
+      "trigger": "svelte:reactive",
+      "description": "Reactive statement that runs when dependencies change",
+      "content": "$: ${1:doubled} = ${2:count} * 2;",
+      "category": "reactivity"
+    },
+    {
+      "trigger": "svelte:reactive-block",
+      "description": "Reactive block with multiple statements",
+      "content": "$: {\n\t${1:// Runs when dependencies change}\n\tconsole.log('${2:count} changed to:', ${2:count});\n\t${3:// Additional reactive logic}\n}",
+      "category": "reactivity"
+    },
+    {
+      "trigger": "svelte:if",
+      "description": "Conditional rendering with if block",
+      "content": "{#if ${1:condition}}\n\t${2:<p>Condition is true</p>}\n{/if}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:if-else",
+      "description": "Conditional rendering with if-else",
+      "content": "{#if ${1:condition}}\n\t${2:<p>True branch</p>}\n{:else}\n\t${3:<p>False branch</p>}\n{/if}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:if-elseif",
+      "description": "Conditional rendering with if-else if-else chain",
+      "content": "{#if ${1:condition1}}\n\t${2:<p>First condition</p>}\n{:else if ${3:condition2}}\n\t${4:<p>Second condition</p>}\n{:else}\n\t${5:<p>Default</p>}\n{/if}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:each",
+      "description": "Iterate over an array",
+      "content": "{#each ${1:items} as ${2:item}}\n\t${3:<p>{${2:item}}</p>}\n{/each}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:each-index",
+      "description": "Iterate with index",
+      "content": "{#each ${1:items} as ${2:item}, ${3:i}}\n\t${4:<p>{${3:i}}: {${2:item}}</p>}\n{/each}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:each-key",
+      "description": "Iterate with unique key for better performance",
+      "content": "{#each ${1:items} as ${2:item} (${2:item}.${3:id})}\n\t${4:<div>{${2:item}.${5:name}}</div>}\n{/each}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:each-else",
+      "description": "Iterate with fallback for empty array",
+      "content": "{#each ${1:items} as ${2:item}}\n\t${3:<p>{${2:item}}</p>}\n{:else}\n\t${4:<p>No items</p>}\n{/each}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:await",
+      "description": "Handle promise states",
+      "content": "{#await ${1:promise}}\n\t${2:<p>Loading...</p>}\n{:then ${3:value}}\n\t${4:<p>Result: {${3:value}}</p>}\n{:catch ${5:error}}\n\t${6:<p>Error: {${5:error}.message}</p>}\n{/await}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:await-short",
+      "description": "Handle promise with only then block",
+      "content": "{#await ${1:promise} then ${2:value}}\n\t${3:<p>{${2:value}}</p>}\n{/await}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:key",
+      "description": "Destroy and recreate content when value changes",
+      "content": "{#key ${1:value}}\n\t${2:<Component />}\n{/key}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:bind",
+      "description": "Two-way binding for input value",
+      "content": "<input bind:value={${1:name}} />",
+      "category": "bindings"
+    },
+    {
+      "trigger": "svelte:bind-checkbox",
+      "description": "Two-way binding for checkbox",
+      "content": "<input type=\"checkbox\" bind:checked={${1:agreed}} />",
+      "category": "bindings"
+    },
+    {
+      "trigger": "svelte:bind-group",
+      "description": "Bind multiple inputs to same variable",
+      "content": "<input type=\"radio\" bind:group={${1:selected}} value={${2:option}} />",
+      "category": "bindings"
+    },
+    {
+      "trigger": "svelte:bind-this",
+      "description": "Get reference to DOM element",
+      "content": "<${1:div} bind:this={${2:element}}>${3:content}</${1:div}>",
+      "category": "bindings"
+    },
+    {
+      "trigger": "svelte:event",
+      "description": "Event handler",
+      "content": "<${1:button} on:${2:click}={${3:handleClick}}>${4:Click me}</${1:button}>",
+      "category": "events"
+    },
+    {
+      "trigger": "svelte:event-inline",
+      "description": "Inline event handler",
+      "content": "<${1:button} on:${2:click}={() => ${3:count++}}>${4:Click me}</${1:button}>",
+      "category": "events"
+    },
+    {
+      "trigger": "svelte:event-modifiers",
+      "description": "Event handler with modifiers",
+      "content": "<${1:form} on:${2:submit}|preventDefault|stopPropagation={${3:handleSubmit}}>\n\t${4:<!-- Form content -->}\n</${1:form}>",
+      "category": "events"
+    },
+    {
+      "trigger": "svelte:class",
+      "description": "Conditional class binding",
+      "content": "<div class:${1:active}={${2:isActive}}>${3:content}</div>",
+      "category": "directives"
+    },
+    {
+      "trigger": "svelte:class-short",
+      "description": "Conditional class binding shorthand",
+      "content": "<div class:${1:active}>${2:content}</div>",
+      "category": "directives"
+    },
+    {
+      "trigger": "svelte:style",
+      "description": "Dynamic style binding",
+      "content": "<div style:${1:color}={${2:textColor}}>${3:content}</div>",
+      "category": "directives"
+    },
+    {
+      "trigger": "svelte:use",
+      "description": "Apply action to element",
+      "content": "<div use:${1:action}>${2:content}</div>",
+      "category": "actions"
+    },
+    {
+      "trigger": "svelte:use-params",
+      "description": "Apply action with parameters",
+      "content": "<div use:${1:action}={{ ${2:param}: ${3:value} }}>${4:content}</div>",
+      "category": "actions"
+    },
+    {
+      "trigger": "svelte:transition",
+      "description": "Bidirectional transition",
+      "content": "<div transition:${1:fade}={{ duration: ${2:300} }}>${3:content}</div>",
+      "category": "transitions"
+    },
+    {
+      "trigger": "svelte:in-out",
+      "description": "Separate in and out transitions",
+      "content": "<div in:${1:fly}={{ x: ${2:200} }} out:${3:fade}>${4:content}</div>",
+      "category": "transitions"
+    },
+    {
+      "trigger": "svelte:animate",
+      "description": "Animate position changes",
+      "content": "<div animate:flip={{ duration: ${1:300} }}>${2:content}</div>",
+      "category": "transitions"
+    },
+    {
+      "trigger": "svelte:slot",
+      "description": "Define a slot for child content",
+      "content": "<slot name=\"${1:header}\">${2:<!-- Default content -->}</slot>",
+      "category": "slots"
+    },
+    {
+      "trigger": "svelte:slot-default",
+      "description": "Default unnamed slot",
+      "content": "<slot>${1:<!-- Default content -->}</slot>",
+      "category": "slots"
+    },
+    {
+      "trigger": "svelte:slot-props",
+      "description": "Slot with props",
+      "content": "<slot ${1:item}={${2:item}} />\n\n<!-- Usage in parent: -->\n<!-- <Component let:${1:item}>{${1:item}}</Component> -->",
+      "category": "slots"
+    },
+    {
+      "trigger": "svelte:store",
+      "description": "Create a writable store",
+      "content": "import { writable } from 'svelte/store';\n\nexport const ${1:count} = writable(${2:0});",
+      "category": "stores"
+    },
+    {
+      "trigger": "svelte:store-derived",
+      "description": "Create a derived store",
+      "content": "import { derived } from 'svelte/store';\n\nexport const ${1:doubled} = derived(${2:count}, $${2:count} => $${2:count} * 2);",
+      "category": "stores"
+    },
+    {
+      "trigger": "svelte:store-readable",
+      "description": "Create a readable store",
+      "content": "import { readable } from 'svelte/store';\n\nexport const ${1:time} = readable(${2:new Date()}, set => {\n\tconst interval = setInterval(() => {\n\t\tset(${2:new Date()});\n\t}, 1000);\n\n\treturn () => clearInterval(interval);\n});",
+      "category": "stores"
+    },
+    {
+      "trigger": "svelte:lifecycle-onMount",
+      "description": "onMount lifecycle function",
+      "content": "import { onMount } from 'svelte';\n\nonMount(() => {\n\t${1:// Runs after component is first rendered}\n\t\n\treturn () => {\n\t\t${2:// Cleanup function}\n\t};\n});",
+      "category": "lifecycle"
+    },
+    {
+      "trigger": "svelte:lifecycle-onDestroy",
+      "description": "onDestroy lifecycle function",
+      "content": "import { onDestroy } from 'svelte';\n\nonDestroy(() => {\n\t${1:// Cleanup before component is destroyed}\n});",
+      "category": "lifecycle"
+    },
+    {
+      "trigger": "svelte:lifecycle-beforeUpdate",
+      "description": "beforeUpdate lifecycle function",
+      "content": "import { beforeUpdate } from 'svelte';\n\nbeforeUpdate(() => {\n\t${1:// Runs before DOM is updated}\n});",
+      "category": "lifecycle"
+    },
+    {
+      "trigger": "svelte:lifecycle-afterUpdate",
+      "description": "afterUpdate lifecycle function",
+      "content": "import { afterUpdate } from 'svelte';\n\nafterUpdate(() => {\n\t${1:// Runs after DOM is updated}\n});",
+      "category": "lifecycle"
+    },
+    {
+      "trigger": "svelte:lifecycle-tick",
+      "description": "tick function to wait for pending state changes",
+      "content": "import { tick } from 'svelte';\n\nawait tick();\n${1:// State changes have been applied to DOM}",
+      "category": "lifecycle"
+    },
+    {
+      "trigger": "svelte:context-set",
+      "description": "Set context for child components",
+      "content": "import { setContext } from 'svelte';\n\nsetContext('${1:key}', ${2:value});",
+      "category": "context"
+    },
+    {
+      "trigger": "svelte:context-get",
+      "description": "Get context from parent component",
+      "content": "import { getContext } from 'svelte';\n\nconst ${1:value} = getContext('${2:key}');",
+      "category": "context"
+    },
+    {
+      "trigger": "svelte:dispatch",
+      "description": "Create and dispatch custom events",
+      "content": "import { createEventDispatcher } from 'svelte';\n\nconst dispatch = createEventDispatcher();\n\nfunction ${1:handleClick}() {\n\tdispatch('${2:event}', ${3:{ detail: 'value' \\}});\n}",
+      "category": "events"
+    },
+    {
+      "trigger": "svelte:component-forward-events",
+      "description": "Forward all events to parent",
+      "content": "<${1:Component} on:${2:event} {...$$props} />",
+      "category": "events"
+    },
+    {
+      "trigger": "svelte:special-head",
+      "description": "Add elements to document head",
+      "content": "<svelte:head>\n\t<title>${1:Page Title}</title>\n\t<meta name=\"description\" content=\"${2:Description}\" />\n</svelte:head>",
+      "category": "special"
+    },
+    {
+      "trigger": "svelte:special-window",
+      "description": "Add event listeners to window",
+      "content": "<svelte:window on:${1:keydown}={${2:handleKeydown}} bind:${3:scrollY} />",
+      "category": "special"
+    },
+    {
+      "trigger": "svelte:special-body",
+      "description": "Add event listeners to body",
+      "content": "<svelte:body on:${1:mouseenter}={${2:handleMouseEnter}} />",
+      "category": "special"
+    },
+    {
+      "trigger": "svelte:special-component",
+      "description": "Dynamically render a component",
+      "content": "<svelte:component this={${1:Component}} ${2:prop}={${3:value}} />",
+      "category": "special"
+    },
+    {
+      "trigger": "svelte:special-self",
+      "description": "Recursive component",
+      "content": "{#if ${1:condition}}\n\t<svelte:self ${2:prop}={${3:value}} />\n{/if}",
+      "category": "special"
+    },
+    {
+      "trigger": "svelte:special-element",
+      "description": "Dynamically render an HTML element",
+      "content": "<svelte:element this={${1:tag}} ${2:prop}={${3:value}}>${4:content}</svelte:element>",
+      "category": "special"
+    },
+    {
+      "trigger": "svelte:action",
+      "description": "Create a reusable action",
+      "content": "export function ${1:action}(node, ${2:parameters}) {\n\t${3:// Action logic}\n\t\n\treturn {\n\t\tupdate(${2:parameters}) {\n\t\t\t${4:// Update logic}\n\t\t},\n\t\tdestroy() {\n\t\t\t${5:// Cleanup}\n\t\t}\n\t};\n}",
+      "category": "actions"
+    },
+    {
+      "trigger": "svelte:transition-custom",
+      "description": "Create a custom transition",
+      "content": "export function ${1:transition}(node, ${2:params}) {\n\treturn {\n\t\tduration: ${2:params}.duration || ${3:300},\n\t\tcss: t => {\n\t\t\treturn `${4:opacity: ${t}}`;\n\t\t}\n\t};\n}",
+      "category": "transitions"
+    },
+    {
+      "trigger": "svelte:form",
+      "description": "Form with two-way bindings",
+      "content": "<form on:submit|preventDefault={${1:handleSubmit}}>\n\t<label>\n\t\t${2:Name}:\n\t\t<input bind:value={${3:name}} />\n\t</label>\n\t\n\t<button type=\"submit\">${4:Submit}</button>\n</form>",
+      "category": "forms"
+    },
+    {
+      "trigger": "svelte:select",
+      "description": "Select dropdown with binding",
+      "content": "<select bind:value={${1:selected}}>\n\t{#each ${2:options} as ${3:option}}\n\t\t<option value={${3:option}}>{${3:option}}</option>\n\t{/each}\n</select>",
+      "category": "forms"
+    },
+    {
+      "trigger": "svelte:textarea",
+      "description": "Textarea with binding",
+      "content": "<textarea bind:value={${1:text}} rows=\"${2:4}\" cols=\"${3:50}\"></textarea>",
+      "category": "forms"
+    },
+    {
+      "trigger": "svelte:module",
+      "description": "Module context script (runs once per module)",
+      "content": "<script context=\"module\">\n\t${1:// Shared between all instances}\n\texport const ${2:shared} = ${3:value};\n</script>\n\n<script>\n\t${4:// Instance-specific logic}\n</script>",
+      "category": "advanced"
+    },
+    {
+      "trigger": "svelte:$$props",
+      "description": "Access all props with $$props",
+      "content": "<${1:Component} {...$$props} />",
+      "category": "advanced"
+    },
+    {
+      "trigger": "svelte:$$restProps",
+      "description": "Access props not declared with export let",
+      "content": "<div {...$$restProps}>${1:content}</div>",
+      "category": "advanced"
+    }
+  ]
+}
