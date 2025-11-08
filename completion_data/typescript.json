@@ -1,0 +1,813 @@
+{
+  "language": "typescript",
+  "description": "TypeScript programming language completion data",
+  "keywords": [
+    {
+      "keyword": "interface",
+      "type": "keyword",
+      "description": "interface - Defines a contract for object structure. Used for type checking and ensuring objects have required properties.",
+      "example": "interface User { name: string; age: number; }",
+      "category": "type_declaration"
+    },
+    {
+      "keyword": "type",
+      "type": "keyword",
+      "description": "type - Creates type aliases for complex types. More flexible than interfaces, can represent unions, intersections, and primitives.",
+      "example": "type ID = string | number;",
+      "category": "type_declaration"
+    },
+    {
+      "keyword": "enum",
+      "type": "keyword",
+      "description": "enum - Defines a set of named constants. Useful for representing a fixed set of values.",
+      "example": "enum Color { Red, Green, Blue }",
+      "category": "type_declaration"
+    },
+    {
+      "keyword": "namespace",
+      "type": "keyword",
+      "description": "namespace - Organizes code into logical groups. Prevents global scope pollution and name conflicts.",
+      "example": "namespace Utils { export function helper() {} }",
+      "category": "module_system"
+    },
+    {
+      "keyword": "module",
+      "type": "keyword",
+      "description": "module - Declares a module (legacy syntax, prefer ES6 modules). Used for ambient module declarations.",
+      "example": "declare module 'my-module' { export function fn(): void; }",
+      "category": "module_system"
+    },
+    {
+      "keyword": "declare",
+      "type": "keyword",
+      "description": "declare - Tells TypeScript about code that exists elsewhere. Used for ambient declarations and .d.ts files.",
+      "example": "declare const API_KEY: string;",
+      "category": "ambient_declarations"
+    },
+    {
+      "keyword": "public",
+      "type": "keyword",
+      "description": "public - Makes class members accessible from anywhere. Default visibility for class members.",
+      "example": "public name: string;",
+      "category": "access_modifiers"
+    },
+    {
+      "keyword": "private",
+      "type": "keyword",
+      "description": "private - Restricts class member access to within the class only. Enforces encapsulation.",
+      "example": "private password: string;",
+      "category": "access_modifiers"
+    },
+    {
+      "keyword": "protected",
+      "type": "keyword",
+      "description": "protected - Allows access within class and subclasses only. Used in inheritance scenarios.",
+      "example": "protected userId: number;",
+      "category": "access_modifiers"
+    },
+    {
+      "keyword": "readonly",
+      "type": "keyword",
+      "description": "readonly - Marks properties that can only be set during initialization. Prevents modification after creation.",
+      "example": "readonly id: string;",
+      "category": "modifiers"
+    },
+    {
+      "keyword": "abstract",
+      "type": "keyword",
+      "description": "abstract - Defines abstract classes and methods that must be implemented by subclasses.",
+      "example": "abstract class Animal { abstract makeSound(): void; }",
+      "category": "class_modifiers"
+    },
+    {
+      "keyword": "implements",
+      "type": "keyword",
+      "description": "implements - Ensures a class satisfies an interface contract. Used for interface implementation.",
+      "example": "class Person implements IUser { }",
+      "category": "class_modifiers"
+    },
+    {
+      "keyword": "extends",
+      "type": "keyword",
+      "description": "extends - Creates inheritance between classes or interfaces. Enables code reuse and polymorphism.",
+      "example": "class Admin extends User { }",
+      "category": "inheritance"
+    },
+    {
+      "keyword": "as",
+      "type": "keyword",
+      "description": "as - Type assertion that tells TypeScript to treat a value as a specific type.",
+      "example": "const input = document.getElementById('input') as HTMLInputElement;",
+      "category": "type_assertions"
+    },
+    {
+      "keyword": "is",
+      "type": "keyword",
+      "description": "is - Type predicate used in type guard functions to narrow types.",
+      "example": "function isString(val: any): val is string { return typeof val === 'string'; }",
+      "category": "type_guards"
+    },
+    {
+      "keyword": "keyof",
+      "type": "keyword",
+      "description": "keyof - Creates a union type of all property keys of an object type.",
+      "example": "type UserKeys = keyof User;",
+      "category": "type_operators"
+    },
+    {
+      "keyword": "typeof",
+      "type": "keyword",
+      "description": "typeof - Gets the type of a value or variable. Used for type queries.",
+      "example": "const config = { api: 'url' }; type Config = typeof config;",
+      "category": "type_operators"
+    },
+    {
+      "keyword": "infer",
+      "type": "keyword",
+      "description": "infer - Infers types within conditional type expressions. Advanced type manipulation tool.",
+      "example": "type ReturnType<T> = T extends (...args: any[]) => infer R ? R : any;",
+      "category": "conditional_types"
+    },
+    {
+      "keyword": "never",
+      "type": "type",
+      "description": "never - Represents values that never occur. Used for exhaustive checks and impossible states.",
+      "example": "function throwError(msg: string): never { throw new Error(msg); }",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "unknown",
+      "type": "type",
+      "description": "unknown - Type-safe alternative to any. Requires type checking before use.",
+      "example": "let value: unknown; if (typeof value === 'string') { console.log(value.length); }",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "any",
+      "type": "type",
+      "description": "any - Disables type checking for a value. Use sparingly as it defeats TypeScript's purpose.",
+      "example": "let data: any = fetchFromAPI();",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "void",
+      "type": "type",
+      "description": "void - Represents the absence of a return value. Used for functions that don't return anything.",
+      "example": "function log(message: string): void { console.log(message); }",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "string",
+      "type": "type",
+      "description": "string - Primitive type for text data. Includes string literals and template strings.",
+      "example": "let name: string = 'Alice';",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "number",
+      "type": "type",
+      "description": "number - Primitive type for numeric values. Includes integers and floating-point numbers.",
+      "example": "let age: number = 25;",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "boolean",
+      "type": "type",
+      "description": "boolean - Primitive type for true/false values.",
+      "example": "let isActive: boolean = true;",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "null",
+      "type": "type",
+      "description": "null - Represents intentional absence of value. One of TypeScript's primitive types.",
+      "example": "let data: string | null = null;",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "undefined",
+      "type": "type",
+      "description": "undefined - Represents uninitialized or missing values.",
+      "example": "let value: string | undefined;",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "symbol",
+      "type": "type",
+      "description": "symbol - Unique and immutable primitive value. Often used as object property keys.",
+      "example": "const sym: symbol = Symbol('key');",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "bigint",
+      "type": "type",
+      "description": "bigint - Primitive type for arbitrarily large integers.",
+      "example": "const big: bigint = 9007199254740991n;",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "object",
+      "type": "type",
+      "description": "object - Represents non-primitive types. Any value that isn't primitive.",
+      "example": "let obj: object = { key: 'value' };",
+      "category": "object_types"
+    },
+    {
+      "keyword": "Array",
+      "type": "type",
+      "description": "Array - Generic type for arrays. Can specify element type.",
+      "example": "let numbers: Array<number> = [1, 2, 3];",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "Promise",
+      "type": "type",
+      "description": "Promise - Generic type for asynchronous operations.",
+      "example": "async function fetchData(): Promise<User> { }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "Record",
+      "type": "utility_type",
+      "description": "Record - Utility type for creating object types with specific keys and value types.",
+      "example": "type UserRecord = Record<string, User>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Partial",
+      "type": "utility_type",
+      "description": "Partial - Makes all properties of a type optional. Useful for updates and patches.",
+      "example": "type PartialUser = Partial<User>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Required",
+      "type": "utility_type",
+      "description": "Required - Makes all properties of a type required. Opposite of Partial.",
+      "example": "type RequiredUser = Required<PartialUser>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Readonly",
+      "type": "utility_type",
+      "description": "Readonly - Makes all properties of a type readonly. Prevents modification.",
+      "example": "type ReadonlyUser = Readonly<User>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Pick",
+      "type": "utility_type",
+      "description": "Pick - Creates a type by picking specific properties from another type.",
+      "example": "type UserPreview = Pick<User, 'name' | 'email'>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Omit",
+      "type": "utility_type",
+      "description": "Omit - Creates a type by omitting specific properties from another type.",
+      "example": "type UserWithoutPassword = Omit<User, 'password'>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Exclude",
+      "type": "utility_type",
+      "description": "Exclude - Excludes types from a union. Filters out specific types.",
+      "example": "type T = Exclude<'a' | 'b' | 'c', 'a'>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Extract",
+      "type": "utility_type",
+      "description": "Extract - Extracts types from a union that match a pattern.",
+      "example": "type T = Extract<'a' | 'b' | 'c', 'a' | 'f'>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "NonNullable",
+      "type": "utility_type",
+      "description": "NonNullable - Removes null and undefined from a type.",
+      "example": "type T = NonNullable<string | null | undefined>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "ReturnType",
+      "type": "utility_type",
+      "description": "ReturnType - Extracts the return type of a function.",
+      "example": "type Result = ReturnType<typeof myFunction>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Parameters",
+      "type": "utility_type",
+      "description": "Parameters - Extracts parameter types of a function as a tuple.",
+      "example": "type Params = Parameters<typeof myFunction>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "InstanceType",
+      "type": "utility_type",
+      "description": "InstanceType - Gets the instance type of a constructor function.",
+      "example": "type Instance = InstanceType<typeof MyClass>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Awaited",
+      "type": "utility_type",
+      "description": "Awaited - Recursively unwraps Promise types to get the resolved value type.",
+      "example": "type Result = Awaited<Promise<string>>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "const",
+      "type": "keyword",
+      "description": "const - Declares a constant variable with type inference. Can use 'as const' for literal types.",
+      "example": "const config = { api: 'url' } as const;",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "let",
+      "type": "keyword",
+      "description": "let - Declares a mutable variable with optional type annotation.",
+      "example": "let count: number = 0;",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "var",
+      "type": "keyword",
+      "description": "var - Function-scoped variable declaration. Avoid in modern TypeScript, use let/const.",
+      "example": "var legacy: string = 'old';",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "function",
+      "type": "keyword",
+      "description": "function - Declares a function with typed parameters and return type.",
+      "example": "function add(a: number, b: number): number { return a + b; }",
+      "category": "function_declaration"
+    },
+    {
+      "keyword": "async",
+      "type": "keyword",
+      "description": "async - Declares an asynchronous function that returns a Promise.",
+      "example": "async function fetchUser(): Promise<User> { }",
+      "category": "async"
+    },
+    {
+      "keyword": "await",
+      "type": "keyword",
+      "description": "await - Waits for a Promise to resolve. Can only be used in async functions.",
+      "example": "const user = await fetchUser();",
+      "category": "async"
+    },
+    {
+      "keyword": "class",
+      "type": "keyword",
+      "description": "class - Declares a class with typed properties and methods.",
+      "example": "class User { constructor(public name: string) {} }",
+      "category": "class_declaration"
+    },
+    {
+      "keyword": "constructor",
+      "type": "keyword",
+      "description": "constructor - Special method for initializing class instances with typed parameters.",
+      "example": "constructor(private name: string, public age: number) {}",
+      "category": "class_methods"
+    },
+    {
+      "keyword": "static",
+      "type": "keyword",
+      "description": "static - Defines class-level members accessible without instantiation.",
+      "example": "static create(): User { return new User(); }",
+      "category": "class_modifiers"
+    },
+    {
+      "keyword": "get",
+      "type": "keyword",
+      "description": "get - Defines a getter accessor with return type annotation.",
+      "example": "get fullName(): string { return this.firstName + ' ' + this.lastName; }",
+      "category": "accessors"
+    },
+    {
+      "keyword": "set",
+      "type": "keyword",
+      "description": "set - Defines a setter accessor with typed parameter.",
+      "example": "set age(value: number) { this._age = value; }",
+      "category": "accessors"
+    },
+    {
+      "keyword": "import",
+      "type": "keyword",
+      "description": "import - Imports modules with type information preserved.",
+      "example": "import { User } from './types';",
+      "category": "module_system"
+    },
+    {
+      "keyword": "export",
+      "type": "keyword",
+      "description": "export - Exports values, types, interfaces, and type aliases.",
+      "example": "export interface User { name: string; }",
+      "category": "module_system"
+    },
+    {
+      "keyword": "default",
+      "type": "keyword",
+      "description": "default - Marks the default export of a module.",
+      "example": "export default class User {}",
+      "category": "module_system"
+    },
+    {
+      "keyword": "this",
+      "type": "keyword",
+      "description": "this - Refers to the current instance. Can be typed with 'this: Type' parameter.",
+      "example": "function method(this: User) { this.name; }",
+      "category": "context"
+    },
+    {
+      "keyword": "super",
+      "type": "keyword",
+      "description": "super - Calls parent class constructor or methods in inheritance.",
+      "example": "super(name);",
+      "category": "inheritance"
+    },
+    {
+      "keyword": "new",
+      "type": "keyword",
+      "description": "new - Creates instances of classes with type checking.",
+      "example": "const user = new User('Alice');",
+      "category": "instantiation"
+    },
+    {
+      "keyword": "satisfies",
+      "type": "keyword",
+      "description": "satisfies - Validates that a value matches a type without widening it. TypeScript 4.9+.",
+      "example": "const config = { port: 3000 } satisfies Config;",
+      "category": "type_checking"
+    },
+    {
+      "keyword": "asserts",
+      "type": "keyword",
+      "description": "asserts - Used in assertion function signatures to narrow types.",
+      "example": "function assert(condition: any): asserts condition { if (!condition) throw new Error(); }",
+      "category": "type_guards"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "interface",
+      "description": "Interface declaration with properties",
+      "content": "interface ${1:InterfaceName} {\n    ${2:property}: ${3:type};\n}",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "type",
+      "description": "Type alias declaration",
+      "content": "type ${1:TypeName} = ${2:type};",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "enum",
+      "description": "Enum declaration",
+      "content": "enum ${1:EnumName} {\n    ${2:Value1},\n    ${3:Value2}\n}",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "class_ts",
+      "description": "TypeScript class with typed properties",
+      "content": "class ${1:ClassName} {\n    constructor(private ${2:prop}: ${3:type}) {}\n    \n    ${4:method}(): ${5:returnType} {\n        ${6:// method body}\n    }\n}",
+      "category": "class"
+    },
+    {
+      "trigger": "abstract_class",
+      "description": "Abstract class with abstract methods",
+      "content": "abstract class ${1:AbstractClass} {\n    abstract ${2:method}(): ${3:returnType};\n    \n    ${4:concreteMethod}(): void {\n        ${5:// implementation}\n    }\n}",
+      "category": "class"
+    },
+    {
+      "trigger": "generic_interface",
+      "description": "Generic interface declaration",
+      "content": "interface ${1:InterfaceName}<${2:T}> {\n    ${3:property}: ${2:T};\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "generic_function",
+      "description": "Generic function declaration",
+      "content": "function ${1:functionName}<${2:T}>(${3:param}: ${2:T}): ${2:T} {\n    ${4:// implementation}\n    return ${3:param};\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "generic_class",
+      "description": "Generic class declaration",
+      "content": "class ${1:ClassName}<${2:T}> {\n    constructor(private value: ${2:T}) {}\n    \n    getValue(): ${2:T} {\n        return this.value;\n    }\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "type_guard",
+      "description": "Type guard function with 'is' predicate",
+      "content": "function is${1:Type}(value: any): value is ${1:Type} {\n    return ${2:// type check condition};\n}",
+      "category": "type_guards"
+    },
+    {
+      "trigger": "union_type",
+      "description": "Union type declaration",
+      "content": "type ${1:TypeName} = ${2:Type1} | ${3:Type2};",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "intersection_type",
+      "description": "Intersection type declaration",
+      "content": "type ${1:TypeName} = ${2:Type1} & ${3:Type2};",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "mapped_type",
+      "description": "Mapped type declaration",
+      "content": "type ${1:TypeName}<T> = {\n    [K in keyof T]: ${2:T[K]};\n};",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "conditional_type",
+      "description": "Conditional type declaration",
+      "content": "type ${1:TypeName}<T> = T extends ${2:ConditionType} ? ${3:TrueType} : ${4:FalseType};",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "namespace",
+      "description": "Namespace declaration",
+      "content": "namespace ${1:NamespaceName} {\n    export ${2:// exported members}\n}",
+      "category": "module_system"
+    },
+    {
+      "trigger": "declare_module",
+      "description": "Ambient module declaration",
+      "content": "declare module '${1:module-name}' {\n    export ${2:// module contents}\n}",
+      "category": "ambient_declarations"
+    },
+    {
+      "trigger": "declare_global",
+      "description": "Global augmentation declaration",
+      "content": "declare global {\n    ${1:// global augmentations}\n}",
+      "category": "ambient_declarations"
+    },
+    {
+      "trigger": "readonly_array",
+      "description": "Readonly array type",
+      "content": "readonly ${1:type}[]",
+      "category": "readonly_types"
+    },
+    {
+      "trigger": "tuple",
+      "description": "Tuple type declaration",
+      "content": "type ${1:TupleName} = [${2:type1}, ${3:type2}];",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "index_signature",
+      "description": "Index signature in interface",
+      "content": "interface ${1:InterfaceName} {\n    [${2:key}: ${3:string}]: ${4:type};\n}",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "decorator",
+      "description": "TypeScript decorator function",
+      "content": "function ${1:decoratorName}(${2:target}: any${3:, propertyKey?: string}) {\n    ${4:// decorator logic}\n}",
+      "category": "decorators"
+    },
+    {
+      "trigger": "class_decorator",
+      "description": "Class decorator",
+      "content": "function ${1:DecoratorName}<T extends { new(...args: any[]): {} }>(constructor: T) {\n    return class extends constructor {\n        ${2:// extended functionality}\n    };\n}",
+      "category": "decorators"
+    },
+    {
+      "trigger": "method_decorator",
+      "description": "Method decorator",
+      "content": "function ${1:decoratorName}(target: any, propertyKey: string, descriptor: PropertyDescriptor) {\n    ${2:// decorator logic}\n}",
+      "category": "decorators"
+    },
+    {
+      "trigger": "property_decorator",
+      "description": "Property decorator",
+      "content": "function ${1:decoratorName}(target: any, propertyKey: string) {\n    ${2:// decorator logic}\n}",
+      "category": "decorators"
+    },
+    {
+      "trigger": "async_function_ts",
+      "description": "Typed async function",
+      "content": "async function ${1:functionName}(${2:param}: ${3:type}): Promise<${4:returnType}> {\n    ${5:// implementation}\n}",
+      "category": "async"
+    },
+    {
+      "trigger": "promise_type",
+      "description": "Promise type annotation",
+      "content": "Promise<${1:type}>",
+      "category": "async"
+    },
+    {
+      "trigger": "literal_type",
+      "description": "String literal type",
+      "content": "type ${1:TypeName} = '${2:literal1}' | '${3:literal2}';",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "const_assertion",
+      "description": "Const assertion for literal types",
+      "content": "const ${1:name} = ${2:value} as const;",
+      "category": "type_assertions"
+    },
+    {
+      "trigger": "type_assertion",
+      "description": "Type assertion (angle bracket syntax)",
+      "content": "<${1:Type}>${2:value}",
+      "category": "type_assertions"
+    },
+    {
+      "trigger": "type_assertion_as",
+      "description": "Type assertion (as syntax)",
+      "content": "${1:value} as ${2:Type}",
+      "category": "type_assertions"
+    },
+    {
+      "trigger": "non_null_assertion",
+      "description": "Non-null assertion operator",
+      "content": "${1:value}!",
+      "category": "type_assertions"
+    },
+    {
+      "trigger": "optional_chaining",
+      "description": "Optional chaining operator",
+      "content": "${1:object}?.${2:property}",
+      "category": "operators"
+    },
+    {
+      "trigger": "nullish_coalescing",
+      "description": "Nullish coalescing operator",
+      "content": "${1:value} ?? ${2:defaultValue}",
+      "category": "operators"
+    },
+    {
+      "trigger": "type_predicate",
+      "description": "Function with type predicate return",
+      "content": "function ${1:functionName}(${2:param}: any): ${2:param} is ${3:Type} {\n    return ${4:// condition};\n}",
+      "category": "type_guards"
+    },
+    {
+      "trigger": "extends_constraint",
+      "description": "Generic with extends constraint",
+      "content": "<${1:T} extends ${2:ConstraintType}>",
+      "category": "generics"
+    },
+    {
+      "trigger": "keyof_constraint",
+      "description": "Generic with keyof constraint",
+      "content": "<${1:K} extends keyof ${2:Type}>",
+      "category": "generics"
+    },
+    {
+      "trigger": "utility_partial",
+      "description": "Partial utility type usage",
+      "content": "Partial<${1:Type}>",
+      "category": "utility_types"
+    },
+    {
+      "trigger": "utility_pick",
+      "description": "Pick utility type usage",
+      "content": "Pick<${1:Type}, '${2:key1}' | '${3:key2}'>",
+      "category": "utility_types"
+    },
+    {
+      "trigger": "utility_omit",
+      "description": "Omit utility type usage",
+      "content": "Omit<${1:Type}, '${2:key1}' | '${3:key2}'>",
+      "category": "utility_types"
+    },
+    {
+      "trigger": "utility_record",
+      "description": "Record utility type usage",
+      "content": "Record<${1:KeyType}, ${2:ValueType}>",
+      "category": "utility_types"
+    },
+    {
+      "trigger": "strict_function_type",
+      "description": "Function type with strict parameters",
+      "content": "type ${1:FunctionName} = (${2:param}: ${3:type}) => ${4:returnType};",
+      "category": "function_types"
+    },
+    {
+      "trigger": "readonly_modifier",
+      "description": "Readonly property modifier",
+      "content": "readonly ${1:property}: ${2:type};",
+      "category": "modifiers"
+    },
+    {
+      "trigger": "private_field",
+      "description": "Private class field (ES2022)",
+      "content": "#${1:fieldName}: ${2:type};",
+      "category": "class_fields"
+    },
+    {
+      "trigger": "override_method",
+      "description": "Override method in derived class",
+      "content": "override ${1:methodName}(${2:params}): ${3:returnType} {\n    ${4:// implementation}\n}",
+      "category": "class_methods"
+    }
+  ],
+  "imports": {
+    "modules": [
+      {
+        "path": "@types/node",
+        "items": [
+          {
+            "name": "Buffer",
+            "item_type": "type",
+            "description": "Node.js Buffer type"
+          },
+          {
+            "name": "NodeJS",
+            "item_type": "namespace",
+            "description": "Node.js global namespace"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "@types/react",
+        "items": [
+          {
+            "name": "FC",
+            "item_type": "type",
+            "description": "Function Component type"
+          },
+          {
+            "name": "ReactNode",
+            "item_type": "type",
+            "description": "React node type"
+          },
+          {
+            "name": "useState",
+            "item_type": "function",
+            "description": "React useState hook with types"
+          },
+          {
+            "name": "useEffect",
+            "item_type": "function",
+            "description": "React useEffect hook"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "typescript",
+        "items": [
+          {
+            "name": "CompilerOptions",
+            "item_type": "interface",
+            "description": "TypeScript compiler options"
+          },
+          {
+            "name": "TransformationContext",
+            "item_type": "interface",
+            "description": "Transformation context for custom transformers"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "zod",
+        "items": [
+          {
+            "name": "z",
+            "item_type": "object",
+            "description": "Zod schema builder for runtime validation"
+          },
+          {
+            "name": "ZodType",
+            "item_type": "type",
+            "description": "Base Zod type"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "type-fest",
+        "items": [
+          {
+            "name": "Simplify",
+            "item_type": "type",
+            "description": "Simplifies complex types"
+          },
+          {
+            "name": "SetRequired",
+            "item_type": "type",
+            "description": "Makes specified keys required"
+          },
+          {
+            "name": "SetOptional",
+            "item_type": "type",
+            "description": "Makes specified keys optional"
+          }
+        ],
+        "submodules": []
+      }
+    ]
+  }
+}

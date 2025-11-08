@@ -176,6 +176,10 @@ See the existing files for comprehensive examples:
 - `rust.json` - Complex language with detailed type system documentation
 - `python.json` - Dynamic language with emphasis on readability
 - `javascript.json` - Web language with modern async patterns
+- `typescript.json` - TypeScript-specific features including types, interfaces, and utility types
+- `css.json` - CSS properties and selectors
+- `html.json` - HTML elements and attributes
+- `svelte.json` - Svelte framework components and syntax
 
 ## Contributing
 
