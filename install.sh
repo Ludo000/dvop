@@ -1,6 +1,5 @@
 #!/bin/bash
 # Install script for Dvop text editor
-#test
 
 set -e
 
