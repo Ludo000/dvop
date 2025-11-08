@@ -538,6 +538,46 @@ fn count_unpushed_commits(repo_path: &Path) -> usize {
     0
 }
 
+/// Count the number of commits to pull from remote
+fn count_incoming_commits(repo_path: &Path) -> usize {
+    // First, fetch to get latest remote info (silently)
+    let _ = Command::new("git")
+        .arg("fetch")
+        .current_dir(repo_path)
+        .output();
+
+    let output = Command::new("git")
+        .arg("rev-list")
+        .arg("--count")
+        .arg("..@{u}")
+        .current_dir(repo_path)
+        .output();
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            let count_str = String::from_utf8_lossy(&output.stdout);
+            return count_str.trim().parse().unwrap_or(0);
+        }
+    }
+    
+    0
+}
+
+/// Pull commits from remote
+fn pull_changes(repo_path: &Path) -> Result<(), String> {
+    let output = Command::new("git")
+        .arg("pull")
+        .current_dir(repo_path)
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
 /// Set up a copy handler that strips line numbers from copied text
 fn setup_copy_handler(view: &sourceview5::View, buffer: &sourceview5::Buffer) {
     let buffer_clone = buffer.clone();
@@ -1152,7 +1192,14 @@ pub fn create_git_diff_panel(
                 }
 
                 // Update commit button text based on state
-                if !staged_changes.is_empty() {
+                // Priority: incoming commits > staged changes > unpushed commits
+                let incoming_count = count_incoming_commits(&repo);
+                
+                if incoming_count > 0 {
+                    // There are commits to pull - show "Pull" button
+                    commit_button.set_label(&format!("Pull ({})", incoming_count));
+                    commit_button.set_tooltip_text(Some(&format!("Pull {} commit{} from remote", incoming_count, if incoming_count == 1 { "" } else { "s" })));
+                } else if !staged_changes.is_empty() {
                     // There are staged changes - show "Commit"
                     commit_button.set_label("Commit");
                     commit_button.set_tooltip_text(Some("Commit staged changes"));
@@ -1658,7 +1705,27 @@ pub fn create_git_diff_panel(
         let changes = changes_for_commit.borrow();
         let has_staged = changes.iter().any(|c| matches!(c.status, GitStatus::Staged | GitStatus::Added | GitStatus::ModifiedStaged));
         
-        if has_staged {
+        // Check button label to determine action
+        let button_label = button.label();
+        let label_str = button_label.as_ref().map(|s| s.as_str()).unwrap_or("");
+        
+        if label_str.starts_with("Pull") {
+            // Button says "Pull" - perform pull
+            crate::status_log::log_info("Pulling from remote...");
+            match pull_changes(&repo) {
+                Ok(()) => {
+                    crate::status_log::log_success("Pulled from remote successfully");
+                    // Refresh git status
+                    let update = update_git_status_for_commit.clone();
+                    glib::idle_add_local_once(move || {
+                        update();
+                    });
+                }
+                Err(e) => {
+                    crate::status_log::log_error(&format!("Pull failed: {}", e));
+                }
+            }
+        } else if has_staged {
             // We have staged changes - perform commit
             let buffer = commit_message_view_for_commit.buffer();
             let start = buffer.start_iter();
@@ -1688,7 +1755,7 @@ pub fn create_git_diff_panel(
                     crate::status_log::log_error(&format!("Commit failed: {}", e));
                 }
             }
-        } else if button.label().as_ref().map(|s| s.starts_with("Push")).unwrap_or(false) {
+        } else if label_str.starts_with("Push") {
             // No staged changes but button says "Push" - perform push
             crate::status_log::log_info("Pushing to remote...");
             match push_changes(&repo) {
