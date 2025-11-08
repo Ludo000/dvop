@@ -1186,6 +1186,7 @@ pub fn create_git_diff_panel(
     let branch_button = panel.branch_button();
     let refresh_button = panel.refresh_button();
     let stage_all_button = panel.stage_all_button();
+    let unstage_all_button = panel.unstage_all_button();
     let staged_files_list = panel.staged_files_list();
     let files_list = panel.files_list();
     let commit_message_view = panel.commit_message_view();
@@ -1256,6 +1257,7 @@ pub fn create_git_diff_panel(
     // Clone widgets early for use in branch actions
     let refresh_button_for_actions = refresh_button.clone();
     let stage_all_button_for_actions = stage_all_button.clone();
+    let unstage_all_button_for_actions = unstage_all_button.clone();
     let branch_button_for_actions = branch_button.clone();
     let commit_button_for_actions = commit_button.clone();
 
@@ -1322,6 +1324,7 @@ pub fn create_git_diff_panel(
                     let branch_btn = branch_button_for_actions.clone();
                     let commit_btn = commit_button_for_actions.clone();
                     let stage_all_btn = stage_all_button_for_actions.clone();
+                    let unstage_all_btn = unstage_all_button_for_actions.clone();
                     
                     action.connect_activate(move |_, _| {
                         if let Some(repo) = repo_path_for_action.borrow().as_ref() {
@@ -1329,6 +1332,7 @@ pub fn create_git_diff_panel(
                             branch_btn.set_sensitive(false);
                             commit_btn.set_sensitive(false);
                             stage_all_btn.set_sensitive(false);
+                            unstage_all_btn.set_sensitive(false);
                             refresh_btn.set_sensitive(false);
                             
                             crate::status_log::log_info(&format!("Switching to branch '{}'...", branch_name));
@@ -1340,6 +1344,7 @@ pub fn create_git_diff_panel(
                                     let branch_btn_clone = branch_btn.clone();
                                     let commit_btn_clone = commit_btn.clone();
                                     let stage_all_btn_clone = stage_all_btn.clone();
+                                    let unstage_all_btn_clone = unstage_all_btn.clone();
                                     let refresh_btn_clone = refresh_btn.clone();
                                     
                                     glib::idle_add_local_once(move || {
@@ -1349,6 +1354,7 @@ pub fn create_git_diff_panel(
                                             branch_btn_clone.set_sensitive(true);
                                             commit_btn_clone.set_sensitive(true);
                                             stage_all_btn_clone.set_sensitive(true);
+                                            unstage_all_btn_clone.set_sensitive(true);
                                             refresh_btn_clone.set_sensitive(true);
                                         });
                                     });
@@ -1360,6 +1366,7 @@ pub fn create_git_diff_panel(
                                     branch_btn.set_sensitive(true);
                                     commit_btn.set_sensitive(true);
                                     stage_all_btn.set_sensitive(true);
+                                    unstage_all_btn.set_sensitive(true);
                                     refresh_btn.set_sensitive(true);
                                 }
                             }
@@ -1388,6 +1395,7 @@ pub fn create_git_diff_panel(
                     let branch_btn = branch_button_for_actions.clone();
                     let commit_btn = commit_button_for_actions.clone();
                     let stage_all_btn = stage_all_button_for_actions.clone();
+                    let unstage_all_btn = unstage_all_button_for_actions.clone();
                     
                     action.connect_activate(move |_, _| {
                         if let Some(repo) = repo_path_for_action.borrow().as_ref() {
@@ -1395,6 +1403,7 @@ pub fn create_git_diff_panel(
                             branch_btn.set_sensitive(false);
                             commit_btn.set_sensitive(false);
                             stage_all_btn.set_sensitive(false);
+                            unstage_all_btn.set_sensitive(false);
                             refresh_btn.set_sensitive(false);
                             
                             // Extract local name for better messaging
@@ -1413,6 +1422,7 @@ pub fn create_git_diff_panel(
                                     let branch_btn_clone = branch_btn.clone();
                                     let commit_btn_clone = commit_btn.clone();
                                     let stage_all_btn_clone = stage_all_btn.clone();
+                                    let unstage_all_btn_clone = unstage_all_btn.clone();
                                     let refresh_btn_clone = refresh_btn.clone();
                                     
                                     glib::idle_add_local_once(move || {
@@ -1422,6 +1432,7 @@ pub fn create_git_diff_panel(
                                             branch_btn_clone.set_sensitive(true);
                                             commit_btn_clone.set_sensitive(true);
                                             stage_all_btn_clone.set_sensitive(true);
+                                            unstage_all_btn_clone.set_sensitive(true);
                                             refresh_btn_clone.set_sensitive(true);
                                         });
                                     });
@@ -1433,6 +1444,7 @@ pub fn create_git_diff_panel(
                                     branch_btn.set_sensitive(true);
                                     commit_btn.set_sensitive(true);
                                     stage_all_btn.set_sensitive(true);
+                                    unstage_all_btn.set_sensitive(true);
                                     refresh_btn.set_sensitive(true);
                                 }
                             }
@@ -1591,6 +1603,40 @@ pub fn create_git_diff_panel(
             
             // Schedule UI update on the main thread after current event completes
             let update_clone = update_git_status_for_stage_all.clone();
+            glib::idle_add_local_once(move || {
+                update_clone();
+            });
+        }
+    });
+
+    // Unstage all button handler
+    let update_git_status_for_unstage_all = update_git_status.clone();
+    let repo_path_for_unstage_all = repo_path_rc.clone();
+    let changes_for_unstage_all = changes_rc.clone();
+    unstage_all_button.connect_clicked(move |_| {
+        let repo = match repo_path_for_unstage_all.borrow().as_ref() {
+            Some(r) => r.clone(),
+            None => return,
+        };
+        
+        // Clone the changes to avoid holding a borrow during the update
+        let changes_to_unstage = changes_for_unstage_all.borrow().clone();
+        let mut unstaged_count = 0;
+
+        // Unstage only files that are currently staged
+        for change in changes_to_unstage.iter() {
+            if matches!(change.status, GitStatus::Staged | GitStatus::Added | GitStatus::ModifiedStaged) {
+                if let Ok(()) = unstage_file(&repo, &change.path) {
+                    unstaged_count += 1;
+                }
+            }
+        }
+
+        if unstaged_count > 0 {
+            crate::status_log::log_success(&format!("Unstaged {} file{}", unstaged_count, if unstaged_count == 1 { "" } else { "s" }));
+            
+            // Schedule UI update on the main thread after current event completes
+            let update_clone = update_git_status_for_unstage_all.clone();
             glib::idle_add_local_once(move || {
                 update_clone();
             });

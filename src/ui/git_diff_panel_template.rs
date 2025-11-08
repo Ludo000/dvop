@@ -16,6 +16,8 @@ mod imp {
         #[template_child]
         pub stage_all_button: TemplateChild<Button>,
         #[template_child]
+        pub unstage_all_button: TemplateChild<Button>,
+        #[template_child]
         pub staged_files_list: TemplateChild<ListBox>,
         #[template_child]
         pub files_list: TemplateChild<ListBox>,
@@ -69,6 +71,10 @@ impl GitDiffPanel {
 
     pub fn stage_all_button(&self) -> Button {
         self.imp().stage_all_button.get()
+    }
+
+    pub fn unstage_all_button(&self) -> Button {
+        self.imp().unstage_all_button.get()
     }
 
     pub fn staged_files_list(&self) -> ListBox {
