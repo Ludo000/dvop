@@ -1254,6 +1254,9 @@ pub fn create_git_diff_panel(
     let changes_rc: Rc<RefCell<Vec<GitFileChange>>> = Rc::new(RefCell::new(Vec::new()));
     let action_group_rc = Rc::new(RefCell::new(gtk4::gio::SimpleActionGroup::new()));
     
+    // Create a RefCell to hold the update function (for self-reference)
+    let update_git_status_rc: Rc<RefCell<Option<Rc<dyn Fn()>>>> = Rc::new(RefCell::new(None));
+    
     // Clone widgets early for use in branch actions
     let refresh_button_for_actions = refresh_button.clone();
     let stage_all_button_for_actions = stage_all_button.clone();
@@ -1272,6 +1275,7 @@ pub fn create_git_diff_panel(
         let commit_button = commit_button.clone();
         let action_group_rc = action_group_rc.clone();
         let refresh_button_clone = refresh_button_for_actions.clone();
+        let update_git_status_rc = update_git_status_rc.clone();
 
         Rc::new(move || {
             // Clear previous content
@@ -1529,6 +1533,31 @@ pub fn create_git_diff_panel(
                     path_label.set_hexpand(true);
                     file_box.append(&path_label);
 
+                    // Unstage button
+                    let unstage_btn = Button::new();
+                    unstage_btn.set_icon_name("list-remove-symbolic");
+                    unstage_btn.set_tooltip_text(Some("Unstage this file"));
+                    unstage_btn.set_valign(gtk4::Align::Center);
+                    
+                    let file_path_for_unstage = change.path.clone();
+                    let repo_for_unstage = repo.clone();
+                    let update_rc_clone = update_git_status_rc.clone();
+                    unstage_btn.connect_clicked(move |_| {
+                        if let Ok(()) = unstage_file(&repo_for_unstage, &file_path_for_unstage) {
+                            let rel_path = file_path_for_unstage.strip_prefix(&repo_for_unstage).unwrap_or(&file_path_for_unstage);
+                            crate::status_log::log_success(&format!("Unstaged: {}", rel_path.display()));
+                            if let Some(update_fn) = update_rc_clone.borrow().as_ref() {
+                                let update_fn = update_fn.clone();
+                                glib::idle_add_local_once(move || {
+                                    update_fn();
+                                });
+                            }
+                        } else {
+                            crate::status_log::log_error("Failed to unstage file");
+                        }
+                    });
+                    file_box.append(&unstage_btn);
+
                     // Store file info and indicate it's staged in tooltip
                     row.set_tooltip_text(Some(&format!("staged:{}", change.path.to_string_lossy())));
 
@@ -1554,6 +1583,31 @@ pub fn create_git_diff_panel(
                     path_label.set_hexpand(true);
                     file_box.append(&path_label);
 
+                    // Stage button
+                    let stage_btn = Button::new();
+                    stage_btn.set_icon_name("list-add-symbolic");
+                    stage_btn.set_tooltip_text(Some("Stage this file"));
+                    stage_btn.set_valign(gtk4::Align::Center);
+                    
+                    let file_path_for_stage = change.path.clone();
+                    let repo_for_stage = repo.clone();
+                    let update_rc_clone = update_git_status_rc.clone();
+                    stage_btn.connect_clicked(move |_| {
+                        if let Ok(()) = stage_file(&repo_for_stage, &file_path_for_stage) {
+                            let rel_path = file_path_for_stage.strip_prefix(&repo_for_stage).unwrap_or(&file_path_for_stage);
+                            crate::status_log::log_success(&format!("Staged: {}", rel_path.display()));
+                            if let Some(update_fn) = update_rc_clone.borrow().as_ref() {
+                                let update_fn = update_fn.clone();
+                                glib::idle_add_local_once(move || {
+                                    update_fn();
+                                });
+                            }
+                        } else {
+                            crate::status_log::log_error("Failed to stage file");
+                        }
+                    });
+                    file_box.append(&stage_btn);
+
                     // Store file info and indicate it's unstaged
                     row.set_tooltip_text(Some(&format!("unstaged:{}", change.path.to_string_lossy())));
 
@@ -1565,8 +1619,11 @@ pub fn create_git_diff_panel(
                 branch_button.set_label("Not a git repository");
                 branch_button.set_menu_model(Option::<&gtk4::gio::Menu>::None);
             }
-        })
+        }) as Rc<dyn Fn()>
     };
+    
+    // Store the update function in the RefCell so it can reference itself
+    *update_git_status_rc.borrow_mut() = Some(update_git_status.clone());
 
     // Initial update
     update_git_status();
