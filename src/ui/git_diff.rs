@@ -1685,7 +1685,7 @@ pub fn create_git_diff_panel(
 
     staged_files_list.add_controller(staged_gesture);
 
-    // Smart commit/push button handler
+    // Smart commit/push/pull button handler
     let repo_path_for_commit = repo_path_rc.clone();
     let update_git_status_for_commit = update_git_status.clone();
     let commit_message_view_for_commit = commit_message_view.clone();
@@ -1693,6 +1693,11 @@ pub fn create_git_diff_panel(
     let show_placeholder_for_commit = show_placeholder.clone();
     
     commit_button.connect_clicked(move |button| {
+        // Prevent spam clicking - disable button during operation
+        if !button.is_sensitive() {
+            return;
+        }
+        
         let repo = match repo_path_for_commit.borrow().as_ref() {
             Some(r) => r.clone(),
             None => {
@@ -1709,9 +1714,13 @@ pub fn create_git_diff_panel(
         let button_label = button.label();
         let label_str = button_label.as_ref().map(|s| s.as_str()).unwrap_or("");
         
+        // Disable button during operation
+        button.set_sensitive(false);
+        
         if label_str.starts_with("Pull") {
             // Button says "Pull" - perform pull
             crate::status_log::log_info("Pulling from remote...");
+            
             match pull_changes(&repo) {
                 Ok(()) => {
                     crate::status_log::log_success("Pulled from remote successfully");
@@ -1725,6 +1734,9 @@ pub fn create_git_diff_panel(
                     crate::status_log::log_error(&format!("Pull failed: {}", e));
                 }
             }
+            
+            // Re-enable button after operation
+            button.set_sensitive(true);
         } else if has_staged {
             // We have staged changes - perform commit
             let buffer = commit_message_view_for_commit.buffer();
@@ -1735,6 +1747,7 @@ pub fn create_git_diff_panel(
             // Skip if message is just the placeholder
             if message.trim().is_empty() || message == "Commit message" {
                 crate::status_log::log_error("Commit message cannot be empty");
+                button.set_sensitive(true);
                 return;
             }
             
@@ -1755,9 +1768,13 @@ pub fn create_git_diff_panel(
                     crate::status_log::log_error(&format!("Commit failed: {}", e));
                 }
             }
+            
+            // Re-enable button after operation
+            button.set_sensitive(true);
         } else if label_str.starts_with("Push") {
             // No staged changes but button says "Push" - perform push
             crate::status_log::log_info("Pushing to remote...");
+            
             match push_changes(&repo) {
                 Ok(()) => {
                     crate::status_log::log_success("Pushed to remote successfully");
@@ -1771,8 +1788,12 @@ pub fn create_git_diff_panel(
                     crate::status_log::log_error(&format!("Push failed: {}", e));
                 }
             }
+            
+            // Re-enable button after operation
+            button.set_sensitive(true);
         } else {
             crate::status_log::log_info("No changes to commit or push");
+            button.set_sensitive(true);
         }
     });
 
