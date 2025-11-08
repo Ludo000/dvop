@@ -578,6 +578,125 @@ fn pull_changes(repo_path: &Path) -> Result<(), String> {
     }
 }
 
+#[derive(Clone, Debug)]
+struct BranchInfo {
+    name: String,
+    is_current: bool,
+    is_remote: bool,
+}
+
+/// Get all branches (local and remote)
+fn get_all_branches(repo_path: &Path) -> Vec<BranchInfo> {
+    let mut branches = Vec::new();
+
+    // Get local branches
+    let output = Command::new("git")
+        .arg("branch")
+        .arg("--list")
+        .current_dir(repo_path)
+        .output();
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            let branch_text = String::from_utf8_lossy(&output.stdout);
+            for line in branch_text.lines() {
+                let is_current = line.starts_with("* ");
+                let name = line.trim_start_matches("* ").trim().to_string();
+                if !name.is_empty() {
+                    branches.push(BranchInfo {
+                        name,
+                        is_current,
+                        is_remote: false,
+                    });
+                }
+            }
+        }
+    }
+
+    // Get remote branches
+    let output = Command::new("git")
+        .arg("branch")
+        .arg("-r")
+        .current_dir(repo_path)
+        .output();
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            let branch_text = String::from_utf8_lossy(&output.stdout);
+            for line in branch_text.lines() {
+                let name = line.trim().to_string();
+                // Skip HEAD pointer
+                if !name.is_empty() && !name.contains("HEAD ->") {
+                    branches.push(BranchInfo {
+                        name,
+                        is_current: false,
+                        is_remote: true,
+                    });
+                }
+            }
+        }
+    }
+
+    branches
+}
+
+/// Switch to a branch
+fn switch_branch(repo_path: &Path, branch_name: &str, is_remote: bool) -> Result<(), String> {
+    if is_remote {
+        // For remote branches, create a local tracking branch
+        // Extract the branch name without the remote prefix (e.g., "origin/feature" -> "feature")
+        let local_name = if let Some(pos) = branch_name.find('/') {
+            &branch_name[pos + 1..]
+        } else {
+            branch_name
+        };
+
+        // First check if local branch already exists
+        let check_output = Command::new("git")
+            .arg("rev-parse")
+            .arg("--verify")
+            .arg(local_name)
+            .current_dir(repo_path)
+            .output()
+            .map_err(|e| format!("Failed to run git: {}", e))?;
+
+        if check_output.status.success() {
+            // Local branch exists, just switch to it
+            switch_branch(repo_path, local_name, false)
+        } else {
+            // Local branch doesn't exist, create and switch to a new local branch tracking the remote
+            let output = Command::new("git")
+                .arg("checkout")
+                .arg("-b")
+                .arg(local_name)
+                .arg(branch_name)
+                .current_dir(repo_path)
+                .output()
+                .map_err(|e| format!("Failed to run git: {}", e))?;
+
+            if output.status.success() {
+                Ok(())
+            } else {
+                Err(String::from_utf8_lossy(&output.stderr).to_string())
+            }
+        }
+    } else {
+        // For local branches, just checkout
+        let output = Command::new("git")
+            .arg("checkout")
+            .arg(branch_name)
+            .current_dir(repo_path)
+            .output()
+            .map_err(|e| format!("Failed to run git: {}", e))?;
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            Err(String::from_utf8_lossy(&output.stderr).to_string())
+        }
+    }
+}
+
 /// Set up a copy handler that strips line numbers from copied text
 fn setup_copy_handler(view: &sourceview5::View, buffer: &sourceview5::Buffer) {
     let buffer_clone = buffer.clone();
@@ -1064,7 +1183,7 @@ pub fn create_git_diff_panel(
     let panel = GitDiffPanel::new();
     
     // Get references to widgets
-    let branch_label = panel.branch_label();
+    let branch_button = panel.branch_button();
     let refresh_button = panel.refresh_button();
     let stage_all_button = panel.stage_all_button();
     let staged_files_list = panel.staged_files_list();
@@ -1132,16 +1251,25 @@ pub fn create_git_diff_panel(
     // State for the panel
     let repo_path_rc: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let changes_rc: Rc<RefCell<Vec<GitFileChange>>> = Rc::new(RefCell::new(Vec::new()));
+    let action_group_rc = Rc::new(RefCell::new(gtk4::gio::SimpleActionGroup::new()));
+    
+    // Clone widgets early for use in branch actions
+    let refresh_button_for_actions = refresh_button.clone();
+    let stage_all_button_for_actions = stage_all_button.clone();
+    let branch_button_for_actions = branch_button.clone();
+    let commit_button_for_actions = commit_button.clone();
 
     // Function to update the git status
     let update_git_status = {
         let current_dir = current_dir.clone();
         let repo_path_rc = repo_path_rc.clone();
         let changes_rc = changes_rc.clone();
-        let branch_label = branch_label.clone();
+        let branch_button = branch_button.clone();
         let staged_files_list = staged_files_list.clone();
         let files_list = files_list.clone();
         let commit_button = commit_button.clone();
+        let action_group_rc = action_group_rc.clone();
+        let refresh_button_clone = refresh_button_for_actions.clone();
 
         Rc::new(move || {
             // Clear previous content
@@ -1160,12 +1288,168 @@ pub fn create_git_diff_panel(
             if let Some(repo) = repo_path {
                 *repo_path_rc.borrow_mut() = Some(repo.clone());
 
-                // Get branch name
+                // Get branch name and update button
                 if let Some(branch) = get_current_branch(&repo) {
-                    branch_label.set_text(&format!("⎇ {}", branch));
+                    branch_button.set_label(&format!("⎇ {}", branch));
                 } else {
-                    branch_label.set_text("⎇ (unknown)");
+                    branch_button.set_label("⎇ (unknown)");
                 }
+
+                // Populate branch menu
+                let branches = get_all_branches(&repo);
+                let menu = gtk4::gio::Menu::new();
+                
+                // Create new action group for this update
+                let new_action_group = gtk4::gio::SimpleActionGroup::new();
+                
+                // Add local branches section
+                let local_section = gtk4::gio::Menu::new();
+                let mut has_local = false;
+                for branch_info in branches.iter().filter(|b| !b.is_remote) {
+                    let label = if branch_info.is_current {
+                        format!("● {}", branch_info.name)
+                    } else {
+                        format!("  {}", branch_info.name)
+                    };
+                    let action_name = format!("switch-local.{}", branch_info.name.replace('/', "-"));
+                    local_section.append(Some(&label), Some(&format!("branch.{}", action_name)));
+                    
+                    // Create action for this branch
+                    let action = gtk4::gio::SimpleAction::new(&action_name, None);
+                    let branch_name = branch_info.name.clone();
+                    let repo_path_for_action = repo_path_rc.clone();
+                    let refresh_btn = refresh_button_clone.clone();
+                    let branch_btn = branch_button_for_actions.clone();
+                    let commit_btn = commit_button_for_actions.clone();
+                    let stage_all_btn = stage_all_button_for_actions.clone();
+                    
+                    action.connect_activate(move |_, _| {
+                        if let Some(repo) = repo_path_for_action.borrow().as_ref() {
+                            // Disable UI elements during branch switch
+                            branch_btn.set_sensitive(false);
+                            commit_btn.set_sensitive(false);
+                            stage_all_btn.set_sensitive(false);
+                            refresh_btn.set_sensitive(false);
+                            
+                            crate::status_log::log_info(&format!("Switching to branch '{}'...", branch_name));
+                            match switch_branch(repo, &branch_name, false) {
+                                Ok(()) => {
+                                    crate::status_log::log_success(&format!("Switched to branch '{}'", branch_name));
+                                    // Trigger immediate refresh by clicking the refresh button
+                                    let btn = refresh_btn.clone();
+                                    let branch_btn_clone = branch_btn.clone();
+                                    let commit_btn_clone = commit_btn.clone();
+                                    let stage_all_btn_clone = stage_all_btn.clone();
+                                    let refresh_btn_clone = refresh_btn.clone();
+                                    
+                                    glib::idle_add_local_once(move || {
+                                        btn.emit_clicked();
+                                        // Re-enable UI elements after refresh
+                                        glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
+                                            branch_btn_clone.set_sensitive(true);
+                                            commit_btn_clone.set_sensitive(true);
+                                            stage_all_btn_clone.set_sensitive(true);
+                                            refresh_btn_clone.set_sensitive(true);
+                                        });
+                                    });
+                                }
+                                Err(e) => {
+                                    let error_msg = format!("Failed to switch branch: {}", e);
+                                    crate::status_log::log_error(&error_msg);
+                                    // Re-enable UI elements on error
+                                    branch_btn.set_sensitive(true);
+                                    commit_btn.set_sensitive(true);
+                                    stage_all_btn.set_sensitive(true);
+                                    refresh_btn.set_sensitive(true);
+                                }
+                            }
+                        }
+                    });
+                    
+                    new_action_group.add_action(&action);
+                    has_local = true;
+                }
+                if has_local {
+                    menu.append_section(Some("Local Branches"), &local_section);
+                }
+
+                // Add remote branches section
+                let remote_section = gtk4::gio::Menu::new();
+                let mut has_remote = false;
+                for branch_info in branches.iter().filter(|b| b.is_remote) {
+                    let action_name = format!("switch-remote.{}", branch_info.name.replace('/', "-"));
+                    remote_section.append(Some(&branch_info.name), Some(&format!("branch.{}", action_name)));
+                    
+                    // Create action for this remote branch
+                    let action = gtk4::gio::SimpleAction::new(&action_name, None);
+                    let branch_name = branch_info.name.clone();
+                    let repo_path_for_action = repo_path_rc.clone();
+                    let refresh_btn = refresh_button_clone.clone();
+                    let branch_btn = branch_button_for_actions.clone();
+                    let commit_btn = commit_button_for_actions.clone();
+                    let stage_all_btn = stage_all_button_for_actions.clone();
+                    
+                    action.connect_activate(move |_, _| {
+                        if let Some(repo) = repo_path_for_action.borrow().as_ref() {
+                            // Disable UI elements during branch switch
+                            branch_btn.set_sensitive(false);
+                            commit_btn.set_sensitive(false);
+                            stage_all_btn.set_sensitive(false);
+                            refresh_btn.set_sensitive(false);
+                            
+                            // Extract local name for better messaging
+                            let local_name = if let Some(pos) = branch_name.find('/') {
+                                &branch_name[pos + 1..]
+                            } else {
+                                branch_name.as_str()
+                            };
+                            
+                            crate::status_log::log_info(&format!("Switching to branch '{}'...", local_name));
+                            match switch_branch(repo, &branch_name, true) {
+                                Ok(()) => {
+                                    crate::status_log::log_success(&format!("Switched to branch '{}'", local_name));
+                                    // Trigger immediate refresh by clicking the refresh button
+                                    let btn = refresh_btn.clone();
+                                    let branch_btn_clone = branch_btn.clone();
+                                    let commit_btn_clone = commit_btn.clone();
+                                    let stage_all_btn_clone = stage_all_btn.clone();
+                                    let refresh_btn_clone = refresh_btn.clone();
+                                    
+                                    glib::idle_add_local_once(move || {
+                                        btn.emit_clicked();
+                                        // Re-enable UI elements after refresh
+                                        glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
+                                            branch_btn_clone.set_sensitive(true);
+                                            commit_btn_clone.set_sensitive(true);
+                                            stage_all_btn_clone.set_sensitive(true);
+                                            refresh_btn_clone.set_sensitive(true);
+                                        });
+                                    });
+                                }
+                                Err(e) => {
+                                    let error_msg = format!("Failed to switch branch: {}", e);
+                                    crate::status_log::log_error(&error_msg);
+                                    // Re-enable UI elements on error
+                                    branch_btn.set_sensitive(true);
+                                    commit_btn.set_sensitive(true);
+                                    stage_all_btn.set_sensitive(true);
+                                    refresh_btn.set_sensitive(true);
+                                }
+                            }
+                        }
+                    });
+                    
+                    new_action_group.add_action(&action);
+                    has_remote = true;
+                }
+                if has_remote {
+                    menu.append_section(Some("Remote Branches"), &remote_section);
+                }
+
+                // Update the action group
+                *action_group_rc.borrow_mut() = new_action_group;
+                branch_button.insert_action_group("branch", Some(&*action_group_rc.borrow()));
+                branch_button.set_menu_model(Some(&menu));
 
                 // Get changes
                 let changes = get_git_status(&repo);
@@ -1266,7 +1550,8 @@ pub fn create_git_diff_panel(
                 }
             } else {
                 *repo_path_rc.borrow_mut() = None;
-                branch_label.set_text("Not a git repository");
+                branch_button.set_label("Not a git repository");
+                branch_button.set_menu_model(Option::<&gtk4::gio::Menu>::None);
             }
         })
     };
