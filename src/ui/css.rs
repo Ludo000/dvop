@@ -638,41 +638,44 @@ fn get_search_styles() -> &'static str {
     "
     /* === SEARCH UI STYLES === */
     
-    /* Case sensitivity toggle button */
+    /* Case sensitivity toggle button - link style */
     .case-toggle-button {
         min-width: 28px;
         min-height: 24px;
         padding: 2px 6px;
-        border-radius: 3px;
-        font-weight: 600;
+        border-radius: 4px;
+        font-weight: 400;
         font-size: 0.85em;
-        background-color: alpha(@theme_bg_color, 0.9);
-        border: 1px solid alpha(@theme_fg_color, 0.2);
-        color: alpha(@theme_fg_color, 0.6);
-        transition: all 0.2s ease;
+        background-color: @theme_base_color;
+        background-image: none;
+        border: none;
+        box-shadow: none;
+        color: alpha(@theme_fg_color, 0.5);
+        transition: color 0.15s ease;
     }
     
     /* Case toggle button hover */
     .case-toggle-button:hover {
-        background-color: alpha(@theme_fg_color, 0.08);
-        border-color: alpha(@theme_fg_color, 0.3);
-        color: @theme_fg_color;
+        background-color: @theme_base_color;
+        background-image: none;
+        text-decoration: underline;
+        color: alpha(@theme_fg_color, 0.8);
     }
     
     /* Case toggle button active/checked state - clearly visible */
     .case-toggle-button:checked {
-        background-color: @theme_selected_bg_color;
-        border-color: @theme_selected_bg_color;
-        color: @theme_selected_fg_color;
-        font-weight: 700;
-        box-shadow: 0 1px 3px alpha(@theme_selected_bg_color, 0.4);
+        background-color: @theme_base_color;
+        background-image: none;
+        color: @theme_selected_bg_color;
+        font-weight: 500;
     }
     
     /* Case toggle button checked hover */
     .case-toggle-button:checked:hover {
-        background-color: shade(@theme_selected_bg_color, 1.1);
-        border-color: shade(@theme_selected_bg_color, 1.1);
-        box-shadow: 0 2px 4px alpha(@theme_selected_bg_color, 0.5);
+        background-color: @theme_base_color;
+        background-image: none;
+        text-decoration: underline;
+        color: @theme_selected_bg_color;
     }
     "
 }
