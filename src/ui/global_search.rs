@@ -1001,12 +1001,6 @@ pub fn show_global_search_dialog(
     controls.set_margin_bottom(8);
     controls.append(&overlay);
     
-    let controls_right = GtkBox::new(Orientation::Vertical, 4);
-    let search_btn = Button::with_label("Search");
-    search_btn.add_css_class("suggested-action");
-    controls_right.append(&search_btn);
-    controls.append(&controls_right);
-    
     // Replace controls row
     let replace_controls = GtkBox::new(Orientation::Horizontal, 8);
     replace_controls.set_margin_bottom(8);
@@ -1025,6 +1019,9 @@ pub fn show_global_search_dialog(
     // Status label
     let status = Label::new(Some(""));
     status.set_xalign(0.0);
+    status.set_wrap(true);
+    status.set_wrap_mode(pango::WrapMode::WordChar);
+    status.set_max_width_chars(30);
     status.add_css_class("dim-label");
     status.set_margin_bottom(4);
 
@@ -1377,17 +1374,12 @@ pub fn show_global_search_dialog(
                                 *result_count_c.borrow_mut() += 1;
                                 let count = *result_count_c.borrow();
                                 if count >= max_results {
-                                    status_c.set_text(&format!("Showing first {} results (more available)", max_results));
+                                    status_c.set_text(&format!("{} results (capped)", max_results));
                                 } else {
                                     status_c.set_text(&format!("Found {} result{}", count, if count == 1 { "" } else { "s" }));
                                 }
                                 
-                                // Select the first result automatically
-                                if count == 1 {
-                                    results_list_c.select_row(Some(&row));
-                                    // Activate the row to open the file and jump to the occurrence
-                                    row.activate();
-                                }
+                                // Don't auto-select/activate to avoid stealing focus from search input
                                 
                                 processed += 1;
                             }
@@ -1415,7 +1407,7 @@ pub fn show_global_search_dialog(
                     if count == 0 {
                         status_c.set_text("No results found");
                     } else if count >= max_results {
-                        status_c.set_text(&format!("Showing first {} results (search stopped at limit)", max_results));
+                        status_c.set_text(&format!("{} results (limit reached)", max_results));
                     } else {
                         status_c.set_text(&format!("Search complete - {} result{} found", count, if count == 1 { "" } else { "s" }));
                     }
@@ -1427,15 +1419,38 @@ pub fn show_global_search_dialog(
         })
     };
 
-    let cb_clone_btn = start_search.clone();
-    let buffer_weak = search_buffer.downgrade();
+    // Debounced search on text change
+    let search_counter: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
+    let cb_clone_text_change = start_search.clone();
     let case_toggle_weak = case_toggle.downgrade();
     let whole_word_toggle_weak = whole_word_toggle.downgrade();
-    search_btn.connect_clicked(move |_| {
-        if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (buffer_weak.upgrade(), case_toggle_weak.upgrade(), whole_word_toggle_weak.upgrade()) {
-            let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string();
-            (cb_clone_btn)(text, case_toggle.is_active(), whole_word_toggle.is_active());
+    let counter_clone = search_counter.clone();
+    
+    search_buffer.connect_changed(move |buffer| {
+        // Increment counter to invalidate previous timeouts
+        *counter_clone.borrow_mut() += 1;
+        let current_count = *counter_clone.borrow();
+        
+        let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string();
+        if text.trim().is_empty() {
+            return;
         }
+        
+        let cb = cb_clone_text_change.clone();
+        let case_toggle_weak_inner = case_toggle_weak.clone();
+        let whole_word_toggle_weak_inner = whole_word_toggle_weak.clone();
+        let counter_check = counter_clone.clone();
+        
+        // Set new timeout with 500ms delay
+        glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
+            // Only execute if counter hasn't changed (no new keystrokes)
+            if *counter_check.borrow() == current_count {
+                if let (Some(case_toggle), Some(whole_word_toggle)) = (case_toggle_weak_inner.upgrade(), whole_word_toggle_weak_inner.upgrade()) {
+                    (cb)(text.clone(), case_toggle.is_active(), whole_word_toggle.is_active());
+                }
+            }
+            glib::ControlFlow::Break
+        });
     });
     
     // Trigger search when toggle buttons are clicked
@@ -1465,19 +1480,21 @@ pub fn show_global_search_dialog(
         }
     });
     
-    // Add keyboard handling to TextView: Enter to search, Shift+Enter for line break
+    // Add keyboard handling to TextView: Enter to search immediately, Shift+Enter for line break
     let key_controller = EventControllerKey::new();
     let cb_clone_enter = start_search.clone();
     let buffer_weak_key = search_buffer.downgrade();
     let case_toggle_weak_key = case_toggle.downgrade();
     let whole_word_toggle_weak_key = whole_word_toggle.downgrade();
+    let counter_for_enter = search_counter.clone();
     key_controller.connect_key_pressed(move |_controller, key, _code, modifier| {
         if key == gdk::Key::Return || key == gdk::Key::KP_Enter {
             if modifier.contains(gdk::ModifierType::SHIFT_MASK) {
                 // Shift+Enter: allow default behavior (insert line break)
                 glib::Propagation::Proceed
             } else {
-                // Enter: trigger search
+                // Enter: increment counter to cancel pending timeouts and trigger search immediately
+                *counter_for_enter.borrow_mut() += 1;
                 if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (buffer_weak_key.upgrade(), case_toggle_weak_key.upgrade(), whole_word_toggle_weak_key.upgrade()) {
                     let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string();
                     (cb_clone_enter)(text, case_toggle.is_active(), whole_word_toggle.is_active());
@@ -1803,7 +1820,6 @@ pub fn create_global_search_panel(
     let case_toggle = panel.case_toggle();
     let whole_word_toggle = panel.whole_word_toggle();
     let buttons_box = panel.buttons_box();
-    let search_btn = panel.search_btn();
     let replace_btn = panel.replace_btn();
     let replace_all_btn = panel.replace_all_btn();
     let status = panel.status_label();
@@ -2177,17 +2193,12 @@ pub fn create_global_search_panel(
                                 *result_count_c.borrow_mut() += 1;
                                 let count = *result_count_c.borrow();
                                 if count >= max_results {
-                                    status_c.set_text(&format!("Showing first {} results (more available)", max_results));
+                                    status_c.set_text(&format!("{} results (capped)", max_results));
                                 } else {
                                     status_c.set_text(&format!("Found {} result{}", count, if count == 1 { "" } else { "s" }));
                                 }
                                 
-                                // Select the first result automatically
-                                if count == 1 {
-                                    results_list_c.select_row(Some(&row));
-                                    // Activate the row to open the file and jump to the occurrence
-                                    row.activate();
-                                }
+                                // Don't auto-select/activate to avoid stealing focus from search input
                                 
                                 processed += 1;
                             }
@@ -2213,7 +2224,7 @@ pub fn create_global_search_panel(
                     if count == 0 {
                         status_c.set_text("No results found");
                     } else if count >= max_results {
-                        status_c.set_text(&format!("Showing first {} results (search stopped at limit)", max_results));
+                        status_c.set_text(&format!("{} results (limit reached)", max_results));
                     } else {
                         status_c.set_text(&format!("Search complete - {} result{} found", count, if count == 1 { "" } else { "s" }));
                     }
@@ -2225,15 +2236,38 @@ pub fn create_global_search_panel(
         }
     };
 
-    let cb_clone_btn = start_search.clone();
-    let buffer_weak = search_buffer.downgrade();
+    // Debounced search on text change
+    let search_counter: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
+    let cb_clone_text_change = start_search.clone();
     let case_toggle_weak = case_toggle.downgrade();
     let whole_word_toggle_weak = whole_word_toggle.downgrade();
-    search_btn.connect_clicked(move |_| {
-        if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (buffer_weak.upgrade(), case_toggle_weak.upgrade(), whole_word_toggle_weak.upgrade()) {
-            let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string();
-            (cb_clone_btn)(text, case_toggle.is_active(), whole_word_toggle.is_active());
+    let counter_clone = search_counter.clone();
+    
+    search_buffer.connect_changed(move |buffer| {
+        // Increment counter to invalidate previous timeouts
+        *counter_clone.borrow_mut() += 1;
+        let current_count = *counter_clone.borrow();
+        
+        let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string();
+        if text.trim().is_empty() {
+            return;
         }
+        
+        let cb = cb_clone_text_change.clone();
+        let case_toggle_weak_inner = case_toggle_weak.clone();
+        let whole_word_toggle_weak_inner = whole_word_toggle_weak.clone();
+        let counter_check = counter_clone.clone();
+        
+        // Set new timeout with 500ms delay
+        glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
+            // Only execute if counter hasn't changed (no new keystrokes)
+            if *counter_check.borrow() == current_count {
+                if let (Some(case_toggle), Some(whole_word_toggle)) = (case_toggle_weak_inner.upgrade(), whole_word_toggle_weak_inner.upgrade()) {
+                    (cb)(text.clone(), case_toggle.is_active(), whole_word_toggle.is_active());
+                }
+            }
+            glib::ControlFlow::Break
+        });
     });
     
     // Trigger search when toggle buttons are clicked
@@ -2263,19 +2297,21 @@ pub fn create_global_search_panel(
         }
     });
     
-    // Add keyboard handling to TextView: Enter to search, Shift+Enter for line break
+    // Add keyboard handling to TextView: Enter to search immediately, Shift+Enter for line break
     let key_controller = EventControllerKey::new();
     let cb_clone_enter = start_search.clone();
     let buffer_weak_key = search_buffer.downgrade();
     let case_toggle_weak_key = case_toggle.downgrade();
     let whole_word_toggle_weak_key = whole_word_toggle.downgrade();
+    let counter_for_enter = search_counter.clone();
     key_controller.connect_key_pressed(move |_controller, key, _code, modifier| {
         if key == gdk::Key::Return || key == gdk::Key::KP_Enter {
             if modifier.contains(gdk::ModifierType::SHIFT_MASK) {
                 // Shift+Enter: allow default behavior (insert line break)
                 glib::Propagation::Proceed
             } else {
-                // Enter: trigger search
+                // Enter: increment counter to cancel pending timeouts and trigger search immediately
+                *counter_for_enter.borrow_mut() += 1;
                 if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (buffer_weak_key.upgrade(), case_toggle_weak_key.upgrade(), whole_word_toggle_weak_key.upgrade()) {
                     let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).to_string();
                     (cb_clone_enter)(text, case_toggle.is_active(), whole_word_toggle.is_active());

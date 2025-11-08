@@ -21,8 +21,6 @@ mod imp {
         #[template_child]
         pub buttons_box: TemplateChild<GtkBox>,
         #[template_child]
-        pub search_btn: TemplateChild<Button>,
-        #[template_child]
         pub replace_btn: TemplateChild<Button>,
         #[template_child]
         pub replace_all_btn: TemplateChild<Button>,
@@ -83,10 +81,6 @@ impl SearchPanel {
 
     pub fn buttons_box(&self) -> GtkBox {
         self.imp().buttons_box.get()
-    }
-
-    pub fn search_btn(&self) -> Button {
-        self.imp().search_btn.get()
     }
 
     pub fn replace_btn(&self) -> Button {
