@@ -1,7 +1,7 @@
 // Template-based git diff panel widget
 
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, CompositeTemplate, Box as GtkBox, ListBox, Button, Label, ScrolledWindow};
+use gtk4::{glib, CompositeTemplate, Box as GtkBox, ListBox, Button, MenuButton, ScrolledWindow};
 
 mod imp {
     use super::*;
@@ -10,7 +10,7 @@ mod imp {
     #[template(resource = "/com/example/Dvop/git_diff_panel.ui")]
     pub struct GitDiffPanel {
         #[template_child]
-        pub branch_label: TemplateChild<Label>,
+        pub branch_button: TemplateChild<MenuButton>,
         #[template_child]
         pub refresh_button: TemplateChild<Button>,
         #[template_child]
@@ -59,8 +59,8 @@ impl GitDiffPanel {
         glib::Object::builder().build()
     }
 
-    pub fn branch_label(&self) -> Label {
-        self.imp().branch_label.get()
+    pub fn branch_button(&self) -> MenuButton {
+        self.imp().branch_button.get()
     }
 
     pub fn refresh_button(&self) -> Button {
