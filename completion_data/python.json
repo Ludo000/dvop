@@ -3,116 +3,151 @@
   "description": "Python programming language completion data",
   "keywords": [
     {
-      "keyword": "def",
-      "type": "keyword",
-      "description": "def - Defines a function. Functions encapsulate reusable code blocks that can accept parameters and return values.",
-      "example": "def greet(name): return f'Hello {name}'",
-      "category": "function_declaration"
+      "keyword": "AttributeError",
+      "type": "exception",
+      "description": "AttributeError - Exception raised when attribute reference or assignment fails.",
+      "example": "try: obj.nonexistent except AttributeError: handle_missing_attr()",
+      "category": "exceptions"
     },
     {
-      "keyword": "class",
-      "type": "keyword", 
-      "description": "class - Defines a class for object-oriented programming. Classes are blueprints for creating objects with attributes and methods.",
-      "example": "class Person: def __init__(self, name): self.name = name",
-      "category": "class_declaration"
+      "keyword": "Exception",
+      "type": "exception",
+      "description": "Exception - Base class for all built-in exceptions except system-exiting exceptions.",
+      "example": "try: risky_code() except Exception as e: log_error(e)",
+      "category": "exceptions"
     },
     {
-      "keyword": "if",
-      "type": "keyword",
-      "description": "if - Conditional statement that executes code based on a boolean condition. The foundation of decision-making in programs.",
-      "example": "if x > 0: print('positive')",
-      "category": "control_flow"
+      "keyword": "False",
+      "type": "constant",
+      "description": "False - Boolean constant representing logical falsehood. One of Python's built-in constants.",
+      "example": "is_valid = False; if condition is False: pass",
+      "category": "constants"
     },
     {
-      "keyword": "else",
-      "type": "keyword",
-      "description": "else - Alternative execution path when the if condition evaluates to False. Handles the 'otherwise' case.",
-      "example": "if x > 0: pass else: print('not positive')",
-      "category": "control_flow"
+      "keyword": "FileNotFoundError",
+      "type": "exception",
+      "description": "FileNotFoundError - Exception raised when file or directory is requested but doesn't exist.",
+      "example": "try: open('missing.txt') except FileNotFoundError: create_file()",
+      "category": "exceptions"
     },
     {
-      "keyword": "elif",
-      "type": "keyword",
-      "description": "elif - Short for 'else if', allows chaining multiple conditions in sequence. More efficient than nested if statements.",
-      "example": "if x > 0: pass elif x < 0: print('negative')",
-      "category": "control_flow"
+      "keyword": "ImportError",
+      "type": "exception",
+      "description": "ImportError - Exception raised when import statement cannot find module or name.",
+      "example": "try: import missing_module except ImportError: use_fallback()",
+      "category": "exceptions"
     },
     {
-      "keyword": "for",
-      "type": "keyword",
-      "description": "for - Iterates over sequences like lists, tuples, strings, or any iterable object. Python's primary looping construct.",
-      "example": "for item in my_list: print(item)",
-      "category": "control_flow"
+      "keyword": "IndexError",
+      "type": "exception",
+      "description": "IndexError - Exception raised when sequence index is out of range.",
+      "example": "try: item = my_list[index] except IndexError: handle_bad_index()",
+      "category": "exceptions"
     },
     {
-      "keyword": "while",
-      "type": "keyword",
-      "description": "while - Repeats code while a condition remains True. Use when the number of iterations is unknown beforehand.",
-      "example": "while x < 10: x += 1",
-      "category": "control_flow"
+      "keyword": "KeyError",
+      "type": "exception",
+      "description": "KeyError - Exception raised when dictionary key is not found.",
+      "example": "try: value = my_dict[key] except KeyError: handle_missing_key()",
+      "category": "exceptions"
     },
     {
-      "keyword": "return",
-      "type": "keyword",
-      "description": "return - Returns a value from a function and immediately exits the function execution.",
-      "example": "return x * 2",
-      "category": "function_control"
+      "keyword": "KeyboardInterrupt",
+      "type": "exception",
+      "description": "KeyboardInterrupt - Exception raised when user hits interrupt key (Ctrl+C).",
+      "example": "try: long_running_task() except KeyboardInterrupt: cleanup()",
+      "category": "exceptions"
     },
     {
-      "keyword": "import",
-      "type": "keyword",
-      "description": "import - Imports entire modules to access their functions, classes, and variables. Essential for code organization.",
-      "example": "import math; import os",
-      "category": "module_system"
+      "keyword": "None",
+      "type": "constant",
+      "description": "None - Represents the absence of a value. Python's null value equivalent.",
+      "example": "result = None; if result is None: handle_empty()",
+      "category": "constants"
     },
     {
-      "keyword": "from",
-      "type": "keyword",
-      "description": "from - Imports specific items from a module, allowing direct access without module prefix.",
-      "example": "from math import sqrt, pi",
-      "category": "module_system"
+      "keyword": "True",
+      "type": "constant",
+      "description": "True - Boolean constant representing logical truth. One of Python's built-in constants.",
+      "example": "is_valid = True; if condition is True: pass",
+      "category": "constants"
     },
     {
-      "keyword": "try",
+      "keyword": "TypeError",
+      "type": "exception",
+      "description": "TypeError - Exception raised when operation is applied to object of inappropriate type.",
+      "example": "try: '2' + 2 except TypeError: handle_type_error()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "ValueError",
+      "type": "exception",
+      "description": "ValueError - Exception raised when function receives argument of right type but inappropriate value.",
+      "example": "if x < 0: raise ValueError('x must be non-negative')",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "__doc__",
+      "type": "special_variable",
+      "description": "__doc__ - Special variable containing module's or function's docstring.",
+      "example": "print(__doc__); print(function.__doc__)",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "__file__",
+      "type": "special_variable",
+      "description": "__file__ - Special variable containing path to current module's file.",
+      "example": "script_dir = os.path.dirname(__file__)",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "__name__",
+      "type": "special_variable",
+      "description": "__name__ - Special variable containing module's name or '__main__' if run as script.",
+      "example": "if __name__ == '__main__': main()",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "abs",
+      "type": "builtin_function",
+      "description": "abs - Returns absolute value of number.",
+      "example": "distance = abs(x - y); magnitude = abs(-5)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "all",
+      "type": "builtin_function",
+      "description": "all - Returns True if all elements of iterable are True.",
+      "example": "all_positive = all(x > 0 for x in numbers)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "and",
+      "type": "operator",
+      "description": "and - Logical AND operator. Returns True if both operands are True.",
+      "example": "if x > 0 and y > 0: print('both positive')",
+      "category": "operators"
+    },
+    {
+      "keyword": "any",
+      "type": "builtin_function",
+      "description": "any - Returns True if any element of iterable is True.",
+      "example": "has_positive = any(x > 0 for x in numbers)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "as",
       "type": "keyword",
-      "description": "try - Begins exception handling block. Code that might raise exceptions should be placed in try blocks.",
-      "example": "try: risky_operation()",
+      "description": "as - Creates an alias for modules, exceptions, or context managers.",
+      "example": "import numpy as np; except ValueError as e:",
+      "category": "alias"
+    },
+    {
+      "keyword": "assert",
+      "type": "keyword",
+      "description": "assert - Tests a condition and raises AssertionError if false. Use for debugging and validation.",
+      "example": "assert x > 0, 'x must be positive'",
       "category": "error_handling"
-    },
-    {
-      "keyword": "except",
-      "type": "keyword", 
-      "description": "except - Handles specific exceptions raised in try block. Allows graceful error handling and recovery.",
-      "example": "except ValueError as e: print(f'Error: {e}')",
-      "category": "error_handling"
-    },
-    {
-      "keyword": "finally",
-      "type": "keyword",
-      "description": "finally - Code that always runs after try/except blocks, regardless of whether exceptions occurred.",
-      "example": "finally: cleanup_resources()",
-      "category": "error_handling"
-    },
-    {
-      "keyword": "with",
-      "type": "keyword",
-      "description": "with - Context manager for automatic resource management. Ensures proper cleanup even if errors occur.",
-      "example": "with open('file.txt') as f: content = f.read()",
-      "category": "context_management"
-    },
-    {
-      "keyword": "lambda",
-      "type": "keyword",
-      "description": "lambda - Creates anonymous functions for short, simple operations. Alternative to defining named functions.",
-      "example": "square = lambda x: x**2",
-      "category": "function_declaration"
-    },
-    {
-      "keyword": "yield",
-      "type": "keyword",
-      "description": "yield - Creates a generator function that can pause and resume execution, producing values on demand.",
-      "example": "def count(): yield 1; yield 2",
-      "category": "generator"
     },
     {
       "keyword": "async",
@@ -129,165 +164,11 @@
       "category": "async"
     },
     {
-      "keyword": "break",
-      "type": "keyword",
-      "description": "break - Immediately exits the current loop, skipping any remaining iterations.",
-      "example": "for i in range(10): if i == 5: break",
-      "category": "control_flow"
-    },
-    {
-      "keyword": "continue",
-      "type": "keyword",
-      "description": "continue - Skips the rest of the current loop iteration and jumps to the next one.",
-      "example": "for i in range(10): if i % 2 == 0: continue",
-      "category": "control_flow"
-    },
-    {
-      "keyword": "pass",
-      "type": "keyword",
-      "description": "pass - A null operation placeholder that does nothing. Use when syntax requires a statement.",
-      "example": "if condition: pass  # TODO: implement later",
-      "category": "control_flow"
-    },
-    {
-      "keyword": "raise",
-      "type": "keyword",
-      "description": "raise - Raises an exception. Use to signal errors or re-raise caught exceptions.",
-      "example": "if x < 0: raise ValueError('x must be positive')",
-      "category": "error_handling"
-    },
-    {
-      "keyword": "assert",
-      "type": "keyword",
-      "description": "assert - Tests a condition and raises AssertionError if false. Use for debugging and validation.",
-      "example": "assert x > 0, 'x must be positive'",
-      "category": "error_handling"
-    },
-    {
-      "keyword": "global",
-      "type": "keyword",
-      "description": "global - Declares that a variable refers to a global variable rather than creating a local one.",
-      "example": "global counter; counter += 1",
-      "category": "scope"
-    },
-    {
-      "keyword": "nonlocal",
-      "type": "keyword",
-      "description": "nonlocal - Declares that a variable refers to a previously bound variable in the nearest enclosing scope.",
-      "example": "def outer(): x = 1; def inner(): nonlocal x; x = 2",
-      "category": "scope"
-    },
-    {
-      "keyword": "del",
-      "type": "keyword",
-      "description": "del - Deletes objects, variables, or removes items from collections.",
-      "example": "del my_list[0]; del variable_name",
-      "category": "memory_management"
-    },
-    {
-      "keyword": "in",
-      "type": "operator",
-      "description": "in - Tests membership in sequences, sets, or dictionaries. Returns True if found.",
-      "example": "if 'key' in my_dict: print('found')",
-      "category": "operators"
-    },
-    {
-      "keyword": "not",
-      "type": "operator",
-      "description": "not - Logical negation operator. Returns the opposite boolean value.",
-      "example": "if not condition: do_something()",
-      "category": "operators"
-    },
-    {
-      "keyword": "and",
-      "type": "operator",
-      "description": "and - Logical AND operator. Returns True if both operands are True.",
-      "example": "if x > 0 and y > 0: print('both positive')",
-      "category": "operators"
-    },
-    {
-      "keyword": "or",
-      "type": "operator",
-      "description": "or - Logical OR operator. Returns True if either operand is True.",
-      "example": "if x == 0 or y == 0: print('at least one is zero')",
-      "category": "operators"
-    },
-    {
-      "keyword": "is",
-      "type": "operator",
-      "description": "is - Identity comparison operator. Tests if two variables refer to the same object.",
-      "example": "if x is None: handle_none_case()",
-      "category": "operators"
-    },
-    {
-      "keyword": "True",
-      "type": "constant",
-      "description": "True - Boolean constant representing logical truth. One of Python's built-in constants.",
-      "example": "is_valid = True; if condition is True: pass",
-      "category": "constants"
-    },
-    {
-      "keyword": "False",
-      "type": "constant",
-      "description": "False - Boolean constant representing logical falsehood. One of Python's built-in constants.",
-      "example": "is_valid = False; if condition is False: pass",
-      "category": "constants"
-    },
-    {
-      "keyword": "None",
-      "type": "constant",
-      "description": "None - Represents the absence of a value. Python's null value equivalent.",
-      "example": "result = None; if result is None: handle_empty()",
-      "category": "constants"
-    },
-    {
-      "keyword": "as",
-      "type": "keyword",
-      "description": "as - Creates an alias for modules, exceptions, or context managers.",
-      "example": "import numpy as np; except ValueError as e:",
-      "category": "alias"
-    },
-    {
-      "keyword": "match",
-      "type": "keyword",
-      "description": "match - Structural pattern matching (Python 3.10+). Switch-case like statement for complex matching.",
-      "example": "match value: case 1: print('one'); case _: print('other')",
-      "category": "control_flow"
-    },
-    {
-      "keyword": "case",
-      "type": "keyword",
-      "description": "case - Pattern branch in match statement. Defines what to match and execute.",
-      "example": "match x: case [1, 2]: print('list with 1,2')",
-      "category": "control_flow"
-    },
-    {
-      "keyword": "str",
-      "type": "builtin_type",
-      "description": "str - Immutable string type for text data. Supports Unicode and many string operations.",
-      "example": "text = str(42); name = 'Hello World'.upper()",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "int",
-      "type": "builtin_type",
-      "description": "int - Integer type for whole numbers. Has unlimited precision in Python 3.",
-      "example": "age = int('25'); large_num = 10**100",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "float",
-      "type": "builtin_type",
-      "description": "float - Floating-point number type for decimal numbers. Uses double precision.",
-      "example": "pi = float('3.14159'); result = 10.5 + 2.3",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "complex",
-      "type": "builtin_type",
-      "description": "complex - Complex number type with real and imaginary parts.",
-      "example": "z = complex(3, 4); z = 3+4j",
-      "category": "builtin_types"
+      "keyword": "bin",
+      "type": "builtin_function",
+      "description": "bin - Returns binary representation of integer as string.",
+      "example": "binary = bin(42)  # '0b101010'",
+      "category": "builtin_functions"
     },
     {
       "keyword": "bool",
@@ -297,38 +178,17 @@
       "category": "builtin_types"
     },
     {
-      "keyword": "list",
-      "type": "builtin_type",
-      "description": "list - Mutable sequence type for ordered collections. Most commonly used container.",
-      "example": "items = list([1, 2, 3]); items = [1, 2, 3]",
-      "category": "builtin_types"
+      "keyword": "break",
+      "type": "keyword",
+      "description": "break - Immediately exits the current loop, skipping any remaining iterations.",
+      "example": "for i in range(10): if i == 5: break",
+      "category": "control_flow"
     },
     {
-      "keyword": "tuple",
+      "keyword": "bytearray",
       "type": "builtin_type",
-      "description": "tuple - Immutable sequence type for ordered collections. Good for fixed data sets.",
-      "example": "coords = tuple((x, y)); point = (10, 20)",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "dict",
-      "type": "builtin_type",
-      "description": "dict - Mutable mapping type for key-value pairs. Hash table implementation.",
-      "example": "data = dict(name='John', age=30); data = {'key': 'value'}",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "set",
-      "type": "builtin_type",
-      "description": "set - Mutable set type for unique unordered collections. Good for membership testing.",
-      "example": "unique = set([1, 2, 2, 3]); unique = {1, 2, 3}",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "frozenset",
-      "type": "builtin_type",
-      "description": "frozenset - Immutable set type. Can be used as dictionary keys unlike regular sets.",
-      "example": "immutable_set = frozenset([1, 2, 3])",
+      "description": "bytearray - Mutable sequence of integers 0-255. Mutable version of bytes.",
+      "example": "data = bytearray(b'Hello'); data[0] = ord('h')",
       "category": "builtin_types"
     },
     {
@@ -339,144 +199,74 @@
       "category": "builtin_types"
     },
     {
-      "keyword": "bytearray",
+      "keyword": "case",
+      "type": "keyword",
+      "description": "case - Pattern branch in match statement. Defines what to match and execute.",
+      "example": "match x: case [1, 2]: print('list with 1,2')",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "chr",
+      "type": "builtin_function",
+      "description": "chr - Returns character from Unicode code point.",
+      "example": "char = chr(65)  # 'A'",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "class",
+      "type": "keyword",
+      "description": "class - Defines a class for object-oriented programming. Classes are blueprints for creating objects with attributes and methods.",
+      "example": "class Person: def __init__(self, name): self.name = name",
+      "category": "class_declaration"
+    },
+    {
+      "keyword": "classmethod",
+      "type": "decorator",
+      "description": "classmethod - Decorator that creates a class method receiving the class as first argument.",
+      "example": "@classmethod def from_string(cls, data): return cls(parse(data))",
+      "category": "decorators"
+    },
+    {
+      "keyword": "cls",
+      "type": "convention",
+      "description": "cls - Conventional first parameter name for class methods, referring to the class.",
+      "example": "@classmethod def create(cls, args): return cls(args)",
+      "category": "conventions"
+    },
+    {
+      "keyword": "compile",
+      "type": "builtin_function",
+      "description": "compile - Compiles source code into code object for exec() or eval().",
+      "example": "code = compile('x + y', '<string>', 'eval'); result = eval(code)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "complex",
       "type": "builtin_type",
-      "description": "bytearray - Mutable sequence of integers 0-255. Mutable version of bytes.",
-      "example": "data = bytearray(b'Hello'); data[0] = ord('h')",
+      "description": "complex - Complex number type with real and imaginary parts.",
+      "example": "z = complex(3, 4); z = 3+4j",
       "category": "builtin_types"
     },
     {
-      "keyword": "range",
-      "type": "builtin_type",
-      "description": "range - Immutable sequence of numbers. Efficient for loops and numeric sequences.",
-      "example": "for i in range(10): pass; numbers = list(range(1, 6))",
-      "category": "builtin_types"
+      "keyword": "continue",
+      "type": "keyword",
+      "description": "continue - Skips the rest of the current loop iteration and jumps to the next one.",
+      "example": "for i in range(10): if i % 2 == 0: continue",
+      "category": "control_flow"
     },
     {
-      "keyword": "enumerate",
-      "type": "builtin_function",
-      "description": "enumerate - Returns enumerated object with index-value pairs from iterable.",
-      "example": "for i, item in enumerate(my_list): print(f'{i}: {item}')",
-      "category": "builtin_functions"
+      "keyword": "def",
+      "type": "keyword",
+      "description": "def - Defines a function. Functions encapsulate reusable code blocks that can accept parameters and return values.",
+      "example": "def greet(name): return f'Hello {name}'",
+      "category": "function_declaration"
     },
     {
-      "keyword": "zip",
-      "type": "builtin_function",
-      "description": "zip - Combines multiple iterables element-wise into tuples.",
-      "example": "for name, age in zip(names, ages): print(f'{name}: {age}')",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "map",
-      "type": "builtin_function",
-      "description": "map - Applies function to every item in iterable and returns iterator.",
-      "example": "squares = list(map(lambda x: x**2, [1, 2, 3, 4]))",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "filter",
-      "type": "builtin_function",
-      "description": "filter - Filters iterable elements for which function returns True.",
-      "example": "evens = list(filter(lambda x: x % 2 == 0, numbers))",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "reduce",
-      "type": "builtin_function",
-      "description": "reduce - Applies function cumulatively to items to reduce to single value. (from functools)",
-      "example": "from functools import reduce; sum_all = reduce(lambda x, y: x + y, numbers)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "len",
-      "type": "builtin_function",
-      "description": "len - Returns the length (number of items) of an object.",
-      "example": "length = len(my_list); size = len('Hello World')",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "max",
-      "type": "builtin_function",
-      "description": "max - Returns the largest item in iterable or among arguments.",
-      "example": "largest = max(numbers); biggest = max(a, b, c)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "min",
-      "type": "builtin_function",
-      "description": "min - Returns the smallest item in iterable or among arguments.",
-      "example": "smallest = min(numbers); lowest = min(a, b, c)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "sum",
-      "type": "builtin_function",
-      "description": "sum - Returns sum of iterable's numeric items, optionally with start value.",
-      "example": "total = sum(numbers); total = sum(numbers, start=10)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "sorted",
-      "type": "builtin_function",
-      "description": "sorted - Returns new sorted list from iterable items.",
-      "example": "sorted_items = sorted(my_list); sorted_names = sorted(names, key=str.lower)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "reversed",
-      "type": "builtin_function",
-      "description": "reversed - Returns reverse iterator over sequence.",
-      "example": "for item in reversed(my_list): print(item)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "any",
-      "type": "builtin_function",
-      "description": "any - Returns True if any element of iterable is True.",
-      "example": "has_positive = any(x > 0 for x in numbers)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "all",
-      "type": "builtin_function",
-      "description": "all - Returns True if all elements of iterable are True.",
-      "example": "all_positive = all(x > 0 for x in numbers)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "isinstance",
-      "type": "builtin_function",
-      "description": "isinstance - Checks if object is instance of specified class or classes.",
-      "example": "if isinstance(value, (int, float)): process_number(value)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "issubclass",
-      "type": "builtin_function",
-      "description": "issubclass - Checks if class is subclass of specified class or classes.",
-      "example": "if issubclass(MyClass, BaseClass): process_subclass()",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "hasattr",
-      "type": "builtin_function",
-      "description": "hasattr - Checks if object has specified attribute.",
-      "example": "if hasattr(obj, 'method_name'): obj.method_name()",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "getattr",
-      "type": "builtin_function",
-      "description": "getattr - Gets attribute value from object, with optional default.",
-      "example": "value = getattr(obj, 'attr', 'default_value')",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "setattr",
-      "type": "builtin_function",
-      "description": "setattr - Sets attribute value on object.",
-      "example": "setattr(obj, 'new_attr', 'value')",
-      "category": "builtin_functions"
+      "keyword": "del",
+      "type": "keyword",
+      "description": "del - Deletes objects, variables, or removes items from collections.",
+      "example": "del my_list[0]; del variable_name",
+      "category": "memory_management"
     },
     {
       "keyword": "delattr",
@@ -486,52 +276,17 @@
       "category": "builtin_functions"
     },
     {
-      "keyword": "type",
-      "type": "builtin_function",
-      "description": "type - Returns type of object or creates new type with name, bases, and dict.",
-      "example": "obj_type = type(my_object); MyClass = type('MyClass', (), {})",
-      "category": "builtin_functions"
+      "keyword": "dict",
+      "type": "builtin_type",
+      "description": "dict - Mutable mapping type for key-value pairs. Hash table implementation.",
+      "example": "data = dict(name='John', age=30); data = {'key': 'value'}",
+      "category": "builtin_types"
     },
     {
-      "keyword": "id",
+      "keyword": "dir",
       "type": "builtin_function",
-      "description": "id - Returns unique identifier of object (memory address in CPython).",
-      "example": "object_id = id(my_object)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "hash",
-      "type": "builtin_function",
-      "description": "hash - Returns hash value of hashable object.",
-      "example": "key_hash = hash('my_string'); dict_key_hash = hash((1, 2, 3))",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "repr",
-      "type": "builtin_function",
-      "description": "repr - Returns string representation of object for developers.",
-      "example": "debug_info = repr(my_object)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "abs",
-      "type": "builtin_function",
-      "description": "abs - Returns absolute value of number.",
-      "example": "distance = abs(x - y); magnitude = abs(-5)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "round",
-      "type": "builtin_function",
-      "description": "round - Rounds number to specified decimal places.",
-      "example": "rounded = round(3.14159, 2); integer = round(3.7)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "pow",
-      "type": "builtin_function",
-      "description": "pow - Returns x to power y, optionally modulo z.",
-      "example": "result = pow(2, 3); modular = pow(2, 3, 5)",
+      "description": "dir - Returns list of valid attributes for object.",
+      "example": "methods = dir(my_object); builtins = dir()",
       "category": "builtin_functions"
     },
     {
@@ -542,94 +297,24 @@
       "category": "builtin_functions"
     },
     {
-      "keyword": "bin",
-      "type": "builtin_function",
-      "description": "bin - Returns binary representation of integer as string.",
-      "example": "binary = bin(42)  # '0b101010'",
-      "category": "builtin_functions"
+      "keyword": "elif",
+      "type": "keyword",
+      "description": "elif - Short for 'else if', allows chaining multiple conditions in sequence. More efficient than nested if statements.",
+      "example": "if x > 0: pass elif x < 0: print('negative')",
+      "category": "control_flow"
     },
     {
-      "keyword": "oct",
-      "type": "builtin_function",
-      "description": "oct - Returns octal representation of integer as string.",
-      "example": "octal = oct(42)  # '0o52'",
-      "category": "builtin_functions"
+      "keyword": "else",
+      "type": "keyword",
+      "description": "else - Alternative execution path when the if condition evaluates to False. Handles the 'otherwise' case.",
+      "example": "if x > 0: pass else: print('not positive')",
+      "category": "control_flow"
     },
     {
-      "keyword": "hex",
+      "keyword": "enumerate",
       "type": "builtin_function",
-      "description": "hex - Returns hexadecimal representation of integer as string.",
-      "example": "hexadecimal = hex(42)  # '0x2a'",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "ord",
-      "type": "builtin_function",
-      "description": "ord - Returns Unicode code point of character.",
-      "example": "code = ord('A')  # 65",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "chr",
-      "type": "builtin_function",
-      "description": "chr - Returns character from Unicode code point.",
-      "example": "char = chr(65)  # 'A'",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "open",
-      "type": "builtin_function",
-      "description": "open - Opens file and returns file object. Essential for file I/O operations.",
-      "example": "with open('file.txt', 'r') as f: content = f.read()",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "print",
-      "type": "builtin_function",
-      "description": "print - Outputs objects to text stream, separated by sep, followed by end.",
-      "example": "print('Hello', 'World', sep='-', end='!\\n')",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "input",
-      "type": "builtin_function",
-      "description": "input - Reads line from input stream, converts to string (minus trailing newline).",
-      "example": "name = input('Enter your name: ')",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "format",
-      "type": "builtin_function",
-      "description": "format - Formats value using format specification.",
-      "example": "formatted = format(3.14159, '.2f')  # '3.14'",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "vars",
-      "type": "builtin_function",
-      "description": "vars - Returns __dict__ attribute of object or local variables.",
-      "example": "attributes = vars(my_object); locals_dict = vars()",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "dir",
-      "type": "builtin_function",
-      "description": "dir - Returns list of valid attributes for object.",
-      "example": "methods = dir(my_object); builtins = dir()",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "help",
-      "type": "builtin_function",
-      "description": "help - Invokes built-in help system for object or interactive help.",
-      "example": "help(len); help()  # interactive help",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "exec",
-      "type": "builtin_function",
-      "description": "exec - Executes Python code dynamically from string or code object.",
-      "example": "exec('x = 1 + 1'); exec(compile('print(x)', '<string>', 'exec'))",
+      "description": "enumerate - Returns enumerated object with index-value pairs from iterable.",
+      "example": "for i, item in enumerate(my_list): print(f'{i}: {item}')",
       "category": "builtin_functions"
     },
     {
@@ -640,157 +325,17 @@
       "category": "builtin_functions"
     },
     {
-      "keyword": "compile",
+      "keyword": "except",
+      "type": "keyword",
+      "description": "except - Handles specific exceptions raised in try block. Allows graceful error handling and recovery.",
+      "example": "except ValueError as e: print(f'Error: {e}')",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "exec",
       "type": "builtin_function",
-      "description": "compile - Compiles source code into code object for exec() or eval().",
-      "example": "code = compile('x + y', '<string>', 'eval'); result = eval(code)",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "__name__",
-      "type": "special_variable",
-      "description": "__name__ - Special variable containing module's name or '__main__' if run as script.",
-      "example": "if __name__ == '__main__': main()",
-      "category": "special_variables"
-    },
-    {
-      "keyword": "__file__",
-      "type": "special_variable",
-      "description": "__file__ - Special variable containing path to current module's file.",
-      "example": "script_dir = os.path.dirname(__file__)",
-      "category": "special_variables"
-    },
-    {
-      "keyword": "__doc__",
-      "type": "special_variable",
-      "description": "__doc__ - Special variable containing module's or function's docstring.",
-      "example": "print(__doc__); print(function.__doc__)",
-      "category": "special_variables"
-    },
-    {
-      "keyword": "self",
-      "type": "convention",
-      "description": "self - Conventional first parameter name for instance methods, referring to the instance.",
-      "example": "def method(self, arg): self.attribute = arg",
-      "category": "conventions"
-    },
-    {
-      "keyword": "cls",
-      "type": "convention",
-      "description": "cls - Conventional first parameter name for class methods, referring to the class.",
-      "example": "@classmethod def create(cls, args): return cls(args)",
-      "category": "conventions"
-    },
-    {
-      "keyword": "str",
-      "type": "builtin_type",
-      "description": "str - Immutable string type for text data. Supports Unicode and many string operations.",
-      "example": "text = str(42); name = 'Hello World'.upper()",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "int",
-      "type": "builtin_type",
-      "description": "int - Integer type for whole numbers. Has unlimited precision in Python 3.",
-      "example": "age = int('25'); large_num = 10**100",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "float",
-      "type": "builtin_type",
-      "description": "float - Floating-point number type for decimal numbers. Uses double precision.",
-      "example": "pi = float('3.14159'); result = 10.5 + 2.3",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "complex",
-      "type": "builtin_type",
-      "description": "complex - Complex number type with real and imaginary parts.",
-      "example": "z = complex(3, 4); z = 3+4j",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "bool",
-      "type": "builtin_type",
-      "description": "bool - Boolean type representing True or False. Subclass of int.",
-      "example": "is_valid = bool(1); result = bool('')  # False",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "list",
-      "type": "builtin_type",
-      "description": "list - Mutable sequence type for ordered collections. Most commonly used container.",
-      "example": "items = list([1, 2, 3]); items = [1, 2, 3]",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "tuple",
-      "type": "builtin_type",
-      "description": "tuple - Immutable sequence type for ordered collections. Good for fixed data sets.",
-      "example": "coords = tuple((x, y)); point = (10, 20)",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "dict",
-      "type": "builtin_type",
-      "description": "dict - Mutable mapping type for key-value pairs. Hash table implementation.",
-      "example": "data = dict(name='John', age=30); data = {'key': 'value'}",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "set",
-      "type": "builtin_type",
-      "description": "set - Mutable set type for unique unordered collections. Good for membership testing.",
-      "example": "unique = set([1, 2, 2, 3]); unique = {1, 2, 3}",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "frozenset",
-      "type": "builtin_type",
-      "description": "frozenset - Immutable set type. Can be used as dictionary keys unlike regular sets.",
-      "example": "immutable_set = frozenset([1, 2, 3])",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "bytes",
-      "type": "builtin_type",
-      "description": "bytes - Immutable sequence of integers 0-255. For binary data handling.",
-      "example": "data = bytes([65, 66, 67]); data = b'ABC'",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "bytearray",
-      "type": "builtin_type",
-      "description": "bytearray - Mutable sequence of integers 0-255. Mutable version of bytes.",
-      "example": "data = bytearray(b'Hello'); data[0] = ord('h')",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "range",
-      "type": "builtin_type",
-      "description": "range - Immutable sequence of numbers. Efficient for loops and numeric sequences.",
-      "example": "for i in range(10): pass; numbers = list(range(1, 6))",
-      "category": "builtin_types"
-    },
-    {
-      "keyword": "enumerate",
-      "type": "builtin_function",
-      "description": "enumerate - Returns enumerated object with index-value pairs from iterable.",
-      "example": "for i, item in enumerate(my_list): print(f'{i}: {item}')",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "zip",
-      "type": "builtin_function",
-      "description": "zip - Combines multiple iterables element-wise into tuples.",
-      "example": "for name, age in zip(names, ages): print(f'{name}: {age}')",
-      "category": "builtin_functions"
-    },
-    {
-      "keyword": "map",
-      "type": "builtin_function",
-      "description": "map - Applies function to every item in iterable and returns iterator.",
-      "example": "squares = list(map(lambda x: x**2, [1, 2, 3, 4]))",
+      "description": "exec - Executes Python code dynamically from string or code object.",
+      "example": "exec('x = 1 + 1'); exec(compile('print(x)', '<string>', 'exec'))",
       "category": "builtin_functions"
     },
     {
@@ -801,60 +346,137 @@
       "category": "builtin_functions"
     },
     {
-      "keyword": "len",
+      "keyword": "finally",
+      "type": "keyword",
+      "description": "finally - Code that always runs after try/except blocks, regardless of whether exceptions occurred.",
+      "example": "finally: cleanup_resources()",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "float",
+      "type": "builtin_type",
+      "description": "float - Floating-point number type for decimal numbers. Uses double precision.",
+      "example": "pi = float('3.14159'); result = 10.5 + 2.3",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "for",
+      "type": "keyword",
+      "description": "for - Iterates over sequences like lists, tuples, strings, or any iterable object. Python's primary looping construct.",
+      "example": "for item in my_list: print(item)",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "format",
       "type": "builtin_function",
-      "description": "len - Returns the length (number of items) of an object.",
-      "example": "length = len(my_list); size = len('Hello World')",
+      "description": "format - Formats value using format specification.",
+      "example": "formatted = format(3.14159, '.2f')  # '3.14'",
       "category": "builtin_functions"
     },
     {
-      "keyword": "max",
+      "keyword": "from",
+      "type": "keyword",
+      "description": "from - Imports specific items from a module, allowing direct access without module prefix.",
+      "example": "from math import sqrt, pi",
+      "category": "module_system"
+    },
+    {
+      "keyword": "frozenset",
+      "type": "builtin_type",
+      "description": "frozenset - Immutable set type. Can be used as dictionary keys unlike regular sets.",
+      "example": "immutable_set = frozenset([1, 2, 3])",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "getattr",
       "type": "builtin_function",
-      "description": "max - Returns the largest item in iterable or among arguments.",
-      "example": "largest = max(numbers); biggest = max(a, b, c)",
+      "description": "getattr - Gets attribute value from object, with optional default.",
+      "example": "value = getattr(obj, 'attr', 'default_value')",
       "category": "builtin_functions"
     },
     {
-      "keyword": "min",
+      "keyword": "global",
+      "type": "keyword",
+      "description": "global - Declares that a variable refers to a global variable rather than creating a local one.",
+      "example": "global counter; counter += 1",
+      "category": "scope"
+    },
+    {
+      "keyword": "hasattr",
       "type": "builtin_function",
-      "description": "min - Returns the smallest item in iterable or among arguments.",
-      "example": "smallest = min(numbers); lowest = min(a, b, c)",
+      "description": "hasattr - Checks if object has specified attribute.",
+      "example": "if hasattr(obj, 'method_name'): obj.method_name()",
       "category": "builtin_functions"
     },
     {
-      "keyword": "sum",
+      "keyword": "hash",
       "type": "builtin_function",
-      "description": "sum - Returns sum of iterable's numeric items, optionally with start value.",
-      "example": "total = sum(numbers); total = sum(numbers, start=10)",
+      "description": "hash - Returns hash value of hashable object.",
+      "example": "key_hash = hash('my_string'); dict_key_hash = hash((1, 2, 3))",
       "category": "builtin_functions"
     },
     {
-      "keyword": "sorted",
+      "keyword": "help",
       "type": "builtin_function",
-      "description": "sorted - Returns new sorted list from iterable items.",
-      "example": "sorted_items = sorted(my_list); sorted_names = sorted(names, key=str.lower)",
+      "description": "help - Invokes built-in help system for object or interactive help.",
+      "example": "help(len); help()  # interactive help",
       "category": "builtin_functions"
     },
     {
-      "keyword": "reversed",
+      "keyword": "hex",
       "type": "builtin_function",
-      "description": "reversed - Returns reverse iterator over sequence.",
-      "example": "for item in reversed(my_list): print(item)",
+      "description": "hex - Returns hexadecimal representation of integer as string.",
+      "example": "hexadecimal = hex(42)  # '0x2a'",
       "category": "builtin_functions"
     },
     {
-      "keyword": "any",
+      "keyword": "id",
       "type": "builtin_function",
-      "description": "any - Returns True if any element of iterable is True.",
-      "example": "has_positive = any(x > 0 for x in numbers)",
+      "description": "id - Returns unique identifier of object (memory address in CPython).",
+      "example": "object_id = id(my_object)",
       "category": "builtin_functions"
     },
     {
-      "keyword": "all",
+      "keyword": "if",
+      "type": "keyword",
+      "description": "if - Conditional statement that executes code based on a boolean condition. The foundation of decision-making in programs.",
+      "example": "if x > 0: print('positive')",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "import",
+      "type": "keyword",
+      "description": "import - Imports entire modules to access their functions, classes, and variables. Essential for code organization.",
+      "example": "import math; import os",
+      "category": "module_system"
+    },
+    {
+      "keyword": "in",
+      "type": "operator",
+      "description": "in - Tests membership in sequences, sets, or dictionaries. Returns True if found.",
+      "example": "if 'key' in my_dict: print('found')",
+      "category": "operators"
+    },
+    {
+      "keyword": "input",
       "type": "builtin_function",
-      "description": "all - Returns True if all elements of iterable are True.",
-      "example": "all_positive = all(x > 0 for x in numbers)",
+      "description": "input - Reads line from input stream, converts to string (minus trailing newline).",
+      "example": "name = input('Enter your name: ')",
       "category": "builtin_functions"
+    },
+    {
+      "keyword": "int",
+      "type": "builtin_type",
+      "description": "int - Integer type for whole numbers. Has unlimited precision in Python 3.",
+      "example": "age = int('25'); large_num = 10**100",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "is",
+      "type": "operator",
+      "description": "is - Identity comparison operator. Tests if two variables refer to the same object.",
+      "example": "if x is None: handle_none_case()",
+      "category": "operators"
     },
     {
       "keyword": "isinstance",
@@ -871,45 +493,115 @@
       "category": "builtin_functions"
     },
     {
-      "keyword": "hasattr",
+      "keyword": "lambda",
+      "type": "keyword",
+      "description": "lambda - Creates anonymous functions for short, simple operations. Alternative to defining named functions.",
+      "example": "square = lambda x: x**2",
+      "category": "function_declaration"
+    },
+    {
+      "keyword": "len",
       "type": "builtin_function",
-      "description": "hasattr - Checks if object has specified attribute.",
-      "example": "if hasattr(obj, 'method_name'): obj.method_name()",
+      "description": "len - Returns the length (number of items) of an object.",
+      "example": "length = len(my_list); size = len('Hello World')",
       "category": "builtin_functions"
     },
     {
-      "keyword": "getattr",
+      "keyword": "list",
+      "type": "builtin_type",
+      "description": "list - Mutable sequence type for ordered collections. Most commonly used container.",
+      "example": "items = list([1, 2, 3]); items = [1, 2, 3]",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "map",
       "type": "builtin_function",
-      "description": "getattr - Gets attribute value from object, with optional default.",
-      "example": "value = getattr(obj, 'attr', 'default_value')",
+      "description": "map - Applies function to every item in iterable and returns iterator.",
+      "example": "squares = list(map(lambda x: x**2, [1, 2, 3, 4]))",
       "category": "builtin_functions"
     },
     {
-      "keyword": "setattr",
+      "keyword": "match",
+      "type": "keyword",
+      "description": "match - Structural pattern matching (Python 3.10+). Switch-case like statement for complex matching.",
+      "example": "match value: case 1: print('one'); case _: print('other')",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "max",
       "type": "builtin_function",
-      "description": "setattr - Sets attribute value on object.",
-      "example": "setattr(obj, 'new_attr', 'value')",
+      "description": "max - Returns the largest item in iterable or among arguments.",
+      "example": "largest = max(numbers); biggest = max(a, b, c)",
       "category": "builtin_functions"
     },
     {
-      "keyword": "delattr",
+      "keyword": "min",
       "type": "builtin_function",
-      "description": "delattr - Deletes attribute from object.",
-      "example": "delattr(obj, 'unwanted_attr')",
+      "description": "min - Returns the smallest item in iterable or among arguments.",
+      "example": "smallest = min(numbers); lowest = min(a, b, c)",
       "category": "builtin_functions"
     },
     {
-      "keyword": "type",
+      "keyword": "nonlocal",
+      "type": "keyword",
+      "description": "nonlocal - Declares that a variable refers to a previously bound variable in the nearest enclosing scope.",
+      "example": "def outer(): x = 1; def inner(): nonlocal x; x = 2",
+      "category": "scope"
+    },
+    {
+      "keyword": "not",
+      "type": "operator",
+      "description": "not - Logical negation operator. Returns the opposite boolean value.",
+      "example": "if not condition: do_something()",
+      "category": "operators"
+    },
+    {
+      "keyword": "oct",
       "type": "builtin_function",
-      "description": "type - Returns type of object or creates new type with name, bases, and dict.",
-      "example": "obj_type = type(my_object); MyClass = type('MyClass', (), {})",
+      "description": "oct - Returns octal representation of integer as string.",
+      "example": "octal = oct(42)  # '0o52'",
       "category": "builtin_functions"
     },
     {
-      "keyword": "super",
+      "keyword": "open",
       "type": "builtin_function",
-      "description": "super - Returns proxy object that delegates method calls to parent or sibling class.",
-      "example": "super().__init__(args); super(Child, self).method()",
+      "description": "open - Opens file and returns file object. Essential for file I/O operations.",
+      "example": "with open('file.txt', 'r') as f: content = f.read()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "or",
+      "type": "operator",
+      "description": "or - Logical OR operator. Returns True if either operand is True.",
+      "example": "if x == 0 or y == 0: print('at least one is zero')",
+      "category": "operators"
+    },
+    {
+      "keyword": "ord",
+      "type": "builtin_function",
+      "description": "ord - Returns Unicode code point of character.",
+      "example": "code = ord('A')  # 65",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "pass",
+      "type": "keyword",
+      "description": "pass - A null operation placeholder that does nothing. Use when syntax requires a statement.",
+      "example": "if condition: pass  # TODO: implement later",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "pow",
+      "type": "builtin_function",
+      "description": "pow - Returns x to power y, optionally modulo z.",
+      "example": "result = pow(2, 3); modular = pow(2, 3, 5)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "print",
+      "type": "builtin_function",
+      "description": "print - Outputs objects to text stream, separated by sep, followed by end.",
+      "example": "print('Hello', 'World', sep='-', end='!\\n')",
       "category": "builtin_functions"
     },
     {
@@ -920,6 +612,83 @@
       "category": "decorators"
     },
     {
+      "keyword": "raise",
+      "type": "keyword",
+      "description": "raise - Raises an exception. Use to signal errors or re-raise caught exceptions.",
+      "example": "if x < 0: raise ValueError('x must be positive')",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "range",
+      "type": "builtin_type",
+      "description": "range - Immutable sequence of numbers. Efficient for loops and numeric sequences.",
+      "example": "for i in range(10): pass; numbers = list(range(1, 6))",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "reduce",
+      "type": "builtin_function",
+      "description": "reduce - Applies function cumulatively to items to reduce to single value. (from functools)",
+      "example": "from functools import reduce; sum_all = reduce(lambda x, y: x + y, numbers)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "repr",
+      "type": "builtin_function",
+      "description": "repr - Returns string representation of object for developers.",
+      "example": "debug_info = repr(my_object)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "return",
+      "type": "keyword",
+      "description": "return - Returns a value from a function and immediately exits the function execution.",
+      "example": "return x * 2",
+      "category": "function_control"
+    },
+    {
+      "keyword": "reversed",
+      "type": "builtin_function",
+      "description": "reversed - Returns reverse iterator over sequence.",
+      "example": "for item in reversed(my_list): print(item)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "round",
+      "type": "builtin_function",
+      "description": "round - Rounds number to specified decimal places.",
+      "example": "rounded = round(3.14159, 2); integer = round(3.7)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "self",
+      "type": "convention",
+      "description": "self - Conventional first parameter name for instance methods, referring to the instance.",
+      "example": "def method(self, arg): self.attribute = arg",
+      "category": "conventions"
+    },
+    {
+      "keyword": "set",
+      "type": "builtin_type",
+      "description": "set - Mutable set type for unique unordered collections. Good for membership testing.",
+      "example": "unique = set([1, 2, 2, 3]); unique = {1, 2, 3}",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "setattr",
+      "type": "builtin_function",
+      "description": "setattr - Sets attribute value on object.",
+      "example": "setattr(obj, 'new_attr', 'value')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "sorted",
+      "type": "builtin_function",
+      "description": "sorted - Returns new sorted list from iterable items.",
+      "example": "sorted_items = sorted(my_list); sorted_names = sorted(names, key=str.lower)",
+      "category": "builtin_functions"
+    },
+    {
       "keyword": "staticmethod",
       "type": "decorator",
       "description": "staticmethod - Decorator that creates a static method that doesn't receive instance or class.",
@@ -927,95 +696,81 @@
       "category": "decorators"
     },
     {
-      "keyword": "classmethod",
-      "type": "decorator",
-      "description": "classmethod - Decorator that creates a class method receiving the class as first argument.",
-      "example": "@classmethod def from_string(cls, data): return cls(parse(data))",
-      "category": "decorators"
+      "keyword": "str",
+      "type": "builtin_type",
+      "description": "str - Immutable string type for text data. Supports Unicode and many string operations.",
+      "example": "text = str(42); name = 'Hello World'.upper()",
+      "category": "builtin_types"
     },
     {
-      "keyword": "Exception",
-      "type": "exception",
-      "description": "Exception - Base class for all built-in exceptions except system-exiting exceptions.",
-      "example": "try: risky_code() except Exception as e: log_error(e)",
-      "category": "exceptions"
+      "keyword": "sum",
+      "type": "builtin_function",
+      "description": "sum - Returns sum of iterable's numeric items, optionally with start value.",
+      "example": "total = sum(numbers); total = sum(numbers, start=10)",
+      "category": "builtin_functions"
     },
     {
-      "keyword": "ValueError",
-      "type": "exception",
-      "description": "ValueError - Exception raised when function receives argument of right type but inappropriate value.",
-      "example": "if x < 0: raise ValueError('x must be non-negative')",
-      "category": "exceptions"
+      "keyword": "super",
+      "type": "builtin_function",
+      "description": "super - Returns proxy object that delegates method calls to parent or sibling class.",
+      "example": "super().__init__(args); super(Child, self).method()",
+      "category": "builtin_functions"
     },
     {
-      "keyword": "TypeError",
-      "type": "exception",
-      "description": "TypeError - Exception raised when operation is applied to object of inappropriate type.",
-      "example": "try: '2' + 2 except TypeError: handle_type_error()",
-      "category": "exceptions"
+      "keyword": "try",
+      "type": "keyword",
+      "description": "try - Begins exception handling block. Code that might raise exceptions should be placed in try blocks.",
+      "example": "try: risky_operation()",
+      "category": "error_handling"
     },
     {
-      "keyword": "KeyError",
-      "type": "exception",
-      "description": "KeyError - Exception raised when dictionary key is not found.",
-      "example": "try: value = my_dict[key] except KeyError: handle_missing_key()",
-      "category": "exceptions"
+      "keyword": "tuple",
+      "type": "builtin_type",
+      "description": "tuple - Immutable sequence type for ordered collections. Good for fixed data sets.",
+      "example": "coords = tuple((x, y)); point = (10, 20)",
+      "category": "builtin_types"
     },
     {
-      "keyword": "IndexError",
-      "type": "exception",
-      "description": "IndexError - Exception raised when sequence index is out of range.",
-      "example": "try: item = my_list[index] except IndexError: handle_bad_index()",
-      "category": "exceptions"
+      "keyword": "type",
+      "type": "builtin_function",
+      "description": "type - Returns type of object or creates new type with name, bases, and dict.",
+      "example": "obj_type = type(my_object); MyClass = type('MyClass', (), {})",
+      "category": "builtin_functions"
     },
     {
-      "keyword": "AttributeError",
-      "type": "exception",
-      "description": "AttributeError - Exception raised when attribute reference or assignment fails.",
-      "example": "try: obj.nonexistent except AttributeError: handle_missing_attr()",
-      "category": "exceptions"
+      "keyword": "vars",
+      "type": "builtin_function",
+      "description": "vars - Returns __dict__ attribute of object or local variables.",
+      "example": "attributes = vars(my_object); locals_dict = vars()",
+      "category": "builtin_functions"
     },
     {
-      "keyword": "ImportError",
-      "type": "exception",
-      "description": "ImportError - Exception raised when import statement cannot find module or name.",
-      "example": "try: import missing_module except ImportError: use_fallback()",
-      "category": "exceptions"
+      "keyword": "while",
+      "type": "keyword",
+      "description": "while - Repeats code while a condition remains True. Use when the number of iterations is unknown beforehand.",
+      "example": "while x < 10: x += 1",
+      "category": "control_flow"
     },
     {
-      "keyword": "FileNotFoundError",
-      "type": "exception",
-      "description": "FileNotFoundError - Exception raised when file or directory is requested but doesn't exist.",
-      "example": "try: open('missing.txt') except FileNotFoundError: create_file()",
-      "category": "exceptions"
+      "keyword": "with",
+      "type": "keyword",
+      "description": "with - Context manager for automatic resource management. Ensures proper cleanup even if errors occur.",
+      "example": "with open('file.txt') as f: content = f.read()",
+      "category": "context_management"
     },
     {
-      "keyword": "KeyboardInterrupt",
-      "type": "exception",
-      "description": "KeyboardInterrupt - Exception raised when user hits interrupt key (Ctrl+C).",
-      "example": "try: long_running_task() except KeyboardInterrupt: cleanup()",
-      "category": "exceptions"
+      "keyword": "yield",
+      "type": "keyword",
+      "description": "yield - Creates a generator function that can pause and resume execution, producing values on demand.",
+      "example": "def count(): yield 1; yield 2",
+      "category": "generator"
     },
     {
-      "keyword": "__name__",
-      "type": "special_variable",
-      "description": "__name__ - Special variable containing module's name or '__main__' if run as script.",
-      "example": "if __name__ == '__main__': main()",
-      "category": "special_variables"
-    },
-    {
-      "keyword": "__file__",
-      "type": "special_variable",
-      "description": "__file__ - Special variable containing path to current module's file.",
-      "example": "script_dir = os.path.dirname(__file__)",
-      "category": "special_variables"
-    },
-    {
-      "keyword": "__doc__",
-      "type": "special_variable",
-      "description": "__doc__ - Special variable containing module's or function's docstring.",
-      "example": "print(__doc__); print(function.__doc__)",
-      "category": "special_variables"
+      "keyword": "zip",
+      "type": "builtin_function",
+      "description": "zip - Combines multiple iterables element-wise into tuples.",
+      "example": "for name, age in zip(names, ages): print(f'{name}: {age}')",
+      "category": "builtin_functions"
     }
   ],
   "snippets": [
@@ -1074,7 +829,7 @@
       "category": "comprehension"
     },
     {
-      "trigger": "dict_comp", 
+      "trigger": "dict_comp",
       "description": "Dictionary comprehension template for creating dictionaries",
       "content": "{${1:key}: ${2:value} for ${3:item} in ${4:iterable}}",
       "category": "comprehension"
@@ -1111,7 +866,7 @@
     },
     {
       "trigger": "repr",
-      "description": "Developer representation method template", 
+      "description": "Developer representation method template",
       "content": "def __repr__(self):\n    \"\"\"Return developer representation.\"\"\"\n    return ${1:f'{self.__class__.__name__}()'}",
       "category": "method"
     },
