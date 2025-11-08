@@ -832,7 +832,7 @@ fn restore_path_buttons(
 /// Sets up common keyboard shortcuts for the application
 ///
 /// This function adds keyboard shortcuts like Ctrl+S for saving, Ctrl+O for opening files,
-/// Ctrl+N for new files, Ctrl+Tab for navigating tabs, Ctrl+Shift+F for global search, and other standard editor shortcuts.
+/// Ctrl+N for new files, Ctrl+Tab for navigating tabs, Ctrl+Shift+F for global search, Ctrl+B for toggling sidebar, Ctrl+T for toggling terminal, and other standard editor shortcuts.
 pub fn setup_keyboard_shortcuts(
     window: &(impl IsA<ApplicationWindow> + IsA<gtk4::Widget>), 
     save_button: &Button, 
@@ -845,7 +845,13 @@ pub fn setup_keyboard_shortcuts(
     current_dir: Option<&Rc<RefCell<PathBuf>>>,
     file_list_box: Option<&gtk4::ListBox>,
     active_tab_path: Option<&Rc<RefCell<Option<PathBuf>>>>,
-    file_path_manager: Option<&Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>>
+    file_path_manager: Option<&Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>>,
+    explorer_button: Option<&gtk4::ToggleButton>,
+    search_button: Option<&gtk4::ToggleButton>,
+    git_diff_button: Option<&gtk4::ToggleButton>,
+    sidebar_stack: Option<&gtk4::Stack>,
+    editor_paned: Option<&gtk4::Paned>,
+    terminal_notebook: Option<&gtk4::Notebook>,
 ) {
     // Create a key event controller
     let key_controller = EventControllerKey::new();
@@ -867,6 +873,16 @@ pub fn setup_keyboard_shortcuts(
     // Clone the editor notebook for file type checking
     let editor_notebook_clone = editor_notebook.cloned();
     let file_path_manager_clone = file_path_manager.cloned();
+    
+    // Clone sidebar toggle buttons for Ctrl+B and Ctrl+Shift+E/F/G
+    let explorer_button_clone = explorer_button.cloned();
+    let search_button_clone = search_button.cloned();
+    let git_diff_button_clone = git_diff_button.cloned();
+    let _sidebar_stack_clone = sidebar_stack.cloned();
+    
+    // Clone editor_paned for Ctrl+T (toggle terminal)
+    let editor_paned_clone = editor_paned.cloned();
+    let terminal_notebook_clone = terminal_notebook.cloned();
     
     // Connect the key pressed event
     key_controller.connect_key_pressed(move |_controller, keyval, keycode, state| {
@@ -923,6 +939,75 @@ pub fn setup_keyboard_shortcuts(
                     if !shift_pressed {
                         new_button_clone.emit_clicked();
                         println!("Keyboard shortcut: Ctrl+N (New File)");
+                        return glib::Propagation::Stop;
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+B: Toggle sidebar (keep the currently active tab)
+                Some("b") => {
+                    if !shift_pressed {
+                        println!("Keyboard shortcut: Ctrl+B (Toggle Sidebar)");
+                        // Check which button is currently active
+                        let explorer_active = explorer_button_clone.as_ref().map(|b| b.is_active()).unwrap_or(false);
+                        let search_active = search_button_clone.as_ref().map(|b| b.is_active()).unwrap_or(false);
+                        let git_diff_active = git_diff_button_clone.as_ref().map(|b| b.is_active()).unwrap_or(false);
+                        
+                        // If any button is active, deactivate it to hide the sidebar
+                        if explorer_active || search_active || git_diff_active {
+                            // Hide the sidebar by deactivating the active button
+                            if explorer_active {
+                                if let Some(explorer) = &explorer_button_clone {
+                                    explorer.set_active(false);
+                                }
+                            } else if search_active {
+                                if let Some(search) = &search_button_clone {
+                                    search.set_active(false);
+                                }
+                            } else if git_diff_active {
+                                if let Some(git_diff) = &git_diff_button_clone {
+                                    git_diff.set_active(false);
+                                }
+                            }
+                        } else {
+                            // Sidebar is hidden - restore the last active tab from settings
+                            let last_tab = crate::settings::get_settings().get_active_sidebar_tab();
+                            match last_tab.as_str() {
+                                "search" => {
+                                    if let Some(search) = &search_button_clone {
+                                        search.set_active(true);
+                                    }
+                                },
+                                "git-diff" => {
+                                    if let Some(git_diff) = &git_diff_button_clone {
+                                        git_diff.set_active(true);
+                                    }
+                                },
+                                _ => {
+                                    // Default to explorer
+                                    if let Some(explorer) = &explorer_button_clone {
+                                        explorer.set_active(true);
+                                    }
+                                }
+                            }
+                        }
+                        return glib::Propagation::Stop;
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+Shift+E: Toggle Explorer
+                Some("E") => {
+                    if let Some(explorer) = &explorer_button_clone {
+                        explorer.set_active(!explorer.is_active());
+                        println!("Keyboard shortcut: Ctrl+Shift+E (Toggle Explorer)");
+                        return glib::Propagation::Stop;
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+Shift+G: Toggle Source Control
+                Some("G") => {
+                    if let Some(git_diff) = &git_diff_button_clone {
+                        git_diff.set_active(!git_diff.is_active());
+                        println!("Keyboard shortcut: Ctrl+Shift+G (Toggle Source Control)");
                         return glib::Propagation::Stop;
                     }
                     return glib::Propagation::Proceed;
@@ -1137,6 +1222,43 @@ pub fn setup_keyboard_shortcuts(
                     }
                     return glib::Propagation::Proceed;
                 },
+                // Ctrl+T: Toggle terminal
+                Some("t") => {
+                    if !shift_pressed {
+                        println!("Keyboard shortcut: Ctrl+T (Toggle Terminal)");
+                        if let Some(paned) = &editor_paned_clone {
+                            if let Some(end_child) = paned.end_child() {
+                                if end_child.is_visible() {
+                                    // Terminal is visible, hide it completely
+                                    end_child.set_visible(false);
+                                    let max_pos = paned.allocation().height();
+                                    paned.set_position(max_pos);
+                                    // Save terminal hidden state
+                                    let mut settings = crate::settings::get_settings_mut();
+                                    settings.set_terminal_visible(false);
+                                    let _ = settings.save();
+                                } else {
+                                    // Terminal is hidden, show it
+                                    end_child.set_visible(true);
+                                    let max_pos = paned.allocation().height();
+                                    paned.set_position((max_pos as f64 * 0.6) as i32);
+                                    // If there are no terminals, create one
+                                    if let Some(notebook) = &terminal_notebook_clone {
+                                        if notebook.n_pages() == 0 {
+                                            crate::ui::terminal::add_terminal_tab_with_toggle(notebook, None, paned);
+                                        }
+                                    }
+                                    // Save terminal visible state
+                                    let mut settings = crate::settings::get_settings_mut();
+                                    settings.set_terminal_visible(true);
+                                    let _ = settings.save();
+                                }
+                            }
+                        }
+                        return glib::Propagation::Stop;
+                    }
+                    return glib::Propagation::Proceed;
+                },
                 // Ctrl+Plus/Ctrl+Equal: Increase font size
                 Some("plus") | Some("equal") => {
                     println!("Keyboard shortcut: Ctrl+Plus (Increase Font Size)");
@@ -1221,7 +1343,11 @@ pub fn setup_keyboard_shortcuts(
     println!("  - Ctrl+Shift+S: Save As (blocked for image/video/audio files)");
     println!("  - Ctrl+O: Open");
     println!("  - Ctrl+N: New file");
+    println!("  - Ctrl+B: Toggle Sidebar");
+    println!("  - Ctrl+T: Toggle Terminal");
+    println!("  - Ctrl+Shift+E: Toggle Explorer");
     println!("  - Ctrl+Shift+F: Global Search");
+    println!("  - Ctrl+Shift+G: Toggle Source Control");
     println!("  - Ctrl+L: Edit path manually");
     println!("  - Ctrl+Q: Quit application");
     println!("  - Ctrl+Plus/Ctrl+=: Increase font size");

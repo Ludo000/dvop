@@ -71,6 +71,8 @@ impl EditorSettings {
         self.values.insert("file_panel_width".to_owned(), DEFAULT_FILE_PANEL_WIDTH.to_string());
         self.values.insert("terminal_height".to_owned(), DEFAULT_TERMINAL_HEIGHT.to_string());
         self.values.insert("active_sidebar_tab".to_owned(), "explorer".to_owned());
+        self.values.insert("sidebar_visible".to_owned(), "true".to_owned());
+        self.values.insert("terminal_visible".to_owned(), "false".to_owned());
         self.values.insert("search_case_sensitive".to_owned(), "false".to_owned());
         self.values.insert("search_whole_word".to_owned(), "false".to_owned());
         self.values.insert("search_query".to_owned(), "".to_owned());
@@ -284,6 +286,28 @@ impl EditorSettings {
     /// Sets the active sidebar tab
     pub fn set_active_sidebar_tab(&mut self, tab: &str) {
         self.set("active_sidebar_tab", tab);
+    }
+
+    /// Gets the sidebar visibility state
+    pub fn get_sidebar_visible(&self) -> bool {
+        self.get("sidebar_visible")
+            .map_or(true, |s| s == "true")
+    }
+
+    /// Sets the sidebar visibility state
+    pub fn set_sidebar_visible(&mut self, visible: bool) {
+        self.set("sidebar_visible", if visible { "true" } else { "false" });
+    }
+
+    /// Gets the terminal visibility state
+    pub fn get_terminal_visible(&self) -> bool {
+        self.get("terminal_visible")
+            .map_or(false, |s| s == "true")
+    }
+
+    /// Sets the terminal visibility state
+    pub fn set_terminal_visible(&mut self, visible: bool) {
+        self.set("terminal_visible", if visible { "true" } else { "false" });
     }
 
     /// Gets the search case sensitive setting

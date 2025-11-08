@@ -553,22 +553,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Get references to UI components from template (already initialized earlier)
     // file_list_box, path_box, volume_control_box, etc. are already assigned
     
-    // Set up keyboard shortcuts for common operations (including Ctrl+L for path editing)
-    utils::setup_keyboard_shortcuts(
-        &window, 
-        &save_button, 
-        &open_button, 
-        &new_button, 
-        &save_as_button, 
-        None,
-        Some(&editor_notebook),
-        Some(&path_box),
-        Some(&current_dir),
-        Some(&file_list_box),
-        Some(&active_tab_path),
-        Some(&file_path_manager)
-    );
-
     // Get status bar components from the template
     let (_status_bar, status_label, secondary_status_label) = ui::create_status_bar(&window);
     
@@ -636,6 +620,17 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Create the first terminal tab directly in the template notebook with paned support
     ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_template, None, &editor_paned);
     
+    // Restore terminal visibility state from settings
+    let saved_terminal_visible = settings::get_settings().get_terminal_visible();
+    if !saved_terminal_visible {
+        // Hide the terminal if it was hidden in the last session
+        if let Some(end_child) = editor_paned.end_child() {
+            end_child.set_visible(false);
+            let max_pos = editor_paned.allocation().height();
+            editor_paned.set_position(max_pos);
+        }
+    }
+    
     // Connect the add terminal button click handler with paned support for toggling
     let terminal_notebook_for_button = terminal_notebook_template.clone();
     let editor_paned_for_button = editor_paned.clone();
@@ -697,15 +692,25 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     
     // Restore active sidebar tab from settings
     let saved_sidebar_tab = settings::get_settings().get_active_sidebar_tab();
+    let saved_sidebar_visible = settings::get_settings().get_sidebar_visible();
+    
     if saved_sidebar_tab == "search" {
-        search_button.set_active(true);
+        search_button.set_active(saved_sidebar_visible);
         sidebar_stack.set_visible_child_name("search");
     } else if saved_sidebar_tab == "git-diff" {
-        git_diff_button.set_active(true);
+        git_diff_button.set_active(saved_sidebar_visible);
         sidebar_stack.set_visible_child_name("git-diff");
     } else {
-        explorer_button.set_active(true);
+        explorer_button.set_active(saved_sidebar_visible);
         sidebar_stack.set_visible_child_name("explorer");
+    }
+    
+    // Apply the sidebar visibility state
+    if !saved_sidebar_visible {
+        if let Some(start_child) = paned.start_child() {
+            start_child.set_visible(false);
+            paned.set_position(0);
+        }
     }
     
     // Save sidebar tab when it changes
@@ -729,13 +734,34 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             search_button_clone.set_active(false);
             git_diff_button_clone.set_active(false);
             sidebar_stack_clone.set_visible_child_name("explorer");
-            let is_hidden = !sidebar_stack_clone.is_visible();
-            if is_hidden {
+            // Show the sidebar by setting the first child visible
+            if let Some(start_child) = paned_clone.start_child() {
+                start_child.set_visible(true);
                 let settings = crate::settings::get_settings();
                 let width = settings.get_file_panel_width();
                 paned_clone.set_position(width);
-                sidebar_stack_clone.set_visible(true);
             }
+            // Save sidebar visible state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(true);
+            let _ = settings.save();
+        } else {
+            // If the button is deactivated, hide the sidebar completely
+            if let Some(start_child) = paned_clone.start_child() {
+                // Save current width before hiding
+                let current_width = paned_clone.position();
+                if current_width > 0 {
+                    let mut settings = crate::settings::get_settings_mut();
+                    settings.set_file_panel_width(current_width);
+                    let _ = settings.save();
+                }
+                start_child.set_visible(false);
+                paned_clone.set_position(0);
+            }
+            // Save sidebar hidden state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(false);
+            let _ = settings.save();
         }
     });
     
@@ -748,13 +774,34 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             explorer_button_clone.set_active(false);
             git_diff_button_clone2.set_active(false);
             sidebar_stack_clone2.set_visible_child_name("search");
-            let is_hidden = !sidebar_stack_clone2.is_visible();
-            if is_hidden {
+            // Show the sidebar by setting the first child visible
+            if let Some(start_child) = paned_clone2.start_child() {
+                start_child.set_visible(true);
                 let settings = crate::settings::get_settings();
                 let width = settings.get_file_panel_width();
                 paned_clone2.set_position(width);
-                sidebar_stack_clone2.set_visible(true);
             }
+            // Save sidebar visible state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(true);
+            let _ = settings.save();
+        } else {
+            // If the button is deactivated, hide the sidebar completely
+            if let Some(start_child) = paned_clone2.start_child() {
+                // Save current width before hiding
+                let current_width = paned_clone2.position();
+                if current_width > 0 {
+                    let mut settings = crate::settings::get_settings_mut();
+                    settings.set_file_panel_width(current_width);
+                    let _ = settings.save();
+                }
+                start_child.set_visible(false);
+                paned_clone2.set_position(0);
+            }
+            // Save sidebar hidden state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(false);
+            let _ = settings.save();
         }
     });
     
@@ -767,13 +814,34 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             explorer_button_clone2.set_active(false);
             search_button_clone2.set_active(false);
             sidebar_stack_clone3.set_visible_child_name("git-diff");
-            let is_hidden = !sidebar_stack_clone3.is_visible();
-            if is_hidden {
+            // Show the sidebar by setting the first child visible
+            if let Some(start_child) = paned_clone3.start_child() {
+                start_child.set_visible(true);
                 let settings = crate::settings::get_settings();
                 let width = settings.get_file_panel_width();
                 paned_clone3.set_position(width);
-                sidebar_stack_clone3.set_visible(true);
             }
+            // Save sidebar visible state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(true);
+            let _ = settings.save();
+        } else {
+            // If the button is deactivated, hide the sidebar completely
+            if let Some(start_child) = paned_clone3.start_child() {
+                // Save current width before hiding
+                let current_width = paned_clone3.position();
+                if current_width > 0 {
+                    let mut settings = crate::settings::get_settings_mut();
+                    settings.set_file_panel_width(current_width);
+                    let _ = settings.save();
+                }
+                start_child.set_visible(false);
+                paned_clone3.set_position(0);
+            }
+            // Save sidebar hidden state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(false);
+            let _ = settings.save();
         }
     });
     
@@ -819,6 +887,28 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             git_diff_panel_box.append(&git_diff_panel);
         }
     }
+    
+    // Set up keyboard shortcuts for common operations (including Ctrl+B, Ctrl+Shift+E/F/G, and Ctrl+L for path editing)
+    utils::setup_keyboard_shortcuts(
+        &window, 
+        &save_button, 
+        &open_button, 
+        &new_button, 
+        &save_as_button, 
+        None,
+        Some(&editor_notebook),
+        Some(&path_box),
+        Some(&current_dir),
+        Some(&file_list_box),
+        Some(&active_tab_path),
+        Some(&file_path_manager),
+        Some(&explorer_button),
+        Some(&search_button),
+        Some(&git_diff_button),
+        Some(&sidebar_stack),
+        Some(&editor_paned),
+        Some(&terminal_notebook_template),
+    );
     
     // Set up modification tracking for the initial tab
     // This adds a "*" indicator to the tab label when content has been modified
@@ -993,7 +1083,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let refresh_button_clone = refresh_button.clone();
     let terminal_notebook_clone_for_new_terminal = terminal_notebook_template.clone();
     let editor_paned_clone_for_new_terminal = editor_paned.clone();
-    let editor_paned_clone = editor_paned.clone();
     let window_clone_for_about = window.clone();
     
     // Connect new file action
@@ -1095,29 +1184,49 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Connect new terminal action
     new_terminal_action.connect_activate(move |_, _| {
         // Show terminal if hidden
-        let max_pos = editor_paned_clone_for_new_terminal.allocation().height();
-        let current_pos = editor_paned_clone_for_new_terminal.position();
-        if current_pos >= max_pos - 50 {
-            // Terminal is hidden, show it
-            editor_paned_clone_for_new_terminal.set_position((max_pos as f64 * 0.6) as i32);
+        if let Some(end_child) = editor_paned_clone_for_new_terminal.end_child() {
+            if !end_child.is_visible() {
+                end_child.set_visible(true);
+                let max_pos = editor_paned_clone_for_new_terminal.allocation().height();
+                editor_paned_clone_for_new_terminal.set_position((max_pos as f64 * 0.6) as i32);
+                // Save terminal visible state
+                let mut settings = crate::settings::get_settings_mut();
+                settings.set_terminal_visible(true);
+                let _ = settings.save();
+            }
         }
         // Add a new terminal tab
         ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_clone_for_new_terminal, None, &editor_paned_clone_for_new_terminal);
     });
     
     // Connect toggle terminal action
+    let terminal_notebook_for_toggle = terminal_notebook_template.clone();
+    let editor_paned_for_toggle = editor_paned.clone();
     toggle_terminal_action.connect_activate(move |_, _| {
-        let current_pos = editor_paned_clone.position();
-        let max_pos = editor_paned_clone.allocation().height();
-        if current_pos >= max_pos - 50 {
-            // Terminal is hidden, show it
-            editor_paned_clone.set_position((max_pos as f64 * 0.6) as i32);
-            
-            // If there are no terminals, the view will show just the add button
-            // which is already visible in the notebook's action widget area
-        } else {
-            // Terminal is visible, hide it
-            editor_paned_clone.set_position(max_pos);
+        if let Some(end_child) = editor_paned_for_toggle.end_child() {
+            if end_child.is_visible() {
+                // Terminal is visible, hide it completely
+                end_child.set_visible(false);
+                let max_pos = editor_paned_for_toggle.allocation().height();
+                editor_paned_for_toggle.set_position(max_pos);
+                // Save terminal hidden state
+                let mut settings = crate::settings::get_settings_mut();
+                settings.set_terminal_visible(false);
+                let _ = settings.save();
+            } else {
+                // Terminal is hidden, show it
+                end_child.set_visible(true);
+                let max_pos = editor_paned_for_toggle.allocation().height();
+                editor_paned_for_toggle.set_position((max_pos as f64 * 0.6) as i32);
+                // If there are no terminals, create one
+                if terminal_notebook_for_toggle.n_pages() == 0 {
+                    ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_for_toggle, None, &editor_paned_for_toggle);
+                }
+                // Save terminal visible state
+                let mut settings = crate::settings::get_settings_mut();
+                settings.set_terminal_visible(true);
+                let _ = settings.save();
+            }
         }
     });
     
@@ -1556,9 +1665,23 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Set up the terminal button handler to open a new terminal in the current directory
     let terminal_notebook_clone_for_terminal_button = imp.terminal_notebook.get();
     let current_dir_clone_for_terminal_button = current_dir.clone();
+    let editor_paned_clone_for_terminal_button = editor_paned.clone();
+    let editor_paned_clone_for_terminal_button2 = editor_paned.clone();
     terminal_button.connect_clicked(move |_| {
-        // Add a new terminal tab in the current directory
-        ui::terminal::add_terminal_tab(&terminal_notebook_clone_for_terminal_button, Some(current_dir_clone_for_terminal_button.borrow().clone()));
+        // Show terminal if hidden
+        if let Some(end_child) = editor_paned_clone_for_terminal_button.end_child() {
+            if !end_child.is_visible() {
+                end_child.set_visible(true);
+                let max_pos = editor_paned_clone_for_terminal_button.allocation().height();
+                editor_paned_clone_for_terminal_button.set_position((max_pos as f64 * 0.6) as i32);
+                // Save terminal visible state
+                let mut settings = crate::settings::get_settings_mut();
+                settings.set_terminal_visible(true);
+                let _ = settings.save();
+            }
+        }
+        // Add a new terminal tab in the current directory (with auto-hide)
+        ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_clone_for_terminal_button, Some(current_dir_clone_for_terminal_button.borrow().clone()), &editor_paned_clone_for_terminal_button2);
     });
 
     // Set up the add file button handler to create a new file (same as new button functionality)
