@@ -854,7 +854,7 @@ fn create_markdown_split_view(
     tab_actual_label: &Label,
     file_name: &str,
 ) -> gtk4::Paned {
-    use pulldown_cmark::{Parser, Options, Event, Tag, HeadingLevel};
+    use pulldown_cmark::{Parser, Options, Event, Tag, TagEnd, HeadingLevel};
     
     // Create the paned widget for split view
     let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
@@ -974,7 +974,7 @@ fn create_markdown_split_view(
             match event {
                 Event::Start(tag) => {
                     match tag {
-                        Tag::Heading(level, ..) => {
+                        Tag::Heading { level, .. } => {
                             current_tag = Some(match level {
                                 HeadingLevel::H1 => "h1",
                                 HeadingLevel::H2 => "h2",
@@ -992,7 +992,7 @@ fn create_markdown_split_view(
                         Tag::Strong => {
                             current_tag = Some("bold".to_string());
                         }
-                        Tag::Link(..) => {
+                        Tag::Link { .. } => {
                             current_tag = Some("link".to_string());
                         }
                         Tag::Paragraph => {},
@@ -1001,12 +1001,12 @@ fn create_markdown_split_view(
                 }
                 Event::End(tag) => {
                     match tag {
-                        Tag::Heading(..) | Tag::Paragraph => {
+                        TagEnd::Heading(_) | TagEnd::Paragraph => {
                             let mut end_iter = buffer.end_iter();
                             buffer.insert(&mut end_iter, "\n\n");
                             current_tag = None;
                         }
-                        Tag::CodeBlock(_) => {
+                        TagEnd::CodeBlock => {
                             let mut end_iter = buffer.end_iter();
                             buffer.insert(&mut end_iter, "\n");
                             in_code_block = false;
