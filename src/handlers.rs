@@ -843,6 +843,267 @@ fn create_svg_split_view(
     paned
 }
 
+/// Creates a split view for Markdown files with code on the left and rendered preview on the right
+/// 
+/// This function creates a horizontal paned widget with:
+/// - Left side: Source code editor with Markdown syntax highlighting
+/// - Right side: Rendered markdown preview with basic styling
+fn create_markdown_split_view(
+    content: &str,
+    file_path: &std::path::Path,
+    tab_actual_label: &Label,
+    file_name: &str,
+) -> gtk4::Paned {
+    use pulldown_cmark::{Parser, Options, Event, Tag, HeadingLevel};
+    
+    // Create the paned widget for split view
+    let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
+    paned.set_wide_handle(true);
+    paned.set_shrink_start_child(false);
+    paned.set_shrink_end_child(false);
+    paned.set_resize_start_child(true);
+    paned.set_resize_end_child(true);
+    
+    // LEFT SIDE: Code editor
+    let (source_view, source_buffer) = crate::syntax::create_source_view();
+    source_buffer.set_text(content);
+    
+    // Apply Markdown syntax highlighting
+    crate::syntax::set_language_for_file(&source_buffer, file_path);
+    
+    // Setup completion for Markdown
+    crate::completion::setup_completion_for_file(&source_view, Some(file_path));
+    crate::completion::setup_completion_shortcuts(&source_view);
+    
+    // Set up interaction tracking for the text editor
+    let text_view = source_view.clone().upcast::<TextView>();
+    setup_text_editor_interaction_tracking(&text_view);
+    
+    let left_scrolled = crate::syntax::create_source_view_scrolled(&source_view);
+    left_scrolled.set_vexpand(true);
+    left_scrolled.set_hexpand(true);
+    
+    // RIGHT SIDE: Rendered preview
+    let right_box = GtkBox::new(Orientation::Vertical, 0);
+    right_box.set_vexpand(true);
+    right_box.set_hexpand(true);
+    
+    // Add a label to indicate this is the preview
+    let preview_label = Label::new(Some("Preview"));
+    preview_label.set_halign(gtk4::Align::Start);
+    preview_label.set_margin_start(10);
+    preview_label.set_margin_top(5);
+    preview_label.set_margin_bottom(5);
+    preview_label.add_css_class("dim-label");
+    right_box.append(&preview_label);
+    
+    // Create TextView for preview with styling
+    let preview_view = TextView::builder()
+        .editable(false)
+        .cursor_visible(false)
+        .wrap_mode(gtk4::WrapMode::Word)
+        .left_margin(20)
+        .right_margin(20)
+        .top_margin(20)
+        .bottom_margin(20)
+        .build();
+    
+    let preview_buffer = preview_view.buffer();
+    
+    // Create text tags for different markdown elements
+    let tag_table = preview_buffer.tag_table();
+    
+    // Heading tags
+    let h1_tag = gtk4::TextTag::new(Some("h1"));
+    h1_tag.set_scale(2.0);
+    h1_tag.set_weight(700);
+    tag_table.add(&h1_tag);
+    
+    let h2_tag = gtk4::TextTag::new(Some("h2"));
+    h2_tag.set_scale(1.5);
+    h2_tag.set_weight(700);
+    tag_table.add(&h2_tag);
+    
+    let h3_tag = gtk4::TextTag::new(Some("h3"));
+    h3_tag.set_scale(1.25);
+    h3_tag.set_weight(700);
+    tag_table.add(&h3_tag);
+    
+    let h4_tag = gtk4::TextTag::new(Some("h4"));
+    h4_tag.set_weight(700);
+    tag_table.add(&h4_tag);
+    
+    // Code tag
+    let code_tag = gtk4::TextTag::new(Some("code"));
+    code_tag.set_family(Some("monospace"));
+    code_tag.set_background_rgba(Some(&gtk4::gdk::RGBA::new(0.95, 0.95, 0.95, 1.0)));
+    tag_table.add(&code_tag);
+    
+    // Bold tag
+    let bold_tag = gtk4::TextTag::new(Some("bold"));
+    bold_tag.set_weight(700);
+    tag_table.add(&bold_tag);
+    
+    // Italic tag
+    let italic_tag = gtk4::TextTag::new(Some("italic"));
+    italic_tag.set_style(gtk4::pango::Style::Italic);
+    tag_table.add(&italic_tag);
+    
+    // Link tag
+    let link_tag = gtk4::TextTag::new(Some("link"));
+    link_tag.set_foreground_rgba(Some(&gtk4::gdk::RGBA::new(0.0, 0.4, 0.8, 1.0)));
+    link_tag.set_underline(gtk4::pango::Underline::Single);
+    tag_table.add(&link_tag);
+    
+    // Helper function to render markdown content to the buffer
+    let render_markdown = |buffer: &gtk4::TextBuffer, markdown_text: &str| {
+        buffer.set_text("");
+        
+        let mut options = Options::empty();
+        options.insert(Options::ENABLE_STRIKETHROUGH);
+        options.insert(Options::ENABLE_TABLES);
+        options.insert(Options::ENABLE_FOOTNOTES);
+        options.insert(Options::ENABLE_TASKLISTS);
+        
+        let parser = Parser::new_ext(markdown_text, options);
+        
+        let mut current_tag: Option<String> = None;
+        let mut in_code_block = false;
+        
+        for event in parser {
+            match event {
+                Event::Start(tag) => {
+                    match tag {
+                        Tag::Heading(level, ..) => {
+                            current_tag = Some(match level {
+                                HeadingLevel::H1 => "h1",
+                                HeadingLevel::H2 => "h2",
+                                HeadingLevel::H3 => "h3",
+                                _ => "h4",
+                            }.to_string());
+                        }
+                        Tag::CodeBlock(_) => {
+                            in_code_block = true;
+                            current_tag = Some("code".to_string());
+                        }
+                        Tag::Emphasis => {
+                            current_tag = Some("italic".to_string());
+                        }
+                        Tag::Strong => {
+                            current_tag = Some("bold".to_string());
+                        }
+                        Tag::Link(..) => {
+                            current_tag = Some("link".to_string());
+                        }
+                        Tag::Paragraph => {},
+                        _ => {},
+                    }
+                }
+                Event::End(tag) => {
+                    match tag {
+                        Tag::Heading(..) | Tag::Paragraph => {
+                            let mut end_iter = buffer.end_iter();
+                            buffer.insert(&mut end_iter, "\n\n");
+                            current_tag = None;
+                        }
+                        Tag::CodeBlock(_) => {
+                            let mut end_iter = buffer.end_iter();
+                            buffer.insert(&mut end_iter, "\n");
+                            in_code_block = false;
+                            current_tag = None;
+                        }
+                        _ => {
+                            current_tag = None;
+                        }
+                    }
+                }
+                Event::Text(text) => {
+                    let mut end_iter = buffer.end_iter();
+                    let start_offset = end_iter.offset();
+                    buffer.insert(&mut end_iter, &text);
+                    
+                    if let Some(tag_name) = &current_tag {
+                        let start = buffer.iter_at_offset(start_offset);
+                        let end = buffer.end_iter();
+                        if let Some(tag) = buffer.tag_table().lookup(tag_name) {
+                            buffer.apply_tag(&tag, &start, &end);
+                        }
+                    }
+                }
+                Event::Code(code) => {
+                    let mut end_iter = buffer.end_iter();
+                    let start_offset = end_iter.offset();
+                    buffer.insert(&mut end_iter, &code);
+                    
+                    let start = buffer.iter_at_offset(start_offset);
+                    let end = buffer.end_iter();
+                    if let Some(tag) = buffer.tag_table().lookup("code") {
+                        buffer.apply_tag(&tag, &start, &end);
+                    }
+                }
+                Event::SoftBreak | Event::HardBreak => {
+                    if in_code_block {
+                        let mut end_iter = buffer.end_iter();
+                        buffer.insert(&mut end_iter, "\n");
+                    } else {
+                        let mut end_iter = buffer.end_iter();
+                        buffer.insert(&mut end_iter, " ");
+                    }
+                }
+                _ => {}
+            }
+        }
+    };
+    
+    // Render initial content
+    render_markdown(&preview_buffer, content);
+    
+    // Put preview in scrolled window
+    let right_scrolled = ScrolledWindow::builder()
+        .hscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vexpand(true)
+        .hexpand(true)
+        .build();
+    right_scrolled.set_child(Some(&preview_view));
+    right_box.append(&right_scrolled);
+    
+    // Track changes for dirty state and update preview
+    let tab_label_weak = tab_actual_label.downgrade();
+    let file_name_clone = file_name.to_string();
+    let preview_buffer_clone = preview_buffer.clone();
+    let text_buffer = source_buffer.clone().upcast::<TextBuffer>();
+    
+    text_buffer.connect_changed(move |buffer| {
+        LAST_ACTIVE_AREA.with(|area| {
+            *area.borrow_mut() = LastActiveArea::TextEditor;
+        });
+        
+        if let Some(label) = tab_label_weak.upgrade() {
+            let current_text = label.text();
+            if !current_text.starts_with('*') {
+                label.set_text(&format!("*{}", file_name_clone));
+                crate::status_log::log_info(&format!("{} modified", file_name_clone));
+            }
+        }
+        
+        // Update preview when content changes
+        let start = buffer.start_iter();
+        let end = buffer.end_iter();
+        let markdown_content = buffer.text(&start, &end, false);
+        render_markdown(&preview_buffer_clone, &markdown_content);
+    });
+    
+    // Add both sides to the paned widget
+    paned.set_start_child(Some(&left_scrolled));
+    paned.set_end_child(Some(&right_box));
+    
+    // Set initial position to 50/50 split
+    paned.set_position(400); // Default split position (will adjust based on window width)
+    
+    paned
+}
+
 
 // Helper function to open a file in a new tab or focus if already open
 pub fn open_or_focus_tab(
@@ -987,6 +1248,73 @@ pub fn open_or_focus_tab(
             }
             
             return; // Exit early for SVG files
+        }
+        
+        // Check if this is a Markdown file - handle with split view
+        let is_markdown = file_to_open.extension()
+            .and_then(|e| e.to_str())
+            .map(|s| {
+                let ext = s.to_lowercase();
+                ext == "md" || ext == "markdown"
+            })
+            .unwrap_or(false);
+            
+        if is_markdown {
+            // Create split view for Markdown (code on left, preview on right)
+            let markdown_paned = create_markdown_split_view(content, file_to_open, &tab_actual_label, &file_name);
+            
+            // Add the paned widget directly to the notebook (no scrolled window wrapper)
+            let new_page_num = notebook.append_page(&markdown_paned, Some(&tab_widget));
+            notebook.set_current_page(Some(new_page_num));
+            
+            // Update state
+            file_path_manager.borrow_mut().insert(new_page_num, file_to_open.clone());
+            *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+            
+            // Log successful opening
+            crate::status_log::log_success(&format!("Opened {}", filename));
+            
+            // Connect close button
+            let notebook_clone = notebook.clone();
+            let window_clone = window.clone();
+            let file_path_manager_clone = file_path_manager.clone();
+            let active_tab_path_ref_clone = active_tab_path_ref.clone();
+            
+            let deps_for_new_tab_creation = NewTabDependencies {
+                editor_notebook: notebook.clone(),
+                active_tab_path: active_tab_path_ref_clone.clone(),
+                file_path_manager: file_path_manager_clone.clone(),
+                window: window_clone.clone().upcast::<ApplicationWindow>(),
+                file_list_box: file_list_box.clone(),
+                current_dir: current_dir.clone(),
+                save_button: save_button.clone(),
+                save_as_button: save_as_button.clone(),
+                _save_menu_button: _save_menu_button.cloned(),
+            };
+            
+            let markdown_paned_for_close = markdown_paned.clone();
+            tab_close_button.connect_clicked(move |_| {
+                if let Some(current_idx_for_this_tab) = notebook_clone.page_num(&markdown_paned_for_close) {
+                    handle_close_tab_request(
+                        &notebook_clone,
+                        current_idx_for_this_tab,
+                        &window_clone,
+                        &file_path_manager_clone,
+                        &active_tab_path_ref_clone,
+                        &deps_for_new_tab_creation.current_dir,
+                        &deps_for_new_tab_creation.file_list_box,
+                        Some(deps_for_new_tab_creation.clone())
+                    );
+                }
+            });
+            
+            // Enable save buttons for Markdown files (they're editable text)
+            utils::update_save_buttons_visibility(save_button, save_as_button, Some(mime_guess::mime::TEXT_PLAIN));
+            if let Some(save_menu_btn) = _save_menu_button {
+                utils::update_save_menu_button_visibility(save_menu_btn, Some(mime_guess::mime::TEXT_PLAIN));
+            }
+            
+            return; // Exit early for Markdown files
         }
         
         let new_scrolled_window = ScrolledWindow::builder()
