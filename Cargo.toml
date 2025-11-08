@@ -24,6 +24,7 @@ gstreamer-app = "0.23"  # For audio data extraction
 rustfft = "6.2"  # For FFT analysis
 hound = "3.5"  # For reading audio files
 apodize = "1.0"  # For windowing functions
+pulldown-cmark = "0.9"  # For markdown parsing and rendering
 
 [build-dependencies]
 glib-build-tools = "0.20"
