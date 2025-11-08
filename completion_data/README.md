@@ -177,6 +177,9 @@ See the existing files for comprehensive examples:
 - `python.json` - Dynamic language with emphasis on readability
 - `javascript.json` - Web language with modern async patterns
 - `typescript.json` - TypeScript-specific features including types, interfaces, and utility types
+- `go.json` - Go language with concurrency patterns and standard library
+- `bash.json` - Bash/Shell scripting with builtins and common commands
+- `sql.json` - SQL query language with DDL, DML, and aggregation functions
 - `css.json` - CSS properties and selectors
 - `html.json` - HTML elements and attributes
 - `svelte.json` - Svelte framework components and syntax

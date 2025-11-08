@@ -1,0 +1,645 @@
+{
+  "language": "bash",
+  "description": "Bash shell scripting completion data",
+  "keywords": [
+    {
+      "keyword": "if",
+      "type": "keyword",
+      "description": "if - Conditional statement. Test condition and execute commands if true.",
+      "example": "if [ $x -eq 0 ]; then echo \"zero\"; fi",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "then",
+      "type": "keyword",
+      "description": "then - Marks beginning of if statement body.",
+      "example": "if [ condition ]; then commands; fi",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "else",
+      "type": "keyword",
+      "description": "else - Alternative execution path when if condition is false.",
+      "example": "if [ condition ]; then cmd1; else cmd2; fi",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "elif",
+      "type": "keyword",
+      "description": "elif - Else-if for additional conditions in if statement.",
+      "example": "if [ $x -eq 0 ]; then echo \"zero\"; elif [ $x -gt 0 ]; then echo \"positive\"; fi",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "fi",
+      "type": "keyword",
+      "description": "fi - Closes if statement block.",
+      "example": "if [ condition ]; then commands; fi",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "for",
+      "type": "keyword",
+      "description": "for - Loop over list of items or range of numbers.",
+      "example": "for i in 1 2 3; do echo $i; done; for f in *.txt; do cat $f; done",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "while",
+      "type": "keyword",
+      "description": "while - Loop while condition is true.",
+      "example": "while [ $count -lt 10 ]; do echo $count; ((count++)); done",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "until",
+      "type": "keyword",
+      "description": "until - Loop until condition becomes true.",
+      "example": "until [ $count -eq 10 ]; do echo $count; ((count++)); done",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "do",
+      "type": "keyword",
+      "description": "do - Marks beginning of loop body in for/while/until.",
+      "example": "for i in *; do echo $i; done",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "done",
+      "type": "keyword",
+      "description": "done - Closes for/while/until loop block.",
+      "example": "while [ condition ]; do commands; done",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "case",
+      "type": "keyword",
+      "description": "case - Multi-way conditional branching. Pattern matching statement.",
+      "example": "case $var in pat1) cmd1;; pat2) cmd2;; esac",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "esac",
+      "type": "keyword",
+      "description": "esac - Closes case statement block.",
+      "example": "case $var in pattern) commands;; esac",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "function",
+      "type": "keyword",
+      "description": "function - Declares a function (alternative syntax).",
+      "example": "function myFunc { echo \"Hello\"; }; myFunc() { echo \"Hello\"; }",
+      "category": "function"
+    },
+    {
+      "keyword": "return",
+      "type": "keyword",
+      "description": "return - Exit function with return code (0-255).",
+      "example": "return 0; return $?",
+      "category": "function"
+    },
+    {
+      "keyword": "break",
+      "type": "keyword",
+      "description": "break - Exit from for/while/until loop.",
+      "example": "while true; do if [ condition ]; then break; fi; done",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "continue",
+      "type": "keyword",
+      "description": "continue - Skip to next iteration of loop.",
+      "example": "for i in *; do [ -d \"$i\" ] && continue; echo $i; done",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "exit",
+      "type": "builtin",
+      "description": "exit - Terminate script with exit code (0=success, non-zero=error).",
+      "example": "exit 0; exit 1; [ -z \"$var\" ] && exit 1",
+      "category": "builtin"
+    },
+    {
+      "keyword": "echo",
+      "type": "builtin",
+      "description": "echo - Print text to standard output. Use -n to omit newline, -e for escape sequences.",
+      "example": "echo \"Hello World\"; echo -n \"No newline\"; echo -e \"Line1\\nLine2\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "read",
+      "type": "builtin",
+      "description": "read - Read input from stdin into variables. Use -p for prompt, -r for raw input.",
+      "example": "read name; read -p \"Enter value: \" value; read -r line",
+      "category": "builtin"
+    },
+    {
+      "keyword": "declare",
+      "type": "builtin",
+      "description": "declare - Declare variables with attributes. -a for array, -r for readonly, -i for integer.",
+      "example": "declare -i count=0; declare -r CONST=10; declare -a array",
+      "category": "builtin"
+    },
+    {
+      "keyword": "local",
+      "type": "builtin",
+      "description": "local - Declare local variables in functions.",
+      "example": "local var=\"value\"; local -r CONST=10",
+      "category": "builtin"
+    },
+    {
+      "keyword": "export",
+      "type": "builtin",
+      "description": "export - Make variables available to child processes.",
+      "example": "export PATH=/usr/bin:$PATH; export VAR=\"value\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "readonly",
+      "type": "builtin",
+      "description": "readonly - Mark variables as immutable.",
+      "example": "readonly PI=3.14159; readonly -f funcname",
+      "category": "builtin"
+    },
+    {
+      "keyword": "unset",
+      "type": "builtin",
+      "description": "unset - Remove variables or functions.",
+      "example": "unset var; unset -f funcname",
+      "category": "builtin"
+    },
+    {
+      "keyword": "shift",
+      "type": "builtin",
+      "description": "shift - Shift positional parameters left. $2 becomes $1, etc.",
+      "example": "shift; shift 2",
+      "category": "builtin"
+    },
+    {
+      "keyword": "source",
+      "type": "builtin",
+      "description": "source - Execute commands from file in current shell. Alias for '.'",
+      "example": "source config.sh; . ~/.bashrc",
+      "category": "builtin"
+    },
+    {
+      "keyword": "cd",
+      "type": "builtin",
+      "description": "cd - Change directory. Use - to go to previous directory, ~ for home.",
+      "example": "cd /path/to/dir; cd -; cd ~; cd ..",
+      "category": "builtin"
+    },
+    {
+      "keyword": "pwd",
+      "type": "builtin",
+      "description": "pwd - Print working directory. -P shows physical path.",
+      "example": "pwd; pwd -P",
+      "category": "builtin"
+    },
+    {
+      "keyword": "test",
+      "type": "builtin",
+      "description": "test - Evaluate conditional expressions. [ ] is alias for test.",
+      "example": "test -f file.txt; [ -d /tmp ]; [ $x -eq 0 ]",
+      "category": "builtin"
+    },
+    {
+      "keyword": "eval",
+      "type": "builtin",
+      "description": "eval - Evaluate arguments as shell command.",
+      "example": "cmd=\"ls -la\"; eval $cmd",
+      "category": "builtin"
+    },
+    {
+      "keyword": "exec",
+      "type": "builtin",
+      "description": "exec - Replace shell with command, or redirect file descriptors.",
+      "example": "exec command; exec > output.txt",
+      "category": "builtin"
+    },
+    {
+      "keyword": "trap",
+      "type": "builtin",
+      "description": "trap - Execute command on signal or script exit. Used for cleanup.",
+      "example": "trap 'rm -f /tmp/file' EXIT; trap 'echo Interrupted' INT",
+      "category": "builtin"
+    },
+    {
+      "keyword": "set",
+      "type": "builtin",
+      "description": "set - Set shell options. -e exits on error, -u errors on undefined vars, -x prints commands.",
+      "example": "set -e; set -u; set -x; set -euo pipefail",
+      "category": "builtin"
+    },
+    {
+      "keyword": "shopt",
+      "type": "builtin",
+      "description": "shopt - Set shell options. -s enables, -u disables.",
+      "example": "shopt -s nocaseglob; shopt -u dotglob",
+      "category": "builtin"
+    },
+    {
+      "keyword": "getopts",
+      "type": "builtin",
+      "description": "getopts - Parse command-line options in scripts.",
+      "example": "while getopts \"ab:c\" opt; do case $opt in a) ;; b) val=$OPTARG;; esac; done",
+      "category": "builtin"
+    },
+    {
+      "keyword": "printf",
+      "type": "builtin",
+      "description": "printf - Formatted output. More portable and powerful than echo.",
+      "example": "printf \"%s\\n\" \"text\"; printf \"%d\\n\" 42; printf \"%-10s %5d\\n\" \"Name\" 123",
+      "category": "builtin"
+    },
+    {
+      "keyword": "let",
+      "type": "builtin",
+      "description": "let - Arithmetic evaluation. Alternative to (( )).",
+      "example": "let x=5+3; let \"x = y + 1\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "grep",
+      "type": "command",
+      "description": "grep - Search text using patterns. -i ignore case, -r recursive, -v invert match.",
+      "example": "grep \"pattern\" file.txt; grep -r \"text\" .; grep -v \"exclude\" file",
+      "category": "command"
+    },
+    {
+      "keyword": "sed",
+      "type": "command",
+      "description": "sed - Stream editor for text transformation. s/find/replace/ for substitution.",
+      "example": "sed 's/old/new/' file; sed -i 's/foo/bar/g' file; sed -n '5,10p' file",
+      "category": "command"
+    },
+    {
+      "keyword": "awk",
+      "type": "command",
+      "description": "awk - Pattern scanning and text processing. $1, $2 are fields, $0 is entire line.",
+      "example": "awk '{print $1}' file; awk -F: '{print $1, $3}' /etc/passwd",
+      "category": "command"
+    },
+    {
+      "keyword": "find",
+      "type": "command",
+      "description": "find - Search for files and directories. -name for name, -type f/d for file/dir.",
+      "example": "find . -name \"*.txt\"; find /path -type f -mtime -7; find . -exec grep pattern {} \\;",
+      "category": "command"
+    },
+    {
+      "keyword": "xargs",
+      "type": "command",
+      "description": "xargs - Build and execute commands from stdin. Often used with find.",
+      "example": "find . -name \"*.txt\" | xargs grep \"pattern\"; ls | xargs -I {} echo {}",
+      "category": "command"
+    },
+    {
+      "keyword": "cut",
+      "type": "command",
+      "description": "cut - Extract sections from lines. -d for delimiter, -f for fields.",
+      "example": "cut -d: -f1 /etc/passwd; echo \"a,b,c\" | cut -d, -f2",
+      "category": "command"
+    },
+    {
+      "keyword": "sort",
+      "type": "command",
+      "description": "sort - Sort lines of text. -n numeric, -r reverse, -u unique.",
+      "example": "sort file.txt; sort -nr numbers.txt; sort -u -t: -k3 /etc/passwd",
+      "category": "command"
+    },
+    {
+      "keyword": "uniq",
+      "type": "command",
+      "description": "uniq - Report or omit repeated lines. Must be sorted first. -c for counts.",
+      "example": "sort file | uniq; sort file | uniq -c; sort file | uniq -d",
+      "category": "command"
+    },
+    {
+      "keyword": "tr",
+      "type": "command",
+      "description": "tr - Translate or delete characters. Works on stdin only.",
+      "example": "echo \"hello\" | tr 'a-z' 'A-Z'; tr -d '\\n' < file; tr -s ' '",
+      "category": "command"
+    },
+    {
+      "keyword": "wc",
+      "type": "command",
+      "description": "wc - Count lines, words, and bytes. -l lines, -w words, -c bytes.",
+      "example": "wc -l file.txt; wc -w file.txt; ls | wc -l",
+      "category": "command"
+    },
+    {
+      "keyword": "head",
+      "type": "command",
+      "description": "head - Output first part of files. -n for number of lines.",
+      "example": "head file.txt; head -n 20 file.txt; head -n -10 file.txt",
+      "category": "command"
+    },
+    {
+      "keyword": "tail",
+      "type": "command",
+      "description": "tail - Output last part of files. -f follows file as it grows, -n for lines.",
+      "example": "tail file.txt; tail -n 20 file.txt; tail -f /var/log/syslog",
+      "category": "command"
+    },
+    {
+      "keyword": "tee",
+      "type": "command",
+      "description": "tee - Read from stdin and write to stdout and files. -a to append.",
+      "example": "echo \"text\" | tee file.txt; command | tee -a log.txt",
+      "category": "command"
+    },
+    {
+      "keyword": "cat",
+      "type": "command",
+      "description": "cat - Concatenate and display files. -n numbers lines.",
+      "example": "cat file.txt; cat file1 file2 > combined; cat -n file.txt",
+      "category": "command"
+    },
+    {
+      "keyword": "ls",
+      "type": "command",
+      "description": "ls - List directory contents. -l long format, -a all files, -h human-readable.",
+      "example": "ls; ls -la; ls -lh; ls -lt",
+      "category": "command"
+    },
+    {
+      "keyword": "chmod",
+      "type": "command",
+      "description": "chmod - Change file permissions. Use octal (755) or symbolic (u+x) notation.",
+      "example": "chmod 755 script.sh; chmod u+x file; chmod -R 644 *.txt",
+      "category": "command"
+    },
+    {
+      "keyword": "chown",
+      "type": "command",
+      "description": "chown - Change file owner and group. -R for recursive.",
+      "example": "chown user file; chown user:group file; chown -R user:group dir/",
+      "category": "command"
+    },
+    {
+      "keyword": "mkdir",
+      "type": "command",
+      "description": "mkdir - Create directories. -p creates parent directories.",
+      "example": "mkdir newdir; mkdir -p path/to/nested/dir",
+      "category": "command"
+    },
+    {
+      "keyword": "rm",
+      "type": "command",
+      "description": "rm - Remove files or directories. -r recursive, -f force, -i interactive.",
+      "example": "rm file.txt; rm -rf dir/; rm -i *.tmp",
+      "category": "command"
+    },
+    {
+      "keyword": "mv",
+      "type": "command",
+      "description": "mv - Move or rename files. -i interactive, -n no clobber.",
+      "example": "mv old.txt new.txt; mv file.txt dir/; mv -i source dest",
+      "category": "command"
+    },
+    {
+      "keyword": "cp",
+      "type": "command",
+      "description": "cp - Copy files or directories. -r recursive, -p preserve attributes.",
+      "example": "cp file.txt copy.txt; cp -r dir/ newdir/; cp -p file dest",
+      "category": "command"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "bash_header",
+      "description": "Bash script header with shebang",
+      "content": "#!/bin/bash\n\n${1:# Script description}\n\nset -euo pipefail\n\n${2:# Main code}",
+      "category": "template"
+    },
+    {
+      "trigger": "if_statement",
+      "description": "If-then-else statement",
+      "content": "if [ ${1:condition} ]; then\n\t${2:# commands}\nelse\n\t${3:# alternative}\nfi",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "if_elif",
+      "description": "If-elif-else chain",
+      "content": "if [ ${1:condition1} ]; then\n\t${2:# commands1}\nelif [ ${3:condition2} ]; then\n\t${4:# commands2}\nelse\n\t${5:# default}\nfi",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "for_loop",
+      "description": "For loop over items",
+      "content": "for ${1:item} in ${2:list}; do\n\t${3:# process item}\ndone",
+      "category": "loop"
+    },
+    {
+      "trigger": "for_range",
+      "description": "For loop with range",
+      "content": "for ((${1:i}=${2:0}; ${1:i}<${3:10}; ${1:i}++)); do\n\t${4:# loop body}\ndone",
+      "category": "loop"
+    },
+    {
+      "trigger": "for_files",
+      "description": "For loop over files",
+      "content": "for ${1:file} in ${2:*.txt}; do\n\t[ -f \"$${1:file}\" ] || continue\n\t${3:# process file}\ndone",
+      "category": "loop"
+    },
+    {
+      "trigger": "while_loop",
+      "description": "While loop",
+      "content": "while [ ${1:condition} ]; do\n\t${2:# commands}\ndone",
+      "category": "loop"
+    },
+    {
+      "trigger": "while_read",
+      "description": "While read loop for processing lines",
+      "content": "while IFS= read -r ${1:line}; do\n\t${2:# process line}\ndone < \"${3:file.txt}\"",
+      "category": "loop"
+    },
+    {
+      "trigger": "case_statement",
+      "description": "Case statement for pattern matching",
+      "content": "case ${1:$var} in\n\t${2:pattern1})\n\t\t${3:# commands1}\n\t\t;;\n\t${4:pattern2})\n\t\t${5:# commands2}\n\t\t;;\n\t*)\n\t\t${6:# default}\n\t\t;;\nesac",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "function",
+      "description": "Function definition",
+      "content": "${1:function_name}() {\n\t${2:# function body}\n}",
+      "category": "function"
+    },
+    {
+      "trigger": "function_args",
+      "description": "Function with argument handling",
+      "content": "${1:function_name}() {\n\tlocal ${2:arg1}=\"$1\"\n\tlocal ${3:arg2}=\"${2:-default}\"\n\t\n\t${4:# function body}\n\t\n\treturn 0\n}",
+      "category": "function"
+    },
+    {
+      "trigger": "getopts",
+      "description": "Parse command-line options",
+      "content": "while getopts \"${1:ab:c}\" opt; do\n\tcase $opt in\n\t\t${2:a})\n\t\t\t${3:# handle -a}\n\t\t\t;;\n\t\t${4:b})\n\t\t\t${5:value}=\"$OPTARG\"\n\t\t\t;;\n\t\t${6:c})\n\t\t\t${7:# handle -c}\n\t\t\t;;\n\t\t\\?)\n\t\t\techo \"Invalid option: -$OPTARG\" >&2\n\t\t\texit 1\n\t\t\t;;\n\tesac\ndone\nshift $((OPTIND - 1))",
+      "category": "argument_parsing"
+    },
+    {
+      "trigger": "error_exit",
+      "description": "Error handling function",
+      "content": "error_exit() {\n\techo \"Error: $1\" >&2\n\texit ${2:-1}\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "check_command",
+      "description": "Check if command exists",
+      "content": "if ! command -v ${1:command} &> /dev/null; then\n\techo \"${1:command} not found\" >&2\n\texit 1\nfi",
+      "category": "validation"
+    },
+    {
+      "trigger": "check_file",
+      "description": "Check if file exists",
+      "content": "if [ ! -f \"${1:file.txt}\" ]; then\n\techo \"File not found: ${1:file.txt}\" >&2\n\texit 1\nfi",
+      "category": "validation"
+    },
+    {
+      "trigger": "check_dir",
+      "description": "Check if directory exists",
+      "content": "if [ ! -d \"${1:directory}\" ]; then\n\techo \"Directory not found: ${1:directory}\" >&2\n\texit 1\nfi",
+      "category": "validation"
+    },
+    {
+      "trigger": "trap_cleanup",
+      "description": "Trap for cleanup on exit",
+      "content": "cleanup() {\n\t${1:# cleanup code}\n}\n\ntrap cleanup EXIT",
+      "category": "cleanup"
+    },
+    {
+      "trigger": "read_input",
+      "description": "Read user input with prompt",
+      "content": "read -p \"${1:Enter value}: \" ${2:variable}\nif [ -z \"$${2:variable}\" ]; then\n\techo \"No input provided\" >&2\n\texit 1\nfi",
+      "category": "input"
+    },
+    {
+      "trigger": "array_declare",
+      "description": "Declare and use array",
+      "content": "declare -a ${1:array}=(${2:\"item1\" \"item2\" \"item3\"})\nfor ${3:item} in \"${${1:array}[@]}\"; do\n\t${4:# process item}\ndone",
+      "category": "array"
+    },
+    {
+      "trigger": "associative_array",
+      "description": "Declare associative array (hash map)",
+      "content": "declare -A ${1:map}\n${1:map}[${2:key1}]=\"${3:value1}\"\n${1:map}[${4:key2}]=\"${5:value2}\"\n\nfor ${6:key} in \"${!${1:map}[@]}\"; do\n\techo \"$${6:key}: ${${1:map}[$${6:key}]}\"\ndone",
+      "category": "array"
+    },
+    {
+      "trigger": "string_test",
+      "description": "String comparison tests",
+      "content": "if [ -z \"${1:$var}\" ]; then echo \"empty\"; fi\nif [ -n \"${1:$var}\" ]; then echo \"not empty\"; fi\nif [ \"${1:$var1}\" = \"${2:$var2}\" ]; then echo \"equal\"; fi",
+      "category": "test"
+    },
+    {
+      "trigger": "numeric_test",
+      "description": "Numeric comparison tests",
+      "content": "if [ ${1:$num1} -eq ${2:$num2} ]; then echo \"equal\"; fi\nif [ ${1:$num1} -lt ${2:$num2} ]; then echo \"less than\"; fi\nif [ ${1:$num1} -gt ${2:$num2} ]; then echo \"greater than\"; fi",
+      "category": "test"
+    },
+    {
+      "trigger": "file_test",
+      "description": "File test conditions",
+      "content": "[ -f \"${1:file}\" ]  # file exists and is regular file\n[ -d \"${1:dir}\" ]   # directory exists\n[ -r \"${1:file}\" ]  # file is readable\n[ -w \"${1:file}\" ]  # file is writable\n[ -x \"${1:file}\" ]  # file is executable\n[ -s \"${1:file}\" ]  # file exists and is not empty",
+      "category": "test"
+    },
+    {
+      "trigger": "redirect",
+      "description": "Input/output redirection",
+      "content": "command > ${1:output.txt}          # redirect stdout\ncommand 2> ${2:error.txt}         # redirect stderr\ncommand &> ${3:all.txt}           # redirect both\ncommand >> ${1:output.txt}        # append stdout\ncommand < ${4:input.txt}          # redirect stdin",
+      "category": "io"
+    },
+    {
+      "trigger": "pipe",
+      "description": "Pipeline with error handling",
+      "content": "${1:command1} | ${2:command2} | ${3:command3}\nif [ ${PIPESTATUS[0]} -ne 0 ]; then\n\techo \"${1:command1} failed\" >&2\nfi",
+      "category": "pipeline"
+    },
+    {
+      "trigger": "heredoc",
+      "description": "Here document",
+      "content": "cat <<EOF\n${1:Multi-line\ntext content\nhere}\nEOF",
+      "category": "io"
+    },
+    {
+      "trigger": "heredoc_var",
+      "description": "Here document with variable expansion",
+      "content": "cat <<EOF\n${1:Text with $variable expansion}\nEOF",
+      "category": "io"
+    },
+    {
+      "trigger": "heredoc_novar",
+      "description": "Here document without variable expansion",
+      "content": "cat <<'EOF'\n${1:Text with literal $variable}\nEOF",
+      "category": "io"
+    },
+    {
+      "trigger": "subshell",
+      "description": "Command substitution",
+      "content": "${1:result}=$(${2:command})\necho \"Result: $${1:result}\"",
+      "category": "substitution"
+    },
+    {
+      "trigger": "arithmetic",
+      "description": "Arithmetic expansion",
+      "content": "${1:result}=$((${2:expression}))\nlet ${1:result}=\"${2:expression}\"\n((${1:result} = ${2:expression}))",
+      "category": "arithmetic"
+    }
+  ],
+  "imports": {
+    "modules": [
+      {
+        "path": "/bin/bash",
+        "items": [
+          {
+            "name": "set",
+            "item_type": "builtin",
+            "description": "Set shell options"
+          },
+          {
+            "name": "shopt",
+            "item_type": "builtin",
+            "description": "Set shell options"
+          },
+          {
+            "name": "trap",
+            "item_type": "builtin",
+            "description": "Signal handling"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "/usr/bin",
+        "items": [
+          {
+            "name": "grep",
+            "item_type": "command",
+            "description": "Pattern matching"
+          },
+          {
+            "name": "sed",
+            "item_type": "command",
+            "description": "Stream editing"
+          },
+          {
+            "name": "awk",
+            "item_type": "command",
+            "description": "Text processing"
+          },
+          {
+            "name": "find",
+            "item_type": "command",
+            "description": "File search"
+          }
+        ],
+        "submodules": []
+      }
+    ]
+  }
+}
