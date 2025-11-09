@@ -382,19 +382,37 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     popover.set_autohide(true);
     println!("Popover autohide set");
     
-    // Create scrolled window for suggestions
+    // Get screen size to calculate appropriate popup dimensions
+    let display = gdk::Display::default().expect("Failed to get display");
+    let monitor = display.monitors().item(0)
+        .and_then(|obj| obj.downcast::<gdk::Monitor>().ok())
+        .expect("Failed to get monitor");
+    let geometry = monitor.geometry();
+    let screen_width = geometry.width();
+    let screen_height = geometry.height();
+    
+    println!("Screen size: {}x{}", screen_width, screen_height);
+    
+    // Calculate popup dimensions as percentage of screen size
+    // 90% of screen width for both min and max
+    let popup_width = (screen_width as f32 * 0.9) as i32;
+    // Max height: 80% of screen height
+    let max_height = (screen_height as f32 * 0.8) as i32;
+    
+    println!("Popup dimensions: width={}, height={}", popup_width, max_height);
+    
+    // Create scrolled window for suggestions with dynamic sizing
     let scrolled = ScrolledWindow::builder()
-        .max_content_height(500)  // Significantly increased height for more visible items
-        .max_content_width(1400)  // Much wider for extensive documentation display
-        // Removed min_content_height to allow popup to size naturally based on content
-        .min_content_width(1200)  // Significantly increased minimum width for documentation
-        .propagate_natural_height(true)  // Changed to true to allow natural sizing
+        .max_content_height(max_height)
+        .max_content_width(popup_width)
+        .min_content_width(popup_width)
+        .propagate_natural_height(true)
         .propagate_natural_width(false)
         .hscrollbar_policy(gtk4::PolicyType::Never)
         .vscrollbar_policy(gtk4::PolicyType::Automatic)
         .overlay_scrolling(true)
         .build();
-    println!("ScrolledWindow created");
+    println!("ScrolledWindow created (screen-adaptive)");
     
     // Create list box for suggestions
     let list_box = ListBox::builder()
@@ -402,10 +420,10 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
         .show_separators(false)
         .build();
     
-    // Ensure the list box can be scrolled
-    list_box.set_size_request(1200, -1);  // Much wider for extensive documentation
+    // Set size based on screen dimensions
+    list_box.set_size_request(popup_width, -1);
     
-    println!("ListBox created");
+    println!("ListBox created with width: {}", popup_width);
     
     // Add suggestions to list
     for (i, (display_text, completion_item)) in suggestions_with_content.iter().enumerate() {
@@ -452,12 +470,20 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
         // Set icon size
         icon.set_icon_size(gtk4::IconSize::Normal);
         
-        // Create label for the main text with compact fixed width
+        // Fixed width for the first column (label)
+        let label_width = 10;  // Fixed at 10 characters
+        // Doc width: dynamic based on remaining space
+        let doc_width = ((popup_width as f32 * 0.70 / 8.0) as i32).max(40);
+        
+        // Create label for the main text with fixed width and wrapping
         let label = Label::builder()
             .label(display_text)
             .xalign(0.0)
             .hexpand(false)
-            .width_chars(20)  // Reduced width to give more room to documentation
+            .width_chars(label_width)
+            .wrap(true)
+            .wrap_mode(pango::WrapMode::WordChar)
+            .max_width_chars(label_width)
             .build();
         
         // Add CSS class for bold styling
@@ -482,29 +508,33 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
             },
         };
         
-        // Create documentation label with much more horizontal space
+        // Create documentation label with dynamic width based on screen size
         let doc_label = Label::builder()
             .label(&doc_text)
             .xalign(0.0)
             .hexpand(true)
             .wrap(true)                              // Enable wrapping for long documentation
             .wrap_mode(pango::WrapMode::Word)        // Wrap at word boundaries
-            .max_width_chars(120)                    // Much more characters for extensive documentation in larger popup
+            .max_width_chars(doc_width)
             .build();
         
         // Style the documentation label to be smaller and dimmed
         doc_label.add_css_class("completion-doc");
         
-        // Add some CSS styling for better appearance with more spacing
+        // Get font size from settings to match editor
+        let settings = crate::settings::get_settings();
+        let font_size = settings.get_font_size();
+        
+        // Add some CSS styling for better appearance with editor's font size
         let css_provider = gtk4::CssProvider::new();
-        css_provider.load_from_data(
-            ".completion-label { 
+        let css_content = format!(
+            ".completion-label {{ 
                 font-weight: bold;
-                font-size: 1.0em;
+                font-size: {}pt;
                 color: @theme_fg_color;
-            }
-            .completion-doc { 
-                font-size: 0.95em; 
+            }}
+            .completion-doc {{ 
+                font-size: {}pt; 
                 font-weight: 700;
                 color: alpha(@theme_fg_color, 0.75); 
                 margin-left: 40px;
@@ -512,8 +542,11 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                 padding-right: 20px;
                 padding-top: 2px;
                 padding-bottom: 2px;
-            }"
+            }}",
+            font_size,
+            font_size
         );
+        css_provider.load_from_data(&css_content);
         
         if let Some(display) = gdk::Display::default() {
             gtk4::style_context_add_provider_for_display(
@@ -685,6 +718,24 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     println!("About to show popover...");
     popover.popup();
     println!("Popover.popup() called");
+    
+    // ARM Debug: Check if popover is actually visible
+    glib::timeout_add_local_once(std::time::Duration::from_millis(100), {
+        let popover_check = popover.clone();
+        move || {
+            println!("=== POST-POPUP DEBUG INFO ===");
+            println!("Popover is_visible: {}", popover_check.is_visible());
+            println!("Popover is_mapped: {}", popover_check.is_mapped());
+            println!("Popover width: {:?}", popover_check.width());
+            println!("Popover height: {:?}", popover_check.height());
+            if let Some(parent) = popover_check.parent() {
+                println!("Popover has parent: {}", parent.widget_name());
+            } else {
+                println!("WARNING: Popover has no parent!");
+            }
+            println!("============================");
+        }
+    });
     
     // Give focus to the list box for keyboard navigation
     list_box.grab_focus();
