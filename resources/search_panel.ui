@@ -63,21 +63,13 @@
       </object>
     </child>
     
-    <!-- Search and Replace buttons container - wraps to column when narrow -->
+    <!-- Replace buttons container - wraps to column when narrow -->
     <child>
       <object class="GtkBox" id="buttons_box">
         <property name="orientation">horizontal</property>
         <property name="spacing">4</property>
         <property name="margin-bottom">8</property>
         <property name="homogeneous">true</property>
-        <child>
-          <object class="GtkButton" id="search_btn">
-            <property name="label">Search</property>
-            <property name="css-classes">suggested-action</property>
-            <property name="width-request">0</property>
-            <property name="hexpand">true</property>
-          </object>
-        </child>
         <child>
           <object class="GtkButton" id="replace_btn">
             <property name="label">Replace</property>
@@ -103,6 +95,9 @@
       <object class="GtkLabel" id="status">
         <property name="label">Enter text to search</property>
         <property name="xalign">0.0</property>
+        <property name="wrap">true</property>
+        <property name="wrap-mode">word-char</property>
+        <property name="max-width-chars">30</property>
         <property name="css-classes">dim-label</property>
         <property name="margin-bottom">4</property>
       </object>
