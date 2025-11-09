@@ -936,7 +936,8 @@ fn create_markdown_split_view(
     // Code tag
     let code_tag = gtk4::TextTag::new(Some("code"));
     code_tag.set_family(Some("monospace"));
-    code_tag.set_background_rgba(Some(&gtk4::gdk::RGBA::new(0.95, 0.95, 0.95, 1.0)));
+    code_tag.set_background_rgba(Some(&gtk4::gdk::RGBA::new(0.9, 0.9, 0.9, 1.0)));
+    code_tag.set_foreground_rgba(Some(&gtk4::gdk::RGBA::new(0.0, 0.0, 0.0, 1.0))); // Black text
     tag_table.add(&code_tag);
     
     // Bold tag
