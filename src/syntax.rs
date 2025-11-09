@@ -297,6 +297,7 @@ pub fn set_language_for_file(buffer: &Buffer, file_path: &Path) -> bool {
         "toml" => "toml",
         "dart" => "dart",
         "kt" | "kts" => "kotlin",
+        "svelte" => "html",
         _ => "",
     };
     
