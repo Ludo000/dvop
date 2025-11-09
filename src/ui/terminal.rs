@@ -195,24 +195,20 @@ pub fn create_terminal_box(terminal: &VteTerminal) -> ScrolledWindow {
 /// - editor_paned: Optional reference to the editor paned for toggling terminal visibility
 ///
 /// Returns the page number of the new tab
-pub fn add_terminal_tab(terminal_notebook: &Notebook, working_dir: Option<PathBuf>) -> u32 {
-    add_terminal_tab_with_paned(terminal_notebook, working_dir, None)
-}
-
 /// Adds a new terminal tab with paned support for toggling terminal visibility
 /// 
 /// This version allows the terminal tab close button to hide the terminal view
-/// when the last tab is closed.
+/// when the last tab is closed (auto-hide enabled).
 pub fn add_terminal_tab_with_toggle(
     terminal_notebook: &Notebook,
     working_dir: Option<PathBuf>,
     editor_paned: &gtk4::Paned
 ) -> u32 {
-    add_terminal_tab_with_paned(terminal_notebook, working_dir, Some(editor_paned))
+    add_terminal_tab_with_paned(terminal_notebook, working_dir, Some(editor_paned), true)
 }
 
-/// Internal function to add a terminal tab with optional paned reference
-fn add_terminal_tab_with_paned(terminal_notebook: &Notebook, working_dir: Option<PathBuf>, editor_paned: Option<&gtk4::Paned>) -> u32 {
+/// Internal function to add a terminal tab with optional paned reference and auto-hide control
+fn add_terminal_tab_with_paned(terminal_notebook: &Notebook, working_dir: Option<PathBuf>, editor_paned: Option<&gtk4::Paned>, auto_hide: bool) -> u32 {
     // Use the last folder name from the path for the tab title, or "Home" for default tabs
     let tab_title = if let Some(dir_path) = &working_dir {
         // Get the last component of the path (the folder name)
@@ -251,11 +247,18 @@ fn add_terminal_tab_with_paned(terminal_notebook: &Notebook, working_dir: Option
             // Remove the terminal tab
             notebook_clone.remove_page(Some(current_page_num));
             
-            // If this was the last terminal, hide the terminal view
-            if notebook_clone.n_pages() == 0 {
+            // If this was the last terminal and auto-hide is enabled, hide the terminal view completely
+            if auto_hide && notebook_clone.n_pages() == 0 {
                 if let Some(paned) = &editor_paned_clone {
-                    let max_pos = paned.allocation().height();
-                    paned.set_position(max_pos);
+                    if let Some(end_child) = paned.end_child() {
+                        end_child.set_visible(false);
+                        let max_pos = paned.allocation().height();
+                        paned.set_position(max_pos);
+                        // Save terminal hidden state
+                        let mut settings = crate::settings::get_settings_mut();
+                        settings.set_terminal_visible(false);
+                        let _ = settings.save();
+                    }
                 }
             }
         }
