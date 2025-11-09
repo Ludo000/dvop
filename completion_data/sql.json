@@ -1,0 +1,728 @@
+{
+  "language": "sql",
+  "description": "SQL (Structured Query Language) completion data",
+  "keywords": [
+    {
+      "keyword": "SELECT",
+      "type": "keyword",
+      "description": "SELECT - Retrieve data from tables. Foundation of SQL queries.",
+      "example": "SELECT * FROM users; SELECT name, email FROM users WHERE id = 1;",
+      "category": "query"
+    },
+    {
+      "keyword": "FROM",
+      "type": "keyword",
+      "description": "FROM - Specifies table(s) to query data from.",
+      "example": "SELECT * FROM users; SELECT u.name FROM users u;",
+      "category": "query"
+    },
+    {
+      "keyword": "WHERE",
+      "type": "keyword",
+      "description": "WHERE - Filter rows based on conditions.",
+      "example": "SELECT * FROM users WHERE age > 18; WHERE active = true AND role = 'admin';",
+      "category": "query"
+    },
+    {
+      "keyword": "INSERT",
+      "type": "keyword",
+      "description": "INSERT - Add new rows to a table.",
+      "example": "INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com');",
+      "category": "data_manipulation"
+    },
+    {
+      "keyword": "UPDATE",
+      "type": "keyword",
+      "description": "UPDATE - Modify existing rows in a table.",
+      "example": "UPDATE users SET email = 'new@example.com' WHERE id = 1;",
+      "category": "data_manipulation"
+    },
+    {
+      "keyword": "DELETE",
+      "type": "keyword",
+      "description": "DELETE - Remove rows from a table.",
+      "example": "DELETE FROM users WHERE id = 1; DELETE FROM logs WHERE created_at < '2023-01-01';",
+      "category": "data_manipulation"
+    },
+    {
+      "keyword": "CREATE",
+      "type": "keyword",
+      "description": "CREATE - Create database objects (tables, indexes, views, etc.).",
+      "example": "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100));",
+      "category": "ddl"
+    },
+    {
+      "keyword": "ALTER",
+      "type": "keyword",
+      "description": "ALTER - Modify existing database objects.",
+      "example": "ALTER TABLE users ADD COLUMN email VARCHAR(255); ALTER TABLE users DROP COLUMN age;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "DROP",
+      "type": "keyword",
+      "description": "DROP - Delete database objects. Irreversible operation.",
+      "example": "DROP TABLE users; DROP INDEX idx_email; DROP DATABASE testdb;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "TABLE",
+      "type": "keyword",
+      "description": "TABLE - Keyword used with CREATE, ALTER, DROP to specify table operations.",
+      "example": "CREATE TABLE users (...); ALTER TABLE users ...; DROP TABLE users;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "JOIN",
+      "type": "keyword",
+      "description": "JOIN - Combine rows from two or more tables based on related columns.",
+      "example": "SELECT * FROM users JOIN orders ON users.id = orders.user_id;",
+      "category": "join"
+    },
+    {
+      "keyword": "INNER JOIN",
+      "type": "keyword",
+      "description": "INNER JOIN - Returns matching rows from both tables.",
+      "example": "SELECT * FROM users INNER JOIN orders ON users.id = orders.user_id;",
+      "category": "join"
+    },
+    {
+      "keyword": "LEFT JOIN",
+      "type": "keyword",
+      "description": "LEFT JOIN - Returns all rows from left table, matching rows from right (NULL if no match).",
+      "example": "SELECT * FROM users LEFT JOIN orders ON users.id = orders.user_id;",
+      "category": "join"
+    },
+    {
+      "keyword": "RIGHT JOIN",
+      "type": "keyword",
+      "description": "RIGHT JOIN - Returns all rows from right table, matching rows from left (NULL if no match).",
+      "example": "SELECT * FROM orders RIGHT JOIN users ON orders.user_id = users.id;",
+      "category": "join"
+    },
+    {
+      "keyword": "FULL JOIN",
+      "type": "keyword",
+      "description": "FULL JOIN - Returns all rows when there's a match in either table.",
+      "example": "SELECT * FROM users FULL JOIN orders ON users.id = orders.user_id;",
+      "category": "join"
+    },
+    {
+      "keyword": "CROSS JOIN",
+      "type": "keyword",
+      "description": "CROSS JOIN - Cartesian product of two tables.",
+      "example": "SELECT * FROM colors CROSS JOIN sizes;",
+      "category": "join"
+    },
+    {
+      "keyword": "ON",
+      "type": "keyword",
+      "description": "ON - Specifies join condition.",
+      "example": "SELECT * FROM users JOIN orders ON users.id = orders.user_id;",
+      "category": "join"
+    },
+    {
+      "keyword": "USING",
+      "type": "keyword",
+      "description": "USING - Shorthand for join when column names are identical.",
+      "example": "SELECT * FROM users JOIN orders USING (user_id);",
+      "category": "join"
+    },
+    {
+      "keyword": "GROUP BY",
+      "type": "keyword",
+      "description": "GROUP BY - Group rows with same values for aggregation.",
+      "example": "SELECT country, COUNT(*) FROM users GROUP BY country;",
+      "category": "aggregation"
+    },
+    {
+      "keyword": "HAVING",
+      "type": "keyword",
+      "description": "HAVING - Filter groups (WHERE for grouped data). Used after GROUP BY.",
+      "example": "SELECT country, COUNT(*) FROM users GROUP BY country HAVING COUNT(*) > 10;",
+      "category": "aggregation"
+    },
+    {
+      "keyword": "ORDER BY",
+      "type": "keyword",
+      "description": "ORDER BY - Sort result set. ASC (default) or DESC.",
+      "example": "SELECT * FROM users ORDER BY name ASC; ORDER BY age DESC, name ASC;",
+      "category": "query"
+    },
+    {
+      "keyword": "LIMIT",
+      "type": "keyword",
+      "description": "LIMIT - Restrict number of rows returned.",
+      "example": "SELECT * FROM users LIMIT 10; SELECT * FROM users LIMIT 10 OFFSET 20;",
+      "category": "query"
+    },
+    {
+      "keyword": "OFFSET",
+      "type": "keyword",
+      "description": "OFFSET - Skip specified number of rows before returning results.",
+      "example": "SELECT * FROM users LIMIT 10 OFFSET 20;",
+      "category": "query"
+    },
+    {
+      "keyword": "DISTINCT",
+      "type": "keyword",
+      "description": "DISTINCT - Return only unique values.",
+      "example": "SELECT DISTINCT country FROM users; SELECT DISTINCT age, city FROM users;",
+      "category": "query"
+    },
+    {
+      "keyword": "AS",
+      "type": "keyword",
+      "description": "AS - Create alias for columns or tables.",
+      "example": "SELECT name AS user_name FROM users AS u; SELECT COUNT(*) AS total;",
+      "category": "query"
+    },
+    {
+      "keyword": "AND",
+      "type": "operator",
+      "description": "AND - Logical AND operator for combining conditions.",
+      "example": "WHERE age > 18 AND country = 'USA';",
+      "category": "operator"
+    },
+    {
+      "keyword": "OR",
+      "type": "operator",
+      "description": "OR - Logical OR operator for alternative conditions.",
+      "example": "WHERE role = 'admin' OR role = 'moderator';",
+      "category": "operator"
+    },
+    {
+      "keyword": "NOT",
+      "type": "operator",
+      "description": "NOT - Logical negation operator.",
+      "example": "WHERE NOT active = false; WHERE country NOT IN ('USA', 'Canada');",
+      "category": "operator"
+    },
+    {
+      "keyword": "IN",
+      "type": "operator",
+      "description": "IN - Check if value matches any in a list.",
+      "example": "WHERE country IN ('USA', 'Canada', 'UK'); WHERE id IN (SELECT user_id FROM orders);",
+      "category": "operator"
+    },
+    {
+      "keyword": "BETWEEN",
+      "type": "operator",
+      "description": "BETWEEN - Check if value is within range (inclusive).",
+      "example": "WHERE age BETWEEN 18 AND 65; WHERE created_at BETWEEN '2023-01-01' AND '2023-12-31';",
+      "category": "operator"
+    },
+    {
+      "keyword": "LIKE",
+      "type": "operator",
+      "description": "LIKE - Pattern matching with wildcards. % matches any characters, _ matches single character.",
+      "example": "WHERE name LIKE 'A%'; WHERE email LIKE '%@gmail.com'; WHERE code LIKE 'ABC_';",
+      "category": "operator"
+    },
+    {
+      "keyword": "IS NULL",
+      "type": "operator",
+      "description": "IS NULL - Check if value is NULL.",
+      "example": "WHERE email IS NULL; WHERE deleted_at IS NULL;",
+      "category": "operator"
+    },
+    {
+      "keyword": "IS NOT NULL",
+      "type": "operator",
+      "description": "IS NOT NULL - Check if value is not NULL.",
+      "example": "WHERE email IS NOT NULL; WHERE last_login IS NOT NULL;",
+      "category": "operator"
+    },
+    {
+      "keyword": "EXISTS",
+      "type": "operator",
+      "description": "EXISTS - Check if subquery returns any rows.",
+      "example": "WHERE EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id);",
+      "category": "operator"
+    },
+    {
+      "keyword": "COUNT",
+      "type": "function",
+      "description": "COUNT - Count number of rows. COUNT(*) includes NULLs, COUNT(column) excludes NULLs.",
+      "example": "SELECT COUNT(*) FROM users; SELECT COUNT(DISTINCT country) FROM users;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "SUM",
+      "type": "function",
+      "description": "SUM - Calculate sum of numeric column.",
+      "example": "SELECT SUM(amount) FROM orders; SELECT SUM(price * quantity) FROM order_items;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "AVG",
+      "type": "function",
+      "description": "AVG - Calculate average of numeric column.",
+      "example": "SELECT AVG(age) FROM users; SELECT AVG(rating) FROM reviews;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "MIN",
+      "type": "function",
+      "description": "MIN - Find minimum value in column.",
+      "example": "SELECT MIN(price) FROM products; SELECT MIN(created_at) FROM orders;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "MAX",
+      "type": "function",
+      "description": "MAX - Find maximum value in column.",
+      "example": "SELECT MAX(price) FROM products; SELECT MAX(updated_at) FROM users;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "UPPER",
+      "type": "function",
+      "description": "UPPER - Convert string to uppercase.",
+      "example": "SELECT UPPER(name) FROM users; WHERE UPPER(email) = 'ADMIN@EXAMPLE.COM';",
+      "category": "string_function"
+    },
+    {
+      "keyword": "LOWER",
+      "type": "function",
+      "description": "LOWER - Convert string to lowercase.",
+      "example": "SELECT LOWER(name) FROM users; WHERE LOWER(country) = 'usa';",
+      "category": "string_function"
+    },
+    {
+      "keyword": "LENGTH",
+      "type": "function",
+      "description": "LENGTH - Get length of string.",
+      "example": "SELECT LENGTH(name) FROM users; WHERE LENGTH(password) >= 8;",
+      "category": "string_function"
+    },
+    {
+      "keyword": "CONCAT",
+      "type": "function",
+      "description": "CONCAT - Concatenate strings.",
+      "example": "SELECT CONCAT(first_name, ' ', last_name) AS full_name FROM users;",
+      "category": "string_function"
+    },
+    {
+      "keyword": "SUBSTRING",
+      "type": "function",
+      "description": "SUBSTRING - Extract substring from string.",
+      "example": "SELECT SUBSTRING(email, 1, 5) FROM users; SUBSTRING(name FROM 1 FOR 10);",
+      "category": "string_function"
+    },
+    {
+      "keyword": "TRIM",
+      "type": "function",
+      "description": "TRIM - Remove leading and trailing whitespace.",
+      "example": "SELECT TRIM(name) FROM users; TRIM(BOTH ' ' FROM text);",
+      "category": "string_function"
+    },
+    {
+      "keyword": "COALESCE",
+      "type": "function",
+      "description": "COALESCE - Return first non-NULL value from list.",
+      "example": "SELECT COALESCE(email, phone, 'N/A') FROM users;",
+      "category": "function"
+    },
+    {
+      "keyword": "CASE",
+      "type": "keyword",
+      "description": "CASE - Conditional expression (like if-then-else).",
+      "example": "SELECT CASE WHEN age < 18 THEN 'minor' ELSE 'adult' END FROM users;",
+      "category": "conditional"
+    },
+    {
+      "keyword": "WHEN",
+      "type": "keyword",
+      "description": "WHEN - Condition in CASE expression.",
+      "example": "CASE WHEN age < 18 THEN 'minor' WHEN age < 65 THEN 'adult' ELSE 'senior' END",
+      "category": "conditional"
+    },
+    {
+      "keyword": "THEN",
+      "type": "keyword",
+      "description": "THEN - Result in CASE expression when condition is true.",
+      "example": "CASE WHEN status = 'active' THEN 1 ELSE 0 END",
+      "category": "conditional"
+    },
+    {
+      "keyword": "ELSE",
+      "type": "keyword",
+      "description": "ELSE - Default result in CASE expression.",
+      "example": "CASE WHEN age < 18 THEN 'minor' ELSE 'adult' END",
+      "category": "conditional"
+    },
+    {
+      "keyword": "END",
+      "type": "keyword",
+      "description": "END - Closes CASE expression.",
+      "example": "CASE WHEN condition THEN result ELSE default END",
+      "category": "conditional"
+    },
+    {
+      "keyword": "UNION",
+      "type": "keyword",
+      "description": "UNION - Combine results of multiple SELECT statements (removes duplicates).",
+      "example": "SELECT name FROM users UNION SELECT name FROM admins;",
+      "category": "set_operation"
+    },
+    {
+      "keyword": "UNION ALL",
+      "type": "keyword",
+      "description": "UNION ALL - Combine results of multiple SELECT statements (keeps duplicates).",
+      "example": "SELECT name FROM users UNION ALL SELECT name FROM guests;",
+      "category": "set_operation"
+    },
+    {
+      "keyword": "INTERSECT",
+      "type": "keyword",
+      "description": "INTERSECT - Return rows common to both SELECT statements.",
+      "example": "SELECT email FROM users INTERSECT SELECT email FROM subscribers;",
+      "category": "set_operation"
+    },
+    {
+      "keyword": "EXCEPT",
+      "type": "keyword",
+      "description": "EXCEPT - Return rows from first SELECT not in second SELECT.",
+      "example": "SELECT email FROM users EXCEPT SELECT email FROM unsubscribed;",
+      "category": "set_operation"
+    },
+    {
+      "keyword": "PRIMARY KEY",
+      "type": "constraint",
+      "description": "PRIMARY KEY - Uniquely identifies each row. Cannot be NULL.",
+      "example": "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100));",
+      "category": "constraint"
+    },
+    {
+      "keyword": "FOREIGN KEY",
+      "type": "constraint",
+      "description": "FOREIGN KEY - Links to primary key in another table. Enforces referential integrity.",
+      "example": "FOREIGN KEY (user_id) REFERENCES users(id);",
+      "category": "constraint"
+    },
+    {
+      "keyword": "UNIQUE",
+      "type": "constraint",
+      "description": "UNIQUE - Ensures all values in column are different.",
+      "example": "CREATE TABLE users (email VARCHAR(255) UNIQUE);",
+      "category": "constraint"
+    },
+    {
+      "keyword": "NOT NULL",
+      "type": "constraint",
+      "description": "NOT NULL - Column cannot contain NULL values.",
+      "example": "CREATE TABLE users (name VARCHAR(100) NOT NULL);",
+      "category": "constraint"
+    },
+    {
+      "keyword": "CHECK",
+      "type": "constraint",
+      "description": "CHECK - Validates data before insert/update.",
+      "example": "CREATE TABLE users (age INT CHECK (age >= 18));",
+      "category": "constraint"
+    },
+    {
+      "keyword": "DEFAULT",
+      "type": "constraint",
+      "description": "DEFAULT - Provides default value for column.",
+      "example": "CREATE TABLE users (active BOOLEAN DEFAULT true);",
+      "category": "constraint"
+    },
+    {
+      "keyword": "AUTO_INCREMENT",
+      "type": "constraint",
+      "description": "AUTO_INCREMENT - Automatically generates unique number for new rows (MySQL).",
+      "example": "CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY);",
+      "category": "constraint"
+    },
+    {
+      "keyword": "INDEX",
+      "type": "keyword",
+      "description": "INDEX - Create index for faster queries.",
+      "example": "CREATE INDEX idx_email ON users(email); CREATE UNIQUE INDEX idx_username ON users(username);",
+      "category": "optimization"
+    },
+    {
+      "keyword": "VIEW",
+      "type": "keyword",
+      "description": "VIEW - Virtual table based on SELECT query.",
+      "example": "CREATE VIEW active_users AS SELECT * FROM users WHERE active = true;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "TRANSACTION",
+      "type": "keyword",
+      "description": "TRANSACTION - Group of SQL operations executed as single unit.",
+      "example": "BEGIN TRANSACTION; ... COMMIT; / ROLLBACK;",
+      "category": "transaction"
+    },
+    {
+      "keyword": "COMMIT",
+      "type": "keyword",
+      "description": "COMMIT - Save all changes made in current transaction.",
+      "example": "BEGIN TRANSACTION; UPDATE users SET active = true; COMMIT;",
+      "category": "transaction"
+    },
+    {
+      "keyword": "ROLLBACK",
+      "type": "keyword",
+      "description": "ROLLBACK - Undo all changes made in current transaction.",
+      "example": "BEGIN TRANSACTION; DELETE FROM users; ROLLBACK;",
+      "category": "transaction"
+    },
+    {
+      "keyword": "INT",
+      "type": "datatype",
+      "description": "INT - Integer number type.",
+      "example": "CREATE TABLE users (age INT);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "VARCHAR",
+      "type": "datatype",
+      "description": "VARCHAR - Variable-length string with maximum length.",
+      "example": "CREATE TABLE users (name VARCHAR(255));",
+      "category": "datatype"
+    },
+    {
+      "keyword": "TEXT",
+      "type": "datatype",
+      "description": "TEXT - Large text data type.",
+      "example": "CREATE TABLE posts (content TEXT);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "DATE",
+      "type": "datatype",
+      "description": "DATE - Date value (YYYY-MM-DD).",
+      "example": "CREATE TABLE events (event_date DATE);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "DATETIME",
+      "type": "datatype",
+      "description": "DATETIME - Date and time value.",
+      "example": "CREATE TABLE logs (created_at DATETIME);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "TIMESTAMP",
+      "type": "datatype",
+      "description": "TIMESTAMP - Timestamp value, often with timezone.",
+      "example": "CREATE TABLE users (created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "BOOLEAN",
+      "type": "datatype",
+      "description": "BOOLEAN - True/false value.",
+      "example": "CREATE TABLE users (active BOOLEAN DEFAULT true);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "DECIMAL",
+      "type": "datatype",
+      "description": "DECIMAL - Fixed-point number with precision and scale.",
+      "example": "CREATE TABLE products (price DECIMAL(10, 2));",
+      "category": "datatype"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "select_all",
+      "description": "Select all columns from table",
+      "content": "SELECT * FROM ${1:table_name};",
+      "category": "query"
+    },
+    {
+      "trigger": "select_columns",
+      "description": "Select specific columns",
+      "content": "SELECT ${1:column1}, ${2:column2}\nFROM ${3:table_name};",
+      "category": "query"
+    },
+    {
+      "trigger": "select_where",
+      "description": "Select with WHERE clause",
+      "content": "SELECT ${1:*}\nFROM ${2:table_name}\nWHERE ${3:condition};",
+      "category": "query"
+    },
+    {
+      "trigger": "select_join",
+      "description": "Select with INNER JOIN",
+      "content": "SELECT ${1:t1.*}, ${2:t2.column}\nFROM ${3:table1} ${4:t1}\nINNER JOIN ${5:table2} ${6:t2} ON ${4:t1}.${7:id} = ${6:t2}.${8:foreign_key};",
+      "category": "join"
+    },
+    {
+      "trigger": "select_left_join",
+      "description": "Select with LEFT JOIN",
+      "content": "SELECT ${1:t1.*}, ${2:t2.column}\nFROM ${3:table1} ${4:t1}\nLEFT JOIN ${5:table2} ${6:t2} ON ${4:t1}.${7:id} = ${6:t2}.${8:foreign_key};",
+      "category": "join"
+    },
+    {
+      "trigger": "select_group",
+      "description": "Select with GROUP BY",
+      "content": "SELECT ${1:column}, COUNT(*) as ${2:count}\nFROM ${3:table_name}\nGROUP BY ${1:column};",
+      "category": "aggregation"
+    },
+    {
+      "trigger": "select_group_having",
+      "description": "Select with GROUP BY and HAVING",
+      "content": "SELECT ${1:column}, COUNT(*) as ${2:count}\nFROM ${3:table_name}\nGROUP BY ${1:column}\nHAVING COUNT(*) > ${4:threshold};",
+      "category": "aggregation"
+    },
+    {
+      "trigger": "select_order",
+      "description": "Select with ORDER BY",
+      "content": "SELECT ${1:*}\nFROM ${2:table_name}\nORDER BY ${3:column} ${4:ASC};",
+      "category": "query"
+    },
+    {
+      "trigger": "select_limit",
+      "description": "Select with LIMIT and OFFSET",
+      "content": "SELECT ${1:*}\nFROM ${2:table_name}\nLIMIT ${3:10} OFFSET ${4:0};",
+      "category": "query"
+    },
+    {
+      "trigger": "insert_single",
+      "description": "Insert single row",
+      "content": "INSERT INTO ${1:table_name} (${2:column1}, ${3:column2})\nVALUES (${4:value1}, ${5:value2});",
+      "category": "insert"
+    },
+    {
+      "trigger": "insert_multiple",
+      "description": "Insert multiple rows",
+      "content": "INSERT INTO ${1:table_name} (${2:column1}, ${3:column2})\nVALUES \n\t(${4:value1}, ${5:value2}),\n\t(${6:value3}, ${7:value4});",
+      "category": "insert"
+    },
+    {
+      "trigger": "update",
+      "description": "Update rows with WHERE",
+      "content": "UPDATE ${1:table_name}\nSET ${2:column1} = ${3:value1}\nWHERE ${4:condition};",
+      "category": "update"
+    },
+    {
+      "trigger": "update_multiple",
+      "description": "Update multiple columns",
+      "content": "UPDATE ${1:table_name}\nSET ${2:column1} = ${3:value1},\n    ${4:column2} = ${5:value2}\nWHERE ${6:condition};",
+      "category": "update"
+    },
+    {
+      "trigger": "delete",
+      "description": "Delete rows with WHERE",
+      "content": "DELETE FROM ${1:table_name}\nWHERE ${2:condition};",
+      "category": "delete"
+    },
+    {
+      "trigger": "create_table",
+      "description": "Create table with columns",
+      "content": "CREATE TABLE ${1:table_name} (\n\t${2:id} INT PRIMARY KEY AUTO_INCREMENT,\n\t${3:column1} ${4:VARCHAR(255)} NOT NULL,\n\t${5:column2} ${6:TEXT},\n\t${7:created_at} TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);",
+      "category": "ddl"
+    },
+    {
+      "trigger": "create_table_fk",
+      "description": "Create table with foreign key",
+      "content": "CREATE TABLE ${1:table_name} (\n\t${2:id} INT PRIMARY KEY AUTO_INCREMENT,\n\t${3:user_id} INT NOT NULL,\n\t${4:column1} ${5:VARCHAR(255)},\n\tFOREIGN KEY (${3:user_id}) REFERENCES ${6:users}(${7:id})\n);",
+      "category": "ddl"
+    },
+    {
+      "trigger": "alter_add_column",
+      "description": "Add column to table",
+      "content": "ALTER TABLE ${1:table_name}\nADD COLUMN ${2:column_name} ${3:datatype} ${4:constraints};",
+      "category": "ddl"
+    },
+    {
+      "trigger": "alter_drop_column",
+      "description": "Drop column from table",
+      "content": "ALTER TABLE ${1:table_name}\nDROP COLUMN ${2:column_name};",
+      "category": "ddl"
+    },
+    {
+      "trigger": "alter_modify_column",
+      "description": "Modify column definition",
+      "content": "ALTER TABLE ${1:table_name}\nMODIFY COLUMN ${2:column_name} ${3:new_datatype} ${4:constraints};",
+      "category": "ddl"
+    },
+    {
+      "trigger": "create_index",
+      "description": "Create index on table",
+      "content": "CREATE INDEX ${1:idx_name}\nON ${2:table_name}(${3:column_name});",
+      "category": "optimization"
+    },
+    {
+      "trigger": "create_unique_index",
+      "description": "Create unique index",
+      "content": "CREATE UNIQUE INDEX ${1:idx_name}\nON ${2:table_name}(${3:column_name});",
+      "category": "optimization"
+    },
+    {
+      "trigger": "create_view",
+      "description": "Create view",
+      "content": "CREATE VIEW ${1:view_name} AS\nSELECT ${2:columns}\nFROM ${3:table_name}\nWHERE ${4:condition};",
+      "category": "view"
+    },
+    {
+      "trigger": "subquery",
+      "description": "Subquery in WHERE clause",
+      "content": "SELECT ${1:*}\nFROM ${2:table1}\nWHERE ${3:column} IN (\n\tSELECT ${4:column}\n\tFROM ${5:table2}\n\tWHERE ${6:condition}\n);",
+      "category": "subquery"
+    },
+    {
+      "trigger": "case_simple",
+      "description": "Simple CASE expression",
+      "content": "CASE\n\tWHEN ${1:condition1} THEN ${2:result1}\n\tWHEN ${3:condition2} THEN ${4:result2}\n\tELSE ${5:default_result}\nEND",
+      "category": "conditional"
+    },
+    {
+      "trigger": "case_searched",
+      "description": "Searched CASE expression",
+      "content": "CASE ${1:column}\n\tWHEN ${2:value1} THEN ${3:result1}\n\tWHEN ${4:value2} THEN ${5:result2}\n\tELSE ${6:default_result}\nEND",
+      "category": "conditional"
+    },
+    {
+      "trigger": "transaction",
+      "description": "Transaction with COMMIT",
+      "content": "BEGIN TRANSACTION;\n\n${1:-- SQL statements}\n\nCOMMIT;",
+      "category": "transaction"
+    },
+    {
+      "trigger": "transaction_rollback",
+      "description": "Transaction with error handling",
+      "content": "BEGIN TRANSACTION;\n\n${1:-- SQL statements}\n\n-- If error occurs:\n-- ROLLBACK;\n-- Otherwise:\nCOMMIT;",
+      "category": "transaction"
+    },
+    {
+      "trigger": "union",
+      "description": "UNION query",
+      "content": "SELECT ${1:columns}\nFROM ${2:table1}\nWHERE ${3:condition1}\n\nUNION\n\nSELECT ${1:columns}\nFROM ${4:table2}\nWHERE ${5:condition2};",
+      "category": "set_operation"
+    },
+    {
+      "trigger": "cte",
+      "description": "Common Table Expression (WITH)",
+      "content": "WITH ${1:cte_name} AS (\n\tSELECT ${2:columns}\n\tFROM ${3:table_name}\n\tWHERE ${4:condition}\n)\nSELECT ${5:*}\nFROM ${1:cte_name};",
+      "category": "query"
+    },
+    {
+      "trigger": "count_all",
+      "description": "Count all rows",
+      "content": "SELECT COUNT(*) as ${1:total}\nFROM ${2:table_name};",
+      "category": "aggregation"
+    },
+    {
+      "trigger": "count_distinct",
+      "description": "Count distinct values",
+      "content": "SELECT COUNT(DISTINCT ${1:column}) as ${2:unique_count}\nFROM ${3:table_name};",
+      "category": "aggregation"
+    },
+    {
+      "trigger": "aggregate_stats",
+      "description": "Multiple aggregation functions",
+      "content": "SELECT \n\tCOUNT(*) as ${1:count},\n\tSUM(${2:column}) as ${3:total},\n\tAVG(${2:column}) as ${4:average},\n\tMIN(${2:column}) as ${5:minimum},\n\tMAX(${2:column}) as ${6:maximum}\nFROM ${7:table_name};",
+      "category": "aggregation"
+    }
+  ],
+  "imports": {
+    "modules": []
+  }
+}

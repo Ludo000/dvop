@@ -1,0 +1,838 @@
+{
+  "language": "go",
+  "description": "Go programming language completion data",
+  "keywords": [
+    {
+      "keyword": "package",
+      "type": "keyword",
+      "description": "package - Declares the package name. Every Go file must start with a package declaration.",
+      "example": "package main",
+      "category": "package_declaration"
+    },
+    {
+      "keyword": "import",
+      "type": "keyword",
+      "description": "import - Imports packages for use in the current file. Can import multiple packages in parentheses.",
+      "example": "import \"fmt\"; import (\"fmt\" \"os\")",
+      "category": "import_system"
+    },
+    {
+      "keyword": "func",
+      "type": "keyword",
+      "description": "func - Declares a function with optional parameters and return values. Functions are first-class citizens in Go.",
+      "example": "func add(a int, b int) int { return a + b }",
+      "category": "function_declaration"
+    },
+    {
+      "keyword": "var",
+      "type": "keyword",
+      "description": "var - Declares variables with explicit types. Can declare multiple variables at once.",
+      "example": "var name string = \"Alice\"; var x, y int",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "const",
+      "type": "keyword",
+      "description": "const - Declares constants that cannot be changed. Evaluated at compile time.",
+      "example": "const PI = 3.14159; const MaxUsers = 1000",
+      "category": "constant_declaration"
+    },
+    {
+      "keyword": "type",
+      "type": "keyword",
+      "description": "type - Defines new types including structs, interfaces, and type aliases.",
+      "example": "type Person struct { Name string; Age int }",
+      "category": "type_declaration"
+    },
+    {
+      "keyword": "struct",
+      "type": "keyword",
+      "description": "struct - Defines a composite type that groups together fields. Foundation of data modeling in Go.",
+      "example": "type User struct { ID int; Name string; Email string }",
+      "category": "type_declaration"
+    },
+    {
+      "keyword": "interface",
+      "type": "keyword",
+      "description": "interface - Defines a contract of methods. Go's way of achieving polymorphism.",
+      "example": "type Reader interface { Read(p []byte) (n int, err error) }",
+      "category": "interface_declaration"
+    },
+    {
+      "keyword": "if",
+      "type": "keyword",
+      "description": "if - Conditional statement. Can include initialization before condition.",
+      "example": "if x > 0 { }; if err := doSomething(); err != nil { }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "else",
+      "type": "keyword",
+      "description": "else - Alternative execution path when if condition is false.",
+      "example": "if x > 0 { } else { }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "for",
+      "type": "keyword",
+      "description": "for - Go's only looping construct. Can be used as while, infinite loop, or traditional for loop.",
+      "example": "for i := 0; i < 10; i++ { }; for condition { }; for { }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "range",
+      "type": "keyword",
+      "description": "range - Iterates over slices, arrays, maps, channels, or strings in for loops.",
+      "example": "for i, v := range slice { }; for key, value := range map { }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "switch",
+      "type": "keyword",
+      "description": "switch - Multi-way conditional. Cases don't fall through by default in Go.",
+      "example": "switch x { case 1: ; case 2: ; default: }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "case",
+      "type": "keyword",
+      "description": "case - Branch in switch or select statement. Can match multiple values.",
+      "example": "case 1, 2, 3: ; case x > 10:",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "default",
+      "type": "keyword",
+      "description": "default - Default case in switch or select when no other case matches.",
+      "example": "default: fmt.Println(\"default case\")",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "break",
+      "type": "keyword",
+      "description": "break - Exits the current loop or switch statement.",
+      "example": "for { if done { break } }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "continue",
+      "type": "keyword",
+      "description": "continue - Skips to next iteration of the loop.",
+      "example": "for i := 0; i < 10; i++ { if skip { continue } }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "return",
+      "type": "keyword",
+      "description": "return - Returns values from a function. Go supports multiple return values.",
+      "example": "return result; return value, err; return",
+      "category": "function_control"
+    },
+    {
+      "keyword": "defer",
+      "type": "keyword",
+      "description": "defer - Defers execution of a function until surrounding function returns. Used for cleanup.",
+      "example": "defer file.Close(); defer fmt.Println(\"done\")",
+      "category": "function_control"
+    },
+    {
+      "keyword": "go",
+      "type": "keyword",
+      "description": "go - Launches a goroutine (concurrent function execution). Core of Go's concurrency model.",
+      "example": "go processData(); go func() { /* anonymous goroutine */ }()",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "chan",
+      "type": "keyword",
+      "description": "chan - Declares a channel type for goroutine communication. Can be buffered or unbuffered.",
+      "example": "var ch chan int; ch := make(chan string, 10)",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "select",
+      "type": "keyword",
+      "description": "select - Waits on multiple channel operations. Like switch but for channels.",
+      "example": "select { case msg := <-ch1: ; case ch2 <- value: ; default: }",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "make",
+      "type": "builtin",
+      "description": "make - Allocates and initializes slices, maps, and channels. Returns initialized value.",
+      "example": "make([]int, 5); make(map[string]int); make(chan int)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "new",
+      "type": "builtin",
+      "description": "new - Allocates memory and returns pointer. Zeroes the memory but doesn't initialize.",
+      "example": "p := new(Person); arr := new([10]int)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "append",
+      "type": "builtin",
+      "description": "append - Appends elements to a slice, growing it if necessary. Returns the updated slice.",
+      "example": "slice = append(slice, element); slice = append(slice, elem1, elem2)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "len",
+      "type": "builtin",
+      "description": "len - Returns the length of strings, arrays, slices, maps, and channels.",
+      "example": "len(slice); len(\"hello\"); len(myMap)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "cap",
+      "type": "builtin",
+      "description": "cap - Returns the capacity of slices, arrays, and channels.",
+      "example": "cap(slice); cap(array)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "copy",
+      "type": "builtin",
+      "description": "copy - Copies elements from source slice to destination slice. Returns number of elements copied.",
+      "example": "n := copy(dst, src)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "delete",
+      "type": "builtin",
+      "description": "delete - Removes a key-value pair from a map.",
+      "example": "delete(myMap, \"key\")",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "close",
+      "type": "builtin",
+      "description": "close - Closes a channel, signaling no more values will be sent.",
+      "example": "close(ch)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "panic",
+      "type": "builtin",
+      "description": "panic - Stops normal execution and begins panicking. Used for unrecoverable errors.",
+      "example": "panic(\"fatal error\"); panic(err)",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "recover",
+      "type": "builtin",
+      "description": "recover - Regains control of a panicking goroutine. Must be called in deferred function.",
+      "example": "defer func() { if r := recover(); r != nil { } }()",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "error",
+      "type": "interface",
+      "description": "error - Built-in interface for error handling. Has single Error() string method.",
+      "example": "func doWork() error { return errors.New(\"failed\") }",
+      "category": "error_handling"
+    },
+    {
+      "keyword": "nil",
+      "type": "constant",
+      "description": "nil - Zero value for pointers, interfaces, maps, slices, channels, and function types.",
+      "example": "var p *int = nil; if err != nil { }",
+      "category": "constants"
+    },
+    {
+      "keyword": "true",
+      "type": "constant",
+      "description": "true - Boolean constant representing true.",
+      "example": "var flag bool = true",
+      "category": "constants"
+    },
+    {
+      "keyword": "false",
+      "type": "constant",
+      "description": "false - Boolean constant representing false.",
+      "example": "var flag bool = false",
+      "category": "constants"
+    },
+    {
+      "keyword": "iota",
+      "type": "constant",
+      "description": "iota - Constant generator that increments in const declarations. Resets to 0 in each const block.",
+      "example": "const ( A = iota; B; C ); // A=0, B=1, C=2",
+      "category": "constants"
+    },
+    {
+      "keyword": "string",
+      "type": "type",
+      "description": "string - Built-in type for UTF-8 encoded text. Immutable sequence of bytes.",
+      "example": "var name string = \"Alice\"",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "int",
+      "type": "type",
+      "description": "int - Platform-dependent signed integer (32 or 64 bits). Most common integer type.",
+      "example": "var count int = 42",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "int8",
+      "type": "type",
+      "description": "int8 - 8-bit signed integer (-128 to 127).",
+      "example": "var small int8 = 127",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "int16",
+      "type": "type",
+      "description": "int16 - 16-bit signed integer (-32768 to 32767).",
+      "example": "var medium int16 = 32000",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "int32",
+      "type": "type",
+      "description": "int32 - 32-bit signed integer. Alias for rune.",
+      "example": "var large int32 = 2147483647",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "int64",
+      "type": "type",
+      "description": "int64 - 64-bit signed integer. Use for very large numbers or timestamps.",
+      "example": "var huge int64 = 9223372036854775807",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "uint",
+      "type": "type",
+      "description": "uint - Platform-dependent unsigned integer (32 or 64 bits).",
+      "example": "var count uint = 42",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "uint8",
+      "type": "type",
+      "description": "uint8 - 8-bit unsigned integer (0 to 255). Alias for byte.",
+      "example": "var b uint8 = 255",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "uint16",
+      "type": "type",
+      "description": "uint16 - 16-bit unsigned integer (0 to 65535).",
+      "example": "var port uint16 = 8080",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "uint32",
+      "type": "type",
+      "description": "uint32 - 32-bit unsigned integer.",
+      "example": "var id uint32 = 4294967295",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "uint64",
+      "type": "type",
+      "description": "uint64 - 64-bit unsigned integer.",
+      "example": "var huge uint64 = 18446744073709551615",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "float32",
+      "type": "type",
+      "description": "float32 - 32-bit floating point number.",
+      "example": "var pi float32 = 3.14159",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "float64",
+      "type": "type",
+      "description": "float64 - 64-bit floating point number. Default for floating point literals.",
+      "example": "var precise float64 = 3.141592653589793",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "complex64",
+      "type": "type",
+      "description": "complex64 - Complex number with float32 real and imaginary parts.",
+      "example": "var c complex64 = 1 + 2i",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "complex128",
+      "type": "type",
+      "description": "complex128 - Complex number with float64 real and imaginary parts.",
+      "example": "var c complex128 = 3.14 + 2.71i",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "bool",
+      "type": "type",
+      "description": "bool - Boolean type with values true or false.",
+      "example": "var isValid bool = true",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "byte",
+      "type": "type",
+      "description": "byte - Alias for uint8. Commonly used for raw binary data.",
+      "example": "var b byte = 255; data := []byte(\"hello\")",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "rune",
+      "type": "type",
+      "description": "rune - Alias for int32. Represents a Unicode code point.",
+      "example": "var ch rune = '世'; for _, r := range \"hello\" { }",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "map",
+      "type": "keyword",
+      "description": "map - Built-in hash table type. Maps keys to values.",
+      "example": "var m map[string]int; m := make(map[string]int)",
+      "category": "composite_types"
+    },
+    {
+      "keyword": "fallthrough",
+      "type": "keyword",
+      "description": "fallthrough - Transfers control to next case in switch. Rarely used in Go.",
+      "example": "switch x { case 1: doSomething(); fallthrough; case 2: doMore() }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "goto",
+      "type": "keyword",
+      "description": "goto - Jumps to a labeled statement. Generally discouraged except for specific cases.",
+      "example": "goto Error; Error: return err",
+      "category": "control_flow"
+    }
+  ],
+  "snippets": [
+    {
+      "trigger": "main",
+      "description": "Main function template - Entry point for Go programs",
+      "content": "func main() {\n\t${1:// code}\n}",
+      "category": "function"
+    },
+    {
+      "trigger": "package_main",
+      "description": "Complete main package template",
+      "content": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"${1:Hello, World!}\")\n}",
+      "category": "package"
+    },
+    {
+      "trigger": "func",
+      "description": "Function declaration with parameters and return type",
+      "content": "func ${1:functionName}(${2:params}) ${3:returnType} {\n\t${4:// implementation}\n\treturn ${5:result}\n}",
+      "category": "function"
+    },
+    {
+      "trigger": "method",
+      "description": "Method declaration with receiver",
+      "content": "func (${1:receiver} ${2:Type}) ${3:MethodName}(${4:params}) ${5:returnType} {\n\t${6:// implementation}\n\treturn ${7:result}\n}",
+      "category": "method"
+    },
+    {
+      "trigger": "struct",
+      "description": "Struct type definition",
+      "content": "type ${1:StructName} struct {\n\t${2:Field1} ${3:Type1}\n\t${4:Field2} ${5:Type2}\n}",
+      "category": "type"
+    },
+    {
+      "trigger": "interface",
+      "description": "Interface type definition",
+      "content": "type ${1:InterfaceName} interface {\n\t${2:MethodName}(${3:params}) ${4:returnType}\n}",
+      "category": "interface"
+    },
+    {
+      "trigger": "if_err",
+      "description": "Error checking pattern",
+      "content": "if err != nil {\n\t${1:return err}\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "if_err_return",
+      "description": "Error checking with wrapped return",
+      "content": "if err != nil {\n\treturn ${1:nil}, fmt.Errorf(\"${2:operation failed}: %w\", err)\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "for_range",
+      "description": "For-range loop over slice or map",
+      "content": "for ${1:i}, ${2:value} := range ${3:collection} {\n\t${4:// process value}\n}",
+      "category": "loop"
+    },
+    {
+      "trigger": "for_traditional",
+      "description": "Traditional for loop with counter",
+      "content": "for ${1:i} := ${2:0}; ${1:i} < ${3:count}; ${1:i}++ {\n\t${4:// loop body}\n}",
+      "category": "loop"
+    },
+    {
+      "trigger": "for_infinite",
+      "description": "Infinite loop",
+      "content": "for {\n\t${1:// loop body}\n\tif ${2:condition} {\n\t\tbreak\n\t}\n}",
+      "category": "loop"
+    },
+    {
+      "trigger": "switch",
+      "description": "Switch statement",
+      "content": "switch ${1:value} {\ncase ${2:case1}:\n\t${3:// case 1}\ncase ${4:case2}:\n\t${5:// case 2}\ndefault:\n\t${6:// default case}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "select",
+      "description": "Select statement for channel operations",
+      "content": "select {\ncase ${1:msg} := <-${2:ch1}:\n\t${3:// received from ch1}\ncase ${4:ch2} <- ${5:value}:\n\t${6:// sent to ch2}\ndefault:\n\t${7:// no channel ready}\n}",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "goroutine",
+      "description": "Launch goroutine",
+      "content": "go func() {\n\t${1:// goroutine body}\n}()",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "channel",
+      "description": "Create buffered channel",
+      "content": "${1:ch} := make(chan ${2:type}, ${3:bufferSize})",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "defer",
+      "description": "Defer statement for cleanup",
+      "content": "defer ${1:cleanup}()",
+      "category": "cleanup"
+    },
+    {
+      "trigger": "defer_close",
+      "description": "Defer closing resource",
+      "content": "defer ${1:file}.Close()",
+      "category": "cleanup"
+    },
+    {
+      "trigger": "test_function",
+      "description": "Test function template",
+      "content": "func Test${1:FunctionName}(t *testing.T) {\n\t${2:// arrange}\n\t${3:// act}\n\t${4:// assert}\n\tif ${5:got} != ${6:want} {\n\t\tt.Errorf(\"${1:FunctionName}() = %v, want %v\", ${5:got}, ${6:want})\n\t}\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "test_table",
+      "description": "Table-driven test",
+      "content": "func Test${1:FunctionName}(t *testing.T) {\n\ttests := []struct {\n\t\tname string\n\t\t${2:input} ${3:type}\n\t\twant ${4:type}\n\t}{\n\t\t{name: \"${5:test case}\", ${2:input}: ${6:value}, want: ${7:expected}},\n\t}\n\tfor _, tt := range tests {\n\t\tt.Run(tt.name, func(t *testing.T) {\n\t\t\tif got := ${1:FunctionName}(tt.${2:input}); got != tt.want {\n\t\t\t\tt.Errorf(\"${1:FunctionName}() = %v, want %v\", got, tt.want)\n\t\t\t}\n\t\t})\n\t}\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "http_handler",
+      "description": "HTTP handler function",
+      "content": "func ${1:handlerName}(w http.ResponseWriter, r *http.Request) {\n\t${2:// handle request}\n\tw.WriteHeader(http.StatusOK)\n\tfmt.Fprintf(w, \"${3:response}\")\n}",
+      "category": "http"
+    },
+    {
+      "trigger": "http_server",
+      "description": "HTTP server setup",
+      "content": "http.HandleFunc(\"${1:/}\", ${2:handler})\nlog.Fatal(http.ListenAndServe(\":${3:8080}\", nil))",
+      "category": "http"
+    },
+    {
+      "trigger": "json_marshal",
+      "description": "Marshal struct to JSON",
+      "content": "${1:data}, err := json.Marshal(${2:object})\nif err != nil {\n\treturn err\n}",
+      "category": "json"
+    },
+    {
+      "trigger": "json_unmarshal",
+      "description": "Unmarshal JSON to struct",
+      "content": "var ${1:result} ${2:Type}\nerr := json.Unmarshal(${3:data}, &${1:result})\nif err != nil {\n\treturn err\n}",
+      "category": "json"
+    },
+    {
+      "trigger": "file_read",
+      "description": "Read file content",
+      "content": "data, err := os.ReadFile(\"${1:filename}\")\nif err != nil {\n\treturn err\n}\n${2:// use data}",
+      "category": "io"
+    },
+    {
+      "trigger": "file_write",
+      "description": "Write content to file",
+      "content": "err := os.WriteFile(\"${1:filename}\", ${2:data}, 0644)\nif err != nil {\n\treturn err\n}",
+      "category": "io"
+    },
+    {
+      "trigger": "context_timeout",
+      "description": "Context with timeout",
+      "content": "ctx, cancel := context.WithTimeout(context.Background(), ${1:5*time.Second})\ndefer cancel()",
+      "category": "context"
+    },
+    {
+      "trigger": "waitgroup",
+      "description": "WaitGroup for goroutine synchronization",
+      "content": "var wg sync.WaitGroup\nwg.Add(${1:1})\ngo func() {\n\tdefer wg.Done()\n\t${2:// work}\n}()\nwg.Wait()",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "mutex",
+      "description": "Mutex for safe concurrent access",
+      "content": "${1:mu}.Lock()\ndefer ${1:mu}.Unlock()\n${2:// critical section}",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "type_assertion",
+      "description": "Type assertion with ok check",
+      "content": "if ${1:value}, ok := ${2:interface}.(${3:Type}); ok {\n\t${4:// use value}\n}",
+      "category": "type_conversion"
+    },
+    {
+      "trigger": "type_switch",
+      "description": "Type switch for interfaces",
+      "content": "switch v := ${1:interface}.(type) {\ncase ${2:string}:\n\t${3:// handle string}\ncase ${4:int}:\n\t${5:// handle int}\ndefault:\n\t${6:// handle unknown type}\n}",
+      "category": "type_conversion"
+    }
+  ],
+  "imports": {
+    "modules": [
+      {
+        "path": "fmt",
+        "items": [
+          {
+            "name": "Println",
+            "item_type": "function",
+            "description": "Print with newline"
+          },
+          {
+            "name": "Printf",
+            "item_type": "function",
+            "description": "Formatted print"
+          },
+          {
+            "name": "Sprintf",
+            "item_type": "function",
+            "description": "Format to string"
+          },
+          {
+            "name": "Errorf",
+            "item_type": "function",
+            "description": "Format error message"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "net/http",
+        "items": [
+          {
+            "name": "HandleFunc",
+            "item_type": "function",
+            "description": "Register HTTP handler"
+          },
+          {
+            "name": "ListenAndServe",
+            "item_type": "function",
+            "description": "Start HTTP server"
+          },
+          {
+            "name": "Get",
+            "item_type": "function",
+            "description": "HTTP GET request"
+          },
+          {
+            "name": "Post",
+            "item_type": "function",
+            "description": "HTTP POST request"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "encoding/json",
+        "items": [
+          {
+            "name": "Marshal",
+            "item_type": "function",
+            "description": "Encode to JSON"
+          },
+          {
+            "name": "Unmarshal",
+            "item_type": "function",
+            "description": "Decode from JSON"
+          },
+          {
+            "name": "Encoder",
+            "item_type": "struct",
+            "description": "JSON encoder"
+          },
+          {
+            "name": "Decoder",
+            "item_type": "struct",
+            "description": "JSON decoder"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "context",
+        "items": [
+          {
+            "name": "Background",
+            "item_type": "function",
+            "description": "Empty context"
+          },
+          {
+            "name": "WithCancel",
+            "item_type": "function",
+            "description": "Cancelable context"
+          },
+          {
+            "name": "WithTimeout",
+            "item_type": "function",
+            "description": "Context with timeout"
+          },
+          {
+            "name": "WithDeadline",
+            "item_type": "function",
+            "description": "Context with deadline"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "sync",
+        "items": [
+          {
+            "name": "Mutex",
+            "item_type": "struct",
+            "description": "Mutual exclusion lock"
+          },
+          {
+            "name": "RWMutex",
+            "item_type": "struct",
+            "description": "Reader/writer lock"
+          },
+          {
+            "name": "WaitGroup",
+            "item_type": "struct",
+            "description": "Wait for goroutines"
+          },
+          {
+            "name": "Once",
+            "item_type": "struct",
+            "description": "One-time execution"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "os",
+        "items": [
+          {
+            "name": "Open",
+            "item_type": "function",
+            "description": "Open file"
+          },
+          {
+            "name": "Create",
+            "item_type": "function",
+            "description": "Create file"
+          },
+          {
+            "name": "ReadFile",
+            "item_type": "function",
+            "description": "Read entire file"
+          },
+          {
+            "name": "WriteFile",
+            "item_type": "function",
+            "description": "Write to file"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "io",
+        "items": [
+          {
+            "name": "Reader",
+            "item_type": "interface",
+            "description": "Basic read interface"
+          },
+          {
+            "name": "Writer",
+            "item_type": "interface",
+            "description": "Basic write interface"
+          },
+          {
+            "name": "Copy",
+            "item_type": "function",
+            "description": "Copy from reader to writer"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "time",
+        "items": [
+          {
+            "name": "Now",
+            "item_type": "function",
+            "description": "Current time"
+          },
+          {
+            "name": "Sleep",
+            "item_type": "function",
+            "description": "Pause execution"
+          },
+          {
+            "name": "Duration",
+            "item_type": "type",
+            "description": "Time duration"
+          },
+          {
+            "name": "Time",
+            "item_type": "struct",
+            "description": "Point in time"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "testing",
+        "items": [
+          {
+            "name": "T",
+            "item_type": "struct",
+            "description": "Testing context"
+          },
+          {
+            "name": "B",
+            "item_type": "struct",
+            "description": "Benchmarking context"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "errors",
+        "items": [
+          {
+            "name": "New",
+            "item_type": "function",
+            "description": "Create new error"
+          },
+          {
+            "name": "Is",
+            "item_type": "function",
+            "description": "Compare errors"
+          },
+          {
+            "name": "As",
+            "item_type": "function",
+            "description": "Type assertion for errors"
+          }
+        ],
+        "submodules": []
+      }
+    ]
+  }
+}

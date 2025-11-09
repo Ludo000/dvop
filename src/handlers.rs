@@ -1154,7 +1154,17 @@ pub fn open_or_focus_tab(
         crate::status_log::log_success(&format!("Focused {}", filename));
     } else {
         // Get file MIME type 
-        let mime_type = mime_guess::from_path(&file_to_open).first_or_octet_stream();
+        let mut mime_type = mime_guess::from_path(&file_to_open).first_or_octet_stream();
+        
+        // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+        // but should be treated as TypeScript files (text/plain)
+        if let Some(ext) = file_to_open.extension() {
+            if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                // Override MIME type for TypeScript files
+                mime_type = mime_guess::mime::TEXT_PLAIN;
+            }
+        }
+        
         let file_name = file_to_open.file_name().unwrap_or_default().to_string_lossy().to_string();
         
         // Create tab widget regardless of content type
@@ -2097,7 +2107,17 @@ fn setup_save_button_handler(
                     .map(|name| name.to_string_lossy().into_owned())
                     .unwrap_or_else(|| "file".to_string());
                 
-                let mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
+                let mut mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
+                
+                // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+                // but should be treated as TypeScript files (text/plain)
+                if let Some(ext) = path_to_save.extension() {
+                    if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                        // Override MIME type for TypeScript files
+                        mime_type = mime_guess::mime::TEXT_PLAIN;
+                    }
+                }
+                
                 if utils::is_allowed_mime_type(&mime_type) {
                     match File::create(&path_to_save) {
                         Ok(mut file) => {
@@ -2280,7 +2300,17 @@ fn setup_save_as_button_handler(
                             .map(|name| name.to_string_lossy().into_owned())
                             .unwrap_or_else(|| "file".to_string());
                         
-                        let mime_type = mime_guess::from_path(&file_to_save).first_or_octet_stream();
+                        let mut mime_type = mime_guess::from_path(&file_to_save).first_or_octet_stream();
+                        
+                        // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+                        // but should be treated as TypeScript files (text/plain)
+                        if let Some(ext) = file_to_save.extension() {
+                            if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                                // Override MIME type for TypeScript files
+                                mime_type = mime_guess::mime::TEXT_PLAIN;
+                            }
+                        }
+                        
                         if utils::is_allowed_mime_type(&mime_type) {
                             match File::create(&file_to_save) {
                                 Ok(mut f_obj) => {
@@ -2777,7 +2807,17 @@ fn setup_file_selection_handler(
                     }
                 }
             } else if path_from_list.is_file() {
-                let mime_type = mime_guess::from_path(&path_from_list).first_or_octet_stream();
+                let mut mime_type = mime_guess::from_path(&path_from_list).first_or_octet_stream();
+                
+                // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+                // but should be treated as TypeScript files (text/plain)
+                if let Some(ext) = path_from_list.extension() {
+                    if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                        // Override MIME type for TypeScript files
+                        mime_type = mime_guess::mime::TEXT_PLAIN;
+                    }
+                }
+                
                 if utils::is_allowed_mime_type(&mime_type) {
                     if let Ok(content) = std::fs::read_to_string(&path_from_list) {                            open_or_focus_tab(
                             &editor_notebook_for_handler, 

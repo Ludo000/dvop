@@ -105,7 +105,16 @@ fn is_current_file_non_editable(
     // Check if we have an active file path
     if let Some(tab_path_ref) = active_tab_path {
         if let Some(file_path) = tab_path_ref.borrow().as_ref() {
-            let mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
+            let mut mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
+            
+            // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+            // but should be treated as TypeScript files (text/plain)
+            if let Some(ext) = file_path.extension() {
+                if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                    // Override MIME type for TypeScript files
+                    mime_type = mime_guess::mime::TEXT_PLAIN;
+                }
+            }
             
             // Check if it's an image, video, or audio file
             if mime_type.type_() == "image" || 

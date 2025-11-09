@@ -1300,7 +1300,17 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
             if let Some(path_to_save) = path_to_save_opt {
                 // Check if this is a supported file type for saving
-                let mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
+                let mut mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
+                
+                // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+                // but should be treated as TypeScript files (text/plain)
+                if let Some(ext) = path_to_save.extension() {
+                    if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                        // Override MIME type for TypeScript files
+                        mime_type = mime_guess::mime::TEXT_PLAIN;
+                    }
+                }
+                
                 if utils::is_allowed_mime_type(&mime_type) {
                     // Attempt to save the file
                     match std::fs::File::create(&path_to_save) {
@@ -1505,9 +1515,20 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_path_clone, &new_active_path, utils::FileSelectionSource::TabSwitch);
 
         // Determine the MIME type from the file path
-        let mime_type = new_active_path.as_ref()
+        let mut mime_type = new_active_path.as_ref()
             .map(|p| mime_guess::from_path(p).first_or_octet_stream())
             .unwrap_or(mime_guess::mime::TEXT_PLAIN_UTF_8); // Default to plain text for unsaved files
+        
+        // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+        // but should be treated as TypeScript files (text/plain)
+        if let Some(file_path) = &new_active_path {
+            if let Some(ext) = file_path.extension() {
+                if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                    // Override MIME type for TypeScript files
+                    mime_type = mime_guess::mime::TEXT_PLAIN;
+                }
+            }
+        }
         
         // Check if the current tab has a text view (editable content) or is an image tab
         if let Some((_, _)) = handlers::get_text_view_and_buffer_for_page(notebook, page_num) {
@@ -1722,7 +1743,16 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 // Close any empty untitled tabs before opening the file
                 handlers::close_empty_untitled_tabs(&editor_notebook, &file_path_manager);
                 
-                let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                let mut mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                
+                // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+                // but should be treated as TypeScript files (text/plain)
+                if let Some(ext) = file_path.extension() {
+                    if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                        // Override MIME type for TypeScript files
+                        mime_type = mime_guess::mime::TEXT_PLAIN;
+                    }
+                }
                 
                 if utils::is_allowed_mime_type(&mime_type) {
                     // Try to read the file content
@@ -1832,7 +1862,16 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         println!("Restoring {} previously opened file(s)", saved_files.len());
         for file_path in saved_files {
             if file_path.exists() && file_path.is_file() {
-                let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                let mut mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                
+                // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+                // but should be treated as TypeScript files (text/plain)
+                if let Some(ext) = file_path.extension() {
+                    if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                        // Override MIME type for TypeScript files
+                        mime_type = mime_guess::mime::TEXT_PLAIN;
+                    }
+                }
                 
                 // Handle different file types appropriately
                 if mime_type.type_() == "video" {
