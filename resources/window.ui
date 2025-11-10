@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <template class="DvopWindow" parent="GtkApplicationWindow">
-    <property name="default-width">1200</property>
-    <property name="default-height">800</property>
+    <property name="default-width">600</property>
+    <property name="default-height">500</property>
     <property name="resizable">true</property>
     <property name="icon-name">dvop</property>
+    
+    <!-- ===== HEADER BAR (Top) ===== -->
     <child type="titlebar">
       <object class="GtkHeaderBar" id="header_bar">
         <property name="show-title-buttons">true</property>
@@ -72,17 +74,15 @@
             </child>
           </object>
         </child>
-        <child type="end">
-          <object class="GtkDropDown" id="language_selector">
-            <property name="tooltip-text">Select programming language for LSP support</property>
-            <property name="margin-end">10</property>
-          </object>
-        </child>
       </object>
     </child>
+    
+    <!-- ===== MAIN CONTAINER (Body) ===== -->
     <child>
       <object class="GtkBox" id="main_container">
         <property name="orientation">vertical</property>
+        
+        <!-- PATH BAR (Below Header) -->
         <child>
           <object class="GtkBox" id="path_bar">
             <property name="css-classes">dvop-path-bar</property>
@@ -178,9 +178,13 @@
             </child>
           </object>
         </child>
+        
+        <!-- CONTENT AREA (Horizontal Layout) -->
         <child>
           <object class="GtkBox" id="paned_content">
             <property name="vexpand">true</property>
+            
+            <!-- ACTIVITY BAR (Left Icon Bar) -->
             <child>
               <object class="GtkBox" id="activity_bar">
                 <property name="css-classes">activity-bar</property>
@@ -216,6 +220,8 @@
                 </child>
               </object>
             </child>
+            
+            <!-- MAIN PANED (Sidebar + Editor Area) -->
             <child>
               <object class="GtkPaned" id="paned">
                 <property name="orientation">horizontal</property>
@@ -226,6 +232,8 @@
                 <property name="shrink-end-child">true</property>
                 <property name="resize-start-child">true</property>
                 <property name="resize-end-child">true</property>
+                
+                <!-- LEFT SIDEBAR (Explorer/Search/Git) -->
                 <child>
                   <object class="GtkScrolledWindow" id="sidebar_scrolled">
                     <property name="hscrollbar-policy">automatic</property>
@@ -295,6 +303,8 @@
                     </child>
                   </object>
                 </child>
+                
+                <!-- EDITOR AREA (Editor + Terminal) -->
                 <child>
                   <object class="GtkPaned" id="editor_paned">
                     <property name="orientation">vertical</property>
@@ -305,6 +315,8 @@
                     <property name="shrink-end-child">true</property>
                     <property name="resize-start-child">true</property>
                     <property name="resize-end-child">true</property>
+                    
+                    <!-- EDITOR NOTEBOOK (Main editing area) -->
                     <child>
                       <object class="GtkBox" id="editor_notebook_box">
                         <property name="orientation">vertical</property>
@@ -323,6 +335,8 @@
                         </child>
                       </object>
                     </child>
+                    
+                    <!-- TERMINAL NOTEBOOK (Bottom panel) -->
                     <child>
                       <object class="GtkBox" id="terminal_notebook_box">
                         <property name="orientation">vertical</property>
@@ -347,6 +361,8 @@
             </child>
           </object>
         </child>
+        
+        <!-- STATUS BAR (Bottom) -->
         <child>
           <object class="GtkBox" id="status_bar">
             <property name="css-classes">status-bar</property>
@@ -370,6 +386,15 @@
               </object>
             </child>
             <child>
+              <object class="GtkLabel" id="linter_status_label">
+                <property name="halign">center</property>
+                <property name="hexpand">false</property>
+                <property name="css-classes">linter-status</property>
+                <property name="margin-start">20</property>
+                <property name="margin-end">20</property>
+              </object>
+            </child>
+            <child>
               <object class="GtkLabel" id="secondary_status_label">
                 <property name="halign">end</property>
                 <property name="css-classes">status-secondary</property>
@@ -380,6 +405,8 @@
       </object>
     </child>
   </template>
+  
+  <!-- ===== MENUS ===== -->
   <menu id="save_menu">
     <section>
       <item>
@@ -388,6 +415,7 @@
       </item>
     </section>
   </menu>
+  
   <menu id="primary_menu">
     <submenu>
       <attribute name="label">File</attribute>

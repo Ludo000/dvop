@@ -4,8 +4,10 @@
 use sourceview5::{prelude::*, View};
 use gtk4::{glib, Label, Box as GtkBox, Orientation, ScrolledWindow, ListBox};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use super::{Diagnostic, DiagnosticSeverity, lint_file, lint_by_language};
 
@@ -63,12 +65,160 @@ lazy_static::lazy_static! {
         Arc::new(Mutex::new(HashMap::new()));
 }
 
+// Thread-local callback for diagnostics panel visibility
+thread_local! {
+    static DIAGNOSTICS_PANEL_CALLBACK: RefCell<Option<Rc<dyn Fn(bool)>>> = RefCell::new(None);
+    static LINTER_STATUS_CALLBACK: RefCell<Option<Rc<dyn Fn(&str)>>> = RefCell::new(None);
+    static LINTER_STATUS_VISIBILITY_CALLBACK: RefCell<Option<Rc<dyn Fn(bool)>>> = RefCell::new(None);
+}
+
+/// Set the callback for showing/hiding the diagnostics panel
+pub fn set_diagnostics_panel_callback<F>(callback: F) 
+where
+    F: Fn(bool) + 'static,
+{
+    DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
+        *cell.borrow_mut() = Some(Rc::new(callback));
+    });
+}
+
+/// Set the callback for updating the linter status label
+pub fn set_linter_status_callback<F>(callback: F) 
+where
+    F: Fn(&str) + 'static,
+{
+    LINTER_STATUS_CALLBACK.with(|cell| {
+        *cell.borrow_mut() = Some(Rc::new(callback));
+    });
+}
+
+/// Set the callback for showing/hiding the linter status widget
+pub fn set_linter_status_visibility_callback<F>(callback: F) 
+where
+    F: Fn(bool) + 'static,
+{
+    LINTER_STATUS_VISIBILITY_CALLBACK.with(|cell| {
+        *cell.borrow_mut() = Some(Rc::new(callback));
+    });
+}
+
+/// Update the linter status label
+pub fn update_linter_status(status: &str) {
+    glib::idle_add_once({
+        let status = status.to_string();
+        move || {
+            LINTER_STATUS_CALLBACK.with(|cell| {
+                if let Some(ref callback) = *cell.borrow() {
+                    callback(&status);
+                }
+            });
+        }
+    });
+}
+
+/// Show the diagnostics panel
+pub fn show_diagnostics_panel() {
+    glib::idle_add_once(|| {
+        DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
+            if let Some(ref callback) = *cell.borrow() {
+                callback(true);
+                println!("📊 Diagnostics panel shown");
+            }
+        });
+    });
+}
+
+/// Hide the diagnostics panel
+pub fn hide_diagnostics_panel() {
+    glib::idle_add_once(|| {
+        DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
+            if let Some(ref callback) = *cell.borrow() {
+                callback(false);
+                println!("📊 Diagnostics panel hidden");
+            }
+        });
+    });
+}
+
+/// Check if there are any Rust files with diagnostics
+pub fn has_rust_diagnostics() -> bool {
+    if let Ok(guard) = DIAGNOSTICS_STORE.lock() {
+        !guard.is_empty()
+    } else {
+        false
+    }
+}
+
+/// Check if a directory contains Rust files and update UI accordingly
+pub fn check_and_update_rust_ui(dir: &Path) {
+    let has_rust = is_rust_project(dir);
+    
+    glib::idle_add_once({
+        let has_rust = has_rust;
+        move || {
+            // Update linter status widget visibility
+            LINTER_STATUS_VISIBILITY_CALLBACK.with(|cell| {
+                if let Some(ref callback) = *cell.borrow() {
+                    callback(has_rust);
+                }
+            });
+            
+            // Update diagnostics panel visibility
+            DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
+                if let Some(ref callback) = *cell.borrow() {
+                    callback(has_rust);
+                }
+            });
+            
+            if has_rust {
+                println!("✓ Rust project detected - showing linter UI");
+                // Refresh diagnostics panel to show relevant diagnostics for this directory
+                refresh_diagnostics_panel();
+            } else {
+                println!("✗ No Rust project - hiding linter UI (linter keeps running in background)");
+            }
+        }
+    });
+}
+
+/// Update diagnostics count in the linter status
+fn update_diagnostics_count() {
+    if let Ok(store) = DIAGNOSTICS_STORE.lock() {
+        let mut errors = 0;
+        let mut warnings = 0;
+        
+        for diagnostics in store.values() {
+            for diag in diagnostics {
+                match diag.severity {
+                    DiagnosticSeverity::Error => errors += 1,
+                    DiagnosticSeverity::Warning => warnings += 1,
+                    _ => {}
+                }
+            }
+        }
+        
+        let status = if errors > 0 || warnings > 0 {
+            format!("🦀 Rust: {} ❌  {} ⚠️", errors, warnings)
+        } else {
+            "🦀 Rust: ✓".to_string()
+        };
+        
+        // Update directly without idle_add since we're already on the main thread
+        LINTER_STATUS_CALLBACK.with(|cell| {
+            if let Some(ref callback) = *cell.borrow() {
+                callback(&status);
+            }
+        });
+    }
+}
+
 /// Initialize rust-analyzer if not already running
 pub fn initialize_rust_analyzer() {
     let mut manager_guard = RUST_ANALYZER.lock().unwrap();
     if manager_guard.is_none() {
         println!("🚀 Initializing rust-analyzer...");
         *manager_guard = Some(crate::lsp::rust_analyzer::RustAnalyzerManager::new());
+        update_linter_status("🦀 Rust: Initializing...");
     }
 }
 
@@ -101,6 +251,8 @@ pub fn shutdown_rust_analyzer() {
         
         // Refresh panel to show empty state
         refresh_diagnostics_panel();
+        
+        update_linter_status("");
         
         println!("✅ rust-analyzer shut down and diagnostics cleared");
     }
@@ -142,6 +294,7 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
         if path.extension().and_then(|e| e.to_str()) == Some("rs") {
             println!("🦀 Detected Rust file, initializing rust-analyzer");
             initialize_rust_analyzer();
+            show_diagnostics_panel();
             setup_lsp_for_file(source_view, path);
         } else {
             println!("❌ Not a Rust file, extension: {:?}", path.extension());
@@ -174,6 +327,7 @@ fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
             match manager.get_client(workspace_root.clone()) {
                 Ok(client) => {
                     println!("✓ Got rust-analyzer client for workspace: {:?}", workspace_root);
+                    update_linter_status("🦀 Rust: Ready");
                     
                     // Setup diagnostic callback
                     let diagnostics_store = DIAGNOSTICS_STORE.clone();
@@ -200,8 +354,10 @@ fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
                         
                         // Always refresh panel when diagnostics change
                         println!("📊 Refreshing diagnostics panel");
-                        glib::idle_add_once(|| {
+                        glib::source::idle_add(|| {
                             refresh_diagnostics_panel();
+                            update_diagnostics_count();
+                            glib::ControlFlow::Break
                         });
                         
                         println!("✅ Stored {} diagnostics for {}", diagnostics.len(), uri_str);

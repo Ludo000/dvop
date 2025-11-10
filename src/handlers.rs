@@ -2836,6 +2836,9 @@ fn setup_file_selection_handler(
                         utils::update_path_buttons(path_box, &current_dir_for_handler, &file_list_box_for_handler_update, &active_tab_path_for_handler);
                     }
                 }
+                
+                // Check for Rust files and update linter UI visibility
+                crate::linter::ui::check_and_update_rust_ui(&path_from_list);
             } else if path_from_list.is_file() {
                 let mut mime_type = mime_guess::from_path(&path_from_list).first_or_octet_stream();
                 
@@ -3016,6 +3019,9 @@ fn setup_up_button_handler(
             if let Some(path_box) = &path_box {
                 utils::update_path_buttons(path_box, &current_dir, &file_list_box_clone, &active_tab_path);
             }
+            
+            // Check for Rust files and update linter UI visibility
+            crate::linter::ui::check_and_update_rust_ui(&path);
         }
     });
 }
@@ -3654,23 +3660,8 @@ pub fn jump_to_line_and_column(source_view: &sourceview5::View, line: usize, col
         }
     }
     
-    // Place cursor at the position
+    // Place cursor at the position (don't select to avoid UI issues)
     buffer.place_cursor(&iter);
-    
-    // Select the word at the cursor position (optional, for visibility)
-    let mut start_iter = iter;
-    let mut end_iter = iter;
-    
-    // Try to select the word
-    if !start_iter.starts_word() {
-        start_iter.backward_word_start();
-    }
-    if !end_iter.ends_word() {
-        end_iter.forward_word_end();
-    }
-    
-    // Select the word to highlight it
-    buffer.select_range(&start_iter, &end_iter);
     
     // Scroll to the cursor position
     let mut iter_for_scroll = iter;
