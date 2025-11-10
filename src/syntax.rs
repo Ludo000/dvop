@@ -4,7 +4,7 @@
 use sourceview5::{prelude::*, Buffer, LanguageManager, StyleSchemeManager, View};
 use gtk4::ScrolledWindow;
 use gtk4::Settings;
-use std::path::Path;
+use std::path::Path; 
 
 /// Determines whether the system is using a dark theme
 /// 
@@ -214,6 +214,9 @@ pub fn create_source_view() -> (View, Buffer) {
     
     // Setup keyboard shortcuts for completion (Ctrl+Space)
     crate::completion::setup_completion_shortcuts(&source_view);
+    
+    // Note: setup_linting is called later when the file path is known
+    // See handlers.rs open_or_focus_tab() which calls setup_linting with the actual file path
     
     (source_view, buffer)
 }

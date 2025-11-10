@@ -10,6 +10,8 @@ mod status_log; // Status logging system
 mod audio;     // Audio file playback functionality
 mod video;     // Video file playback functionality
 mod search;    // Find and replace functionality
+mod linter;    // Code linting and diagnostics
+mod lsp;       // Language Server Protocol integration
 
 // GTK and standard library imports
 use gtk4::prelude::*;   // GTK trait imports for widget functionality
@@ -393,8 +395,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Get references to the header bar action buttons
     let (new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button) = ui::create_header(&window);
 
-    // Get references to UI components from the template
+    // Setup language selector (will be connected after diagnostics panel is created)
     let imp = window.imp();
+    let language_selector = imp.language_selector.get();
+    let languages = gtk4::StringList::new(&["None", "Rust"]);
+    language_selector.set_model(Some(&languages));
+    language_selector.set_selected(0); // Default to "None"
+    
+    // Get references to UI components from the template
     let menu_search_entry = imp.menu_search_entry.get();
     let terminal_button = imp.terminal_button.get();
     let up_button = imp.up_button.get();
@@ -464,8 +472,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let editor_notebook_clone_for_close = editor_notebook.clone();
     let file_path_manager_clone_for_close = file_path_manager.clone();
     let current_dir_clone_for_close = current_dir.clone();
+    let app_for_close = app.clone();
     
     window.connect_close_request(move |_| {
+        // Shutdown rust-analyzer before closing
+        crate::linter::ui::shutdown_rust_analyzer();
+        
         // Save the current folder before closing
         let folder = current_dir_clone_for_close.borrow().clone();
         let mut settings = settings::get_settings_mut();
@@ -526,14 +538,23 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             dialog.set_default_response(gtk4::ResponseType::Cancel);
             
             let window_clone_for_dialog = window_clone_for_close.clone();
+            let app_for_dialog = app_for_close.clone();
             
             dialog.connect_response(move |d, response| {
                 d.close();
                 match response {
                     gtk4::ResponseType::Yes => {
-                        // User chose "Close Anyway" - allow the close to proceed
-                        // We need to temporarily disconnect the close handler to avoid recursion
-                        window_clone_for_dialog.destroy();
+                        // User chose "Close Anyway" - shutdown rust-analyzer and quit
+                        crate::linter::ui::shutdown_rust_analyzer();
+                        println!("Closing anyway, quitting application...");
+                        app_for_dialog.quit();
+                        
+                        // Force exit after a short delay
+                        std::thread::spawn(|| {
+                            std::thread::sleep(std::time::Duration::from_millis(300));
+                            println!("Force exiting application");
+                            std::process::exit(0);
+                        });
                     }
                     _ => {
                         // User chose "Cancel" or closed dialog - close was already stopped
@@ -546,8 +567,18 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             return glib::Propagation::Stop; // Prevent window from closing until user decides
         }
         
-        // No unsaved changes, allow normal close
-        glib::Propagation::Proceed
+        // No unsaved changes - quit the application
+        println!("No unsaved changes, quitting application...");
+        app_for_close.quit();
+        
+        // Force exit after a short delay if app doesn't quit normally
+        std::thread::spawn(|| {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            println!("Force exiting application");
+            std::process::exit(0);
+        });
+        
+        glib::Propagation::Stop
     });
 
     // Get references to UI components from template (already initialized earlier)
@@ -619,6 +650,45 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     
     // Create the first terminal tab directly in the template notebook with paned support
     ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_template, None, &editor_paned);
+    
+    // Add diagnostics panel as a tab
+    let diagnostics_panel = linter::diagnostics_panel::create_diagnostics_panel();
+    let diagnostics_label = Label::new(Some("Diagnostics"));
+    terminal_notebook_template.append_page(&diagnostics_panel, Some(&diagnostics_label));
+    
+    // Hide diagnostics panel by default (will be shown when Rust is selected)
+    diagnostics_panel.set_visible(false);
+    
+    // Connect language selector changes now that we have the diagnostics panel
+    let diagnostics_panel_clone = diagnostics_panel.clone();
+    language_selector.connect_selected_notify(move |dropdown| {
+        let selected = dropdown.selected();
+        match selected {
+            0 => {
+                println!("🔧 Language support: None");
+                crate::linter::ui::shutdown_rust_analyzer();
+                diagnostics_panel_clone.set_visible(false);
+                println!("📊 Diagnostics panel hidden");
+            }
+            1 => {
+                println!("🦀 Enabling Rust language support");
+                crate::linter::ui::initialize_rust_analyzer();
+                diagnostics_panel_clone.set_visible(true);
+                println!("📊 Diagnostics panel shown");
+            }
+            _ => {}
+        }
+    });
+    
+    // Auto-detect Rust project on startup
+    let current_folder = std::env::current_dir().unwrap_or_default();
+    let language_selector_clone = language_selector.clone();
+    glib::idle_add_local_once(move || {
+        if crate::linter::ui::is_rust_project(&current_folder) {
+            println!("🦀 Rust project detected, enabling language support");
+            language_selector_clone.set_selected(1);
+        }
+    });
     
     // Restore terminal visibility state from settings
     let saved_terminal_visible = settings::get_settings().get_terminal_visible();
@@ -1385,6 +1455,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         // This ensures file manager highlighting reverts to subtle style
         *current_selection_source_clone_for_switch.borrow_mut() = utils::FileSelectionSource::TabSwitch;
         
+        // Refresh diagnostics panel when switching tabs
+        crate::linter::ui::refresh_diagnostics_panel();
+        
         // Retrieve the file path associated with the newly selected tab
         let new_active_path = { 
             // Use a separate scope to limit the borrow duration
@@ -1847,6 +1920,95 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // Set up the callback for opening files from diagnostics panel using a channel
+    {
+        let (sender, receiver) = std::sync::mpsc::channel::<(PathBuf, usize, usize)>();
+        
+        // Set up the receiver to handle file open requests on the main thread
+        let notebook_clone = editor_notebook.clone();
+        let file_path_manager_clone = file_path_manager.clone();
+        let active_tab_path_clone = active_tab_path.clone();
+        let save_button_clone = save_button.clone();
+        let save_as_button_clone = save_as_button.clone();
+        let window_clone = window.clone();
+        let file_list_box_clone = file_list_box.clone();
+        let current_dir_clone = current_dir.clone();
+        
+        glib::idle_add_local(move || {
+            // Process all pending file open requests
+            while let Ok((file_path, line, column)) = receiver.try_recv() {
+                println!("Opening file from diagnostics: {} at {}:{}", file_path.display(), line, column);
+                
+                // Check if file is already open
+                let mut page_to_focus = None;
+                let num_pages = notebook_clone.n_pages();
+                for i in 0..num_pages {
+                    if let Some(path) = file_path_manager_clone.borrow().get(&i) {
+                        if path == &file_path {
+                            page_to_focus = Some(i);
+                            break;
+                        }
+                    }
+                }
+                
+                // If file is already open, focus it and jump to line
+                if let Some(page_num) = page_to_focus {
+                    notebook_clone.set_current_page(Some(page_num));
+                    
+                    // Get the source view and jump to line
+                    if let Some(page) = notebook_clone.nth_page(Some(page_num)) {
+                        if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                            if let Some(source_view) = scrolled.child().and_then(|c| c.downcast::<sourceview5::View>().ok()) {
+                                handlers::jump_to_line_and_column(&source_view, line, column);
+                            }
+                        }
+                    }
+                } else {
+                    // File not open - open it first, then jump
+                    if let Ok(content) = std::fs::read_to_string(&file_path) {
+                        let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                        
+                        handlers::open_or_focus_tab(
+                            &notebook_clone,
+                            &file_path,
+                            &content,
+                            &active_tab_path_clone,
+                            &file_path_manager_clone,
+                            &save_button_clone,
+                            &save_as_button_clone,
+                            &mime_type,
+                            &window_clone,
+                            &file_list_box_clone,
+                            &current_dir_clone,
+                            None,
+                        );
+                        
+                        // After opening, jump to the line
+                        let current_page = notebook_clone.current_page().unwrap_or(0);
+                        if let Some(page) = notebook_clone.nth_page(Some(current_page)) {
+                            if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                                if let Some(source_view) = scrolled.child().and_then(|c| c.downcast::<sourceview5::View>().ok()) {
+                                    // Use idle_add to ensure the view is fully loaded before jumping
+                                    let source_view_clone = source_view.clone();
+                                    glib::idle_add_local_once(move || {
+                                        handlers::jump_to_line_and_column(&source_view_clone, line, column);
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            glib::ControlFlow::Continue
+        });
+        
+        // Store the sender in the global callback
+        *handlers::OPEN_FILE_CALLBACK.lock().unwrap() = Some(Box::new(move |file_path: PathBuf, line: usize, column: usize| {
+            let _ = sender.send((file_path, line, column));
+        }));
+    }
+
     // Set up periodic cleanup of file cache to prevent memory bloat
     glib::timeout_add_seconds_local(300, || { // Every 5 minutes
         file_cache::cleanup_file_cache();
@@ -1980,6 +2142,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let editor_notebook_for_close = editor_notebook.clone();
     let file_path_manager_for_close = file_path_manager.clone();
     window.connect_close_request(move |window| {
+        // Shutdown rust-analyzer before closing
+        crate::linter::ui::shutdown_rust_analyzer();
+        
         // Get the current window size - use width() and height() for actual size
         let width = window.width();
         let height = window.height();
@@ -2018,6 +2183,20 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         
         // Allow the window to close
         glib::Propagation::Proceed
+    });
+    
+    // Add destroy handler to ensure application exits cleanly
+    let app_for_destroy = app.clone();
+    window.connect_destroy(move |_| {
+        println!("Window destroyed, quitting application");
+        app_for_destroy.quit();
+        
+        // Force exit after a short delay if app doesn't quit normally
+        std::thread::spawn(|| {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            println!("Force exiting application");
+            std::process::exit(0);
+        });
     });
 
     // Set up the settings button handler

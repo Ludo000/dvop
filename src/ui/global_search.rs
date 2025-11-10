@@ -1847,7 +1847,7 @@ pub fn create_global_search_panel(
             // Debug output every second
             let now = std::time::Instant::now();
             if now.duration_since(*last_log_time.borrow()).as_secs() >= 1 {
-                println!("Search panel - Resizable container width: {}", current_width);
+                // println!("Search panel - Resizable container width: {}", current_width);
                 *last_log_time.borrow_mut() = now;
             }
             

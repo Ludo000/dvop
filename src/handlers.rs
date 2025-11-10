@@ -409,6 +409,9 @@ pub fn handle_close_tab_request(
                                             // Apply syntax highlighting based on file extension
                                             apply_syntax_highlighting_after_save(&notebook_clone, page_num_to_close, &path);
                                             
+                                            // Notify LSP that file was saved (for rust-analyzer)
+                                            crate::linter::ui::notify_file_saved(&path);
+                                            
                                             actually_close_tab(&notebook_clone, page_num_to_close, &file_path_manager_clone, &active_tab_path_clone, new_tab_deps_clone.as_ref());
                                         } else {
                                             eprintln!("Error writing to file: {:?}", path);
@@ -469,6 +472,9 @@ pub fn handle_close_tab_request(
                                                         
                                                         // Apply syntax highlighting based on file extension
                                                         apply_syntax_highlighting_after_save(&nc_save_as, page_num_to_close, &file_to_save);
+                                                        
+                                                        // Notify LSP that file was saved (for rust-analyzer)
+                                                        crate::linter::ui::notify_file_saved(&file_to_save);
                                                         
                                                         if let Some(parent) = file_to_save.parent() {
                                                             *cd_save_as.borrow_mut() = parent.to_path_buf();
@@ -741,6 +747,9 @@ fn create_svg_split_view(
     crate::completion::setup_completion_for_file(&source_view, Some(file_path));
     crate::completion::setup_completion_shortcuts(&source_view);
     
+    // Setup linting for the file
+    crate::linter::ui::setup_linting(&source_view, Some(file_path));
+    
     // Set up interaction tracking for the text editor
     let text_view = source_view.clone().upcast::<TextView>();
     setup_text_editor_interaction_tracking(&text_view);
@@ -874,6 +883,9 @@ fn create_markdown_split_view(
     // Setup completion for Markdown
     crate::completion::setup_completion_for_file(&source_view, Some(file_path));
     crate::completion::setup_completion_shortcuts(&source_view);
+    
+    // Setup linting for the file
+    crate::linter::ui::setup_linting(&source_view, Some(file_path));
     
     // Set up interaction tracking for the text editor
     let text_view = source_view.clone().upcast::<TextView>();
@@ -1143,6 +1155,9 @@ pub fn open_or_focus_tab(
     if let Some(page_num) = page_to_focus {
         notebook.set_current_page(Some(page_num));
         *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+        
+        // Refresh diagnostics panel when focusing a file
+        crate::linter::ui::refresh_diagnostics_panel();
         
         // Focus the text area of the existing tab
         if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, page_num) {
@@ -1599,6 +1614,9 @@ pub fn open_or_focus_tab(
             // Setup keyboard shortcuts for completion
             crate::completion::setup_completion_shortcuts(&source_view);
             
+            // Setup linting for the file
+            crate::linter::ui::setup_linting(&source_view, Some(file_to_open));
+            
             // Set up interaction tracking for the text editor
             let text_view = source_view.clone().upcast::<TextView>();
             setup_text_editor_interaction_tracking(&text_view);
@@ -1652,6 +1670,9 @@ pub fn open_or_focus_tab(
 
         // Log successful opening
         crate::status_log::log_success(&format!("Opened {}", filename));
+        
+        // Refresh diagnostics panel when opening a file
+        crate::linter::ui::refresh_diagnostics_panel();
 
         // Connect close button
         let notebook_clone = notebook.clone();
@@ -2130,6 +2151,9 @@ fn setup_save_button_handler(
                                     // Apply syntax highlighting based on file extension
                                     apply_syntax_highlighting_after_save(&editor_notebook, current_page_num, &path_to_save);
                                     
+                                    // Notify LSP that file was saved (for rust-analyzer)
+                                    crate::linter::ui::notify_file_saved(&path_to_save);
+                                    
                                     crate::status_log::log_success(&format!("Saved {}", filename));
                                 }
                                 Err(e) => {
@@ -2198,6 +2222,9 @@ fn setup_save_button_handler(
                                             
                                             // Apply syntax highlighting based on file extension
                                             apply_syntax_highlighting_after_save(&editor_notebook_clone, current_page_num, &file);
+                                            
+                                            // Notify LSP that file was saved (for rust-analyzer)
+                                            crate::linter::ui::notify_file_saved(&file);
                                             
                                             // Update main window title potentially
                                             if let Some(parent) = file.parent() {
@@ -2325,6 +2352,9 @@ fn setup_save_as_button_handler(
                                             
                                             // Apply syntax highlighting based on file extension
                                             apply_syntax_highlighting_after_save(&editor_notebook_clone, current_page_num, &file_to_save);
+                                            
+                                            // Notify LSP that file was saved (for rust-analyzer)
+                                            crate::linter::ui::notify_file_saved(&file_to_save);
                                             
                                             if let Some(parent) = file_to_save.parent() {
                                                 *current_dir_clone.borrow_mut() = parent.to_path_buf();
@@ -3582,3 +3612,70 @@ fn show_file_manager_background_context_menu(
     println!("DEBUG: Showing background context menu popover");
     popover.popup();
 }
+
+use once_cell::sync::Lazy;
+use std::sync::Mutex as StdMutex;
+
+/// Global callback for opening files and jumping to locations
+/// This is set by main.rs and used by the diagnostics panel
+pub static OPEN_FILE_CALLBACK: Lazy<StdMutex<Option<Box<dyn Fn(PathBuf, usize, usize) + Send + Sync>>>> = 
+    Lazy::new(|| StdMutex::new(None));
+
+/// Open a file and jump to a specific line and column
+/// This is used by the diagnostics panel to navigate to error locations
+pub fn open_file_and_jump_to_location(file_path: PathBuf, line: usize, column: usize) {
+    println!("open_file_and_jump_to_location: {} at {}:{}", file_path.display(), line, column);
+    
+    // Call the global callback if it's set
+    if let Ok(guard) = OPEN_FILE_CALLBACK.lock() {
+        if let Some(callback) = guard.as_ref() {
+            callback(file_path, line, column);
+        } else {
+            eprintln!("OPEN_FILE_CALLBACK not set!");
+        }
+    }
+}
+
+/// Jump to a specific line and column in a source view
+pub fn jump_to_line_and_column(source_view: &sourceview5::View, line: usize, column: usize) {
+    let buffer = source_view.buffer();
+    
+    // Convert 1-based line to 0-based
+    let line_index = if line > 0 { line - 1 } else { 0 };
+    let column_index = if column > 0 { column - 1 } else { 0 };
+    
+    // Get the iterator at the specified line and column
+    let mut iter = buffer.iter_at_line(line_index as i32).unwrap_or_else(|| buffer.start_iter());
+    
+    // Move to the column
+    for _ in 0..column_index {
+        if !iter.forward_char() {
+            break;
+        }
+    }
+    
+    // Place cursor at the position
+    buffer.place_cursor(&iter);
+    
+    // Select the word at the cursor position (optional, for visibility)
+    let mut start_iter = iter;
+    let mut end_iter = iter;
+    
+    // Try to select the word
+    if !start_iter.starts_word() {
+        start_iter.backward_word_start();
+    }
+    if !end_iter.ends_word() {
+        end_iter.forward_word_end();
+    }
+    
+    // Select the word to highlight it
+    buffer.select_range(&start_iter, &end_iter);
+    
+    // Scroll to the cursor position
+    let mut iter_for_scroll = iter;
+    source_view.scroll_to_iter(&mut iter_for_scroll, 0.0, true, 0.5, 0.5);
+    
+    println!("Jumped to line {}, column {}", line, column);
+}
+

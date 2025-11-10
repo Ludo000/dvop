@@ -25,6 +25,12 @@ rustfft = "6.4"  # For FFT analysis
 hound = "3.5"  # For reading audio files
 apodize = "1.0"  # For windowing functions
 pulldown-cmark = "0.13"  # For markdown parsing and rendering
+syn = { version = "2.0", features = ["full", "visit"] }  # For Rust code parsing and linting
+lsp-types = "0.97"  # LSP protocol types
+serde_repr = "0.1"  # Serde support for repr enums
+tokio = { version = "1.42", features = ["full"] }  # Async runtime for LSP
+async-channel = "2.3"  # Async channels for LSP communication
+url = "2.5"  # URL parsing (used by lsp-types)
 
 [build-dependencies]
 glib-build-tools = "0.21"
