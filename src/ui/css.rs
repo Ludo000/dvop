@@ -182,6 +182,15 @@ fn get_status_bar_styles() -> &'static str {
         font-family: monospace;
     }
     
+    .linter-status {
+        font-size: 0.85em;
+        color: alpha(@theme_fg_color, 0.8);
+        font-family: monospace;
+        padding: 2px 12px;
+        border-radius: 4px;
+        background-color: alpha(@theme_selected_bg_color, 0.05);
+    }
+    
     /* Log History Popup Styles */
     .log-history-list {
         background-color: @theme_base_color;

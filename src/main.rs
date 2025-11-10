@@ -395,14 +395,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Get references to the header bar action buttons
     let (new_button, open_button, save_main_button, save_menu_button, save_as_button, save_button, settings_button) = ui::create_header(&window);
 
-    // Setup language selector (will be connected after diagnostics panel is created)
-    let imp = window.imp();
-    let language_selector = imp.language_selector.get();
-    let languages = gtk4::StringList::new(&["None", "Rust"]);
-    language_selector.set_model(Some(&languages));
-    language_selector.set_selected(0); // Default to "None"
-    
     // Get references to UI components from the template
+    let imp = window.imp();
     let menu_search_entry = imp.menu_search_entry.get();
     let terminal_button = imp.terminal_button.get();
     let up_button = imp.up_button.get();
@@ -585,7 +579,13 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // file_list_box, path_box, volume_control_box, etc. are already assigned
     
     // Get status bar components from the template
-    let (_status_bar, status_label, secondary_status_label) = ui::create_status_bar(&window);
+    let (_status_bar, status_label, linter_status_label, secondary_status_label) = ui::create_status_bar(&window);
+
+    // Register linter status callback so the linter module can update the label
+    let linter_status_label_clone = linter_status_label.clone();
+    crate::linter::ui::set_linter_status_callback(move |text| {
+        linter_status_label_clone.set_text(text);
+    });
     
     // Set up volume control handler
     let volume_icon_clone = volume_icon.clone();
@@ -656,39 +656,38 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let diagnostics_label = Label::new(Some("Diagnostics"));
     terminal_notebook_template.append_page(&diagnostics_panel, Some(&diagnostics_label));
     
-    // Hide diagnostics panel by default (will be shown when Rust is selected)
+    // Hide diagnostics panel by default (will be shown when Rust files are opened)
     diagnostics_panel.set_visible(false);
     
-    // Connect language selector changes now that we have the diagnostics panel
-    let diagnostics_panel_clone = diagnostics_panel.clone();
-    language_selector.connect_selected_notify(move |dropdown| {
-        let selected = dropdown.selected();
-        match selected {
-            0 => {
-                println!("🔧 Language support: None");
-                crate::linter::ui::shutdown_rust_analyzer();
-                diagnostics_panel_clone.set_visible(false);
-                println!("📊 Diagnostics panel hidden");
-            }
-            1 => {
-                println!("🦀 Enabling Rust language support");
-                crate::linter::ui::initialize_rust_analyzer();
-                diagnostics_panel_clone.set_visible(true);
-                println!("📊 Diagnostics panel shown");
-            }
-            _ => {}
+    // Set up callback to show/hide diagnostics panel based on linting activity
+    let diagnostics_panel_weak = diagnostics_panel.downgrade();
+    linter::ui::set_diagnostics_panel_callback(move |show| {
+        if let Some(panel) = diagnostics_panel_weak.upgrade() {
+            panel.set_visible(show);
         }
     });
     
-    // Auto-detect Rust project on startup
-    let current_folder = std::env::current_dir().unwrap_or_default();
-    let language_selector_clone = language_selector.clone();
-    glib::idle_add_local_once(move || {
-        if crate::linter::ui::is_rust_project(&current_folder) {
-            println!("🦀 Rust project detected, enabling language support");
-            language_selector_clone.set_selected(1);
+    // Set up callback to update linter status label
+    let linter_status_weak = linter_status_label.downgrade();
+    linter::ui::set_linter_status_callback(move |status| {
+        if let Some(label) = linter_status_weak.upgrade() {
+            label.set_text(status);
         }
     });
+    
+    // Set up callback to show/hide linter status widget based on Rust file presence
+    let linter_status_weak_for_visibility = linter_status_label.downgrade();
+    linter::ui::set_linter_status_visibility_callback(move |show| {
+        if let Some(label) = linter_status_weak_for_visibility.upgrade() {
+            label.set_visible(show);
+        }
+    });
+    
+    // Initialize rust-analyzer at startup (it will keep running in background)
+    linter::ui::initialize_rust_analyzer();
+    
+    // Check current directory for Rust files and update UI accordingly
+    linter::ui::check_and_update_rust_ui(&current_dir.borrow());
     
     // Restore terminal visibility state from settings
     let saved_terminal_visible = settings::get_settings().get_terminal_visible();
@@ -1501,19 +1500,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     });
                 } else {
                     // Fallback for non-source views
-                    let parent = file_path.parent()
-                        .map(|p| p.to_string_lossy().into_owned())
-                        .unwrap_or_else(|| "/".to_string());
-                    
-                    secondary_status_label_clone.set_text(&format!("{} ({})", filename, parent));
+                    secondary_status_label_clone.set_text(&filename);
                 }
             } else {
                 // No text view (e.g., image file)
-                let parent = file_path.parent()
-                    .map(|p| p.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "/".to_string());
-                
-                secondary_status_label_clone.set_text(&format!("{} ({})", filename, parent));
+                secondary_status_label_clone.set_text(&filename);
             }
             
             crate::status_log::log_info(&format!("Switched to {}", filename));
@@ -1558,13 +1549,16 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 let parent_path = parent_dir.to_path_buf();
                 // Only update if the directory is different from current
                 if *current_dir_clone_for_switch.borrow() != parent_path {
-                    *current_dir_clone_for_switch.borrow_mut() = parent_path;
+                    *current_dir_clone_for_switch.borrow_mut() = parent_path.clone();
                     
                     // Update the file list to show the new directory
                     utils::update_file_list(&file_list_box_clone_for_switch, &current_dir_clone_for_switch.borrow(), &new_active_path, utils::FileSelectionSource::TabSwitch);
                     
                     // Update the path buttons to reflect the new current directory
                     utils::update_path_buttons(&path_box_clone_for_switch, &current_dir_clone_for_switch, &file_list_box_clone_for_switch, &active_tab_path_clone_for_switch);
+                    
+                    // Check for Rust files and update linter UI visibility
+                    crate::linter::ui::check_and_update_rust_ui(&parent_path);
                     
                     return; // Exit early since we've already updated the file list
                 }
@@ -2275,18 +2269,12 @@ fn update_cursor_position_status(text_view: &sourceview5::View, status_label: &L
     let line = cursor_iter.line() + 1; // 1-based line numbers
     let column = cursor_iter.line_offset() + 1; // 1-based column numbers
     
-    let status_text = if let Some(path) = file_path {
-        // For actual files, show: "filename (path) | Line X, Column Y"
-        let parent = path.parent()
-            .map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "/".to_string());
-        format!("{} ({}) | Line {}, Column {}", filename, parent, line, column)
-    } else if filename == "Untitled" {
-        // For untitled documents, just show: "Line X, Column Y"
-        format!("Line {}, Column {}", line, column)
+    let status_text = if filename == "Untitled" {
+        // For untitled documents, just show numbers: "X:Y"
+        format!("{}:{}", line, column)
     } else {
-        // For other cases (shouldn't normally happen), show: "filename | Line X, Column Y"
-        format!("{} | Line {}, Column {}", filename, line, column)
+        // For files, show: "filename | X:Y" (without path or labels)
+        format!("{} | {}:{}", filename, line, column)
     };
     
     status_label.set_text(&status_text);

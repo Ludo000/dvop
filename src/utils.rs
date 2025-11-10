@@ -557,6 +557,9 @@ pub fn update_path_buttons(
                     update_path_buttons(box_widget, &current_dir_clone, &file_list_box_clone, &active_tab_path_clone);
                 }
             }
+            
+            // Check for Rust files and update linter UI visibility
+            crate::linter::ui::check_and_update_rust_ui(&path_clone);
         });
         
         // Add a separator after all but the last component

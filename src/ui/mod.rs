@@ -61,8 +61,6 @@ mod imp {
         pub save_main_button: TemplateChild<Button>,
         #[template_child]
         pub save_menu_button: TemplateChild<MenuButton>,
-        #[template_child]
-        pub language_selector: TemplateChild<gtk4::DropDown>,
         
         // Path bar widgets
         #[template_child]
@@ -135,6 +133,8 @@ mod imp {
         pub status_button: TemplateChild<Button>,
         #[template_child]
         pub status_label: TemplateChild<Label>,
+        #[template_child]
+        pub linter_status_label: TemplateChild<Label>,
         #[template_child]
         pub secondary_status_label: TemplateChild<Label>,
     }
@@ -811,12 +811,14 @@ pub fn setup_tab_right_click(
 /// Returns a tuple of:
 /// - GtkBox: Container for the status bar
 /// - Label: Main status text label
+/// - Label: Linter status label (language and status)
 /// - Label: Secondary status information (current file, line/column, etc.)
-pub fn create_status_bar(window: &DvopWindow) -> (GtkBox, Label, Label) {
+pub fn create_status_bar(window: &DvopWindow) -> (GtkBox, Label, Label, Label) {
     let imp = window.imp();
     (
         imp.status_bar.get(),
         imp.status_label.get(),
+        imp.linter_status_label.get(),
         imp.secondary_status_label.get(),
     )
 }
