@@ -61,6 +61,8 @@ mod imp {
         pub save_main_button: TemplateChild<Button>,
         #[template_child]
         pub save_menu_button: TemplateChild<MenuButton>,
+        #[template_child]
+        pub language_selector: TemplateChild<gtk4::DropDown>,
         
         // Path bar widgets
         #[template_child]
