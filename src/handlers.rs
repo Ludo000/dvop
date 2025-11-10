@@ -1818,6 +1818,12 @@ pub fn open_or_focus_tab(
             // Apply syntax highlighting based on file extension
             crate::syntax::set_language_for_file(&source_buffer, file_to_open);
 
+            // Apply diagnostic underlines if there are any stored for this file
+            crate::linter::apply_diagnostic_underlines(&source_buffer, &file_to_open.to_string_lossy());
+
+            // Register buffer for future diagnostic updates
+            crate::linter::ui::register_buffer_for_diagnostics(file_to_open, &source_buffer);
+
             // Setup completion for the specific file type
             crate::completion::setup_completion_for_file(&source_view, Some(file_to_open));
 

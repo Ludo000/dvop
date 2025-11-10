@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 
 use super::{lint_by_language, lint_file, Diagnostic, DiagnosticSeverity};
 
@@ -68,6 +68,10 @@ thread_local! {
     static DIAGNOSTICS_PANEL_CALLBACK: RefCell<Option<Rc<dyn Fn(bool)>>> = RefCell::new(None);
     static LINTER_STATUS_CALLBACK: RefCell<Option<Rc<dyn Fn(&str)>>> = RefCell::new(None);
     static LINTER_STATUS_VISIBILITY_CALLBACK: RefCell<Option<Rc<dyn Fn(bool)>>> = RefCell::new(None);
+    
+    // Track open buffers by file URI for reapplying diagnostics (thread-local since GTK is single-threaded)
+    static BUFFER_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::Buffer>>> = 
+        RefCell::new(HashMap::new());
 }
 
 /// Set the callback for showing/hiding the diagnostics panel
@@ -343,9 +347,14 @@ fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
 
                         // Always refresh panel when diagnostics change
                         println!("📊 Refreshing diagnostics panel");
-                        glib::source::idle_add(|| {
+                        let uri_for_underlines = uri_str.clone();
+                        glib::source::idle_add(move || {
                             refresh_diagnostics_panel();
                             update_diagnostics_count();
+                            
+                            // Reapply underlines to currently visible buffer
+                            reapply_diagnostic_underlines(&uri_for_underlines);
+                            
                             glib::ControlFlow::Break
                         });
 
@@ -525,10 +534,25 @@ pub fn refresh_diagnostics_panel() {
     // Get all stored diagnostics
     let store = DIAGNOSTICS_STORE.lock().unwrap();
 
-    // Display each file's diagnostics
+    // Calculate total counts across all files
+    let mut total_errors = 0;
+    let mut total_warnings = 0;
+    let mut total_infos = 0;
+
+    // Display each file's diagnostics and count totals
     for (file_uri, diagnostics) in store.iter() {
+        for diag in diagnostics {
+            match diag.severity {
+                crate::linter::DiagnosticSeverity::Error => total_errors += 1,
+                crate::linter::DiagnosticSeverity::Warning => total_warnings += 1,
+                crate::linter::DiagnosticSeverity::Info => total_infos += 1,
+            }
+        }
         crate::linter::diagnostics_panel::display_file_diagnostics(file_uri, diagnostics);
     }
+
+    // Update the summary header
+    crate::linter::diagnostics_panel::update_summary(total_errors, total_warnings, total_infos);
 
     println!("✅ Diagnostics panel refreshed with {} files", store.len());
 }
@@ -596,6 +620,49 @@ pub fn notify_file_saved(file_path: &Path) {
             }
         }
     });
+}
+
+/// Reapply diagnostic underlines to the currently open file
+fn reapply_diagnostic_underlines(file_uri: &str) {
+    println!("🎨 Attempting to reapply diagnostic underlines for {}", file_uri);
+    
+    // Extract file path from URI
+    let file_path = file_uri.strip_prefix("file://").unwrap_or(file_uri);
+    
+    // Try to get the buffer from the thread-local registry
+    BUFFER_REGISTRY.with(|registry| {
+        let registry = registry.borrow();
+        println!("📋 Registry has {} entries", registry.len());
+        
+        // Debug: print all registered URIs
+        for (uri, _) in registry.iter() {
+            println!("  - Registered: {}", uri);
+        }
+        
+        if let Some(weak_buffer) = registry.get(file_uri) {
+            if let Some(buffer) = weak_buffer.upgrade() {
+                println!("✓ Found buffer for {}, reapplying underlines", file_uri);
+                crate::linter::apply_diagnostic_underlines(&buffer, file_path);
+            } else {
+                println!("⚠️  Buffer reference is no longer valid for {}", file_uri);
+            }
+        } else {
+            println!("⚠️  No buffer registered for {}", file_uri);
+        }
+    });
+}
+
+/// Register a buffer for diagnostic underline updates
+pub fn register_buffer_for_diagnostics(file_path: &Path, buffer: &sourceview5::Buffer) {
+    if let Ok(url) = url::Url::from_file_path(file_path) {
+        let uri = url.to_string();
+        println!("📝 Registering buffer for diagnostics: {}", uri);
+        
+        BUFFER_REGISTRY.with(|registry| {
+            let mut registry = registry.borrow_mut();
+            registry.insert(uri, buffer.downgrade());
+        });
+    }
 }
 
 #[cfg(test)]

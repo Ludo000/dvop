@@ -24,6 +24,11 @@ enum DiagnosticMessage {
         file_path: String,
         diagnostics: Vec<DiagnosticItem>,
     },
+    UpdateSummary {
+        total_errors: usize,
+        total_warnings: usize,
+        total_infos: usize,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -44,6 +49,16 @@ pub fn create_diagnostics_panel() -> GtkBox {
     list_box.set_selection_mode(gtk4::SelectionMode::Single);
     list_box.add_css_class("monospace");
     
+    // Create summary box with icons
+    let summary_box = GtkBox::new(Orientation::Horizontal, 8);
+    summary_box.set_halign(gtk4::Align::Start);
+    
+    // Create summary label early so we can capture it in the closure
+    let summary_label = Label::new(Some("No diagnostics"));
+    summary_label.set_halign(gtk4::Align::Start);
+    summary_label.set_hexpand(true);
+    summary_box.append(&summary_label);
+    
     // Setup channel communication
     let (tx, rx) = channel::<DiagnosticMessage>();
     
@@ -54,6 +69,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
     
     // Receive messages on the main thread and update the ListBox
     let list_box_for_rx = list_box.clone();
+    let summary_box_for_rx = summary_box.clone();
     glib::idle_add_local(move || {
         // Process all pending messages
         while let Ok(msg) = rx.try_recv() {
@@ -62,6 +78,49 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     // Remove all children
                     while let Some(child) = list_box_for_rx.first_child() {
                         list_box_for_rx.remove(&child);
+                    }
+                }
+                DiagnosticMessage::UpdateSummary { total_errors, total_warnings, total_infos } => {
+                    // Clear the summary box
+                    while let Some(child) = summary_box_for_rx.first_child() {
+                        summary_box_for_rx.remove(&child);
+                    }
+                    
+                    let total = total_errors + total_warnings + total_infos;
+                    
+                    if total == 0 {
+                        let label = Label::new(Some("No diagnostics"));
+                        summary_box_for_rx.append(&label);
+                    } else {
+                        // Add error count with icon
+                        if total_errors > 0 {
+                            let error_icon = Image::from_icon_name("dialog-error-symbolic");
+                            error_icon.set_pixel_size(16);
+                            summary_box_for_rx.append(&error_icon);
+                            
+                            let error_label = Label::new(Some(&format!("{} error{}", total_errors, if total_errors == 1 { "" } else { "s" })));
+                            summary_box_for_rx.append(&error_label);
+                        }
+                        
+                        // Add warning count with icon
+                        if total_warnings > 0 {
+                            let warning_icon = Image::from_icon_name("dialog-warning-symbolic");
+                            warning_icon.set_pixel_size(16);
+                            summary_box_for_rx.append(&warning_icon);
+                            
+                            let warning_label = Label::new(Some(&format!("{} warning{}", total_warnings, if total_warnings == 1 { "" } else { "s" })));
+                            summary_box_for_rx.append(&warning_label);
+                        }
+                        
+                        // Add info count with icon
+                        if total_infos > 0 {
+                            let info_icon = Image::from_icon_name("dialog-information-symbolic");
+                            info_icon.set_pixel_size(16);
+                            summary_box_for_rx.append(&info_icon);
+                            
+                            let info_label = Label::new(Some(&format!("{} info{}", total_infos, if total_infos == 1 { "" } else { "s" })));
+                            summary_box_for_rx.append(&info_label);
+                        }
                     }
                 }
                 DiagnosticMessage::FileSection { file_path, diagnostics } => {
@@ -240,17 +299,17 @@ pub fn create_diagnostics_panel() -> GtkBox {
     scrolled.set_hexpand(true);
     scrolled.set_child(Some(&list_box));
     
-    // Add header with clear button
+    // Add header with summary and clear button
     let header = GtkBox::new(Orientation::Horizontal, 4);
     header.set_margin_start(4);
     header.set_margin_end(4);
     header.set_margin_top(4);
     header.set_margin_bottom(4);
     
-    let title = Label::new(Some("Diagnostics"));
-    title.set_halign(gtk4::Align::Start);
-    title.set_hexpand(true);
-    header.append(&title);
+    // Add the summary box to the header (replaces the "Diagnostics" title)
+    summary_box.set_halign(gtk4::Align::Start);
+    summary_box.set_hexpand(true);
+    header.append(&summary_box);
     
     let clear_button = Button::with_label("Clear");
     let list_box_for_clear = list_box.clone();
@@ -285,6 +344,9 @@ pub fn display_file_diagnostics(file_uri: &str, diagnostics: &[crate::linter::Di
     // Extract file path from URI (remove file:// prefix)
     let file_path = file_uri.strip_prefix("file://").unwrap_or(file_uri);
     
+    // Store diagnostics for applying underlines when file is rendered
+    crate::linter::store_file_diagnostics(file_path, diagnostics.to_vec());
+    
     // Convert diagnostics to DiagnosticItem format
     let diagnostic_items: Vec<DiagnosticItem> = diagnostics.iter().map(|d| DiagnosticItem {
         line: d.line,
@@ -300,6 +362,20 @@ pub fn display_file_diagnostics(file_uri: &str, diagnostics: &[crate::linter::Di
             let msg = DiagnosticMessage::FileSection {
                 file_path: file_path.to_string(),
                 diagnostics: diagnostic_items,
+            };
+            let _ = sender.send(msg);
+        }
+    }
+}
+
+/// Update the summary header with total diagnostic counts
+pub fn update_summary(total_errors: usize, total_warnings: usize, total_infos: usize) {
+    if let Ok(guard) = DIAGNOSTICS_SENDER.lock() {
+        if let Some(sender) = guard.as_ref() {
+            let msg = DiagnosticMessage::UpdateSummary {
+                total_errors,
+                total_warnings,
+                total_infos,
             };
             let _ = sender.send(msg);
         }
