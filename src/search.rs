@@ -2,19 +2,10 @@
 // This module manages find/replace operations within text documents
 
 use gtk4::prelude::*;
-use gtk4::{
-    Box as GtkBox, 
-    Entry, 
-    Button, 
-    Label,
-    SearchBar,
-    SearchEntry,
-    Orientation,
-    Revealer,
-};
+use gtk4::{Box as GtkBox, Button, Entry, Label, Orientation, Revealer, SearchBar, SearchEntry};
 use sourceview5::prelude::*;
-use sourceview5::SearchSettings;
 use sourceview5::SearchContext;
+use sourceview5::SearchSettings;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -36,52 +27,52 @@ impl SearchState {
         // Create search bar
         let search_bar = SearchBar::new();
         search_bar.set_search_mode(false);
-        
+
         // Create main container for search controls
         let search_container = GtkBox::new(Orientation::Horizontal, 8);
         search_container.set_margin_start(8);
         search_container.set_margin_end(8);
         search_container.set_margin_top(8);
         search_container.set_margin_bottom(8);
-        
+
         // Create search entry
         let search_entry = SearchEntry::new();
         search_entry.set_hexpand(true);
         search_entry.set_placeholder_text(Some("Find..."));
-        
+
         // Create replace entry
         let replace_entry = Entry::new();
         replace_entry.set_hexpand(true);
         replace_entry.set_placeholder_text(Some("Replace with..."));
-        
+
         // Create navigation buttons
         let prev_button = Button::from_icon_name("go-up-symbolic");
         prev_button.set_tooltip_text(Some("Find Previous (Shift+F3)"));
-        
+
         let next_button = Button::from_icon_name("go-down-symbolic");
         next_button.set_tooltip_text(Some("Find Next (F3)"));
-        
+
         // Create replace buttons
         let replace_button = Button::with_label("Replace");
         replace_button.set_tooltip_text(Some("Replace current match"));
-        
+
         let replace_all_button = Button::with_label("Replace All");
         replace_all_button.set_tooltip_text(Some("Replace all matches"));
-        
+
         // Create a box for replace controls (entry and buttons)
         let replace_box = GtkBox::new(Orientation::Horizontal, 8);
         replace_box.append(&replace_entry);
         replace_box.append(&replace_button);
         replace_box.append(&replace_all_button);
-        
+
         // Create match counter label
         let current_match_label = Label::new(Some(""));
         current_match_label.add_css_class("dim-label");
-        
+
         // Create close button
         let close_button = Button::from_icon_name("window-close-symbolic");
         close_button.set_tooltip_text(Some("Close search (Escape)"));
-        
+
         // Assemble the search container
         search_container.append(&search_entry);
         search_container.append(&replace_box);
@@ -89,19 +80,19 @@ impl SearchState {
         search_container.append(&next_button);
         search_container.append(&current_match_label);
         search_container.append(&close_button);
-        
+
         // Create revealer to animate the search bar appearance
         let revealer = Revealer::new();
         revealer.set_child(Some(&search_container));
         revealer.set_transition_type(gtk4::RevealerTransitionType::SlideDown);
         revealer.set_transition_duration(200);
-        
+
         // Set the revealer as the child of the search bar
         search_bar.set_child(Some(&revealer));
-        
+
         let search_context = Rc::new(RefCell::new(None));
         let source_view = Rc::new(RefCell::new(None));
-        
+
         let search_state = SearchState {
             search_bar,
             search_entry: search_entry.clone(),
@@ -112,7 +103,7 @@ impl SearchState {
             revealer: revealer.clone(),
             source_view: source_view.clone(),
         };
-        
+
         // Setup event handlers
         search_state.setup_handlers(
             prev_button,
@@ -121,10 +112,10 @@ impl SearchState {
             replace_all_button,
             close_button,
         );
-        
+
         search_state
     }
-    
+
     /// Sets up event handlers for search controls
     fn setup_handlers(
         &self,
@@ -140,7 +131,7 @@ impl SearchState {
         let replace_entry = self.replace_entry.clone();
         let search_bar = self.search_bar.clone();
         let revealer = self.revealer.clone();
-        
+
         // Handle search entry changes
         let search_context_clone = search_context.clone();
         let current_match_label_clone = current_match_label.clone();
@@ -149,7 +140,7 @@ impl SearchState {
             if let Some(context) = search_context_clone.borrow().as_ref() {
                 let settings = context.settings();
                 settings.set_search_text(Some(&search_text));
-                
+
                 if !search_text.is_empty() {
                     Self::update_match_count(&current_match_label_clone, context);
                     Self::highlight_first_match(context);
@@ -158,7 +149,7 @@ impl SearchState {
                 }
             }
         });
-        
+
         // Handle Enter key to find next
         let search_context_clone = search_context.clone();
         let current_match_label_clone = current_match_label.clone();
@@ -172,7 +163,9 @@ impl SearchState {
                     if buffer.has_selection() {
                         if let Some((s, e)) = buffer.selection_bounds() {
                             let sel = buffer.text(&s, &e, false);
-                            if sel.as_str() == search_text { selection_matches = true; }
+                            if sel.as_str() == search_text {
+                                selection_matches = true;
+                            }
                         }
                     }
                     if !selection_matches {
@@ -180,7 +173,9 @@ impl SearchState {
                         let total = Self::count_matches(context);
                         Self::highlight_first_match(context);
                         // If more than one match, advance immediately so first Enter goes to 2nd
-                        if total > 1 { Self::find_next(context); }
+                        if total > 1 {
+                            Self::find_next(context);
+                        }
                     } else {
                         // Already on a match, go to next
                         Self::find_next(context);
@@ -189,7 +184,7 @@ impl SearchState {
                 Self::update_match_count(&current_match_label_clone, context);
             }
         });
-        
+
         // Handle previous button
         let search_context_clone = search_context.clone();
         let current_match_label_clone = current_match_label.clone();
@@ -199,7 +194,7 @@ impl SearchState {
                 Self::update_match_count(&current_match_label_clone, context);
             }
         });
-        
+
         // Handle next button
         let search_context_clone = search_context.clone();
         let current_match_label_clone = current_match_label.clone();
@@ -209,7 +204,7 @@ impl SearchState {
                 Self::update_match_count(&current_match_label_clone, context);
             }
         });
-        
+
         // Handle replace button
         let search_context_clone = search_context.clone();
         let replace_entry_clone = replace_entry.clone();
@@ -221,7 +216,7 @@ impl SearchState {
                 Self::update_match_count(&current_match_label_clone, context);
             }
         });
-        
+
         // Handle replace all button
         let search_context_clone = search_context.clone();
         let replace_entry_clone = replace_entry.clone();
@@ -244,7 +239,7 @@ impl SearchState {
                 Self::update_match_count(&current_match_label_clone, context);
             }
         });
-        
+
         // Handle close button
         let search_bar_clone = search_bar.clone();
         let revealer_clone = revealer.clone();
@@ -252,7 +247,7 @@ impl SearchState {
             search_bar_clone.set_search_mode(false);
             revealer_clone.set_reveal_child(false);
         });
-        
+
         // Handle Escape key to close search
         let search_bar_clone = search_bar.clone();
         let revealer_clone = revealer.clone();
@@ -265,26 +260,39 @@ impl SearchState {
             }
             gtk4::glib::Propagation::Proceed
         });
-        
+
         search_entry.add_controller(key_controller);
     }
-    
+
     /// Shows the search bar and focuses the search entry
-    pub fn show_search(&self, text_buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>) {
+    pub fn show_search(
+        &self,
+        text_buffer: Option<&sourceview5::Buffer>,
+        source_view: Option<&sourceview5::View>,
+    ) {
         self.show_search_internal(text_buffer, source_view, true);
     }
-    
+
     /// Shows only the find functionality (without replace)
-    pub fn show_find_only(&self, text_buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>) {
+    pub fn show_find_only(
+        &self,
+        text_buffer: Option<&sourceview5::Buffer>,
+        source_view: Option<&sourceview5::View>,
+    ) {
         self.show_search_internal(text_buffer, source_view, false);
     }
-    
+
     /// Internal method to show the search bar with optional replace functionality
-    fn show_search_internal(&self, text_buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>, show_replace: bool) {
+    fn show_search_internal(
+        &self,
+        text_buffer: Option<&sourceview5::Buffer>,
+        source_view: Option<&sourceview5::View>,
+        show_replace: bool,
+    ) {
         // Show or hide replace controls
         println!("DEBUG: Setting replace_box visibility to: {}", show_replace);
         self.replace_box.set_visible(show_replace);
-        
+
         // Create search context if we have a buffer
         if let Some(buffer) = text_buffer {
             let settings = SearchSettings::new();
@@ -310,21 +318,25 @@ impl SearchState {
                 }
             }
         }
-        
+
         // Store the source view reference for scrolling
         if let Some(view) = source_view {
             *self.source_view.borrow_mut() = Some(view.clone());
         }
-        
+
         self.search_bar.set_search_mode(true);
         self.revealer.set_reveal_child(true);
         self.search_entry.grab_focus();
-        
+
         println!("Search bar shown");
     }
 
     /// Rebind the search context to a new buffer (used when switching tabs while search UI is open)
-    pub fn rebind_buffer(&self, buffer: &sourceview5::Buffer, source_view: Option<&sourceview5::View>) {
+    pub fn rebind_buffer(
+        &self,
+        buffer: &sourceview5::Buffer,
+        source_view: Option<&sourceview5::View>,
+    ) {
         let settings = SearchSettings::new();
         let context = SearchContext::new(buffer, Some(&settings));
         context.set_highlight(false);
@@ -346,29 +358,29 @@ impl SearchState {
             self.current_match_label.set_text("");
         }
     }
-    
+
     /// Hides the search bar
     pub fn hide_search(&self) {
         self.search_bar.set_search_mode(false);
         self.revealer.set_reveal_child(false);
-        
+
         // Clear search context
         *self.search_context.borrow_mut() = None;
-        
+
         println!("Search bar hidden");
     }
-    
+
     /// Updates the match count display
     pub fn update_match_count(label: &Label, context: &SearchContext) {
         let _buffer = context.buffer();
         let search_text = context.settings().search_text();
-        
+
         if let Some(text) = search_text {
             if !text.is_empty() {
                 // Count total matches
                 let total_matches = Self::count_matches(context);
                 let current_position = Self::get_current_match_position(context);
-                
+
                 if total_matches > 0 {
                     label.set_text(&format!("{} of {}", current_position, total_matches));
                 } else {
@@ -381,32 +393,32 @@ impl SearchState {
             label.set_text("");
         }
     }
-    
+
     /// Counts the total number of matches in the buffer
     fn count_matches(context: &SearchContext) -> i32 {
         let buffer = context.buffer();
         let mut start_iter = buffer.start_iter();
         let mut count = 0;
-        
+
         while let Some((_, match_end, _wrapped)) = context.forward(&mut start_iter) {
             count += 1;
             start_iter = match_end;
         }
-        
+
         count
     }
-    
+
     /// Gets the current match position (1-based)
     fn get_current_match_position(context: &SearchContext) -> i32 {
         let buffer = context.buffer();
-        
+
         // Get current cursor position using the buffer's insert mark
         let cursor_iter = buffer.iter_at_mark(&buffer.get_insert());
-        
+
         // Count matches before cursor
         let mut start_iter = buffer.start_iter();
         let mut position = 0;
-        
+
         while let Some((match_start, match_end, _wrapped)) = context.forward(&mut start_iter) {
             if match_start.offset() >= cursor_iter.offset() {
                 break;
@@ -414,7 +426,7 @@ impl SearchState {
             position += 1;
             start_iter = match_end;
         }
-        
+
         // If cursor is at or in a match, include it
         let mut check_iter = cursor_iter;
         if let Some((match_start, _match_end, _wrapped)) = context.backward(&mut check_iter) {
@@ -422,24 +434,24 @@ impl SearchState {
                 position += 1;
             }
         }
-        
+
         if position == 0 && Self::count_matches(context) > 0 {
             1 // If we haven't found any matches before cursor but there are matches, we're at the first
         } else {
             position
         }
     }
-    
+
     /// Highlights the first match in the buffer
     fn highlight_first_match(context: &SearchContext) {
         let buffer = context.buffer();
         let mut start_iter = buffer.start_iter();
-        
+
         if let Some((match_start, match_end, _wrapped)) = context.forward(&mut start_iter) {
             // Move cursor to the match and select it
             buffer.place_cursor(&match_start);
             buffer.select_range(&match_start, &match_end);
-            
+
             // Scroll to show the match
             if let Some(view) = Self::get_source_view_from_search_state() {
                 let mut iter_for_scroll = match_start;
@@ -447,63 +459,63 @@ impl SearchState {
             }
         }
     }
-    
+
     /// Finds the next match
     pub fn find_next(context: &SearchContext) {
         let buffer = context.buffer();
         let mut start_iter = buffer.iter_at_mark(&buffer.get_insert());
-        
+
         // If there's currently selected text, start searching after it
         if buffer.has_selection() {
             let (_start, end) = buffer.selection_bounds().unwrap();
             start_iter = end;
         }
-        
+
         if let Some((match_start, match_end, wrapped)) = context.forward(&mut start_iter) {
             buffer.place_cursor(&match_start);
             buffer.select_range(&match_start, &match_end);
-            
+
             if wrapped {
                 println!("Search wrapped to beginning");
             }
-            
+
             if let Some(view) = Self::get_source_view_from_search_state() {
                 let mut iter_for_scroll = match_start;
                 view.scroll_to_iter(&mut iter_for_scroll, 0.25, false, 0.0, 0.0);
             }
         }
     }
-    
+
     /// Finds the previous match
     pub fn find_previous(context: &SearchContext) {
         let buffer = context.buffer();
         let mut end_iter = buffer.iter_at_mark(&buffer.get_insert());
-        
+
         // If there's currently selected text, start searching before it
         if buffer.has_selection() {
             let (start, _end) = buffer.selection_bounds().unwrap();
             end_iter = start;
         }
-        
+
         if let Some((match_start, match_end, wrapped)) = context.backward(&mut end_iter) {
             buffer.place_cursor(&match_start);
             buffer.select_range(&match_start, &match_end);
-            
+
             if wrapped {
                 println!("Search wrapped to end");
             }
-            
+
             if let Some(view) = Self::get_source_view_from_search_state() {
                 let mut iter_for_scroll = match_start;
                 view.scroll_to_iter(&mut iter_for_scroll, 0.25, false, 0.0, 0.0);
             }
         }
     }
-    
+
     /// Replaces the current match
     fn replace_current(context: &SearchContext, replace_text: &str) {
         let buffer = context.buffer();
-        
+
         // Ensure we have an active selection that matches the search term; if not, find the next match automatically
         let search_text = context.settings().search_text().unwrap_or_default();
         if search_text.is_empty() {
@@ -551,20 +563,20 @@ impl SearchState {
             Self::find_next(context);
         }
     }
-    
+
     /// Replaces all matches in the buffer
     fn replace_all(context: &SearchContext, replace_text: &str) {
         let buffer = context.buffer();
         let mut start_iter = buffer.start_iter();
         let mut replacements = 0;
-        
+
         // Collect all matches first to avoid iterator invalidation
         let mut matches = Vec::new();
         while let Some((match_start, match_end, _wrapped)) = context.forward(&mut start_iter) {
             matches.push((match_start.offset(), match_end.offset()));
             start_iter = match_end;
         }
-        
+
         // Replace all matches from end to beginning to maintain offsets
         for (start_offset, end_offset) in matches.iter().rev() {
             let mut start_iter = buffer.iter_at_offset(*start_offset);
@@ -573,10 +585,10 @@ impl SearchState {
             buffer.insert(&mut buffer.iter_at_offset(*start_offset), replace_text);
             replacements += 1;
         }
-        
+
         println!("Replaced {} occurrences", replacements);
     }
-    
+
     /// Helper function to get the source view from stored reference
     fn get_source_view_from_search_state() -> Option<sourceview5::View> {
         let search_state = get_search_state();
@@ -601,13 +613,19 @@ pub fn get_search_state() -> &'static SearchState {
 }
 
 /// Shows the search bar for the current active text buffer
-pub fn show_search_for_buffer(buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>) {
+pub fn show_search_for_buffer(
+    buffer: Option<&sourceview5::Buffer>,
+    source_view: Option<&sourceview5::View>,
+) {
     let search_state = get_search_state();
     search_state.show_search(buffer, source_view);
 }
 
 /// Shows only the find functionality (without replace) for the current active text buffer
-pub fn show_find_only_for_buffer(buffer: Option<&sourceview5::Buffer>, source_view: Option<&sourceview5::View>) {
+pub fn show_find_only_for_buffer(
+    buffer: Option<&sourceview5::Buffer>,
+    source_view: Option<&sourceview5::View>,
+) {
     let search_state = get_search_state();
     search_state.show_find_only(buffer, source_view);
 }
@@ -617,5 +635,3 @@ pub fn hide_search() {
     let search_state = get_search_state();
     search_state.hide_search();
 }
-
-

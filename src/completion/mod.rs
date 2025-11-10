@@ -1,19 +1,26 @@
 // Completion module for language-specific code completion
 // This module provides intelligent code completion for various programming languages using JSON data
 
-pub mod ui;
 pub mod json_provider;
+pub mod ui;
 
-use json_provider::{get_json_keywords, get_json_snippets, get_json_keyword_documentation, get_json_snippet_documentation, initialize_completion_data, get_import_suggestions, get_submodules, find_matching_modules, ImportItem};
+use json_provider::{
+    find_matching_modules, get_import_suggestions, get_json_keyword_documentation,
+    get_json_keywords, get_json_snippet_documentation, get_json_snippets, get_submodules,
+    initialize_completion_data, ImportItem,
+};
 
 /// Initialize completion system - loads JSON data and sets up providers
 pub fn initialize_completion() {
     println!("Initializing JSON-based completion system...");
-    
+
     match initialize_completion_data() {
         Ok(languages) => {
-            println!("Successfully loaded completion data for {} languages: {:?}", 
-                     languages.len(), languages);
+            println!(
+                "Successfully loaded completion data for {} languages: {:?}",
+                languages.len(),
+                languages
+            );
         }
         Err(e) => {
             println!("Warning: Failed to load some completion data: {}", e);
@@ -47,23 +54,25 @@ pub fn get_snippet_documentation(language: &str, trigger: &str) -> String {
 pub fn get_supported_languages() -> Vec<String> {
     use std::sync::OnceLock;
     static SUPPORTED_LANGUAGES: OnceLock<Vec<String>> = OnceLock::new();
-    
-    SUPPORTED_LANGUAGES.get_or_init(|| {
-        let mut manager = json_provider::get_completion_manager();
-        match manager.load_all_languages() {
-            Ok(languages) => languages,
-            Err(_) => {
-                // Return default list if loading fails
-                vec![
-                    "rust".to_owned(),
-                    "javascript".to_owned(), 
-                    "python".to_owned(),
-                    "html".to_owned(),
-                    "css".to_owned(),
-                ]
+
+    SUPPORTED_LANGUAGES
+        .get_or_init(|| {
+            let mut manager = json_provider::get_completion_manager();
+            match manager.load_all_languages() {
+                Ok(languages) => languages,
+                Err(_) => {
+                    // Return default list if loading fails
+                    vec![
+                        "rust".to_owned(),
+                        "javascript".to_owned(),
+                        "python".to_owned(),
+                        "html".to_owned(),
+                        "css".to_owned(),
+                    ]
+                }
             }
-        }
-    }).clone()
+        })
+        .clone()
 }
 
 /// Get import suggestions for a specific module path

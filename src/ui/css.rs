@@ -4,21 +4,21 @@
 use gtk4;
 
 /// Apply custom CSS to enhance the appearance of tabs
-/// 
+///
 /// This function creates and applies CSS styles to improve the tab appearance,
 /// making them look less flat and more visually distinct.
 pub fn apply_custom_css() {
     let provider = gtk4::CssProvider::new();
-    
+
     let css = build_complete_css();
-    
+
     // Load and apply the CSS
     provider.load_from_data(&css);
-    
+
     gtk4::style_context_add_provider_for_display(
         &gtk4::gdk::Display::default().expect("Could not get default display"),
         &provider,
-        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION
+        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
 }
 
@@ -107,7 +107,7 @@ fn get_notebook_tab_styles() -> &'static str {
 fn get_button_styles() -> String {
     let is_dark_mode = crate::syntax::is_dark_mode_enabled();
     let active_tab_shade = if is_dark_mode { "2" } else { "0.85" };
-    
+
     format!(
         "
     /* === BUTTON STYLES === */
