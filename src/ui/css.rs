@@ -25,7 +25,7 @@ pub fn apply_custom_css() {
 /// Builds the complete CSS string by combining all component styles
 fn build_complete_css() -> String {
     format!(
-        "{}{}{}{}{}{}{}{}{}",
+        "{}{}{}{}{}{}{}{}{}{}",
         get_notebook_tab_styles(),
         get_button_styles(),
         get_status_bar_styles(),
@@ -34,7 +34,8 @@ fn build_complete_css() -> String {
         get_file_operation_styles(),
         get_list_styles(),
         get_activity_bar_styles(),
-        get_search_styles()
+        get_search_styles(),
+        get_diagnostics_styles()
     )
 }
 
@@ -685,6 +686,55 @@ fn get_search_styles() -> &'static str {
         background-image: none;
         text-decoration: underline;
         color: @theme_selected_bg_color;
+    }
+    "
+}
+
+/// Returns CSS styles for diagnostics panel
+fn get_diagnostics_styles() -> &'static str {
+    "
+    /* === DIAGNOSTICS PANEL STYLES === */
+    
+    /* Error diagnostics - red background, works in both dark and light mode */
+    .diagnostic-error {
+        background-color: alpha(#e74c3c, 0.45);
+        border-left: 3px solid #e74c3c;
+        border-radius: 4px;
+        padding: 12px;
+    }
+    
+    @media (prefers-color-scheme: light) {
+        .diagnostic-error {
+            background-color: alpha(#e74c3c, 0.08);
+        }
+    }
+    
+    /* Warning diagnostics - yellow/orange background */
+    .diagnostic-warning {
+        background-color: alpha(#f39c12, 0.45);
+        border-left: 3px solid #f39c12;
+        border-radius: 4px;
+        padding: 12px;
+    }
+    
+    @media (prefers-color-scheme: light) {
+        .diagnostic-warning {
+            background-color: alpha(#f39c12, 0.08);
+        }
+    }
+    
+    /* Info diagnostics - blue background */
+    .diagnostic-info {
+        background-color: alpha(#3498db, 0.45);
+        border-left: 3px solid #3498db;
+        border-radius: 4px;
+        padding: 12px;
+    }
+    
+    @media (prefers-color-scheme: light) {
+        .diagnostic-info {
+            background-color: alpha(#3498db, 0.08);
+        }
     }
     "
 }
