@@ -1,7 +1,7 @@
 // Diagnostics panel UI for displaying LSP diagnostics
 // This module creates a terminal-like view for showing linter diagnostics
 
-use gtk4::{prelude::*, ScrolledWindow, Box as GtkBox, Orientation, Label, Button, ListBox, ListBoxRow, Expander};
+use gtk4::{prelude::*, ScrolledWindow, Box as GtkBox, Orientation, Label, Button, ListBox, ListBoxRow, Expander, Image};
 use gtk4::glib;
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
@@ -75,33 +75,39 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         .unwrap_or(false);
                     expander.set_expanded(expanded);
                     
-                    // Count diagnostics by severity
                     let errors = diagnostics.iter().filter(|d| matches!(d.severity, crate::linter::DiagnosticSeverity::Error)).count();
                     let warnings = diagnostics.iter().filter(|d| matches!(d.severity, crate::linter::DiagnosticSeverity::Warning)).count();
                     let infos = diagnostics.iter().filter(|d| matches!(d.severity, crate::linter::DiagnosticSeverity::Info)).count();
                     
-                    // Build title with file name and counts
                     let file_name = std::path::Path::new(&file_path)
                         .file_name()
                         .and_then(|n| n.to_str())
                         .unwrap_or(&file_path);
                     
-                    let mut title = format!("📄 {}", file_name);
+                    let mut title = file_name.to_string();
                     let mut counts = Vec::new();
                     if errors > 0 {
-                        counts.push(format!("{} ❌", errors));
+                        counts.push(format!("{} errors", errors));
                     }
                     if warnings > 0 {
-                        counts.push(format!("{} ⚠️", warnings));
+                        counts.push(format!("{} warnings", warnings));
                     }
                     if infos > 0 {
-                        counts.push(format!("{} ℹ️", infos));
+                        counts.push(format!("{} infos", infos));
                     }
                     if !counts.is_empty() {
                         title.push_str(&format!("  ({})", counts.join(", ")));
                     }
                     
-                    expander.set_label(Some(&title));
+                    let expander_box = GtkBox::new(Orientation::Horizontal, 8);
+                    let file_icon = Image::from_icon_name("text-x-generic-symbolic");
+                    file_icon.set_pixel_size(16);
+                    expander_box.append(&file_icon);
+                    
+                    let title_label = Label::new(Some(&title));
+                    expander_box.append(&title_label);
+                    
+                    expander.set_label_widget(Some(&expander_box));
 
                     // Listen for expansion changes to persist state
                     let file_path_for_notify = file_path.clone();
@@ -116,28 +122,33 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     file_list_box.set_selection_mode(gtk4::SelectionMode::Single);
                     
                     for diag in diagnostics {
-                        let item_box = GtkBox::new(Orientation::Vertical, 2);
-                        item_box.set_margin_start(12);
-                        item_box.set_margin_end(12);
-                        item_box.set_margin_top(6);
-                        item_box.set_margin_bottom(6);
+                        let item_box = GtkBox::new(Orientation::Horizontal, 8);
                         
-                        let icon = match diag.severity {
-                            crate::linter::DiagnosticSeverity::Error => "❌",
-                            crate::linter::DiagnosticSeverity::Warning => "⚠️",
-                            crate::linter::DiagnosticSeverity::Info => "ℹ️",
+                        let icon_name = match diag.severity {
+                            crate::linter::DiagnosticSeverity::Error => "dialog-error-symbolic",
+                            crate::linter::DiagnosticSeverity::Warning => "dialog-warning-symbolic",
+                            crate::linter::DiagnosticSeverity::Info => "dialog-information-symbolic",
                         };
+                        let icon = Image::from_icon_name(icon_name);
+                        icon.set_pixel_size(16);
+                        item_box.append(&icon);
+                        
+                        // Add CSS class for background color based on severity
+                        let css_class = match diag.severity {
+                            crate::linter::DiagnosticSeverity::Error => "diagnostic-error",
+                            crate::linter::DiagnosticSeverity::Warning => "diagnostic-warning",
+                            crate::linter::DiagnosticSeverity::Info => "diagnostic-info",
+                        };
+                        item_box.add_css_class(css_class);
                         
                         let formatted_message = if !diag.rule.is_empty() {
-                            format!("{} [{}:{}]: {} ({})", 
-                                icon, 
+                            format!("[{}:{}]: {} ({})", 
                                 diag.line, 
                                 diag.column, 
                                 diag.message,
                                 diag.rule)
                         } else {
-                            format!("{} [{}:{}]: {}", 
-                                icon, 
+                            format!("[{}:{}]: {}", 
                                 diag.line, 
                                 diag.column, 
                                 diag.message)
