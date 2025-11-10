@@ -2,7 +2,7 @@
 
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, gio, CompositeTemplate, Dialog, Label, SpinButton, DropDown};
+use gtk4::{gio, glib, CompositeTemplate, Dialog, DropDown, Label, SpinButton};
 
 mod imp {
     use super::*;
@@ -53,7 +53,10 @@ glib::wrapper! {
 impl SettingsDialog {
     pub fn new<P: IsA<gtk4::ApplicationWindow>>(parent: &P) -> Self {
         glib::Object::builder()
-            .property("transient-for", parent.as_ref().upcast_ref::<gtk4::Window>())
+            .property(
+                "transient-for",
+                parent.as_ref().upcast_ref::<gtk4::Window>(),
+            )
             .build()
     }
 

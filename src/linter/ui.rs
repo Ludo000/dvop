@@ -1,15 +1,15 @@
 // UI integration for the linter
 // This module handles displaying lint diagnostics in the editor
 
+use gtk4::{glib, Box as GtkBox, Label, ListBox, Orientation, ScrolledWindow};
 use sourceview5::{prelude::*, View};
-use gtk4::{glib, Label, Box as GtkBox, Orientation, ScrolledWindow, ListBox};
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, OnceLock};
-use std::collections::HashMap;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::{Arc, Mutex, OnceLock};
 
-use super::{Diagnostic, DiagnosticSeverity, lint_file, lint_by_language};
+use super::{lint_by_language, lint_file, Diagnostic, DiagnosticSeverity};
 
 /// Detect if the current directory contains Rust files or is a Rust project
 pub fn is_rust_project(dir: &Path) -> bool {
@@ -18,7 +18,7 @@ pub fn is_rust_project(dir: &Path) -> bool {
         println!("✓ Found Cargo.toml in {:?}", dir);
         return true;
     }
-    
+
     // Check for any .rs files in the directory or src subdirectory
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -30,7 +30,11 @@ pub fn is_rust_project(dir: &Path) -> bool {
             if path.is_dir() && path.file_name().map_or(false, |name| name == "src") {
                 if let Ok(src_entries) = std::fs::read_dir(&path) {
                     for src_entry in src_entries.flatten() {
-                        if src_entry.path().extension().map_or(false, |ext| ext == "rs") {
+                        if src_entry
+                            .path()
+                            .extension()
+                            .map_or(false, |ext| ext == "rs")
+                        {
                             println!("✓ Found .rs file in src: {:?}", src_entry.path());
                             return true;
                         }
@@ -39,29 +43,29 @@ pub fn is_rust_project(dir: &Path) -> bool {
             }
         }
     }
-    
+
     println!("✗ No Rust project detected in {:?}", dir);
     false
 }
 
 // Global LSP manager
 lazy_static::lazy_static! {
-    static ref RUST_ANALYZER: Arc<Mutex<Option<crate::lsp::rust_analyzer::RustAnalyzerManager>>> = 
+    static ref RUST_ANALYZER: Arc<Mutex<Option<crate::lsp::rust_analyzer::RustAnalyzerManager>>> =
         Arc::new(Mutex::new(None));
-    
-    static ref DIAGNOSTICS_STORE: Arc<Mutex<HashMap<String, Vec<Diagnostic>>>> = 
+
+    static ref DIAGNOSTICS_STORE: Arc<Mutex<HashMap<String, Vec<Diagnostic>>>> =
         Arc::new(Mutex::new(HashMap::new()));
-    
+
     // Track files that have received their initial diagnostics
-    static ref INITIAL_DIAGNOSTICS_RECEIVED: Arc<Mutex<HashMap<String, bool>>> = 
+    static ref INITIAL_DIAGNOSTICS_RECEIVED: Arc<Mutex<HashMap<String, bool>>> =
         Arc::new(Mutex::new(HashMap::new()));
-    
+
     // Track document versions for each file
-    static ref DOCUMENT_VERSIONS: Arc<Mutex<HashMap<String, i32>>> = 
+    static ref DOCUMENT_VERSIONS: Arc<Mutex<HashMap<String, i32>>> =
         Arc::new(Mutex::new(HashMap::new()));
-    
+
     // Track when we're expecting diagnostics after a save
-    static ref AWAITING_SAVE_DIAGNOSTICS: Arc<Mutex<HashMap<String, bool>>> = 
+    static ref AWAITING_SAVE_DIAGNOSTICS: Arc<Mutex<HashMap<String, bool>>> =
         Arc::new(Mutex::new(HashMap::new()));
 }
 
@@ -73,7 +77,7 @@ thread_local! {
 }
 
 /// Set the callback for showing/hiding the diagnostics panel
-pub fn set_diagnostics_panel_callback<F>(callback: F) 
+pub fn set_diagnostics_panel_callback<F>(callback: F)
 where
     F: Fn(bool) + 'static,
 {
@@ -83,7 +87,7 @@ where
 }
 
 /// Set the callback for updating the linter status label
-pub fn set_linter_status_callback<F>(callback: F) 
+pub fn set_linter_status_callback<F>(callback: F)
 where
     F: Fn(&str) + 'static,
 {
@@ -93,7 +97,7 @@ where
 }
 
 /// Set the callback for showing/hiding the linter status widget
-pub fn set_linter_status_visibility_callback<F>(callback: F) 
+pub fn set_linter_status_visibility_callback<F>(callback: F)
 where
     F: Fn(bool) + 'static,
 {
@@ -152,7 +156,7 @@ pub fn has_rust_diagnostics() -> bool {
 /// Check if a directory contains Rust files and update UI accordingly
 pub fn check_and_update_rust_ui(dir: &Path) {
     let has_rust = is_rust_project(dir);
-    
+
     glib::idle_add_once({
         let has_rust = has_rust;
         move || {
@@ -162,20 +166,22 @@ pub fn check_and_update_rust_ui(dir: &Path) {
                     callback(has_rust);
                 }
             });
-            
+
             // Update diagnostics panel visibility
             DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
                 if let Some(ref callback) = *cell.borrow() {
                     callback(has_rust);
                 }
             });
-            
+
             if has_rust {
                 println!("✓ Rust project detected - showing linter UI");
                 // Refresh diagnostics panel to show relevant diagnostics for this directory
                 refresh_diagnostics_panel();
             } else {
-                println!("✗ No Rust project - hiding linter UI (linter keeps running in background)");
+                println!(
+                    "✗ No Rust project - hiding linter UI (linter keeps running in background)"
+                );
             }
         }
     });
@@ -186,7 +192,7 @@ fn update_diagnostics_count() {
     if let Ok(store) = DIAGNOSTICS_STORE.lock() {
         let mut errors = 0;
         let mut warnings = 0;
-        
+
         for diagnostics in store.values() {
             for diag in diagnostics {
                 match diag.severity {
@@ -196,13 +202,13 @@ fn update_diagnostics_count() {
                 }
             }
         }
-        
+
         let status = if errors > 0 || warnings > 0 {
             format!("🦀 Rust: {} ❌  {} ⚠️", errors, warnings)
         } else {
             "🦀 Rust: ✓".to_string()
         };
-        
+
         // Update directly without idle_add since we're already on the main thread
         LINTER_STATUS_CALLBACK.with(|cell| {
             if let Some(ref callback) = *cell.borrow() {
@@ -227,36 +233,36 @@ pub fn shutdown_rust_analyzer() {
     let mut manager_guard = RUST_ANALYZER.lock().unwrap();
     if let Some(ref manager) = *manager_guard {
         println!("🛑 Shutting down rust-analyzer...");
-        
+
         // Properly shutdown the rust-analyzer process
         manager.shutdown();
-        
+
         // Clear all diagnostics
         let mut store = DIAGNOSTICS_STORE.lock().unwrap();
         store.clear();
         drop(store);
-        
+
         // Clear tracking maps
         let mut initial = INITIAL_DIAGNOSTICS_RECEIVED.lock().unwrap();
         initial.clear();
         drop(initial);
-        
+
         let mut versions = DOCUMENT_VERSIONS.lock().unwrap();
         versions.clear();
         drop(versions);
-        
+
         let mut awaiting = AWAITING_SAVE_DIAGNOSTICS.lock().unwrap();
         awaiting.clear();
         drop(awaiting);
-        
+
         // Refresh panel to show empty state
         refresh_diagnostics_panel();
-        
+
         update_linter_status("");
-        
+
         println!("✅ rust-analyzer shut down and diagnostics cleared");
     }
-    
+
     // Remove the manager
     *manager_guard = None;
 }
@@ -266,11 +272,11 @@ pub fn shutdown_rust_analyzer() {
 pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
     println!("🔧 setup_linting called with file_path: {:?}", file_path);
     let buffer = source_view.buffer();
-    
+
     // Create a clone for the signal handler
     let source_view_weak = source_view.downgrade();
     let file_path_opt = file_path.map(|p| p.to_path_buf());
-    
+
     // Connect to buffer changes
     buffer.connect_changed(move |buffer| {
         if let Some(source_view) = source_view_weak.upgrade() {
@@ -278,18 +284,22 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
             let buffer_clone = buffer.clone();
             let source_view_clone = source_view.clone();
             let file_path_clone = file_path_opt.clone();
-            
+
             glib::timeout_add_local_once(std::time::Duration::from_millis(500), move || {
-                run_linter(&source_view_clone, &buffer_clone, file_path_clone.as_deref());
+                run_linter(
+                    &source_view_clone,
+                    &buffer_clone,
+                    file_path_clone.as_deref(),
+                );
             });
         }
     });
-    
+
     // Run initial lint if we have a file path
     if let Some(path) = file_path {
         println!("📁 File path exists: {:?}", path);
         println!("📎 File extension: {:?}", path.extension());
-        
+
         // Try to setup LSP for Rust files
         if path.extension().and_then(|e| e.to_str()) == Some("rs") {
             println!("🦀 Detected Rust file, initializing rust-analyzer");
@@ -309,14 +319,13 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
 fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
     // Find workspace root (directory containing Cargo.toml)
     let workspace_root = find_workspace_root(file_path);
-    
+
     println!("=== LSP SETUP START ===");
     println!("Setting up LSP for file: {:?}", file_path);
     println!("Workspace root: {:?}", workspace_root);
-    
+
     let file_path_buf = file_path.to_path_buf();
 
-    
     // Spawn LSP initialization in a separate thread
     std::thread::spawn(move || {
         println!("LSP thread started");
@@ -326,32 +335,40 @@ fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
             println!("Manager exists, getting client...");
             match manager.get_client(workspace_root.clone()) {
                 Ok(client) => {
-                    println!("✓ Got rust-analyzer client for workspace: {:?}", workspace_root);
+                    println!(
+                        "✓ Got rust-analyzer client for workspace: {:?}",
+                        workspace_root
+                    );
                     update_linter_status("🦀 Rust: Ready");
-                    
+
                     // Setup diagnostic callback
                     let diagnostics_store = DIAGNOSTICS_STORE.clone();
                     let initial_received = INITIAL_DIAGNOSTICS_RECEIVED.clone();
                     println!("Setting diagnostic callback...");
                     client.set_diagnostic_callback(move |uri, lsp_diagnostics| {
                         let uri_str = uri.to_string();
-                        println!("🔔 Received diagnostics for {}: {} items", uri_str, lsp_diagnostics.len());
-                        
+                        println!(
+                            "🔔 Received diagnostics for {}: {} items",
+                            uri_str,
+                            lsp_diagnostics.len()
+                        );
+
                         // Convert LSP diagnostics to our format
-                        let diagnostics: Vec<Diagnostic> = lsp_diagnostics.iter()
+                        let diagnostics: Vec<Diagnostic> = lsp_diagnostics
+                            .iter()
                             .map(|d| crate::lsp::convert_lsp_diagnostic(d))
                             .collect();
-                        
+
                         // Store diagnostics
                         let mut store = diagnostics_store.lock().unwrap();
                         store.insert(uri_str.clone(), diagnostics.clone());
                         drop(store);
-                        
+
                         // Mark as received
                         let mut initial_map = initial_received.lock().unwrap();
                         initial_map.insert(uri_str.clone(), true);
                         drop(initial_map);
-                        
+
                         // Always refresh panel when diagnostics change
                         println!("📊 Refreshing diagnostics panel");
                         glib::source::idle_add(|| {
@@ -359,12 +376,16 @@ fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
                             update_diagnostics_count();
                             glib::ControlFlow::Break
                         });
-                        
-                        println!("✅ Stored {} diagnostics for {}", diagnostics.len(), uri_str);
+
+                        println!(
+                            "✅ Stored {} diagnostics for {}",
+                            diagnostics.len(),
+                            uri_str
+                        );
                     });
-                    
+
                     println!("Diagnostic callback set, now sending didOpen...");
-                    
+
                     // Send didOpen notification
                     if let Ok(url) = url::Url::from_file_path(&file_path_buf) {
                         println!("Created URL: {}", url);
@@ -373,7 +394,8 @@ fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
                             // Read file content
                             if let Ok(content) = std::fs::read_to_string(&file_path_buf) {
                                 println!("Read file content: {} bytes", content.len());
-                                if let Err(e) = client.did_open(uri, "rust".to_string(), 1, content) {
+                                if let Err(e) = client.did_open(uri, "rust".to_string(), 1, content)
+                                {
                                     println!("❌ Failed to send didOpen: {}", e);
                                 } else {
                                     println!("✓ Sent didOpen for file: {:?}", file_path_buf);
@@ -391,7 +413,9 @@ fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
                 }
                 Err(e) => {
                     println!("❌ Failed to get rust-analyzer client: {}", e);
-                    println!("Make sure rust-analyzer is installed: rustup component add rust-analyzer");
+                    println!(
+                        "Make sure rust-analyzer is installed: rustup component add rust-analyzer"
+                    );
                 }
             }
         } else {
@@ -403,14 +427,14 @@ fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
 /// Find the workspace root by looking for Cargo.toml
 fn find_workspace_root(file_path: &Path) -> PathBuf {
     let mut current = file_path.parent();
-    
+
     while let Some(dir) = current {
         if dir.join("Cargo.toml").exists() {
             return dir.to_path_buf();
         }
         current = dir.parent();
     }
-    
+
     // Fallback to file's directory
     file_path.parent().unwrap_or(file_path).to_path_buf()
 }
@@ -421,7 +445,7 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
     let start = buffer.start_iter();
     let end = buffer.end_iter();
     let content = buffer.text(&start, &end, true).to_string();
-    
+
     // Run linter
     let diagnostics = if let Some(path) = file_path {
         lint_file(path, &content)
@@ -438,7 +462,7 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
             Vec::new()
         }
     };
-    
+
     // Display diagnostics
     if !diagnostics.is_empty() {
         println!("Linter found {} diagnostic(s)", diagnostics.len());
@@ -448,9 +472,12 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
                 DiagnosticSeverity::Warning => "WARNING",
                 DiagnosticSeverity::Info => "INFO",
             };
-            println!("  [{}] Line {}: {} ({})", severity_str, diag.line, diag.message, diag.rule);
+            println!(
+                "  [{}] Line {}: {} ({})",
+                severity_str, diag.line, diag.message, diag.rule
+            );
         }
-        
+
         // TODO: Display diagnostics in the UI (underlines, margin icons, etc.)
         // For now, we're just logging them
     }
@@ -463,37 +490,37 @@ pub fn create_diagnostics_panel(diagnostics: &[Diagnostic]) -> GtkBox {
     panel.set_margin_end(8);
     panel.set_margin_top(8);
     panel.set_margin_bottom(8);
-    
+
     // Title
     let title = Label::new(Some(&format!("Diagnostics ({})", diagnostics.len())));
     title.add_css_class("title-4");
     title.set_halign(gtk4::Align::Start);
     title.set_margin_bottom(8);
     panel.append(&title);
-    
+
     // List of diagnostics
     let list = ListBox::new();
     list.add_css_class("boxed-list");
-    
+
     for diag in diagnostics {
         let row_box = GtkBox::new(Orientation::Vertical, 2);
         row_box.set_margin_start(4);
         row_box.set_margin_end(4);
         row_box.set_margin_top(4);
         row_box.set_margin_bottom(4);
-        
+
         // Severity and message
         let severity_icon = match diag.severity {
             DiagnosticSeverity::Error => "❌",
             DiagnosticSeverity::Warning => "⚠️",
             DiagnosticSeverity::Info => "ℹ️",
         };
-        
+
         let message_label = Label::new(Some(&format!("{} {}", severity_icon, diag.message)));
         message_label.set_halign(gtk4::Align::Start);
         message_label.set_wrap(true);
         row_box.append(&message_label);
-        
+
         // Location and rule
         let detail_label = Label::new(Some(&format!(
             "Line {}, Column {} • {}",
@@ -503,15 +530,15 @@ pub fn create_diagnostics_panel(diagnostics: &[Diagnostic]) -> GtkBox {
         detail_label.add_css_class("dim-label");
         detail_label.add_css_class("caption");
         row_box.append(&detail_label);
-        
+
         list.append(&row_box);
     }
-    
+
     let scrolled = ScrolledWindow::new();
     scrolled.set_vexpand(true);
     scrolled.set_child(Some(&list));
     panel.append(&scrolled);
-    
+
     panel
 }
 
@@ -519,18 +546,18 @@ pub fn create_diagnostics_panel(diagnostics: &[Diagnostic]) -> GtkBox {
 /// This should be called when switching tabs or opening files
 pub fn refresh_diagnostics_panel() {
     println!("🔄 Refreshing diagnostics panel...");
-    
+
     // Clear the panel first
     crate::linter::diagnostics_panel::clear_diagnostics();
-    
+
     // Get all stored diagnostics
     let store = DIAGNOSTICS_STORE.lock().unwrap();
-    
+
     // Display each file's diagnostics
     for (file_uri, diagnostics) in store.iter() {
         crate::linter::diagnostics_panel::display_file_diagnostics(file_uri, diagnostics);
     }
-    
+
     println!("✅ Diagnostics panel refreshed with {} files", store.len());
 }
 
@@ -541,10 +568,10 @@ pub fn notify_file_saved(file_path: &Path) {
     if file_path.extension().and_then(|e| e.to_str()) != Some("rs") {
         return;
     }
-    
+
     let workspace_root = find_workspace_root(file_path);
     let file_path_buf = file_path.to_path_buf();
-    
+
     // Spawn notification in a separate thread
     std::thread::spawn(move || {
         let manager_guard = RUST_ANALYZER.lock().unwrap();
@@ -555,13 +582,13 @@ pub fn notify_file_saved(file_path: &Path) {
                         // Read file content
                         if let Ok(content) = std::fs::read_to_string(&file_path_buf) {
                             let uri_str = uri.to_string();
-                            
+
                             // Mark that we're awaiting diagnostics for this file
                             {
                                 let mut awaiting = AWAITING_SAVE_DIAGNOSTICS.lock().unwrap();
                                 awaiting.insert(uri_str.clone(), true);
                             }
-                            
+
                             // Get and increment the version
                             let version = {
                                 let mut versions = DOCUMENT_VERSIONS.lock().unwrap();
@@ -569,17 +596,21 @@ pub fn notify_file_saved(file_path: &Path) {
                                 *v += 1;
                                 *v
                             };
-                            
+
                             // First send didChange to update the content
-                            if let Err(e) = client.did_change(uri.clone(), version, content.clone()) {
+                            if let Err(e) = client.did_change(uri.clone(), version, content.clone())
+                            {
                                 println!("❌ Failed to send didChange: {}", e);
                             } else {
-                                println!("✓ Sent didChange for file: {:?} (version {})", file_path_buf, version);
+                                println!(
+                                    "✓ Sent didChange for file: {:?} (version {})",
+                                    file_path_buf, version
+                                );
                             }
-                            
+
                             // Small delay between didChange and didSave
                             std::thread::sleep(std::time::Duration::from_millis(100));
-                            
+
                             // Then send didSave to trigger analysis
                             if let Err(e) = client.did_save(uri, Some(content)) {
                                 println!("❌ Failed to send didSave: {}", e);
@@ -598,21 +629,19 @@ pub fn notify_file_saved(file_path: &Path) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_create_diagnostics_panel() {
         gtk4::init().ok();
-        
-        let diagnostics = vec![
-            Diagnostic::new(
-                DiagnosticSeverity::Warning,
-                "Test warning".to_string(),
-                10,
-                5,
-                "test_rule".to_string(),
-            ),
-        ];
-        
+
+        let diagnostics = vec![Diagnostic::new(
+            DiagnosticSeverity::Warning,
+            "Test warning".to_string(),
+            10,
+            5,
+            "test_rule".to_string(),
+        )];
+
         let panel = create_diagnostics_panel(&diagnostics);
         assert!(panel.is_visible());
     }

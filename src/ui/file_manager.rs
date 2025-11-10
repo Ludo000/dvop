@@ -3,16 +3,18 @@
 
 use gtk4::prelude::*;
 use gtk4::{
+    gdk,
+    glib,
+    // Drag and drop support
+    DragSource,
+    DropTarget,
     // Common UI elements
     ListBox,
-    
-    // Drag and drop support
-    DragSource, DropTarget, gdk, glib,
 };
 
+use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 /// File clipboard operations
 #[derive(Clone, Debug, PartialEq)]
@@ -42,11 +44,12 @@ pub fn copy_file_to_clipboard(file_path: &PathBuf) {
             operation: ClipboardOperation::Copy,
         });
     });
-    
+
     // Also sync with OS clipboard
     sync_to_os_clipboard(file_path, ClipboardOperation::Copy);
-    
-    let filename = file_path.file_name()
+
+    let filename = file_path
+        .file_name()
         .map(|name| name.to_string_lossy().to_string())
         .unwrap_or_else(|| "file".to_string());
     crate::status_log::log_info(&format!("Copied {} to clipboard", filename));
@@ -61,11 +64,12 @@ pub fn cut_file_to_clipboard(file_path: &PathBuf) {
             operation: ClipboardOperation::Cut,
         });
     });
-    
+
     // Also sync with OS clipboard
     sync_to_os_clipboard(file_path, ClipboardOperation::Cut);
-    
-    let filename = file_path.file_name()
+
+    let filename = file_path
+        .file_name()
         .map(|name| name.to_string_lossy().to_string())
         .unwrap_or_else(|| "file".to_string());
     crate::status_log::log_info(&format!("Cut {} to clipboard", filename));
@@ -75,8 +79,8 @@ pub fn cut_file_to_clipboard(file_path: &PathBuf) {
 pub fn is_file_cut(file_path: &PathBuf) -> bool {
     FILE_CLIPBOARD.with(|clipboard| {
         if let Some(ref clipboard_content) = *clipboard.borrow() {
-            clipboard_content.operation == ClipboardOperation::Cut && 
-            clipboard_content.file_path == *file_path
+            clipboard_content.operation == ClipboardOperation::Cut
+                && clipboard_content.file_path == *file_path
         } else {
             false
         }
@@ -86,39 +90,37 @@ pub fn is_file_cut(file_path: &PathBuf) -> bool {
 /// Check if there's something in the file clipboard
 pub fn has_clipboard_content() -> bool {
     // First check internal clipboard (fast)
-    let has_internal = FILE_CLIPBOARD.with(|clipboard| {
-        clipboard.borrow().is_some()
-    });
-    
+    let has_internal = FILE_CLIPBOARD.with(|clipboard| clipboard.borrow().is_some());
+
     if has_internal {
         return true;
     }
-    
+
     // Quick check of OS clipboard without blocking
     if let Some(display) = gdk::Display::default() {
         let clipboard = display.clipboard();
-        
+
         // Non-blocking check - just see if there's any text content
         // We'll do proper parsing only when actually getting the content
-        return clipboard.formats().contain_mime_type("text/plain") ||
-               clipboard.formats().contain_mime_type("text/uri-list") ||
-               clipboard.formats().contain_mime_type("x-special/gnome-copied-files");
+        return clipboard.formats().contain_mime_type("text/plain")
+            || clipboard.formats().contain_mime_type("text/uri-list")
+            || clipboard
+                .formats()
+                .contain_mime_type("x-special/gnome-copied-files");
     }
-    
+
     false
 }
 
 /// Get the current clipboard content (if any)
 pub fn get_clipboard_content() -> Option<FileClipboard> {
     // First try internal clipboard (fast)
-    let internal_content = FILE_CLIPBOARD.with(|clipboard| {
-        clipboard.borrow().clone()
-    });
-    
+    let internal_content = FILE_CLIPBOARD.with(|clipboard| clipboard.borrow().clone());
+
     if internal_content.is_some() {
         return internal_content;
     }
-    
+
     // Only try OS clipboard if internal is empty
     try_get_os_clipboard_file()
 }
@@ -129,13 +131,13 @@ pub fn clear_clipboard() {
     FILE_CLIPBOARD.with(|clipboard| {
         *clipboard.borrow_mut() = None;
     });
-    
+
     // Also clear OS clipboard if it contains our file data
     if let Some(display) = gdk::Display::default() {
         let clipboard = display.clipboard();
         clipboard.set_text("");
     }
-    
+
     crate::status_log::log_info("Clipboard cleared");
 }
 
@@ -148,24 +150,25 @@ pub fn paste_file_from_clipboard(
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
     let clipboard_content = get_clipboard_content();
-    
+
     if let Some(clipboard) = clipboard_content {
         let source_path = clipboard.file_path;
-        let filename = source_path.file_name()
+        let filename = source_path
+            .file_name()
             .map(|name| name.to_string_lossy().to_string())
             .unwrap_or_else(|| "file".to_string());
-        
+
         // Check if source file still exists
         if !source_path.exists() {
             crate::status_log::log_error(&format!("Source file {} no longer exists", filename));
             clear_clipboard();
             return;
         }
-        
+
         // Create target path
         let mut target_path = target_dir.clone();
         target_path.push(&filename);
-        
+
         match clipboard.operation {
             ClipboardOperation::Copy => {
                 // For copy operations, handle name conflicts by generating unique names
@@ -174,20 +177,32 @@ pub fn paste_file_from_clipboard(
                 } else {
                     target_path
                 };
-                
+
                 // Copy the file
                 match std::fs::copy(&source_path, &final_target_path) {
                     Ok(_) => {
-                        let final_filename = final_target_path.file_name()
+                        let final_filename = final_target_path
+                            .file_name()
                             .map(|name| name.to_string_lossy().to_string())
                             .unwrap_or_else(|| "file".to_string());
-                        crate::status_log::log_success(&format!("Copied {} to {}", filename, final_filename));
-                        
+                        crate::status_log::log_success(&format!(
+                            "Copied {} to {}",
+                            filename, final_filename
+                        ));
+
                         // Refresh file list
-                        crate::utils::update_file_list(file_list_box, &current_dir.borrow(), &active_tab_path.borrow(), crate::utils::FileSelectionSource::TabSwitch);
+                        crate::utils::update_file_list(
+                            file_list_box,
+                            &current_dir.borrow(),
+                            &active_tab_path.borrow(),
+                            crate::utils::FileSelectionSource::TabSwitch,
+                        );
                     }
                     Err(e) => {
-                        crate::status_log::log_error(&format!("Failed to copy {}: {}", filename, e));
+                        crate::status_log::log_error(&format!(
+                            "Failed to copy {}: {}",
+                            filename, e
+                        ));
                         show_error_dialog(window, &format!("Failed to copy file: {}", e));
                     }
                 }
@@ -196,40 +211,60 @@ pub fn paste_file_from_clipboard(
                 // For cut operations, check if we're moving to the same location
                 if source_path == target_path {
                     // Same location - nothing to do, just clear clipboard and refresh to remove cut styling
-                    crate::status_log::log_info(&format!("File {} is already in the target location", filename));
+                    crate::status_log::log_info(&format!(
+                        "File {} is already in the target location",
+                        filename
+                    ));
                     clear_clipboard();
-                    
+
                     // Refresh file list to remove cut styling
-                    crate::utils::update_file_list(file_list_box, &current_dir.borrow(), &active_tab_path.borrow(), crate::utils::FileSelectionSource::TabSwitch);
+                    crate::utils::update_file_list(
+                        file_list_box,
+                        &current_dir.borrow(),
+                        &active_tab_path.borrow(),
+                        crate::utils::FileSelectionSource::TabSwitch,
+                    );
                     return;
                 }
-                
+
                 // For cut operations to different locations, handle conflicts by generating unique names
                 let final_target_path = if target_path.exists() && source_path != target_path {
                     generate_unique_filename(&target_path)
                 } else {
                     target_path
                 };
-                
+
                 // Move the file
                 match std::fs::rename(&source_path, &final_target_path) {
                     Ok(_) => {
-                        let final_filename = final_target_path.file_name()
+                        let final_filename = final_target_path
+                            .file_name()
                             .map(|name| name.to_string_lossy().to_string())
                             .unwrap_or_else(|| "file".to_string());
-                        crate::status_log::log_success(&format!("Moved {} to {}", filename, final_filename));
-                        
+                        crate::status_log::log_success(&format!(
+                            "Moved {} to {}",
+                            filename, final_filename
+                        ));
+
                         // Update any open tabs that had this file open
                         crate::utils::trigger_tab_path_update(&source_path, &final_target_path);
-                        
+
                         // Clear clipboard since cut operation is consumed
                         clear_clipboard();
-                        
+
                         // Refresh file list
-                        crate::utils::update_file_list(file_list_box, &current_dir.borrow(), &active_tab_path.borrow(), crate::utils::FileSelectionSource::TabSwitch);
+                        crate::utils::update_file_list(
+                            file_list_box,
+                            &current_dir.borrow(),
+                            &active_tab_path.borrow(),
+                            crate::utils::FileSelectionSource::TabSwitch,
+                        );
                     }
                     Err(e) => {
-                        crate::status_log::log_error(&format!("Failed to move {}: {}", filename, e));
+                        crate::status_log::log_error(&format!(
+                            "Failed to move {}: {}",
+                            filename, e
+                        ));
                         show_error_dialog(window, &format!("Failed to move file: {}", e));
                     }
                 }
@@ -242,32 +277,36 @@ pub fn paste_file_from_clipboard(
 
 /// Generate a unique filename by appending a number if the file already exists
 fn generate_unique_filename(original_path: &PathBuf) -> PathBuf {
-    let parent_dir = original_path.parent().unwrap_or_else(|| std::path::Path::new("."));
-    let file_stem = original_path.file_stem()
+    let parent_dir = original_path
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
+    let file_stem = original_path
+        .file_stem()
         .map(|stem| stem.to_string_lossy().to_string())
         .unwrap_or_else(|| "file".to_string());
-    let extension = original_path.extension()
+    let extension = original_path
+        .extension()
         .map(|ext| format!(".{}", ext.to_string_lossy()))
         .unwrap_or_default();
-    
+
     let mut counter = 1;
     loop {
         let new_filename = format!("{} ({}){}", file_stem, counter, extension);
         let mut new_path = parent_dir.to_path_buf();
         new_path.push(&new_filename);
-        
+
         if !new_path.exists() {
             return new_path;
         }
-        
+
         counter += 1;
-        
+
         // Prevent infinite loops
         if counter > 1000 {
             break;
         }
     }
-    
+
     // Fallback with timestamp
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -283,53 +322,65 @@ fn generate_unique_filename(original_path: &PathBuf) -> PathBuf {
 fn sync_to_os_clipboard(file_path: &PathBuf, operation: ClipboardOperation) {
     if let Some(display) = gdk::Display::default() {
         let clipboard = display.clipboard();
-        
+
         if file_path.exists() {
             // Convert to absolute path and create proper file URI
             match file_path.canonicalize() {
                 Ok(absolute_path) => {
                     let file_uri = format!("file://{}", absolute_path.to_string_lossy());
-                    
+
                     // Simplified approach: Just set the most important formats
                     // 1. URI list format (most compatible with file managers)
                     let uri_list_content = format!("{}\n", file_uri);
-                    
+
                     // 2. GNOME format for proper cut/copy indication
                     let gnome_content = match operation {
                         ClipboardOperation::Cut => format!("cut\n{}", file_uri),
                         ClipboardOperation::Copy => format!("copy\n{}", file_uri),
                     };
-                    
+
                     // Create content providers - focus on the most important ones
                     let uri_provider = gdk::ContentProvider::for_bytes(
-                        "text/uri-list", 
-                        &glib::Bytes::from(uri_list_content.as_bytes())
+                        "text/uri-list",
+                        &glib::Bytes::from(uri_list_content.as_bytes()),
                     );
-                    
+
                     let gnome_provider = gdk::ContentProvider::for_bytes(
-                        "x-special/gnome-copied-files", 
-                        &glib::Bytes::from(gnome_content.as_bytes())
+                        "x-special/gnome-copied-files",
+                        &glib::Bytes::from(gnome_content.as_bytes()),
                     );
-                    
+
                     // Simple text fallback
                     let text_content = match operation {
-                        ClipboardOperation::Copy => format!("DVOP_COPY:{}", absolute_path.to_string_lossy()),
-                        ClipboardOperation::Cut => format!("DVOP_CUT:{}", absolute_path.to_string_lossy()),
+                        ClipboardOperation::Copy => {
+                            format!("DVOP_COPY:{}", absolute_path.to_string_lossy())
+                        }
+                        ClipboardOperation::Cut => {
+                            format!("DVOP_CUT:{}", absolute_path.to_string_lossy())
+                        }
                     };
                     let text_provider = gdk::ContentProvider::for_bytes(
-                        "text/plain", 
-                        &glib::Bytes::from(text_content.as_bytes())
+                        "text/plain",
+                        &glib::Bytes::from(text_content.as_bytes()),
                     );
-                    
+
                     // Combine providers efficiently
-                    let combined_provider = gdk::ContentProvider::new_union(&[uri_provider, gnome_provider, text_provider]);
+                    let combined_provider = gdk::ContentProvider::new_union(&[
+                        uri_provider,
+                        gnome_provider,
+                        text_provider,
+                    ]);
                     let _ = clipboard.set_content(Some(&combined_provider));
                 }
                 Err(_) => {
                     // If canonicalization fails, just set a simple text representation
                     let simple_text = match operation {
-                        ClipboardOperation::Copy => format!("DVOP_COPY:{}", file_path.to_string_lossy()),
-                        ClipboardOperation::Cut => format!("DVOP_CUT:{}", file_path.to_string_lossy()),
+                        ClipboardOperation::Copy => {
+                            format!("DVOP_COPY:{}", file_path.to_string_lossy())
+                        }
+                        ClipboardOperation::Cut => {
+                            format!("DVOP_CUT:{}", file_path.to_string_lossy())
+                        }
                     };
                     clipboard.set_text(&simple_text);
                 }
@@ -342,20 +393,22 @@ fn sync_to_os_clipboard(file_path: &PathBuf, operation: ClipboardOperation) {
 fn try_get_os_clipboard_file() -> Option<FileClipboard> {
     if let Some(display) = gdk::Display::default() {
         let clipboard = display.clipboard();
-        
+
         // Quick non-blocking check of available formats
         let formats = clipboard.formats();
-        
+
         // Try GNOME format first (most reliable for file operations)
         if formats.contain_mime_type("x-special/gnome-copied-files") {
             // Use a very short timeout for GNOME format
-            if let Some(gnome_content) = get_clipboard_content_fast(&clipboard, "x-special/gnome-copied-files") {
+            if let Some(gnome_content) =
+                get_clipboard_content_fast(&clipboard, "x-special/gnome-copied-files")
+            {
                 if let Some(clipboard_data) = parse_gnome_clipboard_format(&gnome_content) {
                     return Some(clipboard_data);
                 }
             }
         }
-        
+
         // Try URI list format with short timeout
         if formats.contain_mime_type("text/uri-list") {
             if let Some(uri_content) = get_clipboard_content_fast(&clipboard, "text/uri-list") {
@@ -364,7 +417,7 @@ fn try_get_os_clipboard_file() -> Option<FileClipboard> {
                 }
             }
         }
-        
+
         // Finally try plain text with very short timeout
         if formats.contain_mime_type("text/plain") {
             if let Some(text) = get_clipboard_text_fast(&clipboard) {
@@ -383,13 +436,13 @@ fn parse_gnome_clipboard_format(content: &str) -> Option<FileClipboard> {
     if lines.len() >= 2 {
         let operation_str = lines[0];
         let file_uri = lines[1];
-        
+
         let operation = match operation_str {
             "copy" => ClipboardOperation::Copy,
             "cut" => ClipboardOperation::Cut,
             _ => return None,
         };
-        
+
         if let Some(file_path) = uri_to_path(file_uri) {
             if file_path.exists() {
                 return Some(FileClipboard {
@@ -423,7 +476,7 @@ fn parse_uri_list_format(content: &str) -> Option<FileClipboard> {
 /// Parse plain text format (our custom format or plain paths)
 fn parse_text_format(text: &str) -> Option<FileClipboard> {
     let text = text.trim();
-    
+
     // Check if it's our custom format
     if text.starts_with("DVOP_COPY:") {
         if let Some(path_str) = text.strip_prefix("DVOP_COPY:") {
@@ -464,7 +517,7 @@ fn parse_text_format(text: &str) -> Option<FileClipboard> {
             });
         }
     }
-    
+
     None
 }
 
@@ -477,7 +530,7 @@ fn uri_to_path(uri: &str) -> Option<PathBuf> {
             .replace("%25", "%")
             .replace("%2F", "/")
             .replace("%5C", "\\");
-        
+
         let path = PathBuf::from(decoded);
         return Some(path);
     }
@@ -487,15 +540,18 @@ fn uri_to_path(uri: &str) -> Option<PathBuf> {
 /// Fast synchronous get text from clipboard with short timeout
 fn get_clipboard_text_fast(clipboard: &gdk::Clipboard) -> Option<String> {
     let (sender, receiver) = std::sync::mpsc::channel();
-    
-    clipboard.read_text_async(None::<&gtk4::gio::Cancellable>, move |result: Result<Option<glib::GString>, glib::Error>| {
-        let text_result = match result {
-            Ok(text) => text.map(|s| s.to_string()),
-            Err(_) => None,
-        };
-        let _ = sender.send(text_result);
-    });
-    
+
+    clipboard.read_text_async(
+        None::<&gtk4::gio::Cancellable>,
+        move |result: Result<Option<glib::GString>, glib::Error>| {
+            let text_result = match result {
+                Ok(text) => text.map(|s| s.to_string()),
+                Err(_) => None,
+            };
+            let _ = sender.send(text_result);
+        },
+    );
+
     // Much shorter timeout - 20ms instead of 200ms
     match receiver.recv_timeout(std::time::Duration::from_millis(20)) {
         Ok(result) => result,
@@ -519,36 +575,37 @@ fn show_error_dialog(window: &gtk4::ApplicationWindow, message: &str) {
         gtk4::ButtonsType::Ok,
         message,
     );
-    
+
     dialog.connect_response(move |d, _| {
         d.close();
     });
-    
+
     dialog.show();
 }
 
 /// Creates the file manager panel components with drag and drop support
-/// 
+///
 /// Returns a tuple containing:
 /// Sets up drag and drop functionality for a file list row
 ///
 /// This function configures both drag source and drop target for a file or directory item
 /// in the file manager. It enables users to drag files and folders to move them around.
 pub fn setup_drag_drop_for_row(
-    row: &gtk4::ListBoxRow, 
+    row: &gtk4::ListBoxRow,
     file_path: &std::path::Path,
-    is_directory: bool
+    is_directory: bool,
 ) {
     let file_path_clone = file_path.to_path_buf();
-    let _file_name = file_path.file_name()
+    let _file_name = file_path
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("")
         .to_string();
-    
+
     // Set up drag source - what this item can be dragged as
     let drag_source = DragSource::new();
     drag_source.set_actions(gdk::DragAction::MOVE | gdk::DragAction::COPY);
-    
+
     // Prepare drag data - we'll send the full file path as text
     let file_path_for_drag = file_path_clone.clone();
     drag_source.connect_prepare(move |_, _x, _y| {
@@ -556,19 +613,22 @@ pub fn setup_drag_drop_for_row(
         let content_provider = gdk::ContentProvider::for_value(&glib::Value::from(&file_path_str));
         Some(content_provider)
     });
-    
+
     // Set up drag begin handler to show what's being dragged
     drag_source.connect_drag_begin(move |_source, _drag| {
         // For now, we'll skip setting a custom icon since it's complex in GTK4
         // The system will provide a default drag cursor
     });
-    
+
     row.add_controller(drag_source);
-    
+
     // Set up drop target - what can be dropped on this item (only for directories)
     if is_directory {
-        let drop_target = DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE | gdk::DragAction::COPY);
-        
+        let drop_target = DropTarget::new(
+            glib::Type::STRING,
+            gdk::DragAction::MOVE | gdk::DragAction::COPY,
+        );
+
         // Visual feedback during drag over
         drop_target.connect_enter(move |target, _x, _y| {
             if let Some(widget) = target.widget() {
@@ -576,13 +636,13 @@ pub fn setup_drag_drop_for_row(
             }
             gdk::DragAction::MOVE
         });
-        
+
         drop_target.connect_leave(move |target| {
             if let Some(widget) = target.widget() {
                 widget.remove_css_class("drop-target");
             }
         });
-        
+
         // Ensure drop target class is removed after drop operation
         let target_dir_for_cleanup = file_path_clone.clone();
         drop_target.connect_drop(move |target, value, _x, _y| {
@@ -596,18 +656,18 @@ pub fn setup_drag_drop_for_row(
                     }
                 }
             }
-            
+
             if let Ok(source_path_str) = value.get::<String>() {
                 let source_path = std::path::PathBuf::from(&source_path_str);
                 let target_path = target_dir_for_cleanup.clone();
-                
+
                 // Show confirmation modal for the move operation
                 crate::ui::file_manager::show_move_confirmation_modal(&source_path, &target_path);
                 return true;
             }
             false
         });
-        
+
         row.add_controller(drop_target);
     }
 }
@@ -626,7 +686,7 @@ pub fn cleanup_drag_drop_styles(file_list_box: &ListBox) {
         current_child.remove_css_class("drop-target-background");
         child = current_child.next_sibling();
     }
-    
+
     // Also remove from the file list box itself
     file_list_box.remove_css_class("drop-target");
     file_list_box.remove_css_class("drop-target-background");
@@ -637,35 +697,41 @@ pub fn cleanup_drag_drop_styles(file_list_box: &ListBox) {
 /// This function displays a dialog asking the user to confirm moving a file or folder
 /// from the source location to the target directory.
 pub fn show_move_confirmation_modal(source_path: &std::path::Path, target_dir: &std::path::Path) {
-    use gtk4::{MessageDialog, DialogFlags, MessageType, ButtonsType, ResponseType};
-    
-    let source_name = source_path.file_name()
+    use gtk4::{ButtonsType, DialogFlags, MessageDialog, MessageType, ResponseType};
+
+    let source_name = source_path
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("Unknown item");
-    
-    let target_name = target_dir.file_name()
+
+    let target_name = target_dir
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("Unknown folder");
-    
+
     // Determine if we're moving a file or directory
-    let item_type = if source_path.is_dir() { "folder" } else { "file" };
-    
+    let item_type = if source_path.is_dir() {
+        "folder"
+    } else {
+        "file"
+    };
+
     // Build the target path where the item would be moved
     let mut final_target = target_dir.to_path_buf();
     final_target.push(source_name);
-    
+
     // Check if target already exists
     let conflict_message = if final_target.exists() {
         format!("\n\nWarning: A {} with this name already exists in the destination. It will be replaced.", item_type)
     } else {
         String::new()
     };
-    
+
     let message = format!(
         "Move {} \"{}\" to folder \"{}\"?{}",
         item_type, source_name, target_name, conflict_message
     );
-    
+
     // Find the application window to use as parent
     if let Some(app) = gtk4::gio::Application::default() {
         if let Some(gtk_app) = app.downcast_ref::<gtk4::Application>() {
@@ -675,27 +741,27 @@ pub fn show_move_confirmation_modal(source_path: &std::path::Path, target_dir: &
                     DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                     MessageType::Question,
                     ButtonsType::None,
-                    &message
+                    &message,
                 );
-                
+
                 dialog.add_buttons(&[
                     ("Cancel", ResponseType::Cancel),
                     ("Move", ResponseType::Accept),
                 ]);
-                
+
                 dialog.set_default_response(ResponseType::Cancel);
-                
+
                 let source_path = source_path.to_path_buf();
                 let final_target = final_target.clone();
                 let window_clone = window.clone();
-                
+
                 dialog.connect_response(move |d, response| {
                     if response == ResponseType::Accept {
                         perform_file_move(&source_path, &final_target, &window_clone);
                     }
                     d.close();
                 });
-                
+
                 dialog.show();
             }
         }
@@ -707,21 +773,22 @@ pub fn show_move_confirmation_modal(source_path: &std::path::Path, target_dir: &
 /// This function handles the filesystem operation of moving a file or directory
 /// and shows appropriate success or error messages.
 fn perform_file_move(source: &std::path::Path, target: &std::path::Path, window: &gtk4::Window) {
-    use gtk4::{MessageDialog, DialogFlags, MessageType, ButtonsType};
-    
-    let source_name = source.file_name()
+    use gtk4::{ButtonsType, DialogFlags, MessageDialog, MessageType};
+
+    let source_name = source
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("Unknown item");
-    
+
     // Attempt to move the file/directory
     match std::fs::rename(source, target) {
         Ok(()) => {
             // Success - log it
             crate::status_log::log_success(&format!("Moved {} successfully", source_name));
-            
+
             // Update any open tabs that had this file open
             crate::utils::trigger_tab_path_update(&source.to_path_buf(), &target.to_path_buf());
-            
+
             // Force cleanup of any lingering drag-drop styles
             if let Some(app) = gtk4::gio::Application::default() {
                 if let Some(gtk_app) = app.downcast_ref::<gtk4::Application>() {
@@ -730,7 +797,7 @@ fn perform_file_move(source: &std::path::Path, target: &std::path::Path, window:
                     }
                 }
             }
-            
+
             // Trigger a file list refresh by sending a custom event
             refresh_file_list_after_move();
         }
@@ -738,15 +805,15 @@ fn perform_file_move(source: &std::path::Path, target: &std::path::Path, window:
             // Error - show error dialog
             let error_msg = format!("Failed to move {}: {}", source_name, e);
             crate::status_log::log_error(&error_msg);
-            
+
             let error_dialog = MessageDialog::new(
                 Some(window),
                 DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                 MessageType::Error,
                 ButtonsType::Ok,
-                &error_msg
+                &error_msg,
             );
-            
+
             error_dialog.show();
         }
     }
@@ -768,12 +835,12 @@ fn cleanup_all_drag_drop_styles(widget: &gtk4::Widget) {
     // Remove classes from this widget
     widget.remove_css_class("drop-target");
     widget.remove_css_class("drop-target-background");
-    
+
     // If this is a ListBox, use the specialized cleanup
     if let Some(list_box) = widget.downcast_ref::<ListBox>() {
         cleanup_drag_drop_styles(list_box);
     }
-    
+
     // Recursively clean up all children
     let mut child = widget.first_child();
     while let Some(current_child) = child {

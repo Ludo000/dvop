@@ -1,10 +1,10 @@
 // User settings and preferences for the text editor
 // Handles loading, saving, and accessing user configuration options
 
+use home::home_dir;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use home::home_dir;
 
 // Default settings values
 // Note: These are fallback values. The application will attempt to detect
@@ -18,7 +18,7 @@ const DEFAULT_VIDEO_VOLUME: f64 = 0.8; // 80% volume
 const DEFAULT_WINDOW_WIDTH: i32 = 800;
 const DEFAULT_WINDOW_HEIGHT: i32 = 600;
 const DEFAULT_FILE_PANEL_WIDTH: i32 = 200; // Width of file manager sidebar
-const DEFAULT_TERMINAL_HEIGHT: i32 = 320;  // Height of terminal section
+const DEFAULT_TERMINAL_HEIGHT: i32 = 320; // Height of terminal section
 
 /// Represents user-configurable settings for the application
 #[derive(Clone)]
@@ -49,10 +49,10 @@ impl EditorSettings {
 
         // Initialize with default values
         settings.set_defaults();
-        
+
         // Try to load existing settings
         let _ = settings.load_from_file();
-        
+
         settings
     }
 
@@ -62,24 +62,46 @@ impl EditorSettings {
         let (default_light, default_dark) = detect_os_default_themes();
         self.values.insert("light_theme".to_owned(), default_light);
         self.values.insert("dark_theme".to_owned(), default_dark);
-        self.values.insert("font_size".to_owned(), DEFAULT_FONT_SIZE.to_string());
-        self.values.insert("terminal_font_size".to_owned(), DEFAULT_TERMINAL_FONT_SIZE.to_string());
-        self.values.insert("audio_volume".to_owned(), DEFAULT_AUDIO_VOLUME.to_string());
-        self.values.insert("video_volume".to_owned(), DEFAULT_VIDEO_VOLUME.to_string());
-        self.values.insert("window_width".to_owned(), DEFAULT_WINDOW_WIDTH.to_string());
-        self.values.insert("window_height".to_owned(), DEFAULT_WINDOW_HEIGHT.to_string());
-        self.values.insert("file_panel_width".to_owned(), DEFAULT_FILE_PANEL_WIDTH.to_string());
-        self.values.insert("terminal_height".to_owned(), DEFAULT_TERMINAL_HEIGHT.to_string());
-        self.values.insert("active_sidebar_tab".to_owned(), "explorer".to_owned());
-        self.values.insert("sidebar_visible".to_owned(), "true".to_owned());
-        self.values.insert("terminal_visible".to_owned(), "false".to_owned());
-        self.values.insert("search_case_sensitive".to_owned(), "false".to_owned());
-        self.values.insert("search_whole_word".to_owned(), "false".to_owned());
+        self.values
+            .insert("font_size".to_owned(), DEFAULT_FONT_SIZE.to_string());
+        self.values.insert(
+            "terminal_font_size".to_owned(),
+            DEFAULT_TERMINAL_FONT_SIZE.to_string(),
+        );
+        self.values
+            .insert("audio_volume".to_owned(), DEFAULT_AUDIO_VOLUME.to_string());
+        self.values
+            .insert("video_volume".to_owned(), DEFAULT_VIDEO_VOLUME.to_string());
+        self.values
+            .insert("window_width".to_owned(), DEFAULT_WINDOW_WIDTH.to_string());
+        self.values.insert(
+            "window_height".to_owned(),
+            DEFAULT_WINDOW_HEIGHT.to_string(),
+        );
+        self.values.insert(
+            "file_panel_width".to_owned(),
+            DEFAULT_FILE_PANEL_WIDTH.to_string(),
+        );
+        self.values.insert(
+            "terminal_height".to_owned(),
+            DEFAULT_TERMINAL_HEIGHT.to_string(),
+        );
+        self.values
+            .insert("active_sidebar_tab".to_owned(), "explorer".to_owned());
+        self.values
+            .insert("sidebar_visible".to_owned(), "true".to_owned());
+        self.values
+            .insert("terminal_visible".to_owned(), "false".to_owned());
+        self.values
+            .insert("search_case_sensitive".to_owned(), "false".to_owned());
+        self.values
+            .insert("search_whole_word".to_owned(), "false".to_owned());
         self.values.insert("search_query".to_owned(), "".to_owned());
         self.values.insert("opened_files".to_owned(), "".to_owned());
         // Default to home directory if not set
         if let Some(home) = home_dir() {
-            self.values.insert("last_folder".to_owned(), home.to_string_lossy().to_string());
+            self.values
+                .insert("last_folder".to_owned(), home.to_string_lossy().to_string());
         }
         // Add more default settings here as needed
     }
@@ -117,10 +139,10 @@ impl EditorSettings {
         }
 
         fs::write(&self.config_path, contents)?;
-        
+
         // Invalidate the file cache so next load reads fresh from disk
         crate::file_cache::invalidate_file_cache(&self.config_path);
-        
+
         Ok(())
     }
 
@@ -136,12 +158,14 @@ impl EditorSettings {
 
     /// Gets the preferred light theme
     pub fn get_light_theme(&self) -> String {
-        self.get("light_theme").map_or_else(|| detect_os_default_themes().0, |s| s.clone())
+        self.get("light_theme")
+            .map_or_else(|| detect_os_default_themes().0, |s| s.clone())
     }
 
     /// Gets the preferred dark theme
     pub fn get_dark_theme(&self) -> String {
-        self.get("dark_theme").map_or_else(|| detect_os_default_themes().1, |s| s.clone())
+        self.get("dark_theme")
+            .map_or_else(|| detect_os_default_themes().1, |s| s.clone())
     }
 
     /// Sets the preferred light theme
@@ -192,7 +216,6 @@ impl EditorSettings {
         let clamped_volume = volume.max(0.0).min(1.0);
         self.set("audio_volume", &clamped_volume.to_string());
     }
-
 
     /// Gets the window width
     pub fn get_window_width(&self) -> i32 {
@@ -290,8 +313,7 @@ impl EditorSettings {
 
     /// Gets the sidebar visibility state
     pub fn get_sidebar_visible(&self) -> bool {
-        self.get("sidebar_visible")
-            .map_or(true, |s| s == "true")
+        self.get("sidebar_visible").map_or(true, |s| s == "true")
     }
 
     /// Sets the sidebar visibility state
@@ -301,8 +323,7 @@ impl EditorSettings {
 
     /// Gets the terminal visibility state
     pub fn get_terminal_visible(&self) -> bool {
-        self.get("terminal_visible")
-            .map_or(false, |s| s == "true")
+        self.get("terminal_visible").map_or(false, |s| s == "true")
     }
 
     /// Sets the terminal visibility state
@@ -318,18 +339,23 @@ impl EditorSettings {
 
     /// Sets the search case sensitive setting
     pub fn set_search_case_sensitive(&mut self, case_sensitive: bool) {
-        self.set("search_case_sensitive", if case_sensitive { "true" } else { "false" });
+        self.set(
+            "search_case_sensitive",
+            if case_sensitive { "true" } else { "false" },
+        );
     }
 
     /// Gets the search whole word setting
     pub fn get_search_whole_word(&self) -> bool {
-        self.get("search_whole_word")
-            .map_or(false, |s| s == "true")
+        self.get("search_whole_word").map_or(false, |s| s == "true")
     }
 
     /// Sets the search whole word setting
     pub fn set_search_whole_word(&mut self, whole_word: bool) {
-        self.set("search_whole_word", if whole_word { "true" } else { "false" });
+        self.set(
+            "search_whole_word",
+            if whole_word { "true" } else { "false" },
+        );
     }
 
     /// Gets the last search query
@@ -361,7 +387,8 @@ impl EditorSettings {
 
     /// Sets the list of opened files
     pub fn set_opened_files(&mut self, files: &[PathBuf]) {
-        let files_str = files.iter()
+        let files_str = files
+            .iter()
             .map(|p| p.to_string_lossy().to_string())
             .collect::<Vec<_>>()
             .join("|");
@@ -391,12 +418,12 @@ fn get_config_dir() -> PathBuf {
         let path = Path::new(&xdg_config).join("dvop");
         return path;
     }
-    
+
     // Then fall back to ~/.config/dvop
     if let Some(home) = home::home_dir() {
         return home.join(".config").join("dvop");
     }
-    
+
     // Last resort: use the current directory
     PathBuf::from("./config")
 }
@@ -406,13 +433,12 @@ pub fn get_config_dir_public() -> PathBuf {
     get_config_dir()
 }
 
-use std::sync::{Mutex, Once};
 use once_cell::sync::Lazy;
+use std::sync::{Mutex, Once};
 
 // Global settings instance using thread-safe patterns
-static SETTINGS_INSTANCE: Lazy<Mutex<EditorSettings>> = Lazy::new(|| {
-    Mutex::new(EditorSettings::new())
-});
+static SETTINGS_INSTANCE: Lazy<Mutex<EditorSettings>> =
+    Lazy::new(|| Mutex::new(EditorSettings::new()));
 static INIT: Once = Once::new();
 
 /// Initializes global settings
@@ -432,13 +458,13 @@ pub fn initialize_settings() {
 pub fn get_settings() -> EditorSettings {
     // Ensure settings are initialized
     initialize_settings();
-    
+
     // Get a fresh clone of the settings
     SETTINGS_INSTANCE.lock().unwrap().clone()
 }
 
 /// Updates and returns the mutable settings
-/// 
+///
 /// This function locks the mutex to perform changes and returns a mutable
 /// reference to the settings. Call save() afterwards to persist changes.
 pub fn get_settings_mut() -> std::sync::MutexGuard<'static, EditorSettings> {
@@ -454,33 +480,33 @@ thread_local! {
 }
 
 /// Forces a reload of settings and triggers updates
-/// 
+///
 /// This function should be called after settings have been changed and saved
 pub fn refresh_settings() {
     // Prevent recursive calls
     if REFRESHING.with(|flag| flag.get()) {
         return;
     }
-    
+
     REFRESHING.with(|flag| flag.set(true));
-    
+
     // Lock the settings instance
     let mut settings = SETTINGS_INSTANCE.lock().unwrap();
-    
+
     // Reload settings from disk
     let _ = settings.load_from_file();
-    
+
     // Print some debugging info about the current themes
     println!("Settings refreshed:");
     println!("  Light theme: {}", settings.get_light_theme());
     println!("  Dark theme: {}", settings.get_dark_theme());
-    
+
     // Reset the refreshing flag
     REFRESHING.with(|flag| flag.set(false));
 }
 
 /// Detects the OS default theme based on the current GTK theme
-/// 
+///
 /// Returns a tuple of (light_theme, dark_theme) based on what's available
 /// and what the OS is currently using. Prioritizes OS-native themes.
 fn detect_os_default_themes() -> (String, String) {
@@ -489,7 +515,9 @@ fn detect_os_default_themes() -> (String, String) {
         .or_else(|_| {
             // Try to get from GIO settings for GNOME
             use gtk4::gio::prelude::*;
-            match std::panic::catch_unwind(|| gtk4::gio::Settings::new("org.gnome.desktop.interface")) {
+            match std::panic::catch_unwind(|| {
+                gtk4::gio::Settings::new("org.gnome.desktop.interface")
+            }) {
                 Ok(gio_settings) => {
                     if let Some(schema) = gio_settings.settings_schema() {
                         if schema.has_key("gtk-theme") {
@@ -497,14 +525,14 @@ fn detect_os_default_themes() -> (String, String) {
                         }
                     }
                     Err(())
-                },
-                Err(_) => Err(())
+                }
+                Err(_) => Err(()),
             }
         })
         .unwrap_or_else(|_| String::from(""));
-    
+
     let theme_lower = gtk_theme.to_lowercase();
-    
+
     // Determine the appropriate light/dark theme pair based on the OS theme
     let (light, dark) = if theme_lower.contains("yaru") {
         ("Yaru", "Yaru-dark")
@@ -513,7 +541,7 @@ fn detect_os_default_themes() -> (String, String) {
     } else {
         // Check desktop environment for better defaults
         let desktop_env = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
-        
+
         if desktop_env.contains("GNOME") || desktop_env.contains("Ubuntu") {
             // Ubuntu/GNOME: prefer Yaru on Ubuntu, Adwaita on GNOME
             if desktop_env.contains("Ubuntu") {
@@ -528,7 +556,10 @@ fn detect_os_default_themes() -> (String, String) {
             (FALLBACK_LIGHT_THEME, FALLBACK_DARK_THEME)
         }
     };
-    
-    println!("Detected OS default themes: Light='{}', Dark='{}'", light, dark);
+
+    println!(
+        "Detected OS default themes: Light='{}', Dark='{}'",
+        light, dark
+    );
     (light.to_string(), dark.to_string())
 }

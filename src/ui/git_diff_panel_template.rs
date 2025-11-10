@@ -1,7 +1,7 @@
 // Template-based git diff panel widget
 
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, CompositeTemplate, Box as GtkBox, ListBox, Button, MenuButton, ScrolledWindow};
+use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, ListBox, MenuButton, ScrolledWindow};
 
 mod imp {
     use super::*;

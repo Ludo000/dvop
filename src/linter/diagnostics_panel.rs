@@ -6,11 +6,16 @@ use gtk4::glib;
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 
 
 // Channel for sending messages to the diagnostics panel
-static DIAGNOSTICS_SENDER: Lazy<Arc<Mutex<Option<Sender<DiagnosticMessage>>>>> = 
+static DIAGNOSTICS_SENDER: Lazy<Arc<Mutex<Option<Sender<DiagnosticMessage>>>>> =
     Lazy::new(|| Arc::new(Mutex::new(None)));
+
+// Track expansion state per file so refreshes don't collapse everything
+static EXPANSION_STATE: Lazy<Arc<Mutex<HashMap<String, bool>>>> =
+    Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 #[derive(Debug, Clone)]
 enum DiagnosticMessage {
@@ -62,7 +67,13 @@ pub fn create_diagnostics_panel() -> GtkBox {
                 DiagnosticMessage::FileSection { file_path, diagnostics } => {
                     // Create an Expander for this file (collapsible section)
                     let expander = Expander::new(None::<&str>);
-                    expander.set_expanded(false); // Collapsed by default
+                    // Restore previous expansion state if any
+                    let expanded = EXPANSION_STATE
+                        .lock()
+                        .ok()
+                        .and_then(|m| m.get(&file_path).cloned())
+                        .unwrap_or(false);
+                    expander.set_expanded(expanded);
                     
                     // Count diagnostics by severity
                     let errors = diagnostics.iter().filter(|d| matches!(d.severity, crate::linter::DiagnosticSeverity::Error)).count();
@@ -91,6 +102,15 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     }
                     
                     expander.set_label(Some(&title));
+
+                    // Listen for expansion changes to persist state
+                    let file_path_for_notify = file_path.clone();
+                    expander.connect_notify_local(Some("expanded"), move |expander, _| {
+                        let is_expanded = expander.is_expanded();
+                        if let Ok(mut map) = EXPANSION_STATE.lock() {
+                            map.insert(file_path_for_notify.clone(), is_expanded);
+                        }
+                    });
                     
                     // Create a ListBox for diagnostics in this file
                     let file_list_box = ListBox::new();
@@ -154,7 +174,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         
                         let file_path_for_gesture = file_path_clone.clone();
                         gesture.connect_pressed(move |gesture, _, _, _| {
-                            // Stop propagation to prevent expander from toggling
+                            // Stop propagation so clicking a diagnostic doesn't toggle its parent expander
                             gesture.set_state(gtk4::EventSequenceState::Claimed);
                             
                             println!("Diagnostic clicked: {} at line {}, column {}", file_path_for_gesture, line_num, col_num);

@@ -1,13 +1,19 @@
 // UI components and setup functions for completion
 // This module handles the visual aspects and setup of code completion
 
-use sourceview5::{prelude::*, View, Buffer};
-use gtk4::{gdk, Popover, ListBox, Label, ScrolledWindow, Image, Box as GtkBox, Orientation, pango};
 use glib;
+use gtk4::{
+    gdk, pango, Box as GtkBox, Image, Label, ListBox, Orientation, Popover, ScrolledWindow,
+};
+use sourceview5::{prelude::*, Buffer, View};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use super::{get_language_keywords_owned, get_language_snippets_owned, get_keyword_documentation, get_snippet_documentation, get_import_completions, get_available_submodules, find_modules_by_prefix, ImportItem};
+use super::{
+    find_modules_by_prefix, get_available_submodules, get_import_completions,
+    get_keyword_documentation, get_language_keywords_owned, get_language_snippets_owned,
+    get_snippet_documentation, ImportItem,
+};
 
 // Static flag to prevent recursive completion triggering
 static COMPLETION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
@@ -25,7 +31,7 @@ enum CompletionItem {
 /// Extract the programming language from buffer language setting
 fn get_buffer_language(buffer: &Buffer) -> String {
     let supported_languages = crate::completion::get_supported_languages();
-    
+
     if let Some(language) = buffer.language() {
         let lang_id = language.id().to_string();
         let detected_lang = match lang_id.as_str() {
@@ -40,17 +46,23 @@ fn get_buffer_language(buffer: &Buffer) -> String {
             "css" => "css".to_string(),
             _ => "rust".to_string(), // Default to rust instead of generic
         };
-        
+
         // Validate that the detected language is actually supported
         if supported_languages.contains(&detected_lang) {
             detected_lang
         } else {
             // Fall back to the first supported language if the detected one isn't available
-            supported_languages.get(0).unwrap_or(&"rust".to_string()).clone()
+            supported_languages
+                .get(0)
+                .unwrap_or(&"rust".to_string())
+                .clone()
         }
     } else {
         // Default to first supported language when no language is detected
-        supported_languages.get(0).unwrap_or(&"rust".to_string()).clone()
+        supported_languages
+            .get(0)
+            .unwrap_or(&"rust".to_string())
+            .clone()
     }
 }
 
@@ -58,18 +70,18 @@ fn get_buffer_language(buffer: &Buffer) -> String {
 pub fn setup_completion(source_view: &View) {
     println!("=== SETTING UP MANUAL COMPLETION ONLY ===");
     let buffer = source_view.buffer();
-    
+
     // Cast buffer to SourceView Buffer
     if let Some(source_buffer) = buffer.downcast_ref::<Buffer>() {
         println!("Buffer cast successful, manual completion ready...");
-        
+
         // Get the language for context (but don't set up auto-completion)
         let language = get_buffer_language(source_buffer);
         println!("Language detected: {}", language);
-        
+
         // Note: We're NOT setting up the automatic CompletionWords providers
         // Only manual completion via Ctrl+Space will be available
-        
+
         println!("Manual completion configuration complete");
         println!("Use Ctrl+Space or F1 to trigger completion manually");
     } else {
@@ -81,36 +93,36 @@ pub fn setup_completion(source_view: &View) {
 /// Enhanced completion setup with file-specific behavior
 pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
     setup_completion(source_view);
-    
+
     if let Some(path) = file_path {
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         println!("Setting up manual completion for file type: {}", extension);
-        
+
         // Note: Only manual completion (Ctrl+Space) is available
         // No automatic completion providers are configured
-        
+
         match extension {
             "rs" => {
                 println!("Manual Rust completion enabled");
-            },
+            }
             "js" | "ts" | "jsx" | "tsx" => {
                 println!("Manual JavaScript/TypeScript completion enabled");
-            },
+            }
             "py" => {
                 println!("Manual Python completion enabled");
-            },
+            }
             "java" => {
                 println!("Manual Java completion enabled");
-            },
+            }
             "c" | "cpp" | "cc" | "cxx" | "h" | "hpp" => {
                 println!("Manual C/C++ completion enabled");
-            },
+            }
             "html" | "htm" => {
                 println!("Manual HTML completion enabled");
-            },
+            }
             "css" | "scss" | "sass" | "less" => {
                 println!("Manual CSS completion enabled");
-            },
+            }
             _ => {
                 println!("Manual completion enabled for file type: {}", extension);
             }
@@ -125,41 +137,44 @@ pub fn trigger_completion(source_view: &View) {
         println!("Completion already in progress, skipping...");
         return;
     }
-    
+
     println!("=== CREATING CUSTOM COMPLETION POPUP ===");
     println!("Function called successfully!");
-    
+
     // Get current buffer and cursor position
     let buffer = source_view.buffer();
     let cursor_mark = buffer.get_insert();
     let cursor_iter = buffer.iter_at_mark(&cursor_mark);
-    
+
     // Get text around cursor for context
     let mut start_iter = cursor_iter;
-    for _ in 0..50 {  // Look back further for import context
-        if start_iter.is_start() { break; }
+    for _ in 0..50 {
+        // Look back further for import context
+        if start_iter.is_start() {
+            break;
+        }
         start_iter.backward_char();
     }
-    
+
     let context_text = buffer.text(&start_iter, &cursor_iter, false);
     println!("Context around cursor: '{}'", context_text);
-    
+
     // Check if we're in an import statement
     let is_import_context = detect_import_context(&context_text);
     println!("Import context detected: {}", is_import_context);
-    
+
     let import_path = if is_import_context {
         extract_import_path(&context_text)
     } else {
         None
     };
-    
+
     println!("Import path: {:?}", import_path);
-    
+
     // Find the word prefix being typed - improved algorithm
     let mut word_start = cursor_iter;
     let mut moved_back = false;
-    
+
     // Move backward to find the start of the current word
     while !word_start.is_start() {
         let prev_iter = {
@@ -168,85 +183,105 @@ pub fn trigger_completion(source_view: &View) {
             temp
         };
         let ch = prev_iter.char();
-        
-        println!("Checking character at offset {}: '{}' (code: {})", prev_iter.offset(), ch, ch as u32);
-        
+
+        println!(
+            "Checking character at offset {}: '{}' (code: {})",
+            prev_iter.offset(),
+            ch,
+            ch as u32
+        );
+
         // Only include alphanumeric characters and underscores in words
         if ch.is_alphanumeric() || ch == '_' {
             word_start.backward_char();
             moved_back = true;
-            println!("Moved back, word_start now at offset: {}", word_start.offset());
+            println!(
+                "Moved back, word_start now at offset: {}",
+                word_start.offset()
+            );
         } else {
             // We've hit a non-word character, stop here
             println!("Found word boundary at character: '{}', stopping", ch);
             break;
         }
     }
-    
+
     // Get the actual word being typed
     let prefix = buffer.text(&word_start, &cursor_iter, false);
-    
+
     println!("=== WORD BOUNDARY ANALYSIS ===");
     println!("Cursor position: {}", cursor_iter.offset());
     println!("Word start position: {}", word_start.offset());
     println!("Moved back: {}", moved_back);
     println!("Prefix found: '{}'", prefix);
     println!("Prefix length: {}", prefix.len());
-    
+
     // Get some context around the word
     let mut context_start = word_start;
     for _ in 0..5 {
-        if context_start.is_start() { break; }
+        if context_start.is_start() {
+            break;
+        }
         context_start.backward_char();
     }
     let mut context_end = cursor_iter;
     for _ in 0..5 {
-        if context_end.is_end() { break; }
+        if context_end.is_end() {
+            break;
+        }
         context_end.forward_char();
     }
     let context = buffer.text(&context_start, &context_end, false);
     println!("Context: '{}'", context);
     println!("=================================");
-    
+
     // Get language-specific keywords
     let language = if let Some(source_buffer) = buffer.downcast_ref::<sourceview5::Buffer>() {
         get_buffer_language(source_buffer)
     } else {
         "generic".to_string()
     };
-    
+
     println!("Language detected: {}", language);
-    
+
     // Collect completion suggestions with their types
     let mut completion_items = Vec::new();
     let prefix_lower = prefix.to_lowercase();
-    
+
     if is_import_context {
         // Handle import completions
         println!("Processing import completions...");
-        
+
         if let Some(module_path) = import_path {
             // Get items available in the specified module
             let import_items = get_import_completions(&language, &module_path);
-            println!("Found {} import items for module '{}'", import_items.len(), module_path);
-            
+            println!(
+                "Found {} import items for module '{}'",
+                import_items.len(),
+                module_path
+            );
+
             for item in import_items {
                 if prefix.is_empty() || item.name.to_lowercase().starts_with(&prefix_lower) {
                     completion_items.push(CompletionItem::ImportItem(item));
                 }
             }
-            
+
             // Get available submodules
             let submodules = get_available_submodules(&language, &module_path);
-            println!("Found {} submodules for module '{}'", submodules.len(), module_path);
-            
+            println!(
+                "Found {} submodules for module '{}'",
+                submodules.len(),
+                module_path
+            );
+
             for submodule in submodules {
                 let full_path = if module_path.is_empty() {
                     submodule.clone()
                 } else {
                     format!("{}::{}", module_path, submodule)
                 };
-                
+
                 if prefix.is_empty() || submodule.to_lowercase().starts_with(&prefix_lower) {
                     completion_items.push(CompletionItem::ImportModule(full_path));
                 }
@@ -255,7 +290,7 @@ pub fn trigger_completion(source_view: &View) {
             // No specific module path, show root modules
             let root_modules = find_modules_by_prefix(&language, "");
             println!("Found {} root modules", root_modules.len());
-            
+
             for module in root_modules {
                 if prefix.is_empty() || module.to_lowercase().starts_with(&prefix_lower) {
                     completion_items.push(CompletionItem::ImportModule(module));
@@ -265,11 +300,15 @@ pub fn trigger_completion(source_view: &View) {
     } else {
         // Regular completion (keywords, snippets, buffer words)
         println!("Processing regular completions...");
-        
+
         // Add language keywords that match the prefix
         let keywords = get_language_keywords_owned(&language);
         if !keywords.is_empty() {
-            println!("Found {} keywords for language {}", keywords.len(), language);
+            println!(
+                "Found {} keywords for language {}",
+                keywords.len(),
+                language
+            );
             for keyword in keywords {
                 if prefix.is_empty() || keyword.to_lowercase().starts_with(&prefix_lower) {
                     completion_items.push(CompletionItem::Keyword(keyword));
@@ -278,11 +317,15 @@ pub fn trigger_completion(source_view: &View) {
         } else {
             println!("No keywords found for language: {}", language);
         }
-        
+
         // Add language snippets that match the prefix
         let snippets = get_language_snippets_owned(&language);
         if !snippets.is_empty() {
-            println!("Found {} snippets for language {}", snippets.len(), language);
+            println!(
+                "Found {} snippets for language {}",
+                snippets.len(),
+                language
+            );
             for (trigger, content) in snippets {
                 if prefix.is_empty() || trigger.to_lowercase().starts_with(&prefix_lower) {
                     completion_items.push(CompletionItem::Snippet(trigger, content));
@@ -291,12 +334,12 @@ pub fn trigger_completion(source_view: &View) {
         } else {
             println!("No snippets found for language: {}", language);
         }
-        
+
         // Add buffer words that match the prefix
         let buffer_text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
         let words: Vec<&str> = buffer_text.split_whitespace().collect();
         println!("Buffer contains {} words", words.len());
-        
+
         for word in words {
             let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
             if clean_word.len() > 2 
@@ -310,60 +353,80 @@ pub fn trigger_completion(source_view: &View) {
                         CompletionItem::ImportItem(i) => i.name == clean_word,
                         CompletionItem::ImportModule(m) => m == clean_word,
                     }
-                }) {
+                })
+            {
                 completion_items.push(CompletionItem::BufferWord(clean_word.to_string()));
             }
         }
     }
-    
+
     // Convert completion items to display strings and prepare for insertion
     let mut suggestions_with_content: Vec<(String, CompletionItem)> = Vec::new();
-    
+
     for item in completion_items {
         let display_text = match &item {
             CompletionItem::Keyword(k) => format!("{} (keyword)", k),
             CompletionItem::Snippet(trigger, _) => format!("{} (snippet)", trigger),
             CompletionItem::BufferWord(w) => w.clone(),
-            CompletionItem::ImportItem(import_item) => format!("{} ({})", import_item.name, import_item.item_type),
+            CompletionItem::ImportItem(import_item) => {
+                format!("{} ({})", import_item.name, import_item.item_type)
+            }
             CompletionItem::ImportModule(module) => {
                 let module_name = module.split("::").last().unwrap_or(module);
                 format!("{} (module)", module_name)
-            },
+            }
         };
         suggestions_with_content.push((display_text, item));
     }
-    
+
     // Sort suggestions by display text
     suggestions_with_content.sort_by(|a, b| a.0.cmp(&b.0));
     suggestions_with_content.truncate(20); // Increase to 20 suggestions to test scrolling
-    
-    println!("Found {} completion suggestions: {:?}", 
-             suggestions_with_content.len(), 
-             suggestions_with_content.iter().map(|(display, _)| display).collect::<Vec<_>>());
-    
+
+    println!(
+        "Found {} completion suggestions: {:?}",
+        suggestions_with_content.len(),
+        suggestions_with_content
+            .iter()
+            .map(|(display, _)| display)
+            .collect::<Vec<_>>()
+    );
+
     if suggestions_with_content.is_empty() {
         println!("No completion suggestions found - not showing popup");
         // Reset the completion flag since we're not showing a popup
         COMPLETION_IN_PROGRESS.store(false, Ordering::SeqCst);
         return;
     }
-    
+
     // Create custom completion popup
     println!("About to create popup...");
-    create_completion_popup(source_view, &suggestions_with_content, &prefix, word_start.offset(), cursor_iter.offset());
-    
+    create_completion_popup(
+        source_view,
+        &suggestions_with_content,
+        &prefix,
+        word_start.offset(),
+        cursor_iter.offset(),
+    );
+
     // Reset the completion flag after a short delay
     glib::timeout_add_local_once(std::time::Duration::from_millis(200), move || {
         COMPLETION_IN_PROGRESS.store(false, Ordering::SeqCst);
     });
-    
+
     println!("=== CUSTOM COMPLETION POPUP CREATED ===");
 }
 
 /// Create a custom completion popup using GTK Popover
-fn create_completion_popup(source_view: &View, suggestions_with_content: &[(String, CompletionItem)], _prefix: &str, word_start_offset: i32, cursor_offset: i32) {
+fn create_completion_popup(
+    source_view: &View,
+    suggestions_with_content: &[(String, CompletionItem)],
+    _prefix: &str,
+    word_start_offset: i32,
+    cursor_offset: i32,
+) {
     println!("=== CREATING POPOVER ===");
-    
+
     // Get language for documentation
     let buffer = source_view.buffer();
     let language = if let Some(source_buffer) = buffer.downcast_ref::<sourceview5::Buffer>() {
@@ -371,36 +434,41 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
     } else {
         "generic".to_string()
     };
-    
+
     // Create popover
     let popover = Popover::new();
     println!("Popover created");
-    
+
     popover.set_parent(source_view);
     println!("Popover parent set");
-    
+
     popover.set_autohide(true);
     println!("Popover autohide set");
-    
+
     // Get screen size to calculate appropriate popup dimensions
     let display = gdk::Display::default().expect("Failed to get display");
-    let monitor = display.monitors().item(0)
+    let monitor = display
+        .monitors()
+        .item(0)
         .and_then(|obj| obj.downcast::<gdk::Monitor>().ok())
         .expect("Failed to get monitor");
     let geometry = monitor.geometry();
     let screen_width = geometry.width();
     let screen_height = geometry.height();
-    
+
     println!("Screen size: {}x{}", screen_width, screen_height);
-    
+
     // Calculate popup dimensions as percentage of screen size
     // 90% of screen width for both min and max
     let popup_width = (screen_width as f32 * 0.9) as i32;
     // Max height: 80% of screen height
     let max_height = (screen_height as f32 * 0.8) as i32;
-    
-    println!("Popup dimensions: width={}, height={}", popup_width, max_height);
-    
+
+    println!(
+        "Popup dimensions: width={}, height={}",
+        popup_width, max_height
+    );
+
     // Create scrolled window for suggestions with dynamic sizing
     let scrolled = ScrolledWindow::builder()
         .max_content_height(max_height)
@@ -413,43 +481,43 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
         .overlay_scrolling(true)
         .build();
     println!("ScrolledWindow created (screen-adaptive)");
-    
+
     // Create list box for suggestions
     let list_box = ListBox::builder()
         .selection_mode(gtk4::SelectionMode::Single)
         .show_separators(false)
         .build();
-    
+
     // Set size based on screen dimensions
     list_box.set_size_request(popup_width, -1);
-    
+
     println!("ListBox created with width: {}", popup_width);
-    
+
     // Add suggestions to list
     for (i, (display_text, completion_item)) in suggestions_with_content.iter().enumerate() {
         println!("Adding suggestion {}: {}", i, display_text);
-        
+
         // Create a horizontal box to hold icon, text, and documentation
-        let item_box = GtkBox::new(Orientation::Horizontal, 16);  // Increased spacing for larger popup
-        item_box.set_margin_start(16);   // Increased margins for better visual hierarchy
+        let item_box = GtkBox::new(Orientation::Horizontal, 16); // Increased spacing for larger popup
+        item_box.set_margin_start(16); // Increased margins for better visual hierarchy
         item_box.set_margin_end(16);
-        item_box.set_margin_top(8);      // Increased vertical spacing for taller popup
+        item_box.set_margin_top(8); // Increased vertical spacing for taller popup
         item_box.set_margin_bottom(8);
-        
+
         // Create appropriate icon based on completion type
         let icon = match completion_item {
             CompletionItem::Keyword(_) => {
                 // Use a wrench/tool icon for language keywords (reserved words)
                 Image::from_icon_name("insert-text-symbolic")
-            },
+            }
             CompletionItem::Snippet(_, _) => {
                 // Use a template/code block icon for code snippets
                 Image::from_icon_name("text-x-script-symbolic")
-            },
+            }
             CompletionItem::BufferWord(_) => {
                 // Use a text file icon for words from the current buffer
                 Image::from_icon_name("text-x-generic-symbolic")
-            },
+            }
             CompletionItem::ImportItem(import_item) => {
                 // Use different icons based on import item type
                 match import_item.item_type.as_str() {
@@ -460,21 +528,21 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                     "const" => Image::from_icon_name("dialog-information-symbolic"),
                     _ => Image::from_icon_name("insert-object-symbolic"),
                 }
-            },
+            }
             CompletionItem::ImportModule(_) => {
                 // Use folder icon for modules
                 Image::from_icon_name("folder-symbolic")
-            },
+            }
         };
-        
+
         // Set icon size
         icon.set_icon_size(gtk4::IconSize::Normal);
-        
+
         // Fixed width for the first column (label)
-        let label_width = 10;  // Fixed at 10 characters
-        // Doc width: dynamic based on remaining space
+        let label_width = 10; // Fixed at 10 characters
+                              // Doc width: dynamic based on remaining space
         let doc_width = ((popup_width as f32 * 0.70 / 8.0) as i32).max(40);
-        
+
         // Create label for the main text with fixed width and wrapping
         let label = Label::builder()
             .label(display_text)
@@ -485,46 +553,47 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
             .wrap_mode(pango::WrapMode::WordChar)
             .max_width_chars(label_width)
             .build();
-        
+
         // Add CSS class for bold styling
         label.add_css_class("completion-label");
-        
+
         // Get and add enhanced documentation
         let doc_text = match completion_item {
-            CompletionItem::Keyword(keyword) => {
-                get_keyword_documentation(&language, keyword)
-            },
+            CompletionItem::Keyword(keyword) => get_keyword_documentation(&language, keyword),
             CompletionItem::Snippet(trigger, _content) => {
                 get_snippet_documentation(&language, trigger)
-            },
+            }
             CompletionItem::BufferWord(word) => {
                 format!("{} - Word found in current buffer. This identifier is already used elsewhere in your code.", word)
-            },
+            }
             CompletionItem::ImportItem(import_item) => {
-                format!("{} ({}) - {}", import_item.name, import_item.item_type, import_item.description)
-            },
+                format!(
+                    "{} ({}) - {}",
+                    import_item.name, import_item.item_type, import_item.description
+                )
+            }
             CompletionItem::ImportModule(module) => {
                 format!("{} - Module available for import", module)
-            },
+            }
         };
-        
+
         // Create documentation label with dynamic width based on screen size
         let doc_label = Label::builder()
             .label(&doc_text)
             .xalign(0.0)
             .hexpand(true)
-            .wrap(true)                              // Enable wrapping for long documentation
-            .wrap_mode(pango::WrapMode::Word)        // Wrap at word boundaries
+            .wrap(true) // Enable wrapping for long documentation
+            .wrap_mode(pango::WrapMode::Word) // Wrap at word boundaries
             .max_width_chars(doc_width)
             .build();
-        
+
         // Style the documentation label to be smaller and dimmed
         doc_label.add_css_class("completion-doc");
-        
+
         // Get font size from settings to match editor
         let settings = crate::settings::get_settings();
         let font_size = settings.get_font_size();
-        
+
         // Add some CSS styling for better appearance with editor's font size
         let css_provider = gtk4::CssProvider::new();
         let css_content = format!(
@@ -543,11 +612,10 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                 padding-top: 2px;
                 padding-bottom: 2px;
             }}",
-            font_size,
-            font_size
+            font_size, font_size
         );
         css_provider.load_from_data(&css_content);
-        
+
         if let Some(display) = gdk::Display::default() {
             gtk4::style_context_add_provider_for_display(
                 &display,
@@ -555,41 +623,44 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                 gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
             );
         }
-        
+
         // Add icon, label, and documentation to the horizontal box
         item_box.append(&icon);
         item_box.append(&label);
         item_box.append(&doc_label);
-        
+
         list_box.append(&item_box);
     }
-    
+
     // Select first row by default
     if let Some(first_row) = list_box.row_at_index(0) {
         list_box.select_row(Some(&first_row));
     }
-    
+
     scrolled.set_child(Some(&list_box));
     popover.set_child(Some(&scrolled));
     println!("Popover content set with documentation");
-    
+
     // Handle selection
     let buffer = source_view.buffer();
     let suggestions_clone = suggestions_with_content.to_vec();
     let popover_for_close = popover.clone();
-    
+
     list_box.connect_row_activated(move |_, row| {
         let index = row.index() as usize;
         if let Some((display_text, completion_item)) = suggestions_clone.get(index) {
             println!("Selected completion: {}", display_text);
-            println!("Replacing text from offset {} to {}", word_start_offset, cursor_offset);
-            
+            println!(
+                "Replacing text from offset {} to {}",
+                word_start_offset, cursor_offset
+            );
+
             // Get the text that will be replaced for debugging
             let start_iter = buffer.iter_at_offset(word_start_offset);
             let end_iter = buffer.iter_at_offset(cursor_offset);
             let text_to_replace = buffer.text(&start_iter, &end_iter, false);
             println!("Text being replaced: '{}'", text_to_replace);
-            
+
             // Determine what to insert based on completion type
             let text_to_insert = match completion_item {
                 CompletionItem::Keyword(keyword) => keyword.clone(),
@@ -597,76 +668,86 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                 CompletionItem::Snippet(_, content) => {
                     // Process snippet - remove placeholders for now and replace with simple text
                     expand_snippet_content(content)
-                },
-                CompletionItem::ImportItem(import_item) => {
-                    import_item.name.clone()
-                },
+                }
+                CompletionItem::ImportItem(import_item) => import_item.name.clone(),
                 CompletionItem::ImportModule(module) => {
                     // For modules, just insert the module name (last component)
                     module.split("::").last().unwrap_or(module).to_string()
-                },
+                }
             };
-            
+
             // Replace the prefix with the selected suggestion/snippet
             let mut start_iter = buffer.iter_at_offset(word_start_offset);
             let mut end_iter = buffer.iter_at_offset(cursor_offset);
-            
+
             buffer.delete(&mut start_iter, &mut end_iter);
             let mut insert_iter = buffer.iter_at_offset(word_start_offset);
             buffer.insert(&mut insert_iter, &text_to_insert);
-            
+
             println!("Inserted: '{}'", text_to_insert);
-            
+
             // Reset completion flag
             COMPLETION_IN_PROGRESS.store(false, Ordering::SeqCst);
-            
+
             // Close popover
             popover_for_close.popdown();
         }
     });
-    
+
     // Reset completion flag when popover is closed
     let popover_close_handler = popover.clone();
     popover_close_handler.connect_closed(move |_| {
         println!("Popover closed - resetting completion flag");
         COMPLETION_IN_PROGRESS.store(false, Ordering::SeqCst);
     });
-    
+
     // Calculate cursor position for better popover positioning
     let buffer = source_view.buffer();
     let cursor_mark = buffer.get_insert();
     let cursor_iter = buffer.iter_at_mark(&cursor_mark);
-    
+
     // Get cursor rectangle in buffer coordinates first
     let cursor_rect = source_view.iter_location(&cursor_iter);
-    println!("Cursor location (buffer coords): x={}, y={}, width={}, height={}", 
-             cursor_rect.x(), cursor_rect.y(), cursor_rect.width(), cursor_rect.height());
-    
+    println!(
+        "Cursor location (buffer coords): x={}, y={}, width={}, height={}",
+        cursor_rect.x(),
+        cursor_rect.y(),
+        cursor_rect.width(),
+        cursor_rect.height()
+    );
+
     // Convert buffer coordinates to widget coordinates
     let (widget_x, widget_y) = source_view.buffer_to_window_coords(
         gtk4::TextWindowType::Widget,
         cursor_rect.x(),
-        cursor_rect.y()
+        cursor_rect.y(),
     );
-    
-    println!("Cursor location (widget coords): x={}, y={}", widget_x, widget_y);
-    
+
+    println!(
+        "Cursor location (widget coords): x={}, y={}",
+        widget_x, widget_y
+    );
+
     // Position the popover below the cursor
     let pointing_rect = gdk::Rectangle::new(
         widget_x,
         widget_y + cursor_rect.height(),
-        cursor_rect.width().max(1),  // Ensure minimum width
-        1
+        cursor_rect.width().max(1), // Ensure minimum width
+        1,
     );
     popover.set_pointing_to(Some(&pointing_rect));
-    println!("Popover positioned at widget coordinates: x={}, y={}", widget_x, widget_y + cursor_rect.height());
-    
+    println!(
+        "Popover positioned at widget coordinates: x={}, y={}",
+        widget_x,
+        widget_y + cursor_rect.height()
+    );
+
     // Handle keyboard navigation in the popover
     let key_controller = gtk4::EventControllerKey::new();
     let popover_clone = popover.clone();
     let list_box_clone = list_box.clone();
     let scrolled_clone = scrolled.clone();
-    
+
     key_controller.connect_key_pressed(move |_, keyval, _, _| {
         println!("Popover key pressed: {:?}", keyval);
         match keyval {
@@ -675,14 +756,14 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                 COMPLETION_IN_PROGRESS.store(false, Ordering::SeqCst);
                 popover_clone.popdown();
                 glib::Propagation::Stop
-            },
+            }
             gdk::Key::Return | gdk::Key::Tab => {
                 println!("Return/Tab pressed - activating selection");
                 if let Some(selected_row) = list_box_clone.selected_row() {
                     selected_row.activate();
                 }
                 glib::Propagation::Stop
-            },
+            }
             gdk::Key::Down => {
                 println!("Down arrow - moving to next item");
                 if let Some(selected_row) = list_box_clone.selected_row() {
@@ -694,7 +775,7 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                     }
                 }
                 glib::Propagation::Stop
-            },
+            }
             gdk::Key::Up => {
                 println!("Up arrow - moving to previous item");
                 if let Some(selected_row) = list_box_clone.selected_row() {
@@ -706,19 +787,19 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
                     }
                 }
                 glib::Propagation::Stop
-            },
-            _ => glib::Propagation::Proceed
+            }
+            _ => glib::Propagation::Proceed,
         }
     });
-    
+
     list_box.add_controller(key_controller);
     println!("Key controller added to list box");
-    
+
     // Show the popover
     println!("About to show popover...");
     popover.popup();
     println!("Popover.popup() called");
-    
+
     // ARM Debug: Check if popover is actually visible
     glib::timeout_add_local_once(std::time::Duration::from_millis(100), {
         let popover_check = popover.clone();
@@ -736,16 +817,19 @@ fn create_completion_popup(source_view: &View, suggestions_with_content: &[(Stri
             println!("============================");
         }
     });
-    
+
     // Give focus to the list box for keyboard navigation
     list_box.grab_focus();
     println!("Focus grabbed by list box");
-    
+
     // Additional debugging
     println!("Popover is_visible: {}", popover.is_visible());
     println!("ListBox has_focus: {}", list_box.has_focus());
-    
-    println!("Custom completion popup displayed with {} suggestions and documentation", suggestions_with_content.len());
+
+    println!(
+        "Custom completion popup displayed with {} suggestions and documentation",
+        suggestions_with_content.len()
+    );
 }
 
 /// Helper function to scroll to a specific row in the scrolled window
@@ -754,17 +838,17 @@ fn scroll_to_row(scrolled: &ScrolledWindow, row: &gtk4::ListBoxRow) {
     let row_allocation = row.allocation();
     let row_height = row_allocation.height() as f64;
     let row_y = row_allocation.y() as f64;
-    
+
     // Get the scrolled window's viewport
     if let Some(_viewport) = scrolled.child() {
         let adjustment = scrolled.vadjustment();
         let current_scroll = adjustment.value();
         let page_size = adjustment.page_size();
-        
+
         // Calculate if we need to scroll
         let visible_top = current_scroll;
         let visible_bottom = current_scroll + page_size;
-        
+
         // If the row is above the visible area, scroll up to it
         if row_y < visible_top {
             adjustment.set_value(row_y);
@@ -781,30 +865,29 @@ fn scroll_to_row(scrolled: &ScrolledWindow, row: &gtk4::ListBoxRow) {
 /// Setup keyboard shortcuts for completion with manual trigger only
 pub fn setup_completion_shortcuts(source_view: &View) {
     println!("Setting up completion keyboard shortcuts...");
-    
+
     // Create key controller with high priority to ensure it gets events
     let key_controller = gtk4::EventControllerKey::new();
     key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
-    
+
     let source_view_clone = source_view.clone();
     key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
         // Debug key press
         println!("Key pressed: {:?}, state: {:?}", keyval, state);
-        
+
         // Check for Ctrl+Space (manual trigger)
-        if keyval == gdk::Key::space 
-            && state.contains(gdk::ModifierType::CONTROL_MASK) {
+        if keyval == gdk::Key::space && state.contains(gdk::ModifierType::CONTROL_MASK) {
             println!("*** Ctrl+Space detected! Triggering manual completion ***");
-            
+
             // Use timeout to ensure the key event is fully processed first
             let sv = source_view_clone.clone();
             glib::idle_add_local_once(move || {
                 trigger_completion(&sv);
             });
-            
+
             return glib::Propagation::Stop;
         }
-        
+
         // Check for F1 key as alternative trigger for testing
         if keyval == gdk::Key::F1 {
             println!("*** F1 detected! Triggering test completion ***");
@@ -814,16 +897,16 @@ pub fn setup_completion_shortcuts(source_view: &View) {
             });
             return glib::Propagation::Stop;
         }
-        
+
         // Let other keys through
         glib::Propagation::Proceed
     });
-    
+
     source_view.add_controller(key_controller);
-    
+
     println!("Completion keyboard shortcuts enabled:");
     println!("  - Ctrl+Space for manual trigger");
-    println!("  - F1 for testing trigger"); 
+    println!("  - F1 for testing trigger");
     println!("  - Auto-completion has been DISABLED");
 }
 
@@ -832,17 +915,17 @@ pub fn setup_completion_shortcuts(source_view: &View) {
 fn expand_snippet_content(content: &str) -> String {
     // Use regex to find and replace all snippet placeholders ${n:default_text}
     // For now, we'll use a simple parser since regex is not available
-    
+
     let mut result = String::new();
     let chars: Vec<char> = content.chars().collect();
     let mut i = 0;
-    
+
     while i < chars.len() {
         if i + 2 < chars.len() && chars[i] == '$' && chars[i + 1] == '{' {
             // Find the closing brace
             let mut j = i + 2;
             let mut brace_count = 1;
-            
+
             while j < chars.len() && brace_count > 0 {
                 if chars[j] == '{' {
                     brace_count += 1;
@@ -851,11 +934,11 @@ fn expand_snippet_content(content: &str) -> String {
                 }
                 j += 1;
             }
-            
+
             if brace_count == 0 {
                 // Extract the placeholder content
                 let placeholder: String = chars[i + 2..j - 1].iter().collect();
-                
+
                 // Parse ${n:default_text} format
                 if let Some(colon_pos) = placeholder.find(':') {
                     // Extract the default text after the colon
@@ -865,59 +948,61 @@ fn expand_snippet_content(content: &str) -> String {
                     // Just a number, use generic placeholder
                     result.push_str("placeholder");
                 }
-                
+
                 i = j;
                 continue;
             }
         }
-        
+
         result.push(chars[i]);
         i += 1;
     }
-    
+
     result
 }
 
 /// Detect if we're currently in an import context
 fn detect_import_context(context: &str) -> bool {
     let trimmed = context.trim();
-    
+
     // Find the current line (the last line in the context)
     let current_line = trimmed.lines().last().unwrap_or("");
     let current_line_trimmed = current_line.trim();
-    
+
     // Rust: "use module::" syntax
     if current_line_trimmed.starts_with("use ") && current_line_trimmed.contains("::") {
         return true;
     }
-    
+
     // JavaScript/TypeScript: "import { } from 'module'" or "import module from 'module'" or "const module = require('module')"
-    if (current_line_trimmed.starts_with("import ") && current_line_trimmed.contains("from")) 
-       || (current_line_trimmed.contains("require(")) {
+    if (current_line_trimmed.starts_with("import ") && current_line_trimmed.contains("from"))
+        || (current_line_trimmed.contains("require("))
+    {
         return true;
     }
-    
+
     // Python: "from module import" or "import module"
     if (current_line_trimmed.starts_with("from ") && current_line_trimmed.contains(" import"))
-       || (current_line_trimmed.starts_with("import ") && !current_line_trimmed.contains("from")) {
+        || (current_line_trimmed.starts_with("import ") && !current_line_trimmed.contains("from"))
+    {
         return true;
     }
-    
+
     false
 }
 
 /// Extract the module path from import context
 fn extract_import_path(context: &str) -> Option<String> {
     let trimmed = context.trim();
-    
+
     // Get the current line (the last line in the context)
     let current_line = trimmed.lines().last().unwrap_or("");
     let current_line_trimmed = current_line.trim();
-    
+
     // Rust: "use module::" syntax
     if let Some(stripped) = current_line_trimmed.strip_prefix("use ") {
         let after_use = &stripped.trim();
-        
+
         // Find the last :: to get the module path before it
         if let Some(last_double_colon) = after_use.rfind("::") {
             let module_path = &after_use[..last_double_colon];
@@ -927,7 +1012,7 @@ fn extract_import_path(context: &str) -> Option<String> {
             return Some(String::new());
         }
     }
-    
+
     // JavaScript: "import { } from 'module'" or "import module from 'module'"
     if current_line_trimmed.starts_with("import ") && current_line_trimmed.contains("from") {
         // Extract module name from 'module' or "module"
@@ -942,7 +1027,7 @@ fn extract_import_path(context: &str) -> Option<String> {
             }
         }
     }
-    
+
     // JavaScript: "const module = require('module')" or "import('module')"
     if let Some(require_pos) = current_line_trimmed.find("require(") {
         let after_require = &current_line_trimmed[require_pos + 8..];
@@ -954,7 +1039,7 @@ fn extract_import_path(context: &str) -> Option<String> {
             }
         }
     }
-    
+
     // Python: "from module import" - extract the module before "import"
     if let Some(stripped) = current_line_trimmed.strip_prefix("from ") {
         if let Some(import_pos) = stripped.find(" import") {
@@ -962,7 +1047,7 @@ fn extract_import_path(context: &str) -> Option<String> {
             return Some(module_path.to_string());
         }
     }
-    
+
     // Python: "import module" - show available modules
     if let Some(stripped) = current_line_trimmed.strip_prefix("import ") {
         let module_part = stripped.trim();
@@ -975,6 +1060,6 @@ fn extract_import_path(context: &str) -> Option<String> {
             return Some(String::new());
         }
     }
-    
+
     None
 }

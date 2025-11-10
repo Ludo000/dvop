@@ -1,9 +1,9 @@
 // Linter module for code quality checking
 // This module provides linting functionality for various programming languages
 
+pub mod diagnostics_panel;
 pub mod rust_linter;
 pub mod ui;
-pub mod diagnostics_panel;
 
 use std::path::Path;
 
