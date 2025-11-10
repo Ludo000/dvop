@@ -112,52 +112,45 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         }
                     });
                     
-                    // Create a ListBox for diagnostics in this file
                     let file_list_box = ListBox::new();
                     file_list_box.set_selection_mode(gtk4::SelectionMode::Single);
                     
-                    // Add each diagnostic as a clickable row
                     for diag in diagnostics {
-                        let item_box = GtkBox::new(Orientation::Horizontal, 8);
-                        item_box.set_margin_start(8);
-                        item_box.set_margin_end(8);
-                        item_box.set_margin_top(4);
-                        item_box.set_margin_bottom(4);
+                        let item_box = GtkBox::new(Orientation::Vertical, 2);
+                        item_box.set_margin_start(12);
+                        item_box.set_margin_end(12);
+                        item_box.set_margin_top(6);
+                        item_box.set_margin_bottom(6);
                         
-                        // Severity icon
                         let icon = match diag.severity {
                             crate::linter::DiagnosticSeverity::Error => "❌",
                             crate::linter::DiagnosticSeverity::Warning => "⚠️",
                             crate::linter::DiagnosticSeverity::Info => "ℹ️",
                         };
-                        let icon_label = Label::new(Some(icon));
-                        item_box.append(&icon_label);
                         
-                        // Location (dimmed)
-                        let location_text = format!("Line {}:{}", diag.line, diag.column);
-                        let location_label = Label::new(Some(&location_text));
-                        location_label.add_css_class("dim");
-                        item_box.append(&location_label);
+                        let formatted_message = if !diag.rule.is_empty() {
+                            format!("{} [{}:{}]: {} ({})", 
+                                icon, 
+                                diag.line, 
+                                diag.column, 
+                                diag.message,
+                                diag.rule)
+                        } else {
+                            format!("{} [{}:{}]: {}", 
+                                icon, 
+                                diag.line, 
+                                diag.column, 
+                                diag.message)
+                        };
                         
-                        // Separator
-                        let separator = Label::new(Some("-"));
-                        item_box.append(&separator);
-                        
-                        // Message
-                        let message_label = Label::new(Some(&diag.message));
+                        let message_label = Label::new(Some(&formatted_message));
                         message_label.set_hexpand(true);
                         message_label.set_halign(gtk4::Align::Start);
                         message_label.set_wrap(true);
                         message_label.set_wrap_mode(gtk4::pango::WrapMode::WordChar);
                         message_label.set_xalign(0.0);
+                        message_label.add_css_class("monospace");
                         item_box.append(&message_label);
-                        
-                        // Rule (dimmed)
-                        if !diag.rule.is_empty() {
-                            let rule_label = Label::new(Some(&format!("[{}]", diag.rule)));
-                            rule_label.add_css_class("dim");
-                            item_box.append(&rule_label);
-                        }
                         
                         let row = ListBoxRow::new();
                         row.set_child(Some(&item_box));
@@ -174,59 +167,41 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         
                         let file_path_for_gesture = file_path_clone.clone();
                         gesture.connect_pressed(move |gesture, _, _, _| {
-                            // Stop propagation so clicking a diagnostic doesn't toggle its parent expander
                             gesture.set_state(gtk4::EventSequenceState::Claimed);
                             
-                            println!("Diagnostic clicked: {} at line {}, column {}", file_path_for_gesture, line_num, col_num);
-                            
-                            // Convert URI to file path
                             let path = if file_path_for_gesture.starts_with("file://") {
-                                // Parse as URI and extract path
                                 if let Ok(url) = url::Url::parse(&file_path_for_gesture) {
                                     if let Ok(path) = url.to_file_path() {
                                         path
                                     } else {
-                                        println!("Failed to convert URI to file path: {}", file_path_for_gesture);
                                         return;
                                     }
                                 } else {
-                                    println!("Failed to parse URI: {}", file_path_for_gesture);
                                     return;
                                 }
                             } else {
-                                // Already a file path
                                 std::path::PathBuf::from(&file_path_for_gesture)
                             };
                             
-                            println!("Opening file: {:?} at line {}, column {}", path, line_num, col_num);
                             crate::handlers::open_file_and_jump_to_location(path, line_num, col_num);
                         });
                         row.add_controller(gesture);
                         
-                        // Also keep the activate signal for keyboard navigation
                         row.connect_activate(move |_| {
-                            println!("Diagnostic clicked: {} at line {}, column {}", file_path_clone, line_num, col_num);
-                            
-                            // Convert URI to file path
                             let path = if file_path_clone.starts_with("file://") {
-                                // Parse as URI and extract path
                                 if let Ok(url) = url::Url::parse(&file_path_clone) {
                                     if let Ok(path) = url.to_file_path() {
                                         path
                                     } else {
-                                        println!("Failed to convert URI to file path: {}", file_path_clone);
                                         return;
                                     }
                                 } else {
-                                    println!("Failed to parse URI: {}", file_path_clone);
                                     return;
                                 }
                             } else {
-                                // Already a file path
                                 std::path::PathBuf::from(&file_path_clone)
                             };
                             
-                            println!("Opening file: {:?} at line {}, column {}", path, line_num, col_num);
                             crate::handlers::open_file_and_jump_to_location(path, line_num, col_num);
                         });
                         
@@ -292,9 +267,6 @@ pub fn clear_diagnostics() {
 
 /// Format and display diagnostics for a file
 pub fn display_file_diagnostics(file_uri: &str, diagnostics: &[crate::linter::Diagnostic]) {
-    println!("display_file_diagnostics called with {} diagnostics for {}", diagnostics.len(), file_uri);
-    
-    // Don't show anything if there are no diagnostics
     if diagnostics.is_empty() {
         return;
     }

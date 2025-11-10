@@ -198,12 +198,10 @@ mod tests {
         let code = r#"
             fn good_function_name() {
                 let variable_name = 1;
-                println!("{}", variable_name);
             }
         "#;
 
         let diagnostics = lint_rust_code(code);
-        // Should have no naming convention errors
         assert!(!diagnostics.iter().any(|d| d.rule == "naming_convention"));
     }
 

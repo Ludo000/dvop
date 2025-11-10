@@ -634,7 +634,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             
             dialog.set_default_response(gtk4::ResponseType::Cancel);
             
-            let window_clone_for_dialog = window_clone_for_close.clone();
+
             let app_for_dialog = app_for_close.clone();
             
             dialog.connect_response(move |d, response| {

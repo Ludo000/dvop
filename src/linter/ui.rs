@@ -13,18 +13,14 @@ use super::{lint_by_language, lint_file, Diagnostic, DiagnosticSeverity};
 
 /// Detect if the current directory contains Rust files or is a Rust project
 pub fn is_rust_project(dir: &Path) -> bool {
-    // Check for Cargo.toml
     if dir.join("Cargo.toml").exists() {
-        println!("✓ Found Cargo.toml in {:?}", dir);
         return true;
     }
 
-    // Check for any .rs files in the directory or src subdirectory
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().map_or(false, |ext| ext == "rs") {
-                println!("✓ Found .rs file: {:?}", path);
                 return true;
             }
             if path.is_dir() && path.file_name().map_or(false, |name| name == "src") {
@@ -35,7 +31,6 @@ pub fn is_rust_project(dir: &Path) -> bool {
                             .extension()
                             .map_or(false, |ext| ext == "rs")
                         {
-                            println!("✓ Found .rs file in src: {:?}", src_entry.path());
                             return true;
                         }
                     }
@@ -44,7 +39,6 @@ pub fn is_rust_project(dir: &Path) -> bool {
         }
     }
 
-    println!("✗ No Rust project detected in {:?}", dir);
     false
 }
 
@@ -126,7 +120,6 @@ pub fn show_diagnostics_panel() {
         DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
             if let Some(ref callback) = *cell.borrow() {
                 callback(true);
-                println!("📊 Diagnostics panel shown");
             }
         });
     });
@@ -138,7 +131,6 @@ pub fn hide_diagnostics_panel() {
         DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
             if let Some(ref callback) = *cell.borrow() {
                 callback(false);
-                println!("📊 Diagnostics panel hidden");
             }
         });
     });
@@ -160,14 +152,12 @@ pub fn check_and_update_rust_ui(dir: &Path) {
     glib::idle_add_once({
         let has_rust = has_rust;
         move || {
-            // Update linter status widget visibility
             LINTER_STATUS_VISIBILITY_CALLBACK.with(|cell| {
                 if let Some(ref callback) = *cell.borrow() {
                     callback(has_rust);
                 }
             });
 
-            // Update diagnostics panel visibility
             DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
                 if let Some(ref callback) = *cell.borrow() {
                     callback(has_rust);
@@ -175,13 +165,7 @@ pub fn check_and_update_rust_ui(dir: &Path) {
             });
 
             if has_rust {
-                println!("✓ Rust project detected - showing linter UI");
-                // Refresh diagnostics panel to show relevant diagnostics for this directory
                 refresh_diagnostics_panel();
-            } else {
-                println!(
-                    "✗ No Rust project - hiding linter UI (linter keeps running in background)"
-                );
             }
         }
     });
@@ -209,7 +193,6 @@ fn update_diagnostics_count() {
             "🦀 Rust: ✓".to_string()
         };
 
-        // Update directly without idle_add since we're already on the main thread
         LINTER_STATUS_CALLBACK.with(|cell| {
             if let Some(ref callback) = *cell.borrow() {
                 callback(&status);
@@ -222,7 +205,6 @@ fn update_diagnostics_count() {
 pub fn initialize_rust_analyzer() {
     let mut manager_guard = RUST_ANALYZER.lock().unwrap();
     if manager_guard.is_none() {
-        println!("🚀 Initializing rust-analyzer...");
         *manager_guard = Some(crate::lsp::rust_analyzer::RustAnalyzerManager::new());
         update_linter_status("🦀 Rust: Initializing...");
     }
@@ -232,17 +214,12 @@ pub fn initialize_rust_analyzer() {
 pub fn shutdown_rust_analyzer() {
     let mut manager_guard = RUST_ANALYZER.lock().unwrap();
     if let Some(ref manager) = *manager_guard {
-        println!("🛑 Shutting down rust-analyzer...");
-
-        // Properly shutdown the rust-analyzer process
         manager.shutdown();
 
-        // Clear all diagnostics
         let mut store = DIAGNOSTICS_STORE.lock().unwrap();
         store.clear();
         drop(store);
 
-        // Clear tracking maps
         let mut initial = INITIAL_DIAGNOSTICS_RECEIVED.lock().unwrap();
         initial.clear();
         drop(initial);
@@ -255,15 +232,10 @@ pub fn shutdown_rust_analyzer() {
         awaiting.clear();
         drop(awaiting);
 
-        // Refresh panel to show empty state
         refresh_diagnostics_panel();
-
         update_linter_status("");
-
-        println!("✅ rust-analyzer shut down and diagnostics cleared");
     }
 
-    // Remove the manager
     *manager_guard = None;
 }
 
