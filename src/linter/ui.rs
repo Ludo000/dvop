@@ -1,7 +1,7 @@
 // UI integration for the linter
 // This module handles displaying lint diagnostics in the editor
 
-use gtk4::{glib, Box as GtkBox, Label, ListBox, Orientation, ScrolledWindow};
+use gtk4::{glib, Box as GtkBox, Label, ListBox, Orientation, ScrolledWindow, Image};
 use sourceview5::{prelude::*, View};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -66,7 +66,7 @@ lazy_static::lazy_static! {
 // Thread-local callback for diagnostics panel visibility
 thread_local! {
     static DIAGNOSTICS_PANEL_CALLBACK: RefCell<Option<Rc<dyn Fn(bool)>>> = RefCell::new(None);
-    static LINTER_STATUS_CALLBACK: RefCell<Option<Rc<dyn Fn(&str)>>> = RefCell::new(None);
+    static LINTER_STATUS_BOX: RefCell<Option<GtkBox>> = RefCell::new(None);
     static LINTER_STATUS_VISIBILITY_CALLBACK: RefCell<Option<Rc<dyn Fn(bool)>>> = RefCell::new(None);
     
     // Track open buffers by file URI for reapplying diagnostics (thread-local since GTK is single-threaded)
@@ -85,12 +85,9 @@ where
 }
 
 /// Set the callback for updating the linter status label
-pub fn set_linter_status_callback<F>(callback: F)
-where
-    F: Fn(&str) + 'static,
-{
-    LINTER_STATUS_CALLBACK.with(|cell| {
-        *cell.borrow_mut() = Some(Rc::new(callback));
+pub fn set_linter_status_callback(status_box: GtkBox) {
+    LINTER_STATUS_BOX.with(|cell| {
+        *cell.borrow_mut() = Some(status_box);
     });
 }
 
@@ -109,12 +106,70 @@ pub fn update_linter_status(status: &str) {
     glib::idle_add_once({
         let status = status.to_string();
         move || {
-            LINTER_STATUS_CALLBACK.with(|cell| {
-                if let Some(ref callback) = *cell.borrow() {
-                    callback(&status);
+            LINTER_STATUS_BOX.with(|cell| {
+                if let Some(ref status_box) = *cell.borrow() {
+                    // Clear existing children
+                    while let Some(child) = status_box.first_child() {
+                        status_box.remove(&child);
+                    }
+                    
+                    // Add label with status text
+                    let label = Label::new(Some(&status));
+                    status_box.append(&label);
                 }
             });
         }
+    });
+}
+
+/// Update the linter status with icons
+pub fn update_linter_status_with_icons(rust_icon: bool, errors: usize, warnings: usize) {
+    glib::idle_add_once(move || {
+        LINTER_STATUS_BOX.with(|cell| {
+            if let Some(ref status_box) = *cell.borrow() {
+                // Clear existing children
+                while let Some(child) = status_box.first_child() {
+                    status_box.remove(&child);
+                }
+                
+                // Add Rust icon if requested
+                if rust_icon {
+                    let icon = Image::from_icon_name("application-x-executable-symbolic");
+                    icon.set_pixel_size(16);
+                    status_box.append(&icon);
+                    
+                    let rust_label = Label::new(Some("Rust:"));
+                    status_box.append(&rust_label);
+                }
+                
+                if errors > 0 || warnings > 0 {
+                    // Add error icon and count
+                    if errors > 0 {
+                        let error_icon = Image::from_icon_name("dialog-error-symbolic");
+                        error_icon.set_pixel_size(16);
+                        status_box.append(&error_icon);
+                        
+                        let error_label = Label::new(Some(&format!("{}", errors)));
+                        status_box.append(&error_label);
+                    }
+                    
+                    // Add warning icon and count
+                    if warnings > 0 {
+                        let warning_icon = Image::from_icon_name("dialog-warning-symbolic");
+                        warning_icon.set_pixel_size(16);
+                        status_box.append(&warning_icon);
+                        
+                        let warning_label = Label::new(Some(&format!("{}", warnings)));
+                        status_box.append(&warning_label);
+                    }
+                } else {
+                    // All good - show checkmark
+                    let check_icon = Image::from_icon_name("emblem-ok-symbolic");
+                    check_icon.set_pixel_size(16);
+                    status_box.append(&check_icon);
+                }
+            }
+        });
     });
 }
 
@@ -191,17 +246,7 @@ fn update_diagnostics_count() {
             }
         }
 
-        let status = if errors > 0 || warnings > 0 {
-            format!("🦀 Rust: {} ❌  {} ⚠️", errors, warnings)
-        } else {
-            "🦀 Rust: ✓".to_string()
-        };
-
-        LINTER_STATUS_CALLBACK.with(|cell| {
-            if let Some(ref callback) = *cell.borrow() {
-                callback(&status);
-            }
-        });
+        update_linter_status_with_icons(true, errors, warnings);
     }
 }
 
@@ -210,7 +255,7 @@ pub fn initialize_rust_analyzer() {
     let mut manager_guard = RUST_ANALYZER.lock().unwrap();
     if manager_guard.is_none() {
         *manager_guard = Some(crate::lsp::rust_analyzer::RustAnalyzerManager::new());
-        update_linter_status("🦀 Rust: Initializing...");
+        update_linter_status("Rust: Initializing...");
     }
 }
 
@@ -315,7 +360,7 @@ fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
                         "✓ Got rust-analyzer client for workspace: {:?}",
                         workspace_root
                     );
-                    update_linter_status("🦀 Rust: Ready");
+                    update_linter_status("Rust: Ready");
 
                     // Setup diagnostic callback
                     let diagnostics_store = DIAGNOSTICS_STORE.clone();

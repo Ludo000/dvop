@@ -145,7 +145,7 @@ mod imp {
         #[template_child]
         pub status_label: TemplateChild<Label>,
         #[template_child]
-        pub linter_status_label: TemplateChild<Label>,
+        pub linter_status_label: TemplateChild<GtkBox>,
         #[template_child]
         pub secondary_status_label: TemplateChild<Label>,
     }
@@ -836,7 +836,7 @@ pub fn setup_tab_right_click(
 /// - Label: Main status text label
 /// - Label: Linter status label (language and status)
 /// - Label: Secondary status information (current file, line/column, etc.)
-pub fn create_status_bar(window: &DvopWindow) -> (GtkBox, Label, Label, Label) {
+pub fn create_status_bar(window: &DvopWindow) -> (GtkBox, Label, GtkBox, Label) {
     let imp = window.imp();
     (
         imp.status_bar.get(),
