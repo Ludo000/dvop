@@ -668,6 +668,10 @@ fn actually_close_tab(
     new_tab_deps: Option<&NewTabDependencies>,
 ) {
     let n_pages_before_close = notebook.n_pages();
+    
+    println!("\n=== actually_close_tab called ===");
+    println!("Attempting to close page {}", page_num_to_close);
+    println!("Total pages before close: {}", n_pages_before_close);
 
     // Get file path and filename for logging and audio cleanup before we remove it
     let (filename, file_path_opt) = {
@@ -680,6 +684,8 @@ fn actually_close_tab(
             .unwrap_or_else(|| "Untitled".to_string());
         (name, path_opt)
     };
+    
+    println!("Closing file: {}", filename);
 
     // Stop any audio playback for this file if it's a music file
     if let Some(ref file_path) = file_path_opt {
@@ -699,6 +705,12 @@ fn actually_close_tab(
     // Efficiently handle HashMap index updates
     {
         let mut manager = file_path_manager_rc.borrow_mut();
+        println!("=== Closing tab {} ===", page_num_to_close);
+        println!("Before close:");
+        for (k, v) in manager.iter() {
+            println!("  Page {}: {:?}", k, v.file_name().unwrap_or_default());
+        }
+        
         manager.remove(&page_num_to_close);
 
         // Collect entries above the closed index and reinsert with decremented keys
@@ -722,6 +734,13 @@ fn actually_close_tab(
         for (old_key, path) in entries_to_update {
             manager.insert(old_key - 1, path);
         }
+        
+        println!("After close:");
+        for (k, v) in manager.iter() {
+            println!("  Page {}: {:?}", k, v.file_name().unwrap_or_default());
+        }
+        println!("Total pages after close: {}", notebook.n_pages());
+        println!("=== End tab close ===\n");
     } // Drop mutable borrow here
 
     if notebook.n_pages() == 0 {
@@ -1393,6 +1412,7 @@ pub fn open_or_focus_tab(
             notebook.set_current_page(Some(new_page_num));
 
             // Update state
+            println!("Adding SVG file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
             file_path_manager
                 .borrow_mut()
                 .insert(new_page_num, file_to_open.clone());
@@ -1473,6 +1493,7 @@ pub fn open_or_focus_tab(
             notebook.set_current_page(Some(new_page_num));
 
             // Update state
+            println!("Adding Markdown file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
             file_path_manager
                 .borrow_mut()
                 .insert(new_page_num, file_to_open.clone());
@@ -1882,6 +1903,7 @@ pub fn open_or_focus_tab(
         }
 
         // Update state
+        println!("Adding text file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
         file_path_manager
             .borrow_mut()
             .insert(new_page_num, file_to_open.clone());
