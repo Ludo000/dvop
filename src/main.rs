@@ -2158,7 +2158,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                                 .child()
                                 .and_then(|c| c.downcast::<sourceview5::View>().ok())
                             {
-                                handlers::jump_to_line_and_column(&source_view, line, column);
+                                // Use idle_add to ensure the view is fully focused and ready
+                                let source_view_clone = source_view.clone();
+                                glib::idle_add_local_once(move || {
+                                    handlers::jump_to_line_and_column(&source_view_clone, line, column);
+                                });
                             }
                         }
                     }
