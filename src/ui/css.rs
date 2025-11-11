@@ -736,5 +736,10 @@ fn get_diagnostics_styles() -> &'static str {
             background-color: alpha(#3498db, 0.08);
         }
     }
+
+    /* Collapsible file header in diagnostics panel - match message padding */
+    .diagnostic-file-header {
+        padding: 12px;
+    }
     "
 }

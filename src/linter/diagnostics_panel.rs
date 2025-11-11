@@ -159,6 +159,8 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     }
                     
                     let expander_box = GtkBox::new(Orientation::Horizontal, 8);
+                    // Add padding to the collapsible file line to match diagnostic messages
+                    expander_box.add_css_class("diagnostic-file-header");
                     let file_icon = Image::from_icon_name("text-x-generic-symbolic");
                     file_icon.set_pixel_size(16);
                     expander_box.append(&file_icon);
