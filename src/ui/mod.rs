@@ -796,8 +796,63 @@ pub fn setup_tab_right_click(
             }
         });
         
+        // Create "Close Saved" button
+        let close_saved_button = Button::with_label("Close Saved");
+        close_saved_button.add_css_class("flat");
+        close_saved_button.set_hexpand(true);
+        close_saved_button.set_halign(gtk4::Align::Start);
+        
+        // Clone for the button closure
+        let notebook_for_close_saved = notebook_clone.clone();
+        let popover_weak_saved = popover.downgrade();
+        let file_path_manager_for_close_saved = file_path_manager_clone.clone();
+        
+        close_saved_button.connect_clicked(move |_| {
+            crate::status_log::log_info("Closing saved tabs...");
+            
+            // Hide the context menu first
+            if let Some(popover) = popover_weak_saved.upgrade() {
+                popover.popdown();
+            }
+            
+            // Collect indices of tabs that are saved (not dirty)
+            let mut saved_tabs = Vec::new();
+            for page_num in 0..notebook_for_close_saved.n_pages() {
+                if let Some(page_widget) = notebook_for_close_saved.nth_page(Some(page_num)) {
+                    if let Some(tab_label_widget) = notebook_for_close_saved.tab_label(&page_widget) {
+                        if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                            if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                // If label doesn't start with '*', it's saved
+                                if !label.text().starts_with('*') {
+                                    saved_tabs.push(page_num);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if saved_tabs.is_empty() {
+                crate::status_log::log_info("No saved tabs to close");
+                return;
+            }
+            
+            // Close saved tabs from last to first to avoid index shifting issues
+            saved_tabs.reverse();
+            let count = saved_tabs.len();
+            for page_num in saved_tabs {
+                // Remove from file path manager
+                file_path_manager_for_close_saved.borrow_mut().remove(&page_num);
+                // Close the tab
+                notebook_for_close_saved.remove_page(Some(page_num));
+            }
+            
+            crate::status_log::log_success(&format!("Closed {} saved tab{}", count, if count == 1 { "" } else { "s" }));
+        });
+        
         // Add buttons to menu
         menu_box.append(&close_others_button);
+        menu_box.append(&close_saved_button);
         menu_box.append(&close_all_button);
         
         // Set the menu box as the popover's child
