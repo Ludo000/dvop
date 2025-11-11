@@ -1,7 +1,7 @@
 // Diagnostics panel UI for displaying LSP diagnostics
 // This module creates a terminal-like view for showing linter diagnostics
 
-use gtk4::{prelude::*, ScrolledWindow, Box as GtkBox, Orientation, Label, Button, ListBox, ListBoxRow, Expander, Image};
+use gtk4::{prelude::*, ScrolledWindow, Box as GtkBox, Orientation, Label, ListBox, ListBoxRow, Expander, Image};
 use gtk4::glib;
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
@@ -299,7 +299,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
     scrolled.set_hexpand(true);
     scrolled.set_child(Some(&list_box));
     
-    // Add header with summary and clear button
+    // Add header with summary
     let header = GtkBox::new(Orientation::Horizontal, 4);
     header.set_margin_start(4);
     header.set_margin_end(4);
@@ -310,15 +310,6 @@ pub fn create_diagnostics_panel() -> GtkBox {
     summary_box.set_halign(gtk4::Align::Start);
     summary_box.set_hexpand(true);
     header.append(&summary_box);
-    
-    let clear_button = Button::with_label("Clear");
-    let list_box_for_clear = list_box.clone();
-    clear_button.connect_clicked(move |_| {
-        while let Some(child) = list_box_for_clear.first_child() {
-            list_box_for_clear.remove(&child);
-        }
-    });
-    header.append(&clear_button);
     
     outer_container.append(&header);
     outer_container.append(&scrolled);
