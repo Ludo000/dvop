@@ -1854,6 +1854,46 @@ pub fn open_or_focus_tab(
             // Setup linting for the file
             crate::linter::ui::setup_linting(&source_view, Some(file_to_open));
 
+            // Ctrl+Click on an underlined diagnostic focuses corresponding entry in diagnostics panel
+            {
+                let source_view_for_gesture = source_view.clone();
+                let file_path_for_gesture = file_to_open.to_string_lossy().to_string();
+                let gesture = gtk4::GestureClick::new();
+                gesture.set_button(1); // Left click only
+                gesture.set_propagation_phase(gtk4::PropagationPhase::Bubble);
+                gesture.connect_pressed(move |g, _n_press, x, y| {
+                    let state = g.current_event_state();
+                    if state.contains(gtk4::gdk::ModifierType::CONTROL_MASK) {
+                        // Determine line at click position
+                        let buffer = source_view_for_gesture.buffer();
+                        // Convert widget coords to buffer coords
+                        let (bx, by) = source_view_for_gesture.window_to_buffer_coords(
+                            gtk4::TextWindowType::Widget,
+                            x as i32,
+                            y as i32,
+                        );
+                        // Get iter at location; API returns Option<TextIter>
+                        let line = if let Some(iter) = source_view_for_gesture.iter_at_location(bx, by) {
+                            iter.line() + 1
+                        } else {
+                            // Fallback to current cursor position
+                            let insert_mark = buffer.get_insert();
+                            let cursor_iter = buffer.iter_at_mark(&insert_mark);
+                            cursor_iter.line() + 1
+                        }; // convert to 1-based
+                        // Ensure diagnostics panel and terminal area are visible
+                        crate::linter::ui::show_diagnostics_panel();
+                        // Also trigger the show-diagnostics window action so the terminal notebook becomes visible if hidden
+                        if let Some(window) = source_view_for_gesture.root().and_then(|r| r.downcast::<gtk4::ApplicationWindow>().ok()) {
+                            // Fire the same action bound to menu/shortcuts (ignores if already visible)
+                            let _ = gtk4::prelude::WidgetExt::activate_action(&window, "win.show-diagnostics", None);
+                        }
+                        crate::linter::diagnostics_panel::focus_diagnostic(&file_path_for_gesture, line as usize);
+                    }
+                });
+                source_view.add_controller(gesture);
+            }
+
             // Set up interaction tracking for the text editor
             let text_view = source_view.clone().upcast::<TextView>();
             setup_text_editor_interaction_tracking(&text_view);

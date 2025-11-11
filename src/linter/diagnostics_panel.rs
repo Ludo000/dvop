@@ -3,6 +3,8 @@
 
 use gtk4::{prelude::*, ScrolledWindow, Box as GtkBox, Orientation, Label, ListBox, ListBoxRow, Expander, Image};
 use gtk4::glib;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use once_cell::sync::Lazy;
@@ -17,6 +19,9 @@ static DIAGNOSTICS_SENDER: Lazy<Arc<Mutex<Option<Sender<DiagnosticMessage>>>>> =
 static EXPANSION_STATE: Lazy<Arc<Mutex<HashMap<String, bool>>>> =
     Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 
+// Note: Row indices and expander references are kept per-panel (not static) to avoid
+// Send/Sync constraints on GTK objects; they live inside the UI thread.
+
 #[derive(Debug, Clone)]
 enum DiagnosticMessage {
     Clear,
@@ -28,6 +33,10 @@ enum DiagnosticMessage {
         total_errors: usize,
         total_warnings: usize,
         total_infos: usize,
+    },
+    FocusDiagnostic {
+        file_path: String,
+        line: usize,
     },
 }
 
@@ -67,9 +76,17 @@ pub fn create_diagnostics_panel() -> GtkBox {
         *guard = Some(tx);
     }
     
+    // Per-panel indices for focusing
+    let row_index: Rc<RefCell<HashMap<String, Vec<(usize, glib::WeakRef<ListBoxRow>)>>>> =
+        Rc::new(RefCell::new(HashMap::new()));
+    let file_expanders: Rc<RefCell<HashMap<String, glib::WeakRef<Expander>>>> =
+        Rc::new(RefCell::new(HashMap::new()));
+
     // Receive messages on the main thread and update the ListBox
     let list_box_for_rx = list_box.clone();
     let summary_box_for_rx = summary_box.clone();
+    let row_index_for_rx = row_index.clone();
+    let file_expanders_for_rx = file_expanders.clone();
     glib::idle_add_local(move || {
         // Process all pending messages
         while let Ok(msg) = rx.try_recv() {
@@ -181,6 +198,10 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     
                     let file_list_box = ListBox::new();
                     file_list_box.set_selection_mode(gtk4::SelectionMode::Single);
+                    // Prepare index collector for this file
+                    let mut file_rows: Vec<(usize, glib::WeakRef<ListBoxRow>)> = Vec::new();
+                    // Prepare index collector for this file
+                    let mut file_rows: Vec<(usize, glib::WeakRef<ListBoxRow>)> = Vec::new();
                     
                     for diag in diagnostics {
                         let item_box = GtkBox::new(Orientation::Horizontal, 8);
@@ -227,6 +248,8 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         let row = ListBoxRow::new();
                         row.set_child(Some(&item_box));
                         row.set_activatable(true);
+                        // Index this row for focusing later
+                        file_rows.push((diag.line, row.downgrade()));
                         
                         // Make it clickable with a gesture
                         let file_path_clone = file_path.clone();
@@ -281,6 +304,15 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     }
                     
                     expander.set_child(Some(&file_list_box));
+                    // Store expander reference for this file
+                    file_expanders_for_rx
+                        .borrow_mut()
+                        .insert(file_path.clone(), expander.downgrade());
+
+                    // Store row index for this file
+                    row_index_for_rx
+                        .borrow_mut()
+                        .insert(file_path.clone(), file_rows);
                     
                     // Wrap expander in a ListBoxRow
                     let expander_row = ListBoxRow::new();
@@ -289,6 +321,29 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     expander_row.set_child(Some(&expander));
                     
                     list_box_for_rx.append(&expander_row);
+                }
+                DiagnosticMessage::FocusDiagnostic { file_path, line } => {
+                    // Expand the file section if we can
+                    if let Some(weak_expander) = file_expanders_for_rx.borrow().get(&file_path) {
+                        if let Some(expander) = weak_expander.upgrade() {
+                            expander.set_expanded(true);
+                        }
+                    }
+
+                    // Find the matching row for the line
+                    if let Some(rows) = row_index_for_rx.borrow().get(&file_path) {
+                        if let Some((_, weak_row)) = rows.iter().find(|(l, _)| *l == line) {
+                            if let Some(row) = weak_row.upgrade() {
+                                // Select row via its parent listbox if possible
+                                if let Some(parent) = row.parent() {
+                                    if let Ok(list_box) = parent.downcast::<ListBox>() {
+                                        list_box.select_row(Some(&row));
+                                    }
+                                }
+                                row.grab_focus();
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -371,6 +426,15 @@ pub fn update_summary(total_errors: usize, total_warnings: usize, total_infos: u
                 total_infos,
             };
             let _ = sender.send(msg);
+        }
+    }
+}
+
+/// Focus a specific diagnostic line within the panel for a given file
+pub fn focus_diagnostic(file_path: &str, line: usize) {
+    if let Ok(guard) = DIAGNOSTICS_SENDER.lock() {
+        if let Some(sender) = guard.as_ref() {
+            let _ = sender.send(DiagnosticMessage::FocusDiagnostic { file_path: file_path.to_string(), line });
         }
     }
 }
