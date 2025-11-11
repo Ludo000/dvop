@@ -386,7 +386,9 @@
               </object>
             </child>
             <child>
-              <object class="GtkLabel" id="linter_status_label">
+              <object class="GtkBox" id="linter_status_label">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">4</property>
                 <property name="halign">center</property>
                 <property name="hexpand">false</property>
                 <property name="css-classes">linter-status</property>

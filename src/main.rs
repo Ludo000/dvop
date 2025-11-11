@@ -685,11 +685,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let (_status_bar, status_label, linter_status_label, secondary_status_label) =
         ui::create_status_bar(&window);
 
-    // Register linter status callback so the linter module can update the label
-    let linter_status_label_clone = linter_status_label.clone();
-    crate::linter::ui::set_linter_status_callback(move |text| {
-        linter_status_label_clone.set_text(text);
-    });
+    // Register linter status box so the linter module can update it with icons
+    crate::linter::ui::set_linter_status_callback(linter_status_label.clone());
 
     // Set up volume control handler
     let volume_icon_clone = volume_icon.clone();
@@ -760,13 +757,13 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let terminal_notebook_template = imp.terminal_notebook.get();
     let add_terminal_button = imp.add_terminal_button.get();
 
-    // Create the first terminal tab directly in the template notebook with paned support
-    ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_template, None, &editor_paned);
-
-    // Add diagnostics panel as a tab
+    // Add diagnostics panel as the first tab
     let diagnostics_panel = linter::diagnostics_panel::create_diagnostics_panel();
     let diagnostics_label = Label::new(Some("Diagnostics"));
-    terminal_notebook_template.append_page(&diagnostics_panel, Some(&diagnostics_label));
+    terminal_notebook_template.prepend_page(&diagnostics_panel, Some(&diagnostics_label));
+
+    // Create the first terminal tab directly in the template notebook with paned support
+    ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_template, None, &editor_paned);
 
     // Hide diagnostics panel by default (will be shown when Rust files are opened)
     diagnostics_panel.set_visible(false);
@@ -779,19 +776,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
-    // Set up callback to update linter status label
-    let linter_status_weak = linter_status_label.downgrade();
-    linter::ui::set_linter_status_callback(move |status| {
-        if let Some(label) = linter_status_weak.upgrade() {
-            label.set_text(status);
-        }
-    });
-
     // Set up callback to show/hide linter status widget based on Rust file presence
     let linter_status_weak_for_visibility = linter_status_label.downgrade();
     linter::ui::set_linter_status_visibility_callback(move |show| {
-        if let Some(label) = linter_status_weak_for_visibility.upgrade() {
-            label.set_visible(show);
+        if let Some(box_widget) = linter_status_weak_for_visibility.upgrade() {
+            box_widget.set_visible(show);
         }
     });
 
