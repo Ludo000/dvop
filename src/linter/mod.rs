@@ -200,7 +200,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
             }
             
             // Determine end position
-            let mut end_iter = if let (Some(end_line), Some(end_col)) = (diag.end_line, diag.end_column) {
+            let end_iter = if let (Some(end_line), Some(end_col)) = (diag.end_line, diag.end_column) {
                 let end_line_idx = if end_line > 0 { end_line - 1 } else { 0 };
                 let end_col_idx = if end_col > 0 { end_col - 1 } else { 0 };
                 

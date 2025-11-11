@@ -44,6 +44,7 @@ pub fn convert_lsp_diagnostic(lsp_diag: &LspDiagnostic) -> crate::linter::Diagno
 
 /// Language server configuration
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct LanguageServerConfig {
     pub name: String,
     pub command: String,

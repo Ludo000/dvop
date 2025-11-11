@@ -7,7 +7,6 @@ use lsp_types::{
     Uri, *,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
@@ -84,7 +83,8 @@ impl LspClient {
 
         let init_params = InitializeParams {
             process_id: Some(std::process::id()),
-            root_uri: Some(workspace_uri.clone()),
+            #[allow(deprecated)]
+            root_uri: None,
             #[allow(deprecated)]
             root_path: None,
             initialization_options: None,

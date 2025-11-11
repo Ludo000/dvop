@@ -2605,7 +2605,7 @@ fn update_cursor_position_status(
     text_view: &sourceview5::View,
     status_label: &Label,
     filename: &str,
-    file_path: Option<&std::path::Path>,
+    _file_path: Option<&std::path::Path>,
 ) {
     let buffer = text_view.buffer();
     let cursor_mark = buffer.get_insert();
