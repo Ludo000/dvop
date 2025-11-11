@@ -117,6 +117,11 @@ fn get_menu_commands() -> Vec<MenuCommand> {
             keywords: vec!["terminal", "toggle", "console"],
         },
         MenuCommand {
+            label: "Diagnostics",
+            action: "win.show-diagnostics",
+            keywords: vec!["diagnostics", "linter", "errors", "warnings", "problems"],
+        },
+        MenuCommand {
             label: "About Dvop",
             action: "win.about",
             keywords: vec!["about", "info", "version"],
@@ -765,6 +770,33 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Create the first terminal tab directly in the template notebook with paned support
     ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_template, None, &editor_paned);
 
+    // Make linter status widget clickable to open diagnostics panel
+    let editor_paned_for_linter = editor_paned.clone();
+    let terminal_notebook_for_linter = terminal_notebook_template.clone();
+    let linter_gesture = gtk4::GestureClick::new();
+    linter_gesture.set_button(1); // Left click only
+    linter_gesture.connect_pressed(move |_, _, _, _| {
+        // Show terminal if hidden
+        if let Some(end_child) = editor_paned_for_linter.end_child() {
+            if !end_child.is_visible() {
+                end_child.set_visible(true);
+                let max_pos = editor_paned_for_linter.allocation().height();
+                editor_paned_for_linter.set_position((max_pos as f64 * 0.6) as i32);
+                // Save terminal visible state
+                let mut settings = crate::settings::get_settings_mut();
+                settings.set_terminal_visible(true);
+                let _ = settings.save();
+            }
+        }
+        
+        // Switch to diagnostics tab (first tab, index 0)
+        terminal_notebook_for_linter.set_current_page(Some(0));
+    });
+    linter_status_label.add_controller(linter_gesture);
+    
+    // Add hover cursor to indicate it's clickable
+    linter_status_label.set_cursor_from_name(Some("pointer"));
+
     // Hide diagnostics panel by default (will be shown when Rust files are opened)
     diagnostics_panel.set_visible(false);
 
@@ -1246,6 +1278,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let refresh_action = gio::SimpleAction::new("refresh", None);
     let new_terminal_action = gio::SimpleAction::new("new-terminal", None);
     let toggle_terminal_action = gio::SimpleAction::new("toggle-terminal", None);
+    let show_diagnostics_action = gio::SimpleAction::new("show-diagnostics", None);
     let about_action = gio::SimpleAction::new("about", None);
 
     // Clone necessary references for action handlers
@@ -1428,6 +1461,27 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    // Connect show diagnostics action
+    let terminal_notebook_for_diagnostics = terminal_notebook_template.clone();
+    let editor_paned_for_diagnostics = editor_paned.clone();
+    show_diagnostics_action.connect_activate(move |_, _| {
+        // Show terminal if hidden
+        if let Some(end_child) = editor_paned_for_diagnostics.end_child() {
+            if !end_child.is_visible() {
+                end_child.set_visible(true);
+                let max_pos = editor_paned_for_diagnostics.allocation().height();
+                editor_paned_for_diagnostics.set_position((max_pos as f64 * 0.6) as i32);
+                // Save terminal visible state
+                let mut settings = crate::settings::get_settings_mut();
+                settings.set_terminal_visible(true);
+                let _ = settings.save();
+            }
+        }
+        
+        // Switch to diagnostics tab (first tab, index 0)
+        terminal_notebook_for_diagnostics.set_current_page(Some(0));
+    });
+
     // Connect about action
     about_action.connect_activate(move |_, _| {
         let about_dialog = gtk4::AboutDialog::builder()
@@ -1462,6 +1516,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     window_as_app_window.add_action(&refresh_action);
     window_as_app_window.add_action(&new_terminal_action);
     window_as_app_window.add_action(&toggle_terminal_action);
+    window_as_app_window.add_action(&show_diagnostics_action);
     window_as_app_window.add_action(&about_action);
 
     // Set up menu search functionality
