@@ -569,119 +569,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Track the file path of the currently active tab
     let active_tab_path = Rc::new(RefCell::new(None::<PathBuf>));
 
-    // Set up window close event handler to check for unsaved changes
-    let window_clone_for_close = window.clone();
-    let editor_notebook_clone_for_close = editor_notebook.clone();
-    let file_path_manager_clone_for_close = file_path_manager.clone();
-    let current_dir_clone_for_close = current_dir.clone();
-    let app_for_close = app.clone();
-
-    window.connect_close_request(move |_| {
-        // Shutdown rust-analyzer before closing
-        crate::linter::ui::shutdown_rust_analyzer();
-        
-        // Save the current folder before closing
-        let folder = current_dir_clone_for_close.borrow().clone();
-        let mut settings = settings::get_settings_mut();
-        settings.set_last_folder(&folder);
-        if let Err(e) = settings.save() {
-            eprintln!("Failed to save settings: {}", e);
-        }
-        drop(settings); // Release the lock
-        
-        // Check if any tabs have unsaved changes (indicated by '*' in tab labels)
-        let notebook = &editor_notebook_clone_for_close;
-        let mut unsaved_files = Vec::new();
-        
-        // Iterate through all tabs to check for unsaved changes
-        let num_pages = notebook.n_pages();
-        for page_num in 0..num_pages {
-            if let Some(page_widget) = notebook.nth_page(Some(page_num)) {
-                if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
-                    if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
-                        if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
-                            if label.text().starts_with('*') {
-                                // Found an unsaved file - get its name
-                                let filename = file_path_manager_clone_for_close.borrow()
-                                    .get(&page_num)
-                                    .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
-                                    .unwrap_or_else(|| "Untitled".to_string());
-                                unsaved_files.push(filename);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // If there are unsaved files, show confirmation dialog
-        if !unsaved_files.is_empty() {
-            let message = if unsaved_files.len() == 1 {
-                format!("You have unsaved changes in {}.\n\nAre you sure you want to close the application without saving?", unsaved_files[0])
-            } else {
-                format!("You have unsaved changes in {} files:\n• {}\n\nAre you sure you want to close the application without saving?", 
-                        unsaved_files.len(), 
-                        unsaved_files.join("\n• "))
-            };
-            
-            let dialog = gtk4::MessageDialog::new(
-                Some(&window_clone_for_close),
-                gtk4::DialogFlags::MODAL | gtk4::DialogFlags::DESTROY_WITH_PARENT,
-                gtk4::MessageType::Warning,
-                gtk4::ButtonsType::None,
-                &message
-            );
-            
-            dialog.add_buttons(&[
-                ("Cancel", gtk4::ResponseType::Cancel),
-                ("Close Anyway", gtk4::ResponseType::Yes),
-            ]);
-            
-            dialog.set_default_response(gtk4::ResponseType::Cancel);
-            
-
-            let app_for_dialog = app_for_close.clone();
-            
-            dialog.connect_response(move |d, response| {
-                d.close();
-                match response {
-                    gtk4::ResponseType::Yes => {
-                        // User chose "Close Anyway" - shutdown rust-analyzer and quit
-                        crate::linter::ui::shutdown_rust_analyzer();
-                        println!("Closing anyway, quitting application...");
-                        app_for_dialog.quit();
-                        
-                        // Force exit after a short delay
-                        std::thread::spawn(|| {
-                            std::thread::sleep(std::time::Duration::from_millis(300));
-                            println!("Force exiting application");
-                            std::process::exit(0);
-                        });
-                    }
-                    _ => {
-                        // User chose "Cancel" or closed dialog - close was already stopped
-                        // Do nothing, the close request was already stopped
-                    }
-                }
-            });
-            
-            dialog.present();
-            return glib::Propagation::Stop; // Prevent window from closing until user decides
-        }
-        
-        // No unsaved changes - quit the application
-        println!("No unsaved changes, quitting application...");
-        app_for_close.quit();
-        
-        // Force exit after a short delay if app doesn't quit normally
-        std::thread::spawn(|| {
-            std::thread::sleep(std::time::Duration::from_millis(300));
-            println!("Force exiting application");
-            std::process::exit(0);
-        });
-        
-        glib::Propagation::Stop
-    });
+    // REMOVED - this handler has been merged with the session-saving handler below
 
     // Get references to UI components from template (already initialized earlier)
     // file_list_box, path_box, volume_control_box, etc. are already assigned
@@ -1207,6 +1095,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Set up the close button handler for the initial tab
     // Clone all necessary references for the closure
     let initial_tab_close_button_clone = initial_tab_close_button.clone();
+    let initial_scrolled_window_for_close = _initial_scrolled_window.clone();
     let editor_notebook_clone_for_initial_close = editor_notebook.clone();
     let window_clone_for_initial_close = window.clone();
     let file_path_manager_clone_for_initial_close = file_path_manager.clone();
@@ -1216,22 +1105,19 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Connect to the close button's clicked signal
     initial_tab_close_button_clone.connect_clicked(move |_| {
-        // Verify the notebook still has pages before attempting to close one
-        if editor_notebook_clone_for_initial_close.n_pages() > 0 {
-            // Check if the first tab (usually the initial one) exists
-            if let Some(_page_widget) = editor_notebook_clone_for_initial_close.nth_page(Some(0)) {
-                // Handle the tab close request with proper cleanup and potential new tab creation
-                handlers::handle_close_tab_request(
-                    &editor_notebook_clone_for_initial_close,
-                    0, // Tab index 0 (first tab)
-                    &window_clone_for_initial_close,
-                    &file_path_manager_clone_for_initial_close,
-                    &active_tab_path_clone_for_initial_close,
-                    &current_dir_clone_for_initial_close,
-                    &file_list_box_clone_for_initial_close,
-                    Some(deps_for_new_tab_creation.clone()), // Dependencies for creating a new tab if needed
-                );
-            }
+        // Find the current page number of this tab dynamically (it may have changed due to other tabs closing)
+        if let Some(current_idx_for_this_tab) = editor_notebook_clone_for_initial_close.page_num(&initial_scrolled_window_for_close) {
+            // Handle the tab close request with proper cleanup and potential new tab creation
+            handlers::handle_close_tab_request(
+                &editor_notebook_clone_for_initial_close,
+                current_idx_for_this_tab,
+                &window_clone_for_initial_close,
+                &file_path_manager_clone_for_initial_close,
+                &active_tab_path_clone_for_initial_close,
+                &current_dir_clone_for_initial_close,
+                &file_list_box_clone_for_initial_close,
+                Some(deps_for_new_tab_creation.clone()), // Dependencies for creating a new tab if needed
+            );
         }
     });
 
@@ -2343,8 +2229,19 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Restore previously opened files from settings (after window is shown)
     let saved_files = settings::get_settings().get_opened_files();
+    println!("=== Restoring session ===");
+    println!("Found {} saved file(s)", saved_files.len());
+    for (i, file) in saved_files.iter().enumerate() {
+        println!("  {}: {:?}", i, file);
+    }
+    println!("=== End restoration info ===");
+    
     if !saved_files.is_empty() {
         println!("Restoring {} previously opened file(s)", saved_files.len());
+        
+        // Close any empty untitled tabs before restoring the session
+        handlers::close_empty_untitled_tabs(&editor_notebook, &file_path_manager);
+        
         for file_path in saved_files {
             if file_path.exists() && file_path.is_file() {
                 let mut mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
@@ -2460,14 +2357,99 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
-    // Set up window close handler to save window size and pane positions
+    // Set up window close handler to save window size, pane positions, and check for unsaved changes
     let paned_for_close = paned.clone();
     let editor_paned_for_close = editor_paned.clone();
     let editor_notebook_for_close = editor_notebook.clone();
     let file_path_manager_for_close = file_path_manager.clone();
+    let current_dir_for_close = current_dir.clone();
+    let app_for_close = app.clone();
+    let window_clone_for_dialog = window.clone();
+    
     window.connect_close_request(move |window| {
         // Shutdown rust-analyzer before closing
         crate::linter::ui::shutdown_rust_analyzer();
+        
+        // Save the current folder
+        let folder = current_dir_for_close.borrow().clone();
+        {
+            let mut settings = settings::get_settings_mut();
+            settings.set_last_folder(&folder);
+            if let Err(e) = settings.save() {
+                eprintln!("Failed to save current folder: {}", e);
+            }
+        } // Release settings lock
+
+        // Check for unsaved changes first
+        let notebook = &editor_notebook_for_close;
+        let mut unsaved_files = Vec::new();
+        let num_pages = notebook.n_pages();
+        
+        for page_num in 0..num_pages {
+            if let Some(page_widget) = notebook.nth_page(Some(page_num)) {
+                if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
+                    if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                        if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                            if label.text().starts_with('*') {
+                                let filename = file_path_manager_for_close.borrow()
+                                    .get(&page_num)
+                                    .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
+                                    .unwrap_or_else(|| "Untitled".to_string());
+                                unsaved_files.push(filename);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If there are unsaved files, show confirmation dialog and stop the close
+        if !unsaved_files.is_empty() {
+            let message = if unsaved_files.len() == 1 {
+                format!("You have unsaved changes in {}.\n\nAre you sure you want to close the application without saving?", unsaved_files[0])
+            } else {
+                format!("You have unsaved changes in {} files:\n• {}\n\nAre you sure you want to close the application without saving?", 
+                        unsaved_files.len(), 
+                        unsaved_files.join("\n• "))
+            };
+            
+            let dialog = gtk4::MessageDialog::new(
+                Some(&window_clone_for_dialog),
+                gtk4::DialogFlags::MODAL | gtk4::DialogFlags::DESTROY_WITH_PARENT,
+                gtk4::MessageType::Warning,
+                gtk4::ButtonsType::None,
+                &message
+            );
+            
+            dialog.add_buttons(&[
+                ("Cancel", gtk4::ResponseType::Cancel),
+                ("Close Anyway", gtk4::ResponseType::Yes),
+            ]);
+            
+            dialog.set_default_response(gtk4::ResponseType::Cancel);
+            
+            let app_for_dialog = app_for_close.clone();
+            
+            dialog.connect_response(move |d, response| {
+                d.close();
+                if response == gtk4::ResponseType::Yes {
+                    // User chose "Close Anyway" - force quit
+                    println!("Closing anyway, quitting application...");
+                    app_for_dialog.quit();
+                    std::thread::spawn(|| {
+                        std::thread::sleep(std::time::Duration::from_millis(300));
+                        std::process::exit(0);
+                    });
+                }
+                // If canceled, do nothing - the window close was already stopped
+            });
+            
+            dialog.present();
+            return glib::Propagation::Stop; // Prevent window from closing
+        }
+
+        // No unsaved changes - proceed with saving session and closing
+        println!("No unsaved changes, saving session...");
 
         // Get the current window size - use width() and height() for actual size
         let width = window.width();
@@ -2480,14 +2462,20 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         // Collect all opened file paths from the notebook
         let n_pages = editor_notebook_for_close.n_pages();
         let mut opened_files = Vec::new();
+        println!("=== Saving session state ===");
+        println!("Total notebook pages: {}", n_pages);
         for i in 0..n_pages {
             if editor_notebook_for_close.nth_page(Some(i)).is_some() {
                 let page_num = i as u32;
                 if let Some(path) = file_path_manager_for_close.borrow().get(&page_num) {
+                    println!("  Page {}: {:?}", page_num, path);
                     opened_files.push(path.clone());
+                } else {
+                    println!("  Page {}: No file path (likely Untitled tab)", page_num);
                 }
             }
         }
+        println!("=== End session state ===");
 
         // Save all state to settings
         let mut settings = settings::get_settings_mut();
@@ -2504,6 +2492,17 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             println!("Saved terminal height: {}", terminal_height);
             println!("Saved {} opened file(s)", opened_files.len());
         }
+        
+        // Quit the application after saving
+        println!("Quitting application...");
+        app_for_close.quit();
+        
+        // Force exit after a short delay if app doesn't quit normally
+        std::thread::spawn(|| {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            println!("Force exiting application");
+            std::process::exit(0);
+        });
 
         // Allow the window to close
         glib::Propagation::Proceed
