@@ -1,6 +1,5 @@
 // UI integration for the linter
 // This module handles displaying lint diagnostics in the editor
-
 use gtk4::{glib, Box as GtkBox, Label, ListBox, Orientation, ScrolledWindow, Image};
 use sourceview5::{prelude::*, View};
 use std::cell::RefCell;

@@ -222,18 +222,18 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         };
                         item_box.add_css_class(css_class);
                         
-                        let formatted_message = if !diag.rule.is_empty() {
-                            format!("[{}:{}]: {} ({})", 
-                                diag.line, 
-                                diag.column, 
-                                diag.message,
-                                diag.rule)
-                        } else {
-                            format!("[{}:{}]: {}", 
-                                diag.line, 
-                                diag.column, 
-                                diag.message)
-                        };
+                        // Clean up message - remove contextual info like "(part of ...)" and "on by default"
+                        let clean_message = diag.message
+                            .split('\n')
+                            .next()
+                            .unwrap_or(&diag.message)
+                            .to_string();
+                        
+                        let formatted_message = format!("[{}:{}]: {}", 
+                            diag.line, 
+                            diag.column, 
+                            clean_message
+                        );
                         
                         let message_label = Label::new(Some(&formatted_message));
                         message_label.set_hexpand(true);
@@ -243,6 +243,35 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         message_label.set_xalign(0.0);
                         message_label.add_css_class("monospace");
                         item_box.append(&message_label);
+                        
+                        // Add rule label and icon if rule is present with context-specific icon
+                        if !diag.rule.is_empty() {
+                            let icon_name = match diag.rule.as_str() {
+                                // Dead code / unused
+                                "dead_code" | "unused_variable" | "unused_imports" | "unused_mut" => "user-trash-symbolic",
+                                // Naming conventions
+                                "naming_convention" | "non_snake_case" | "non_camel_case_types" => "format-text-symbolic",
+                                // Deprecated
+                                "deprecated" => "dialog-warning-symbolic",
+                                // Type/syntax errors
+                                "type_error" | "syntax_error" => "dialog-error-symbolic",
+                                // Clippy lints
+                                s if s.starts_with("clippy::") => "tools-check-spelling-symbolic",
+                                // Default for unknown rules
+                                _ => "emblem-important-symbolic",
+                            };
+                            
+                            let rule_icon = Image::from_icon_name(icon_name);
+                            rule_icon.set_pixel_size(14);
+                            rule_icon.set_tooltip_text(Some(&diag.rule));
+                            rule_icon.set_margin_start(8);
+                            item_box.append(&rule_icon);
+                            
+                            let rule_label = Label::new(Some(&diag.rule));
+                            rule_label.add_css_class("dim-label");
+                            rule_label.set_margin_start(4);
+                            item_box.append(&rule_label);
+                        }
                         
                         let row = ListBoxRow::new();
                         row.set_child(Some(&item_box));
@@ -286,7 +315,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         let right_click = gtk4::GestureClick::new();
                         right_click.set_button(3); // Right click
                         
-                        // Create full message with filename for copying
+                        // Create full message with filename for copying (include rule)
                         let file_display_name = if file_path.starts_with("file://") {
                             if let Ok(url) = url::Url::parse(&file_path) {
                                 if let Ok(path) = url.to_file_path() {
@@ -301,7 +330,11 @@ pub fn create_diagnostics_panel() -> GtkBox {
                             file_path.clone()
                         };
                         
-                        let full_message = format!("{}: {}", file_display_name, formatted_message);
+                        let full_message = if !diag.rule.is_empty() {
+                            format!("{}: {} ({})", file_display_name, formatted_message, diag.rule)
+                        } else {
+                            format!("{}: {}", file_display_name, formatted_message)
+                        };
                         let row_for_menu = row.clone();
                         
                         right_click.connect_pressed(move |gesture, _, x, y| {
