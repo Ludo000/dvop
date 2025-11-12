@@ -18,25 +18,15 @@ Each platform requires specific system libraries to be installed before building
 
 ## Prerequisites
 
-### For Linux (Ubuntu 25.04):
+### For Linux (Ubuntu 25.10):
   #### Install dev dependencies:
    Run the following commands to install the necessary dependencies:
 
    ```bash
    sudo apt update
-   sudo apt install build-essential libgtk-4-dev libvte-2.91-dev libglib2.0-dev pkg-config libgtk-4-dev libpango1.0-dev libgtksourceview-5-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav
+   sudo apt install build-essential libgtk-4-dev libvte-2.91-dev libvte-2.91-gtk4-dev libglib2.0-dev pkg-config libgtk-4-dev libpango1.0-dev libgtksourceview-5-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav
   ```
 
-### Specific command for Ubuntu 25.10
-   Here is some commands I add to run on Ubuntu 25.10, it might also help you if you are concerned :
-
-   ```bash
-   export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
-   sudo ln -s /usr/lib/x86_64-linux-gnu/pkgconfig/vte-2.91.pc /usr/lib/x86_64-linux-gnu/pkgconfig/vte-2.91-gtk4.pc
-   sudo ln -s /usr/lib/x86_64-linux-gnu/libvte-2.91.so /usr/lib/x86_64-linux-gnu/libvte-2.91-gtk4.so
-   sudo ln -s /usr/lib/x86_64-linux-gnu/libvte-2.91-gtk4.so.0 /usr/lib/x86_64-linux-gnu/libvte-2.91-gtk4.so
-  ```
-  
 #### Install Rust:
 If you haven't installed Rust, you can do so using the following command:
 
