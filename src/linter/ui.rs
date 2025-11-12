@@ -185,6 +185,7 @@ pub fn show_diagnostics_panel() {
 }
 
 /// Hide the diagnostics panel
+#[allow(dead_code)]
 pub fn hide_diagnostics_panel() {
     glib::idle_add_once(|| {
         DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
@@ -196,6 +197,7 @@ pub fn hide_diagnostics_panel() {
 }
 
 /// Check if there are any Rust files with diagnostics
+#[allow(dead_code)]
 pub fn has_rust_diagnostics() -> bool {
     if let Ok(guard) = DIAGNOSTICS_STORE.lock() {
         !guard.is_empty()
@@ -337,7 +339,7 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
 }
 
 /// Setup LSP for a Rust file
-fn setup_lsp_for_file(source_view: &View, file_path: &Path) {
+fn setup_lsp_for_file(_source_view: &View, file_path: &Path) {
     // Find workspace root (directory containing Cargo.toml)
     let workspace_root = find_workspace_root(file_path);
 
@@ -510,6 +512,7 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
 }
 
 /// Create a diagnostics panel widget to display lint results
+#[allow(dead_code)]
 pub fn create_diagnostics_panel(diagnostics: &[Diagnostic]) -> GtkBox {
     let panel = GtkBox::new(Orientation::Vertical, 4);
     panel.set_margin_start(8);

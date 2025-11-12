@@ -198,8 +198,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     
                     let file_list_box = ListBox::new();
                     file_list_box.set_selection_mode(gtk4::SelectionMode::Single);
-                    // Prepare index collector for this file
-                    let mut file_rows: Vec<(usize, glib::WeakRef<ListBoxRow>)> = Vec::new();
+                    
                     // Prepare index collector for this file
                     let mut file_rows: Vec<(usize, glib::WeakRef<ListBoxRow>)> = Vec::new();
                     
