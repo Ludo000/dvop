@@ -109,6 +109,8 @@ pub fn get_file_diagnostics(file_path: &str) -> Vec<Diagnostic> {
 pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str) {
     let mut diagnostics = get_file_diagnostics(file_path);
     
+    println!("🖊️  apply_diagnostic_underlines for {}: {} diagnostics", file_path, diagnostics.len());
+    
     let tag_table = buffer.tag_table();
     
     // Clear all existing diagnostic tags first
@@ -125,7 +127,10 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
         buffer.remove_tag(&tag, &start_iter, &end_iter);
     }
     
+    println!("✓ Cleared all diagnostic tags");
+    
     if diagnostics.is_empty() {
+        println!("✓ No diagnostics to apply, returning");
         return;
     }
     
