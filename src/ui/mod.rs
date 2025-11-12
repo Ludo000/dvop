@@ -593,6 +593,108 @@ pub fn setup_tab_right_click(
         let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
         menu_box.add_css_class("menu");
         
+        // Create "Close to the Right" button
+        let close_to_right_button = Button::with_label("Close to the Right");
+        close_to_right_button.add_css_class("flat");
+        close_to_right_button.set_hexpand(true);
+        close_to_right_button.set_halign(gtk4::Align::Start);
+        
+        // Disable "Close to the Right" if this is the last tab
+        if let Some(page_num) = clicked_page_num {
+            if page_num >= notebook_clone.n_pages() - 1 {
+                close_to_right_button.set_sensitive(false);
+            }
+        } else {
+            close_to_right_button.set_sensitive(false);
+        }
+        
+        // Clone for the button closure
+        let notebook_for_close_right = notebook_clone.clone();
+        let popover_weak_right = popover.downgrade();
+        let window_for_close_right = window_clone.clone();
+        let file_path_manager_for_close_right = file_path_manager_clone.clone();
+        
+        close_to_right_button.connect_clicked(move |_| {
+            crate::status_log::log_info("Closing tabs to the right...");
+            
+            // Hide the context menu first
+            if let Some(popover) = popover_weak_right.upgrade() {
+                popover.popdown();
+            }
+            
+            // Close all tabs to the right of the clicked tab
+            if let Some(keep_page) = clicked_page_num {
+                // Check if any tabs to the right have unsaved changes
+                let mut unsaved_files = Vec::new();
+                for page_num in (keep_page + 1)..notebook_for_close_right.n_pages() {
+                    if let Some(page_widget) = notebook_for_close_right.nth_page(Some(page_num)) {
+                        if let Some(tab_label_widget) = notebook_for_close_right.tab_label(&page_widget) {
+                            if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                                if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                    if label.text().starts_with('*') {
+                                        // Found an unsaved file
+                                        let filename = file_path_manager_for_close_right.borrow()
+                                            .get(&page_num)
+                                            .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
+                                            .unwrap_or_else(|| "Untitled".to_string());
+                                        unsaved_files.push(filename);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // If there are unsaved files, show confirmation dialog
+                if !unsaved_files.is_empty() {
+                    let message = if unsaved_files.len() == 1 {
+                        format!("You have unsaved changes in {}.\n\nAre you sure you want to close tabs to the right without saving?", unsaved_files[0])
+                    } else {
+                        format!("You have unsaved changes in {} files:\n• {}\n\nAre you sure you want to close tabs to the right without saving?", 
+                                unsaved_files.len(), 
+                                unsaved_files.join("\n• "))
+                    };
+                    
+                    let dialog = gtk4::MessageDialog::new(
+                        Some(&window_for_close_right),
+                        gtk4::DialogFlags::MODAL | gtk4::DialogFlags::DESTROY_WITH_PARENT,
+                        gtk4::MessageType::Warning,
+                        gtk4::ButtonsType::None,
+                        &message
+                    );
+                    
+                    dialog.add_buttons(&[
+                        ("Cancel", gtk4::ResponseType::Cancel),
+                        ("Close Anyway", gtk4::ResponseType::Yes),
+                    ]);
+                    
+                    dialog.set_default_response(gtk4::ResponseType::Cancel);
+                    
+                    let notebook_clone = notebook_for_close_right.clone();
+                    dialog.connect_response(move |d, response| {
+                        if response == gtk4::ResponseType::Yes {
+                            // User confirmed - close tabs to the right without saving
+                            while notebook_clone.n_pages() > keep_page + 1 {
+                                let last_page = notebook_clone.n_pages() - 1;
+                                notebook_clone.remove_page(Some(last_page));
+                            }
+                            crate::status_log::log_success("Tabs to the right closed");
+                        }
+                        d.close();
+                    });
+                    
+                    dialog.show();
+                } else {
+                    // No unsaved files, close tabs to the right directly
+                    while notebook_for_close_right.n_pages() > keep_page + 1 {
+                        let last_page = notebook_for_close_right.n_pages() - 1;
+                        notebook_for_close_right.remove_page(Some(last_page));
+                    }
+                    crate::status_log::log_success("Tabs to the right closed");
+                }
+            }
+        });
+        
         // Create "Close Others" button
         let close_others_button = Button::with_label("Close Others");
         close_others_button.add_css_class("flat");
@@ -851,6 +953,7 @@ pub fn setup_tab_right_click(
         });
         
         // Add buttons to menu
+        menu_box.append(&close_to_right_button);
         menu_box.append(&close_others_button);
         menu_box.append(&close_saved_button);
         menu_box.append(&close_all_button);
