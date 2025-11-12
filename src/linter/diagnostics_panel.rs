@@ -1,7 +1,7 @@
 // Diagnostics panel UI for displaying LSP diagnostics
 // This module creates a terminal-like view for showing linter diagnostics
 
-use gtk4::{prelude::*, ScrolledWindow, Box as GtkBox, Orientation, Label, ListBox, ListBoxRow, Expander, Image};
+use gtk4::{prelude::*, ScrolledWindow, Box as GtkBox, Orientation, Label, ListBox, ListBoxRow, Expander, Image, PopoverMenu, gio};
 use gtk4::glib;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -255,6 +255,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         let line_num = diag.line;
                         let col_num = diag.column;
                         
+                        // Left click to open file
                         let gesture = gtk4::GestureClick::new();
                         gesture.set_button(1); // Left click only
                         gesture.set_propagation_phase(gtk4::PropagationPhase::Capture);
@@ -280,6 +281,68 @@ pub fn create_diagnostics_panel() -> GtkBox {
                             crate::handlers::open_file_and_jump_to_location(path, line_num, col_num);
                         });
                         row.add_controller(gesture);
+                        
+                        // Right click context menu
+                        let right_click = gtk4::GestureClick::new();
+                        right_click.set_button(3); // Right click
+                        
+                        // Create full message with filename for copying
+                        let file_display_name = if file_path.starts_with("file://") {
+                            if let Ok(url) = url::Url::parse(&file_path) {
+                                if let Ok(path) = url.to_file_path() {
+                                    path.display().to_string()
+                                } else {
+                                    file_path.clone()
+                                }
+                            } else {
+                                file_path.clone()
+                            }
+                        } else {
+                            file_path.clone()
+                        };
+                        
+                        let full_message = format!("{}: {}", file_display_name, formatted_message);
+                        let row_for_menu = row.clone();
+                        
+                        right_click.connect_pressed(move |gesture, _, x, y| {
+                            gesture.set_state(gtk4::EventSequenceState::Claimed);
+                            
+                            // Create a simple menu
+                            let menu = gio::Menu::new();
+                            menu.append(Some("Copy"), Some("diag.copy"));
+                            
+                            let popover = PopoverMenu::builder()
+                                .menu_model(&menu)
+                                .has_arrow(false)
+                                .build();
+                            
+                            popover.set_parent(&row_for_menu);
+                            popover.set_pointing_to(Some(&gtk4::gdk::Rectangle::new(
+                                x as i32,
+                                y as i32,
+                                1,
+                                1,
+                            )));
+                            
+                            // Create action for copy
+                            let action_group = gio::SimpleActionGroup::new();
+                            let copy_action = gio::SimpleAction::new("copy", None);
+                            
+                            let msg_clone = full_message.clone();
+                            copy_action.connect_activate(move |_, _| {
+                                if let Some(display) = gtk4::gdk::Display::default() {
+                                    let clipboard = display.clipboard();
+                                    clipboard.set_text(&msg_clone);
+                                    println!("📋 Copied diagnostic to clipboard: {}", msg_clone);
+                                }
+                            });
+                            
+                            action_group.add_action(&copy_action);
+                            row_for_menu.insert_action_group("diag", Some(&action_group));
+                            
+                            popover.popup();
+                        });
+                        row.add_controller(right_click);
                         
                         row.connect_activate(move |_| {
                             let path = if file_path_clone.starts_with("file://") {
