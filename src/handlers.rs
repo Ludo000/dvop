@@ -4266,9 +4266,17 @@ pub fn jump_to_line_and_column(source_view: &sourceview5::View, line: usize, col
     // Place cursor at the position (don't select to avoid UI issues)
     buffer.place_cursor(&iter);
 
-    // Scroll to the cursor position
-    let mut iter_for_scroll = iter;
-    source_view.scroll_to_iter(&mut iter_for_scroll, 0.0, true, 0.5, 0.5);
+    // Grab focus to ensure the view is active
+    source_view.grab_focus();
+
+    // Scroll to the cursor position with a slight delay to ensure view is ready
+    // This is especially important for the first click on each file
+    let source_view_clone = source_view.clone();
+    let iter_for_scroll = iter;
+    glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
+        let mut scroll_iter = iter_for_scroll;
+        source_view_clone.scroll_to_iter(&mut scroll_iter, 0.0, true, 0.5, 0.5);
+    });
 
     println!("Jumped to line {}, column {}", line, column);
 }
