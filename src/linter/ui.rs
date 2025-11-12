@@ -71,6 +71,10 @@ thread_local! {
     // Track open buffers by file URI for reapplying diagnostics (thread-local since GTK is single-threaded)
     static BUFFER_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::Buffer>>> = 
         RefCell::new(HashMap::new());
+    
+    // Track source views by file URI for forcing redraw after diagnostic updates
+    static VIEW_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::View>>> = 
+        RefCell::new(HashMap::new());
 }
 
 /// Set the callback for showing/hiding the diagnostics panel
@@ -381,9 +385,24 @@ fn setup_lsp_for_file(_source_view: &View, file_path: &Path) {
                             .map(|d| crate::lsp::convert_lsp_diagnostic(d))
                             .collect();
 
-                        // Store diagnostics
+                        // Store diagnostics (remove from store if empty)
                         let mut store = diagnostics_store.lock().unwrap();
-                        store.insert(uri_str.clone(), diagnostics.clone());
+                        if diagnostics.is_empty() {
+                            store.remove(&uri_str);
+                            println!("✓ Cleared diagnostics from store for {}", uri_str);
+                            
+                            // Also clear from FILE_DIAGNOSTICS to ensure underlines are removed
+                            let file_path = uri_str.strip_prefix("file://").unwrap_or(&uri_str);
+                            crate::linter::store_file_diagnostics(file_path, vec![]);
+                            println!("✓ Cleared FILE_DIAGNOSTICS for {}", file_path);
+                        } else {
+                            store.insert(uri_str.clone(), diagnostics.clone());
+                            println!("✓ Stored {} diagnostics for {}", diagnostics.len(), uri_str);
+                            
+                            // Also update FILE_DIAGNOSTICS for consistency
+                            let file_path = uri_str.strip_prefix("file://").unwrap_or(&uri_str);
+                            crate::linter::store_file_diagnostics(file_path, diagnostics.clone());
+                        }
                         drop(store);
 
                         // Mark as received
@@ -690,6 +709,16 @@ fn reapply_diagnostic_underlines(file_uri: &str) {
             if let Some(buffer) = weak_buffer.upgrade() {
                 println!("✓ Found buffer for {}, reapplying underlines", file_uri);
                 crate::linter::apply_diagnostic_underlines(&buffer, file_path);
+                
+                // Force the view to redraw to show changes immediately
+                VIEW_REGISTRY.with(|view_registry| {
+                    if let Some(weak_view) = view_registry.borrow().get(file_uri) {
+                        if let Some(view) = weak_view.upgrade() {
+                            view.queue_draw();
+                            println!("✓ Queued redraw of source view");
+                        }
+                    }
+                });
             } else {
                 println!("⚠️  Buffer reference is no longer valid for {}", file_uri);
             }
@@ -699,15 +728,20 @@ fn reapply_diagnostic_underlines(file_uri: &str) {
     });
 }
 
-/// Register a buffer for diagnostic underline updates
-pub fn register_buffer_for_diagnostics(file_path: &Path, buffer: &sourceview5::Buffer) {
+/// Register a buffer and view for diagnostic underline updates
+pub fn register_buffer_for_diagnostics(file_path: &Path, buffer: &sourceview5::Buffer, view: &sourceview5::View) {
     if let Ok(url) = url::Url::from_file_path(file_path) {
         let uri = url.to_string();
-        println!("📝 Registering buffer for diagnostics: {}", uri);
+        println!("📝 Registering buffer and view for diagnostics: {}", uri);
         
         BUFFER_REGISTRY.with(|registry| {
             let mut registry = registry.borrow_mut();
-            registry.insert(uri, buffer.downgrade());
+            registry.insert(uri.clone(), buffer.downgrade());
+        });
+        
+        VIEW_REGISTRY.with(|registry| {
+            let mut registry = registry.borrow_mut();
+            registry.insert(uri, view.downgrade());
         });
     }
 }
