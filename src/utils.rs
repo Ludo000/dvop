@@ -2,10 +2,12 @@
 // This module contains helper functions used throughout the application
 
 use gtk4::prelude::*;
-use gtk4::{Button, ListBox, MenuButton, pango, ApplicationWindow, EventControllerKey, gdk, glib, Entry};
+use gtk4::{
+    gdk, glib, pango, ApplicationWindow, Button, Entry, EventControllerKey, ListBox, MenuButton,
+};
+use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use mime_guess::Mime;
 
@@ -21,8 +23,8 @@ thread_local! {
 
 /// Set a callback function to refresh the file list
 /// This is called by drag and drop operations to trigger a refresh
-pub fn set_file_list_refresh_callback<F>(callback: F) 
-where 
+pub fn set_file_list_refresh_callback<F>(callback: F)
+where
     F: Fn() + 'static,
 {
     FILE_LIST_REFRESH_CALLBACK.with(|cb| {
@@ -32,8 +34,8 @@ where
 
 /// Set a callback function to update tab paths after file moves
 /// This is called when files are moved to update the corresponding open tab paths
-pub fn set_tab_path_update_callback<F>(callback: F) 
-where 
+pub fn set_tab_path_update_callback<F>(callback: F)
+where
     F: Fn(&PathBuf, &PathBuf) + 'static,
 {
     TAB_PATH_UPDATE_CALLBACK.with(|cb| {
@@ -59,7 +61,6 @@ pub fn trigger_tab_path_update(old_path: &PathBuf, new_path: &PathBuf) {
         }
     });
 }
-
 
 /// Represents the source of file selection for different visual styling
 #[derive(Clone, Copy, PartialEq)]
@@ -91,7 +92,6 @@ pub fn is_allowed_mime_type(mime_type: &Mime) -> bool {
     mime_type.essence_str() == "application/x-httpd-php" ||
     mime_type.essence_str() == "application/x-mspublisher" ||
     mime_type.essence_str() == "application/x-sh"
-
 }
 
 /// Checks if the currently active file is a non-editable type (image, video, or audio)
@@ -100,13 +100,13 @@ pub fn is_allowed_mime_type(mime_type: &Mime) -> bool {
 /// false if it's a text file that can be edited and saved.
 fn is_current_file_non_editable(
     active_tab_path: Option<&Rc<RefCell<Option<PathBuf>>>>,
-    editor_notebook: Option<&gtk4::Notebook>
+    editor_notebook: Option<&gtk4::Notebook>,
 ) -> bool {
     // Check if we have an active file path
     if let Some(tab_path_ref) = active_tab_path {
         if let Some(file_path) = tab_path_ref.borrow().as_ref() {
             let mut mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
-            
+
             // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
             // but should be treated as TypeScript files (text/plain)
             if let Some(ext) = file_path.extension() {
@@ -115,21 +115,22 @@ fn is_current_file_non_editable(
                     mime_type = mime_guess::mime::TEXT_PLAIN;
                 }
             }
-            
+
             // Check if it's an image, video, or audio file
-            if mime_type.type_() == "image" || 
-               mime_type.type_() == "video" || 
-               mime_type.type_() == "audio" {
+            if mime_type.type_() == "image"
+                || mime_type.type_() == "video"
+                || mime_type.type_() == "audio"
+            {
                 return true;
             }
-            
+
             // Additional check: if it's not a supported text type
             if !is_allowed_mime_type(&mime_type) {
                 return true;
             }
         }
     }
-    
+
     // Also check if the current tab contains non-text content
     if let Some(notebook) = editor_notebook {
         if let Some(current_page) = notebook.current_page() {
@@ -152,7 +153,7 @@ fn is_current_file_non_editable(
             }
         }
     }
-    
+
     false
 }
 
@@ -182,8 +183,8 @@ fn has_audio_controls(box_widget: &gtk4::Box) -> bool {
 /// This function refreshes the file list to show folders and files in the current directory,
 /// and highlights the currently open file if applicable with different styling based on selection source.
 pub fn update_file_list(
-    file_list_box: &ListBox, 
-    current_dir: &PathBuf, 
+    file_list_box: &ListBox,
+    current_dir: &PathBuf,
     file_path: &Option<PathBuf>,
     selection_source: FileSelectionSource,
 ) {
@@ -230,25 +231,25 @@ pub fn update_file_list(
     for (file_name_str, entry) in folders {
         let row = gtk4::ListBoxRow::new();
         let label = gtk4::Label::new(Some(&file_name_str));
-        label.set_halign(gtk4::Align::Start);        // Left-align text
-        label.set_margin_start(5);                   // Add left margin
+        label.set_halign(gtk4::Align::Start); // Left-align text
+        label.set_margin_start(5); // Add left margin
         label.set_ellipsize(pango::EllipsizeMode::End);
 
         // Make folder names bold for better visual distinction
         label.set_markup(&format!("<span weight=\"bold\">{}</span>", file_name_str));
-        
+
         row.set_child(Some(&label));
-        
+
         // Set up drag and drop for this folder
         let folder_path = entry.path();
         crate::ui::file_manager::setup_drag_drop_for_row(&row, &folder_path, true);
-        
+
         file_list_box.append(&row);
     }
 
     // Track which row should be selected (if any)
     let mut selected_row = None;
-    
+
     // Add files to the list
     for (file_name_str, entry) in files {
         let row = gtk4::ListBoxRow::new();
@@ -273,30 +274,30 @@ pub fn update_file_list(
                         // For tab switches, use a subtle CSS class
                         row.add_css_class("file-selected-by-tab");
                         label.set_markup(&format!("{}", file_name_str));
-                    },
+                    }
                     FileSelectionSource::DirectClick => {
                         // For direct clicks, use a more prominent CSS class
                         row.add_css_class("file-selected-by-click");
                         label.set_markup(&format!("<u>{}</u>", file_name_str));
-                    },
+                    }
                 }
                 selected_row = Some(row.clone());
             }
         }
 
         row.set_child(Some(&label));
-        
+
         // Set up drag and drop for this file
         let file_path = entry.path();
         crate::ui::file_manager::setup_drag_drop_for_row(&row, &file_path, false);
-        
+
         file_list_box.append(&row);
     }
 
     // If we found the currently open file in the list, select it
     if let Some(row) = selected_row {
         file_list_box.select_row(Some(&row));
-        
+
         // Scroll to make the selected row visible (preferably centered)
         // Use timeout to ensure the row is properly laid out before scrolling
         let row_clone = row.clone();
@@ -307,23 +308,23 @@ pub fn update_file_list(
                 if let Ok(scrolled_window) = widget.clone().downcast::<gtk4::ScrolledWindow>() {
                     // Get the vertical adjustment (scroll position control)
                     let vadj = scrolled_window.vadjustment();
-                    
+
                     // Get row allocation (position and size)
                     let allocation = row_clone.allocation();
                     let row_y = allocation.y() as f64;
                     let row_height = allocation.height() as f64;
-                    
+
                     // Get viewport height
                     let viewport_height = vadj.page_size();
-                    
+
                     // Calculate target scroll position to center the row
                     let target_scroll = row_y - (viewport_height / 2.0) + (row_height / 2.0);
-                    
+
                     // Clamp to valid range
                     let min_scroll = vadj.lower();
                     let max_scroll = vadj.upper() - vadj.page_size();
                     let final_scroll = target_scroll.max(min_scroll).min(max_scroll);
-                    
+
                     // Set the scroll position
                     vadj.set_value(final_scroll);
                     break;
@@ -337,24 +338,37 @@ pub fn update_file_list(
 }
 
 /// Backward-compatible wrapper for update_file_list with default TabSwitch behavior
-/// 
+///
 /// This function provides compatibility for existing calls that don't specify selection source
 #[allow(dead_code)]
-pub fn update_file_list_default(file_list_box: &ListBox, current_dir: &PathBuf, file_path: &Option<PathBuf>) {
-    update_file_list(file_list_box, current_dir, file_path, FileSelectionSource::TabSwitch);
+pub fn update_file_list_default(
+    file_list_box: &ListBox,
+    current_dir: &PathBuf,
+    file_path: &Option<PathBuf>,
+) {
+    update_file_list(
+        file_list_box,
+        current_dir,
+        file_path,
+        FileSelectionSource::TabSwitch,
+    );
 }
 
 /// Updates the visibility of save buttons based on content type
 ///
 /// Disables save functionality for content types that can't be edited,
 /// such as images and audio files which are display/playback-only in this editor.
-pub fn update_save_buttons_visibility(save_button: &Button, save_as_button: &Button, mime_type: Option<mime_guess::Mime>) {
+pub fn update_save_buttons_visibility(
+    save_button: &Button,
+    save_as_button: &Button,
+    mime_type: Option<mime_guess::Mime>,
+) {
     match mime_type {
         // For images and audio files, disable save functionality since we don't support editing
         Some(mime) if mime.type_() == "image" || mime.type_() == "audio" => {
             save_button.set_visible(false);
             save_as_button.set_visible(false);
-        },
+        }
         // For all other content types (text, etc.), enable save functionality
         _ => {
             save_button.set_visible(true);
@@ -366,7 +380,10 @@ pub fn update_save_buttons_visibility(save_button: &Button, save_as_button: &But
 /// Updates the visibility of the save menu button based on content type
 ///
 /// Similar to update_save_buttons_visibility, but for the split button menu component
-pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_type: Option<mime_guess::Mime>) {
+pub fn update_save_menu_button_visibility(
+    save_menu_button: &MenuButton,
+    mime_type: Option<mime_guess::Mime>,
+) {
     match mime_type {
         // Hide menu button for images and audio files since saving is not supported
         Some(mime) if mime.type_() == "image" || mime.type_() == "audio" => {
@@ -377,7 +394,7 @@ pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_ty
                 // Fallback if there's no parent for some reason
                 save_menu_button.set_visible(false);
             }
-        },
+        }
         _ => {
             // Show the entire split button
             if let Some(parent) = save_menu_button.parent() {
@@ -393,17 +410,17 @@ pub fn update_save_menu_button_visibility(save_menu_button: &MenuButton, mime_ty
 /// Updates the status bar path label with the current directory path
 ///
 /// Updates the path label in the status bar with the current directory path
-/// 
+///
 /// This formats the path in a user-friendly way and should be called whenever
 /// the current directory changes.
 #[allow(dead_code)]
 pub fn update_path_label(path_label: &gtk4::Label, current_dir: &PathBuf) {
     // Simply display the full path for better reliability
     path_label.set_text(&format!("{}", current_dir.display()));
-    
+
     // Set tooltip to show the full path on hover (helpful for long paths)
     path_label.set_tooltip_text(Some(&current_dir.display().to_string()));
-    
+
     // Make the path label look interactive
     path_label.add_css_class("clickable-path");
 }
@@ -416,17 +433,17 @@ pub fn update_path_label(path_label: &gtk4::Label, current_dir: &PathBuf) {
 pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
     let mut components = Vec::new();
     let mut current = PathBuf::new();
-    
+
     // Get user's home directory
     let home_dir = home::home_dir();
-    
+
     // Check if the path is under the user's home directory
     if let Some(home) = &home_dir {
         if path.starts_with(home) {
             // Start with home directory
             current = home.clone();
             components.push(("Home".to_owned(), current.clone()));
-            
+
             // Skip the parts that are already included in the home path
             let rel_path = path.strip_prefix(home).unwrap_or(path);
             for component in rel_path.components() {
@@ -437,17 +454,17 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
                     }
                 }
             }
-            
+
             return components;
         }
     }
-    
+
     // For paths not under home, start with root if it's an absolute path
     if path.is_absolute() {
         current.push("/");
         components.push(("Root".to_owned(), current.clone()));
     }
-    
+
     // Add each path component with its full path
     for component in path.components() {
         match component {
@@ -456,24 +473,25 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
                     current.push(name);
                     components.push((name.to_owned(), current.clone()));
                 }
-            },
+            }
             // Handle other path component types if needed
             std::path::Component::RootDir => {
-                if components.is_empty() { // Only add if not already added
+                if components.is_empty() {
+                    // Only add if not already added
                     current = PathBuf::from("/");
                     components.push(("/".to_owned(), current.clone()));
                 }
-            },
+            }
             std::path::Component::ParentDir => {
                 if !current.as_os_str().is_empty() {
                     current.pop();
                     // Parent directory component (..) - not adding to components list
                 }
-            },
+            }
             _ => {} // Skip other component types
         }
     }
-    
+
     components
 }
 
@@ -485,22 +503,22 @@ pub fn update_path_buttons(
     path_box: &gtk4::Box,
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
-    active_tab_path: &Rc<RefCell<Option<PathBuf>>>
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
     let current_path = current_dir.borrow().clone();
     // Clear any existing buttons
     while let Some(child) = path_box.first_child() {
         path_box.remove(&child);
     }
-    
+
     // Get path components
     let components = parse_path_components(&current_path);
-    
+
     // Create a button for each path component
     for (i, (display_name, path)) in components.iter().enumerate() {
         // Create a button for this path segment
         let button = gtk4::Button::new();
-        
+
         // Special handling for home and root directories
         if i == 0 {
             if display_name == "Home" {
@@ -519,46 +537,54 @@ pub fn update_path_buttons(
         } else {
             button.set_label(display_name);
         }
-        
+
         // Add styling
         button.add_css_class("path-segment-button");
-        button.set_has_frame(false);  // Make it look like a link
-        
+        button.set_has_frame(false); // Make it look like a link
+
         // Set up drop target for this path button to allow dragging files/folders onto it
         setup_path_button_drop_target(&button, &path);
-        
+
         // Clone needed variables for the closure
         let path_clone = path.clone();
         let file_list_box_clone = file_list_box.clone();
         let active_tab_path_clone = active_tab_path.clone();
         let current_dir_clone = current_dir.clone();
-        
+
         // We need weak references to the path_box to avoid ownership issues
         let path_box_weak = glib::object::WeakRef::new();
         path_box_weak.set(Some(path_box));
-        
+
         // Connect clicked signal
         button.connect_clicked(move |_| {
             // Navigate to this path segment by updating the current_dir
             *current_dir_clone.borrow_mut() = path_clone.clone();
-            
+
             // Update the file list to show this directory
             update_file_list(
                 &file_list_box_clone,
                 &current_dir_clone.borrow(),
                 &active_tab_path_clone.borrow(),
-                FileSelectionSource::TabSwitch
+                FileSelectionSource::TabSwitch,
             );
-            
+
             // Update path buttons to reflect the new current directory
             // Get the path_box from the weak reference
             if let Some(pb) = path_box_weak.upgrade() {
                 if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
-                    update_path_buttons(box_widget, &current_dir_clone, &file_list_box_clone, &active_tab_path_clone);
+                    update_path_buttons(
+                        box_widget,
+                        &current_dir_clone,
+                        &file_list_box_clone,
+                        &active_tab_path_clone,
+                    );
                 }
             }
+
+            // Check for Rust files and update linter UI visibility
+            crate::linter::ui::check_and_update_rust_ui(&path_clone);
         });
-        
+
         // Add a separator after all but the last component
         path_box.append(&button);
         if i < components.len() - 1 {
@@ -574,28 +600,31 @@ pub fn update_path_buttons(
 /// This function configures a path button to accept dropped files and folders,
 /// allowing users to drag items from the file list onto any path segment to move them there.
 fn setup_path_button_drop_target(button: &gtk4::Button, target_path: &std::path::PathBuf) {
-    use gtk4::{DropTarget, gdk, glib};
-    
-    let drop_target = DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE | gdk::DragAction::COPY);
-    
+    use gtk4::{gdk, glib, DropTarget};
+
+    let drop_target = DropTarget::new(
+        glib::Type::STRING,
+        gdk::DragAction::MOVE | gdk::DragAction::COPY,
+    );
+
     let target_path_clone = target_path.clone();
     drop_target.connect_drop(move |target, value, _x, _y| {
         // Remove visual feedback immediately
         if let Some(widget) = target.widget() {
             widget.remove_css_class("path-drop-target");
         }
-        
+
         if let Ok(source_path_str) = value.get::<String>() {
             let source_path = std::path::PathBuf::from(&source_path_str);
             let target_dir = target_path_clone.clone();
-            
+
             // Show confirmation modal for the move operation
             crate::ui::file_manager::show_move_confirmation_modal(&source_path, &target_dir);
             return true;
         }
         false
     });
-    
+
     // Visual feedback during drag over path buttons
     drop_target.connect_enter(move |target, _x, _y| {
         if let Some(widget) = target.widget() {
@@ -603,18 +632,18 @@ fn setup_path_button_drop_target(button: &gtk4::Button, target_path: &std::path:
         }
         gdk::DragAction::MOVE
     });
-    
+
     drop_target.connect_leave(move |target| {
         if let Some(widget) = target.widget() {
             widget.remove_css_class("path-drop-target");
         }
     });
-    
+
     button.add_controller(drop_target);
 }
 
 /// Toggles between showing path buttons and an input entry for manual path editing
-/// 
+///
 /// This function implements the Ctrl+L functionality where the user can press Ctrl+L
 /// to replace the clickable path buttons with a text input field where they can
 /// manually type a path and press Enter to navigate to it.
@@ -622,7 +651,7 @@ pub fn toggle_path_input_mode(
     path_box: &gtk4::Box,
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
-    active_tab_path: &Rc<RefCell<Option<PathBuf>>>
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
     // Check if we're already in input mode by looking for an Entry widget or input container
     let mut has_entry = false;
@@ -650,7 +679,7 @@ pub fn toggle_path_input_mode(
         }
         child = current_child.next_sibling();
     }
-    
+
     if has_entry {
         // We're in input mode, switch back to buttons
         restore_path_buttons(path_box, current_dir, file_list_box, active_tab_path);
@@ -665,62 +694,62 @@ fn show_path_input(
     path_box: &gtk4::Box,
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
-    active_tab_path: &Rc<RefCell<Option<PathBuf>>>
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
     // Clear existing buttons
     while let Some(child) = path_box.first_child() {
         path_box.remove(&child);
     }
-    
+
     // Ensure the path_box is configured to expand properly
     path_box.set_hexpand(true);
     path_box.set_halign(gtk4::Align::Fill);
-    path_box.set_homogeneous(false);  // Allow children to have different sizes
-    
+    path_box.set_homogeneous(false); // Allow children to have different sizes
+
     // Create a horizontal container for the entry and close button
     let input_container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
     input_container.set_hexpand(true);
     input_container.set_halign(gtk4::Align::Fill);
     input_container.add_css_class("path-input-container");
-    
+
     // Create a text entry widget that takes all available space
     let entry = Entry::new();
-    entry.set_hexpand(true);  // Expand horizontally to fill available space
-    entry.set_halign(gtk4::Align::Fill);  // Fill the entire width
-    entry.set_valign(gtk4::Align::Center);  // Center vertically
-    entry.set_width_request(-1);  // No minimum width restriction
-    entry.set_size_request(-1, -1);  // No size restrictions
+    entry.set_hexpand(true); // Expand horizontally to fill available space
+    entry.set_halign(gtk4::Align::Fill); // Fill the entire width
+    entry.set_valign(gtk4::Align::Center); // Center vertically
+    entry.set_width_request(-1); // No minimum width restriction
+    entry.set_size_request(-1, -1); // No size restrictions
     entry.set_placeholder_text(Some("Enter path..."));
-    entry.add_css_class("path-input");  // Add CSS class for styling
-    
+    entry.add_css_class("path-input"); // Add CSS class for styling
+
     // Create a close button
     let close_button = Button::new();
     let close_icon = gtk4::Image::from_icon_name("window-close-symbolic");
     close_button.set_child(Some(&close_icon));
     close_button.set_tooltip_text(Some("Cancel path editing (Esc)"));
-    close_button.add_css_class("flat");  // Make it look less prominent
+    close_button.add_css_class("flat"); // Make it look less prominent
     close_button.add_css_class("path-input-close");
     close_button.set_valign(gtk4::Align::Center);
-    
+
     // Set the current path as the initial text
     let current_path_str = current_dir.borrow().display().to_string();
     entry.set_text(&current_path_str);
-    
+
     // Select all text so user can immediately start typing
     entry.select_region(0, -1);
-    
+
     // Clone references for the closure
     let current_dir_clone = current_dir.clone();
     let file_list_box_clone = file_list_box.clone();
     let active_tab_path_clone = active_tab_path.clone();
     let path_box_weak = glib::object::WeakRef::new();
     path_box_weak.set(Some(path_box));
-    
+
     // Handle Enter key press to navigate to the entered path
     entry.connect_activate(move |entry| {
         let entered_path = entry.text();
         let path_str = entered_path.as_str();
-        
+
         // Try to parse and validate the path
         let new_path = if let Some(stripped) = path_str.strip_prefix("~/") {
             // Handle home directory expansion
@@ -735,31 +764,36 @@ fn show_path_input(
         } else {
             PathBuf::from(path_str)
         };
-        
+
         // Check if the path exists and is a directory
         if new_path.exists() && new_path.is_dir() {
             // Update current directory
             *current_dir_clone.borrow_mut() = new_path;
-            
+
             // Update file list
             update_file_list(
                 &file_list_box_clone,
                 &current_dir_clone.borrow(),
                 &active_tab_path_clone.borrow(),
-                FileSelectionSource::TabSwitch
+                FileSelectionSource::TabSwitch,
             );
-            
+
             // Restore path buttons
             if let Some(pb) = path_box_weak.upgrade() {
                 if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
-                    restore_path_buttons(box_widget, &current_dir_clone, &file_list_box_clone, &active_tab_path_clone);
+                    restore_path_buttons(
+                        box_widget,
+                        &current_dir_clone,
+                        &file_list_box_clone,
+                        &active_tab_path_clone,
+                    );
                 }
             }
         } else {
             // Invalid path - show error and keep input mode
             entry.add_css_class("error");
             entry.set_tooltip_text(Some("Invalid path or directory does not exist"));
-            
+
             // Remove error styling after a short delay
             let entry_weak = glib::object::WeakRef::new();
             entry_weak.set(Some(entry));
@@ -773,7 +807,7 @@ fn show_path_input(
             });
         }
     });
-    
+
     // Handle Escape key to cancel and restore buttons
     let key_controller = EventControllerKey::new();
     let path_box_weak_esc = glib::object::WeakRef::new();
@@ -781,42 +815,52 @@ fn show_path_input(
     let current_dir_clone_esc = current_dir.clone();
     let file_list_box_clone_esc = file_list_box.clone();
     let active_tab_path_clone_esc = active_tab_path.clone();
-    
+
     key_controller.connect_key_pressed(move |_controller, keyval, _keycode, _state| {
         if keyval == gdk::Key::Escape {
             // Restore path buttons without changing directory
             if let Some(pb) = path_box_weak_esc.upgrade() {
                 if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
-                    restore_path_buttons(box_widget, &current_dir_clone_esc, &file_list_box_clone_esc, &active_tab_path_clone_esc);
+                    restore_path_buttons(
+                        box_widget,
+                        &current_dir_clone_esc,
+                        &file_list_box_clone_esc,
+                        &active_tab_path_clone_esc,
+                    );
                 }
             }
             return glib::Propagation::Stop;
         }
         glib::Propagation::Proceed
     });
-    
+
     entry.add_controller(key_controller);
-    
+
     // Connect close button click to restore path buttons
     let path_box_weak_close = glib::object::WeakRef::new();
     path_box_weak_close.set(Some(path_box));
     let current_dir_clone_close = current_dir.clone();
     let file_list_box_clone_close = file_list_box.clone();
     let active_tab_path_clone_close = active_tab_path.clone();
-    
+
     close_button.connect_clicked(move |_| {
         // Restore path buttons without changing directory
         if let Some(pb) = path_box_weak_close.upgrade() {
             if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
-                restore_path_buttons(box_widget, &current_dir_clone_close, &file_list_box_clone_close, &active_tab_path_clone_close);
+                restore_path_buttons(
+                    box_widget,
+                    &current_dir_clone_close,
+                    &file_list_box_clone_close,
+                    &active_tab_path_clone_close,
+                );
             }
         }
     });
-    
+
     // Add the entry and close button to the container
     input_container.append(&entry);
     input_container.append(&close_button);
-    
+
     // Add the input container to the path box and focus the entry
     path_box.append(&input_container);
     entry.grab_focus();
@@ -827,13 +871,13 @@ fn restore_path_buttons(
     path_box: &gtk4::Box,
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
-    active_tab_path: &Rc<RefCell<Option<PathBuf>>>
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
     // Clear the input widget
     while let Some(child) = path_box.first_child() {
         path_box.remove(&child);
     }
-    
+
     // Restore the normal path buttons
     update_path_buttons(path_box, current_dir, file_list_box, active_tab_path);
 }
@@ -843,10 +887,10 @@ fn restore_path_buttons(
 /// This function adds keyboard shortcuts like Ctrl+S for saving, Ctrl+O for opening files,
 /// Ctrl+N for new files, Ctrl+Tab for navigating tabs, Ctrl+Shift+F for global search, Ctrl+B for toggling sidebar, Ctrl+T for toggling terminal, and other standard editor shortcuts.
 pub fn setup_keyboard_shortcuts(
-    window: &(impl IsA<ApplicationWindow> + IsA<gtk4::Widget>), 
-    save_button: &Button, 
-    open_button: &Button, 
-    new_button: &Button, 
+    window: &(impl IsA<ApplicationWindow> + IsA<gtk4::Widget>),
+    save_button: &Button,
+    open_button: &Button,
+    new_button: &Button,
     save_as_button: &Button,
     global_search_button: Option<&Button>,
     editor_notebook: Option<&gtk4::Notebook>,
@@ -864,7 +908,7 @@ pub fn setup_keyboard_shortcuts(
 ) {
     // Create a key event controller
     let key_controller = EventControllerKey::new();
-    
+
     // Clone button references for use in the closure
     let save_button_clone = save_button.clone();
     let save_as_button_clone = save_as_button.clone();
@@ -872,27 +916,27 @@ pub fn setup_keyboard_shortcuts(
     let new_button_clone = new_button.clone();
     let global_search_button_clone = global_search_button.cloned();
     let window_clone = window.clone();
-    
+
     // Clone path-related references for Ctrl+L functionality
     let path_box_clone = path_box.cloned();
     let current_dir_clone = current_dir.cloned();
     let file_list_box_clone = file_list_box.cloned();
     let active_tab_path_clone = active_tab_path.cloned();
-    
+
     // Clone the editor notebook for file type checking
     let editor_notebook_clone = editor_notebook.cloned();
     let file_path_manager_clone = file_path_manager.cloned();
-    
+
     // Clone sidebar toggle buttons for Ctrl+B and Ctrl+Shift+E/F/G
     let explorer_button_clone = explorer_button.cloned();
     let search_button_clone = search_button.cloned();
     let git_diff_button_clone = git_diff_button.cloned();
     let _sidebar_stack_clone = sidebar_stack.cloned();
-    
+
     // Clone editor_paned for Ctrl+T (toggle terminal)
     let editor_paned_clone = editor_paned.cloned();
     let terminal_notebook_clone = terminal_notebook.cloned();
-    
+
     // Connect the key pressed event
     key_controller.connect_key_pressed(move |_controller, keyval, keycode, state| {
         // Check modifier keys
@@ -1342,10 +1386,10 @@ pub fn setup_keyboard_shortcuts(
         // Let the event propagate to other handlers (like the text editor's built-in shortcuts)
         glib::Propagation::Proceed
     });
-    
+
     // Add the controller to the window
     window.add_controller(key_controller);
-    
+
     // Log that keyboard shortcuts have been set up
     println!("Keyboard shortcuts initialized:");
     println!("  - Ctrl+S: Save (blocked for image/video/audio files)");

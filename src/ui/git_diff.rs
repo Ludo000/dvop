@@ -1,16 +1,14 @@
 // Git Diff UI components for Dvop
 // Displays git status and diff information in the sidebar
 
+use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{
-    Box as GtkBox, Button, Label, ListBoxRow, Orientation, pango, DrawingArea,
-};
+use gtk4::{pango, Box as GtkBox, Button, DrawingArea, Label, ListBoxRow, Orientation};
 use sourceview5::prelude::{BufferExt, ViewExt};
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::rc::Rc;
-use gtk4::glib;
 
 use super::git_diff_panel_template::GitDiffPanel;
 
@@ -102,7 +100,7 @@ fn get_git_status(repo_path: &Path) -> Vec<GitFileChange> {
                 if chars.len() < 3 {
                     continue;
                 }
-                
+
                 let staged_char = chars[0];
                 let unstaged_char = chars[1];
                 let file_path = line[3..].trim();
@@ -166,27 +164,39 @@ fn get_staged_file_content(repo_path: &Path, file_path: &Path) -> Option<String>
 
 /// Align two text contents for side-by-side comparison
 /// Returns (aligned_old, aligned_new, left_line_map, right_line_map, old_width, new_width)
-fn align_diff_content(old_content: &str, new_content: &str) -> (String, String, Vec<Option<usize>>, Vec<Option<usize>>, usize, usize) {
+fn align_diff_content(
+    old_content: &str,
+    new_content: &str,
+) -> (
+    String,
+    String,
+    Vec<Option<usize>>,
+    Vec<Option<usize>>,
+    usize,
+    usize,
+) {
     let old_lines: Vec<&str> = old_content.lines().collect();
     let new_lines: Vec<&str> = new_content.lines().collect();
-    
+
     let diff_ops = compute_diff_operations(&old_lines, &new_lines);
-    
+
     let mut aligned_old = Vec::new();
     let mut aligned_new = Vec::new();
     let mut left_line_map = Vec::new();
     let mut right_line_map = Vec::new();
-    
+
     // Calculate max line numbers for padding
     // Use at least 5 digits to ensure proper spacing
     let max_old_line = old_lines.len();
     let max_new_line = new_lines.len();
     let old_width = max_old_line.to_string().len().max(5);
     let new_width = max_new_line.to_string().len().max(5);
-    
-    eprintln!("DEBUG: max_old_line={}, max_new_line={}, old_width={}, new_width={}", 
-              max_old_line, max_new_line, old_width, new_width);
-    
+
+    eprintln!(
+        "DEBUG: max_old_line={}, max_new_line={}, old_width={}, new_width={}",
+        max_old_line, max_new_line, old_width, new_width
+    );
+
     for (old_idx, new_idx) in diff_ops {
         match (old_idx, new_idx) {
             (Some(old_i), Some(new_i)) => {
@@ -194,15 +204,30 @@ fn align_diff_content(old_content: &str, new_content: &str) -> (String, String, 
                 let old_line_num = old_i + 1;
                 let new_line_num = new_i + 1;
                 // Format with line number prefix: "  123  content"
-                aligned_old.push(format!("{:>width$}  {}", old_line_num, old_lines[old_i], width = old_width));
-                aligned_new.push(format!("{:>width$}  {}", new_line_num, new_lines[new_i], width = new_width));
+                aligned_old.push(format!(
+                    "{:>width$}  {}",
+                    old_line_num,
+                    old_lines[old_i],
+                    width = old_width
+                ));
+                aligned_new.push(format!(
+                    "{:>width$}  {}",
+                    new_line_num,
+                    new_lines[new_i],
+                    width = new_width
+                ));
                 left_line_map.push(Some(old_line_num));
                 right_line_map.push(Some(new_line_num));
             }
             (Some(old_i), None) => {
                 // Deleted line - add blank line on right
                 let old_line_num = old_i + 1;
-                aligned_old.push(format!("{:>width$}  {}", old_line_num, old_lines[old_i], width = old_width));
+                aligned_old.push(format!(
+                    "{:>width$}  {}",
+                    old_line_num,
+                    old_lines[old_i],
+                    width = old_width
+                ));
                 // Right side: spaces for line number + 2 spaces
                 aligned_new.push(" ".repeat(new_width + 2));
                 left_line_map.push(Some(old_line_num));
@@ -213,7 +238,12 @@ fn align_diff_content(old_content: &str, new_content: &str) -> (String, String, 
                 let new_line_num = new_i + 1;
                 // Left side: spaces for line number + 2 spaces
                 aligned_old.push(" ".repeat(old_width + 2));
-                aligned_new.push(format!("{:>width$}  {}", new_line_num, new_lines[new_i], width = new_width));
+                aligned_new.push(format!(
+                    "{:>width$}  {}",
+                    new_line_num,
+                    new_lines[new_i],
+                    width = new_width
+                ));
                 left_line_map.push(None);
                 right_line_map.push(Some(new_line_num));
             }
@@ -222,16 +252,26 @@ fn align_diff_content(old_content: &str, new_content: &str) -> (String, String, 
             }
         }
     }
-    
-    (aligned_old.join("\n"), aligned_new.join("\n"), left_line_map, right_line_map, old_width, new_width)
+
+    (
+        aligned_old.join("\n"),
+        aligned_new.join("\n"),
+        left_line_map,
+        right_line_map,
+        old_width,
+        new_width,
+    )
 }
 
 /// Compute the longest common subsequence (LCS) based diff
-fn compute_diff_operations(old_lines: &[&str], new_lines: &[&str]) -> Vec<(Option<usize>, Option<usize>)> {
+fn compute_diff_operations(
+    old_lines: &[&str],
+    new_lines: &[&str],
+) -> Vec<(Option<usize>, Option<usize>)> {
     let mut operations = Vec::new();
     let m = old_lines.len();
     let n = new_lines.len();
-    
+
     // Build LCS table
     let mut lcs = vec![vec![0; n + 1]; m + 1];
     for i in 0..m {
@@ -243,11 +283,11 @@ fn compute_diff_operations(old_lines: &[&str], new_lines: &[&str]) -> Vec<(Optio
             }
         }
     }
-    
+
     // Backtrack to find the diff
     let mut i = m;
     let mut j = n;
-    
+
     while i > 0 || j > 0 {
         if i > 0 && j > 0 && old_lines[i - 1] == new_lines[j - 1] {
             // Lines are equal
@@ -264,7 +304,7 @@ fn compute_diff_operations(old_lines: &[&str], new_lines: &[&str]) -> Vec<(Optio
             i -= 1;
         }
     }
-    
+
     operations.reverse();
     operations
 }
@@ -272,22 +312,22 @@ fn compute_diff_operations(old_lines: &[&str], new_lines: &[&str]) -> Vec<(Optio
 /// Make embedded line numbers invisible to selection and copy operations
 fn make_line_numbers_invisible(buffer: &sourceview5::Buffer, line_map: &[Option<usize>]) {
     let tag_table = buffer.tag_table();
-    
+
     // Create a tag that makes text invisible to selection/clipboard
     let invisible_tag = gtk4::TextTag::new(Some("line_num_invisible"));
     invisible_tag.set_invisible(true);
-    
+
     tag_table.add(&invisible_tag);
-    
+
     // Apply the tag to line number portions (start of each line until content)
     for (line_idx, _) in line_map.iter().enumerate() {
         if let Some(line_start) = buffer.iter_at_line(line_idx as i32) {
             let mut line_end = line_start.clone();
             line_end.forward_to_line_end();
-            
+
             let text = buffer.text(&line_start, &line_end, false);
             let text_str = text.as_str();
-            
+
             // Find the position of the first occurrence of double space
             // This marks the end of line number section
             if let Some(pos) = text_str.find("  ") {
@@ -311,7 +351,7 @@ fn apply_diff_highlighting(
 ) {
     let old_lines: Vec<&str> = old_content.lines().collect();
     let new_lines: Vec<&str> = new_content.lines().collect();
-    
+
     // Helper function to strip line number prefix from a line
     let strip_line_number = |line: &str, width: usize| -> String {
         // Line format is "{:>width$}  content"
@@ -323,53 +363,63 @@ fn apply_diff_highlighting(
             String::new()
         }
     };
-    
+
     // Strip line numbers for comparison
-    let old_lines_stripped: Vec<String> = old_lines.iter().map(|line| strip_line_number(line, old_width)).collect();
-    let new_lines_stripped: Vec<String> = new_lines.iter().map(|line| strip_line_number(line, new_width)).collect();
-    
+    let old_lines_stripped: Vec<String> = old_lines
+        .iter()
+        .map(|line| strip_line_number(line, old_width))
+        .collect();
+    let new_lines_stripped: Vec<String> = new_lines
+        .iter()
+        .map(|line| strip_line_number(line, new_width))
+        .collect();
+
     // If the old file is empty (new file), don't highlight anything
-    if old_lines_stripped.is_empty() || (old_lines_stripped.len() == 1 && old_lines_stripped[0].is_empty()) {
+    if old_lines_stripped.is_empty()
+        || (old_lines_stripped.len() == 1 && old_lines_stripped[0].is_empty())
+    {
         return;
     }
-    
+
     // If the new file is empty (deleted file), don't highlight anything
-    if new_lines_stripped.is_empty() || (new_lines_stripped.len() == 1 && new_lines_stripped[0].is_empty()) {
+    if new_lines_stripped.is_empty()
+        || (new_lines_stripped.len() == 1 && new_lines_stripped[0].is_empty())
+    {
         return;
     }
-    
+
     // Use RGBA colors with alpha channel for better theme adaptation
     // These colors will blend with the background
-    let delete_color = gtk4::gdk::RGBA::new(1.0, 0.0, 0.0, 0.15);  // Red with 15% opacity
-    let add_color = gtk4::gdk::RGBA::new(0.0, 1.0, 0.0, 0.15);     // Green with 15% opacity
-    let modify_color = gtk4::gdk::RGBA::new(1.0, 1.0, 0.0, 0.15);  // Yellow with 15% opacity
-    
+    let delete_color = gtk4::gdk::RGBA::new(1.0, 0.0, 0.0, 0.15); // Red with 15% opacity
+    let add_color = gtk4::gdk::RGBA::new(0.0, 1.0, 0.0, 0.15); // Green with 15% opacity
+    let modify_color = gtk4::gdk::RGBA::new(1.0, 1.0, 0.0, 0.15); // Yellow with 15% opacity
+
     // Create text tags for highlighting
     let left_tag_table = left_buffer.tag_table();
     let delete_tag = gtk4::TextTag::new(Some("delete"));
     delete_tag.set_background_rgba(Some(&delete_color));
     left_tag_table.add(&delete_tag);
-    
+
     let right_tag_table = right_buffer.tag_table();
     let add_tag = gtk4::TextTag::new(Some("add"));
     add_tag.set_background_rgba(Some(&add_color));
     right_tag_table.add(&add_tag);
-    
+
     let left_modify_tag = gtk4::TextTag::new(Some("modify_old"));
     left_modify_tag.set_background_rgba(Some(&modify_color));
     left_tag_table.add(&left_modify_tag);
-    
+
     let right_modify_tag = gtk4::TextTag::new(Some("modify_new"));
     right_modify_tag.set_background_rgba(Some(&modify_color));
     right_tag_table.add(&right_modify_tag);
-    
+
     // Since content is already aligned, compare line by line using stripped content
     let max_lines = old_lines_stripped.len().max(new_lines_stripped.len());
-    
+
     for i in 0..max_lines {
         let old_line = old_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
         let new_line = new_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
-        
+
         if old_line.is_empty() && !new_line.is_empty() {
             // Added line (blank on left, content on right)
             if let Some(right_start) = right_buffer.iter_at_line(i as i32) {
@@ -391,7 +441,7 @@ fn apply_diff_highlighting(
                 left_end.forward_to_line_end();
                 left_buffer.apply_tag(&left_modify_tag, &left_start, &left_end);
             }
-            
+
             if let Some(right_start) = right_buffer.iter_at_line(i as i32) {
                 let mut right_end = right_start.clone();
                 right_end.forward_to_line_end();
@@ -534,7 +584,7 @@ fn count_unpushed_commits(repo_path: &Path) -> usize {
             return count_str.trim().parse().unwrap_or(0);
         }
     }
-    
+
     0
 }
 
@@ -559,7 +609,7 @@ fn count_incoming_commits(repo_path: &Path) -> usize {
             return count_str.trim().parse().unwrap_or(0);
         }
     }
-    
+
     0
 }
 
@@ -700,56 +750,62 @@ fn switch_branch(repo_path: &Path, branch_name: &str, is_remote: bool) -> Result
 /// Set up a copy handler that strips line numbers from copied text
 fn setup_copy_handler(view: &sourceview5::View, buffer: &sourceview5::Buffer) {
     let buffer_clone = buffer.clone();
-    
+
     // Use key event controller to intercept copy operations
     let key_controller = gtk4::EventControllerKey::new();
-    
+
     key_controller.connect_key_pressed(move |_, key, _, modifier| {
         // Check for Ctrl+C or Ctrl+Insert
         let is_ctrl = modifier.contains(gtk4::gdk::ModifierType::CONTROL_MASK);
-        let is_copy = (key == gtk4::gdk::Key::c || key == gtk4::gdk::Key::C || 
-                       key == gtk4::gdk::Key::Insert) && is_ctrl;
-        
+        let is_copy =
+            (key == gtk4::gdk::Key::c || key == gtk4::gdk::Key::C || key == gtk4::gdk::Key::Insert)
+                && is_ctrl;
+
         if is_copy {
             // Get the selected text
             if let Some((start, end)) = buffer_clone.selection_bounds() {
                 let text = buffer_clone.text(&start, &end, false);
                 let text_str = text.as_str();
-                
+
                 // Strip line numbers from each line
                 // Line format is "{:>width$}  content" - skip spaces, digits, then 2 more spaces
-                let stripped_lines: Vec<String> = text_str.lines().map(|line| {
-                    let chars: Vec<char> = line.chars().collect();
-                    let mut i = 0;
-                    
-                    // Skip leading spaces and digits
-                    while i < chars.len() && (chars[i].is_whitespace() || chars[i].is_ascii_digit()) {
-                        i += 1;
-                    }
-                    
-                    if i < line.len() {
-                        line[i..].to_string()
-                    } else {
-                        String::new()
-                    }
-                }).collect();
-                
+                let stripped_lines: Vec<String> = text_str
+                    .lines()
+                    .map(|line| {
+                        let chars: Vec<char> = line.chars().collect();
+                        let mut i = 0;
+
+                        // Skip leading spaces and digits
+                        while i < chars.len()
+                            && (chars[i].is_whitespace() || chars[i].is_ascii_digit())
+                        {
+                            i += 1;
+                        }
+
+                        if i < line.len() {
+                            line[i..].to_string()
+                        } else {
+                            String::new()
+                        }
+                    })
+                    .collect();
+
                 let stripped_text = stripped_lines.join("\n");
-                
+
                 // Set the clipboard with stripped text
                 if let Some(display) = gtk4::gdk::Display::default() {
                     let clipboard = display.clipboard();
                     clipboard.set_text(&stripped_text);
                 }
-                
+
                 // Prevent default copy behavior
                 return gtk4::glib::Propagation::Stop;
             }
         }
-        
+
         gtk4::glib::Propagation::Proceed
     });
-    
+
     view.add_controller(key_controller);
 }
 
@@ -763,10 +819,15 @@ enum LineChangeType {
 }
 
 /// Compute line changes for minimap display
-fn compute_line_changes(old_content: &str, new_content: &str, old_width: usize, new_width: usize) -> Vec<LineChangeType> {
+fn compute_line_changes(
+    old_content: &str,
+    new_content: &str,
+    old_width: usize,
+    new_width: usize,
+) -> Vec<LineChangeType> {
     let old_lines: Vec<&str> = old_content.lines().collect();
     let new_lines: Vec<&str> = new_content.lines().collect();
-    
+
     // Helper function to strip line number prefix from a line
     let strip_line_number = |line: &str, width: usize| -> String {
         let skip_chars = width + 2;
@@ -776,18 +837,24 @@ fn compute_line_changes(old_content: &str, new_content: &str, old_width: usize, 
             String::new()
         }
     };
-    
+
     // Strip line numbers for comparison
-    let old_lines_stripped: Vec<String> = old_lines.iter().map(|line| strip_line_number(line, old_width)).collect();
-    let new_lines_stripped: Vec<String> = new_lines.iter().map(|line| strip_line_number(line, new_width)).collect();
-    
+    let old_lines_stripped: Vec<String> = old_lines
+        .iter()
+        .map(|line| strip_line_number(line, old_width))
+        .collect();
+    let new_lines_stripped: Vec<String> = new_lines
+        .iter()
+        .map(|line| strip_line_number(line, new_width))
+        .collect();
+
     let mut changes = Vec::new();
     let max_lines = old_lines_stripped.len().max(new_lines_stripped.len());
-    
+
     for i in 0..max_lines {
         let old_line = old_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
         let new_line = new_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
-        
+
         if old_line.is_empty() && !new_line.is_empty() {
             changes.push(LineChangeType::Added);
         } else if !old_line.is_empty() && new_line.is_empty() {
@@ -798,7 +865,7 @@ fn compute_line_changes(old_content: &str, new_content: &str, old_width: usize, 
             changes.push(LineChangeType::Unchanged);
         }
     }
-    
+
     changes
 }
 
@@ -813,16 +880,21 @@ fn setup_minimap_drawing(
     let scrolled_weak = scrolled.downgrade();
     let buffer_weak = buffer.downgrade();
     let line_changes_clone = line_changes.clone();
-    
+
     // Draw the minimap
     minimap.set_draw_func(move |widget, cr, width, height| {
-        let Some(scrolled) = scrolled_weak.upgrade() else { return; };
-        let Some(buffer) = buffer_weak.upgrade() else { return; };
-        
+        let Some(scrolled) = scrolled_weak.upgrade() else {
+            return;
+        };
+        let Some(buffer) = buffer_weak.upgrade() else {
+            return;
+        };
+
         // Get theme colors from the widget's style context
         let style_context = widget.style_context();
         let color = style_context.color();
-        let bg_color = style_context.lookup_color("view_bg_color")
+        let bg_color = style_context
+            .lookup_color("view_bg_color")
             .or_else(|| style_context.lookup_color("theme_bg_color"))
             .unwrap_or_else(|| {
                 // Fallback: determine if dark or light theme based on text color luminance
@@ -835,30 +907,35 @@ fn setup_minimap_drawing(
                     gtk4::gdk::RGBA::new(0.2, 0.2, 0.2, 1.0)
                 }
             });
-        
+
         // Background with theme color
-        cr.set_source_rgba(bg_color.red() as f64, bg_color.green() as f64, bg_color.blue() as f64, bg_color.alpha() as f64);
+        cr.set_source_rgba(
+            bg_color.red() as f64,
+            bg_color.green() as f64,
+            bg_color.blue() as f64,
+            bg_color.alpha() as f64,
+        );
         let _ = cr.paint();
-        
+
         let line_count = buffer.line_count() as usize;
         if line_count == 0 {
             return;
         }
-        
+
         let changes = line_changes_clone.borrow();
         if changes.is_empty() {
             return;
         }
-        
+
         let line_height = height as f64 / line_count as f64;
-        
+
         // Determine if we're in dark mode
         let is_dark_theme = bg_color.red() < 0.5;
-        
+
         // Draw colored bars for each line
         for (i, change) in changes.iter().enumerate() {
             let y = i as f64 * line_height;
-            
+
             match change {
                 LineChangeType::Added => {
                     // Green for added lines (muted colors)
@@ -893,21 +970,21 @@ fn setup_minimap_drawing(
                     }
                 }
             }
-            
+
             let _ = cr.rectangle(0.0, y, width as f64, line_height.max(1.0));
             let _ = cr.fill();
         }
-        
+
         // Draw viewport indicator (showing visible area)
         let vadj = scrolled.vadjustment();
         let visible_start = vadj.value();
         let visible_size = vadj.page_size();
         let total_size = vadj.upper();
-        
+
         if total_size > 0.0 {
             let viewport_start = (visible_start / total_size) * height as f64;
             let viewport_height = (visible_size / total_size) * height as f64;
-            
+
             // Semi-transparent overlay for viewport (adapted to theme)
             if is_dark_theme {
                 cr.set_source_rgba(1.0, 1.0, 1.0, 0.15);
@@ -916,7 +993,7 @@ fn setup_minimap_drawing(
             }
             let _ = cr.rectangle(0.0, viewport_start, width as f64, viewport_height);
             let _ = cr.fill();
-            
+
             // Border for viewport
             if is_dark_theme {
                 cr.set_source_rgba(1.0, 1.0, 1.0, 0.4);
@@ -928,43 +1005,47 @@ fn setup_minimap_drawing(
             let _ = cr.stroke();
         }
     });
-    
+
     // Add drag handler for continuous scrolling
     let scrolled_weak2 = scrolled.downgrade();
     let minimap_clone = minimap.clone();
     let drag_gesture = gtk4::GestureDrag::new();
-    
+
     // Helper closure to handle scrolling
     let scroll_to_position = move |y: f64| {
-        let Some(scrolled) = scrolled_weak2.upgrade() else { return; };
-        
+        let Some(scrolled) = scrolled_weak2.upgrade() else {
+            return;
+        };
+
         let vadj = scrolled.vadjustment();
         let total_height = vadj.upper();
         let minimap_height = y;
-        
+
         // Get minimap widget height
         let widget_height = minimap_clone.height() as f64;
-        
+
         if widget_height > 0.0 {
             // Calculate scroll position
             let scroll_position = (minimap_height / widget_height) * total_height;
             let scroll_centered = scroll_position - vadj.page_size() / 2.0;
-            
+
             // Clamp to valid range
-            let clamped = scroll_centered.max(0.0).min(total_height - vadj.page_size());
+            let clamped = scroll_centered
+                .max(0.0)
+                .min(total_height - vadj.page_size());
             vadj.set_value(clamped);
         }
     };
-    
+
     let scroll_to_position_rc = Rc::new(RefCell::new(scroll_to_position));
     let scroll_to_position_clone = scroll_to_position_rc.clone();
-    
+
     // On drag begin, scroll to initial position
     drag_gesture.connect_drag_begin(move |_, _start_x, start_y| {
         let scroll_fn = scroll_to_position_clone.borrow();
         scroll_fn(start_y);
     });
-    
+
     // On drag update, continuously scroll
     let scroll_to_position_clone2 = scroll_to_position_rc.clone();
     drag_gesture.connect_drag_update(move |gesture, _offset_x, offset_y| {
@@ -974,7 +1055,7 @@ fn setup_minimap_drawing(
             scroll_fn(current_y);
         }
     });
-    
+
     minimap.add_controller(drag_gesture);
 }
 
@@ -989,31 +1070,32 @@ fn create_diff_tab(
     tab_title: &str,
 ) {
     // Align the content for side-by-side comparison
-    let (aligned_old, aligned_new, left_line_map, right_line_map, old_width, new_width) = align_diff_content(old_content, new_content);
-    
+    let (aligned_old, aligned_new, left_line_map, right_line_map, old_width, new_width) =
+        align_diff_content(old_content, new_content);
+
     // Create a horizontal paned widget for side-by-side view
     let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
     paned.set_wide_handle(true);
     paned.set_shrink_start_child(false);
     paned.set_shrink_end_child(false);
-    
+
     // Track line change types for minimap
     let line_changes = Rc::new(RefCell::new(Vec::new()));
-    
+
     // Create left side (old version)
     let (left_view, left_buffer) = crate::syntax::create_source_view();
     left_buffer.set_text(&aligned_old);
     left_view.set_editable(false);
     left_view.set_cursor_visible(false);
     left_view.set_show_line_numbers(false); // Line numbers are embedded in text
-    
+
     // Set up copy handler to strip line numbers
     setup_copy_handler(&left_view, &left_buffer);
-    
+
     let left_scrolled = crate::syntax::create_source_view_scrolled(&left_view);
     left_scrolled.set_vexpand(true);
     left_scrolled.set_hexpand(true);
-    
+
     // Create left header
     let left_header = Label::new(Some("Original"));
     left_header.set_halign(gtk4::Align::Start);
@@ -1021,42 +1103,42 @@ fn create_diff_tab(
     left_header.set_margin_start(10);
     left_header.set_margin_top(5);
     left_header.set_margin_bottom(5);
-    
+
     // Create minimap container (left side with minimap + content)
     let left_container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
     left_container.set_hexpand(true);
-    
+
     // Create minimap for left side
     let left_minimap = DrawingArea::new();
     left_minimap.set_width_request(30);
     left_minimap.set_vexpand(true);
     left_minimap.set_valign(gtk4::Align::Fill);
-    
+
     let left_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     left_box.set_hexpand(true);
     left_box.append(&left_header);
-    
+
     let left_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
     left_content_box.set_hexpand(true);
     left_content_box.append(&left_scrolled);
     left_content_box.append(&left_minimap);
-    
+
     left_box.append(&left_content_box);
-    
+
     // Create right side (new version)
     let (right_view, right_buffer) = crate::syntax::create_source_view();
     right_buffer.set_text(&aligned_new);
     right_view.set_editable(false);
     right_view.set_cursor_visible(false);
     right_view.set_show_line_numbers(false); // Line numbers are embedded in text
-    
+
     // Set up copy handler to strip line numbers
     setup_copy_handler(&right_view, &right_buffer);
-    
+
     let right_scrolled = crate::syntax::create_source_view_scrolled(&right_view);
     right_scrolled.set_vexpand(true);
     right_scrolled.set_hexpand(true);
-    
+
     // Create right header
     let right_header = Label::new(Some("Modified"));
     right_header.set_halign(gtk4::Align::Start);
@@ -1064,24 +1146,24 @@ fn create_diff_tab(
     right_header.set_margin_start(10);
     right_header.set_margin_top(5);
     right_header.set_margin_bottom(5);
-    
+
     // Create minimap for right side
     let right_minimap = DrawingArea::new();
     right_minimap.set_width_request(30);
     right_minimap.set_vexpand(true);
     right_minimap.set_valign(gtk4::Align::Fill);
-    
+
     let right_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     right_box.set_hexpand(true);
     right_box.append(&right_header);
-    
+
     let right_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
     right_content_box.set_hexpand(true);
     right_content_box.append(&right_scrolled);
     right_content_box.append(&right_minimap);
-    
+
     right_box.append(&right_content_box);
-    
+
     // Detect language from file extension
     let lang_manager = sourceview5::LanguageManager::new();
     if let Some(_extension) = file_path.extension().and_then(|e| e.to_str()) {
@@ -1090,20 +1172,27 @@ fn create_diff_tab(
             right_buffer.set_language(Some(&lang));
         }
     }
-    
+
     // Apply diff highlighting using aligned content and collect line changes
     let changes = compute_line_changes(&aligned_old, &aligned_new, old_width, new_width);
     *line_changes.borrow_mut() = changes.clone();
-    apply_diff_highlighting(&left_buffer, &right_buffer, &aligned_old, &aligned_new, old_width, new_width);
-    
+    apply_diff_highlighting(
+        &left_buffer,
+        &right_buffer,
+        &aligned_old,
+        &aligned_new,
+        old_width,
+        new_width,
+    );
+
     // Make line numbers non-selectable (invisible to selection/copy)
     make_line_numbers_invisible(&left_buffer, &left_line_map);
     make_line_numbers_invisible(&right_buffer, &right_line_map);
-    
+
     // Set up scroll synchronization
     let left_vadj = left_scrolled.vadjustment();
     let right_vadj = right_scrolled.vadjustment();
-    
+
     let right_vadj_clone = right_vadj.clone();
     let left_minimap_clone = left_minimap.clone();
     let right_minimap_clone = right_minimap.clone();
@@ -1112,7 +1201,7 @@ fn create_diff_tab(
         left_minimap_clone.queue_draw();
         right_minimap_clone.queue_draw();
     });
-    
+
     let left_vadj_clone = left_vadj.clone();
     let left_minimap_clone2 = left_minimap.clone();
     let right_minimap_clone2 = right_minimap.clone();
@@ -1121,11 +1210,23 @@ fn create_diff_tab(
         left_minimap_clone2.queue_draw();
         right_minimap_clone2.queue_draw();
     });
-    
+
     // Set up minimap drawing
-    setup_minimap_drawing(&left_minimap, &left_scrolled, &left_buffer, &line_changes, true);
-    setup_minimap_drawing(&right_minimap, &right_scrolled, &right_buffer, &line_changes, false);
-    
+    setup_minimap_drawing(
+        &left_minimap,
+        &left_scrolled,
+        &left_buffer,
+        &line_changes,
+        true,
+    );
+    setup_minimap_drawing(
+        &right_minimap,
+        &right_scrolled,
+        &right_buffer,
+        &line_changes,
+        false,
+    );
+
     // Add both sides to the paned widget
     paned.set_start_child(Some(&left_box));
     paned.set_end_child(Some(&right_box));
@@ -1133,7 +1234,7 @@ fn create_diff_tab(
     paned.set_resize_end_child(true);
     paned.set_shrink_start_child(false);
     paned.set_shrink_end_child(false);
-    
+
     // Set initial position to middle after the paned is realized
     paned.connect_realize(|p| {
         let width = p.width();
@@ -1141,17 +1242,17 @@ fn create_diff_tab(
             p.set_position(width / 2);
         }
     });
-    
+
     // Create tab widget
     let (tab_widget, _tab_label, tab_close_button) = crate::ui::create_tab_widget(tab_title);
-    
+
     // Add the tab
     let page_num = editor_notebook.append_page(&paned, Some(&tab_widget));
     editor_notebook.set_tab_label(&paned, Some(&tab_widget));
-    
+
     // Set up middle-click to close
     crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
-    
+
     // Close button handler
     let notebook_clone = editor_notebook.clone();
     tab_close_button.connect_clicked(move |_| {
@@ -1162,10 +1263,10 @@ fn create_diff_tab(
             }
         }
     });
-        
+
     // Focus the new tab
     editor_notebook.set_current_page(Some(page_num));
-    
+
     // Don't track this in file_path_manager since it's not a real file
     *active_tab_path.borrow_mut() = None;
 }
@@ -1181,7 +1282,7 @@ pub fn create_git_diff_panel(
 ) -> GtkBox {
     // Create the template-based panel
     let panel = GitDiffPanel::new();
-    
+
     // Get references to widgets
     let branch_button = panel.branch_button();
     let refresh_button = panel.refresh_button();
@@ -1194,13 +1295,15 @@ pub fn create_git_diff_panel(
 
     // Set up placeholder text behavior for commit message
     let buffer = commit_message_view.buffer();
-    
+
     // Create placeholder styling
-    let placeholder_tag = buffer.create_tag(
-        Some("placeholder"),
-        &[("foreground", &"gray"), ("style", &pango::Style::Italic)],
-    ).expect("Failed to create placeholder tag");
-    
+    let placeholder_tag = buffer
+        .create_tag(
+            Some("placeholder"),
+            &[("foreground", &"gray"), ("style", &pango::Style::Italic)],
+        )
+        .expect("Failed to create placeholder tag");
+
     // Helper to show placeholder
     let show_placeholder = {
         let buffer = buffer.clone();
@@ -1215,7 +1318,7 @@ pub fn create_git_diff_panel(
             }
         }
     };
-    
+
     // Helper to hide placeholder
     let hide_placeholder = {
         let buffer = buffer.clone();
@@ -1226,18 +1329,18 @@ pub fn create_git_diff_panel(
             }
         }
     };
-    
+
     // Initialize with placeholder
     show_placeholder();
-    
+
     // Use focus controller for GTK4
     let focus_controller = gtk4::EventControllerFocus::new();
-    
+
     let hide_placeholder_clone = hide_placeholder.clone();
     focus_controller.connect_enter(move |_| {
         hide_placeholder_clone();
     });
-    
+
     let show_placeholder_clone = show_placeholder.clone();
     let buffer_clone = buffer.clone();
     focus_controller.connect_leave(move |_| {
@@ -1246,17 +1349,17 @@ pub fn create_git_diff_panel(
             show_placeholder_clone();
         }
     });
-    
+
     commit_message_view.add_controller(focus_controller);
 
     // State for the panel
     let repo_path_rc: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let changes_rc: Rc<RefCell<Vec<GitFileChange>>> = Rc::new(RefCell::new(Vec::new()));
     let action_group_rc = Rc::new(RefCell::new(gtk4::gio::SimpleActionGroup::new()));
-    
+
     // Create a RefCell to hold the update function (for self-reference)
     let update_git_status_rc: Rc<RefCell<Option<Rc<dyn Fn()>>>> = Rc::new(RefCell::new(None));
-    
+
     // Clone widgets early for use in branch actions
     let refresh_button_for_actions = refresh_button.clone();
     let stage_all_button_for_actions = stage_all_button.clone();
@@ -1304,10 +1407,10 @@ pub fn create_git_diff_panel(
                 // Populate branch menu
                 let branches = get_all_branches(&repo);
                 let menu = gtk4::gio::Menu::new();
-                
+
                 // Create new action group for this update
                 let new_action_group = gtk4::gio::SimpleActionGroup::new();
-                
+
                 // Add local branches section
                 let local_section = gtk4::gio::Menu::new();
                 let mut has_local = false;
@@ -1317,9 +1420,10 @@ pub fn create_git_diff_panel(
                     } else {
                         format!("  {}", branch_info.name)
                     };
-                    let action_name = format!("switch-local.{}", branch_info.name.replace('/', "-"));
+                    let action_name =
+                        format!("switch-local.{}", branch_info.name.replace('/', "-"));
                     local_section.append(Some(&label), Some(&format!("branch.{}", action_name)));
-                    
+
                     // Create action for this branch
                     let action = gtk4::gio::SimpleAction::new(&action_name, None);
                     let branch_name = branch_info.name.clone();
@@ -1329,7 +1433,7 @@ pub fn create_git_diff_panel(
                     let commit_btn = commit_button_for_actions.clone();
                     let stage_all_btn = stage_all_button_for_actions.clone();
                     let unstage_all_btn = unstage_all_button_for_actions.clone();
-                    
+
                     action.connect_activate(move |_, _| {
                         if let Some(repo) = repo_path_for_action.borrow().as_ref() {
                             // Disable UI elements during branch switch
@@ -1338,11 +1442,17 @@ pub fn create_git_diff_panel(
                             stage_all_btn.set_sensitive(false);
                             unstage_all_btn.set_sensitive(false);
                             refresh_btn.set_sensitive(false);
-                            
-                            crate::status_log::log_info(&format!("Switching to branch '{}'...", branch_name));
+
+                            crate::status_log::log_info(&format!(
+                                "Switching to branch '{}'...",
+                                branch_name
+                            ));
                             match switch_branch(repo, &branch_name, false) {
                                 Ok(()) => {
-                                    crate::status_log::log_success(&format!("Switched to branch '{}'", branch_name));
+                                    crate::status_log::log_success(&format!(
+                                        "Switched to branch '{}'",
+                                        branch_name
+                                    ));
                                     // Trigger immediate refresh by clicking the refresh button
                                     let btn = refresh_btn.clone();
                                     let branch_btn_clone = branch_btn.clone();
@@ -1350,17 +1460,20 @@ pub fn create_git_diff_panel(
                                     let stage_all_btn_clone = stage_all_btn.clone();
                                     let unstage_all_btn_clone = unstage_all_btn.clone();
                                     let refresh_btn_clone = refresh_btn.clone();
-                                    
+
                                     glib::idle_add_local_once(move || {
                                         btn.emit_clicked();
                                         // Re-enable UI elements after refresh
-                                        glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
-                                            branch_btn_clone.set_sensitive(true);
-                                            commit_btn_clone.set_sensitive(true);
-                                            stage_all_btn_clone.set_sensitive(true);
-                                            unstage_all_btn_clone.set_sensitive(true);
-                                            refresh_btn_clone.set_sensitive(true);
-                                        });
+                                        glib::timeout_add_local_once(
+                                            std::time::Duration::from_millis(100),
+                                            move || {
+                                                branch_btn_clone.set_sensitive(true);
+                                                commit_btn_clone.set_sensitive(true);
+                                                stage_all_btn_clone.set_sensitive(true);
+                                                unstage_all_btn_clone.set_sensitive(true);
+                                                refresh_btn_clone.set_sensitive(true);
+                                            },
+                                        );
                                     });
                                 }
                                 Err(e) => {
@@ -1376,7 +1489,7 @@ pub fn create_git_diff_panel(
                             }
                         }
                     });
-                    
+
                     new_action_group.add_action(&action);
                     has_local = true;
                 }
@@ -1388,9 +1501,13 @@ pub fn create_git_diff_panel(
                 let remote_section = gtk4::gio::Menu::new();
                 let mut has_remote = false;
                 for branch_info in branches.iter().filter(|b| b.is_remote) {
-                    let action_name = format!("switch-remote.{}", branch_info.name.replace('/', "-"));
-                    remote_section.append(Some(&branch_info.name), Some(&format!("branch.{}", action_name)));
-                    
+                    let action_name =
+                        format!("switch-remote.{}", branch_info.name.replace('/', "-"));
+                    remote_section.append(
+                        Some(&branch_info.name),
+                        Some(&format!("branch.{}", action_name)),
+                    );
+
                     // Create action for this remote branch
                     let action = gtk4::gio::SimpleAction::new(&action_name, None);
                     let branch_name = branch_info.name.clone();
@@ -1400,7 +1517,7 @@ pub fn create_git_diff_panel(
                     let commit_btn = commit_button_for_actions.clone();
                     let stage_all_btn = stage_all_button_for_actions.clone();
                     let unstage_all_btn = unstage_all_button_for_actions.clone();
-                    
+
                     action.connect_activate(move |_, _| {
                         if let Some(repo) = repo_path_for_action.borrow().as_ref() {
                             // Disable UI elements during branch switch
@@ -1409,18 +1526,24 @@ pub fn create_git_diff_panel(
                             stage_all_btn.set_sensitive(false);
                             unstage_all_btn.set_sensitive(false);
                             refresh_btn.set_sensitive(false);
-                            
+
                             // Extract local name for better messaging
                             let local_name = if let Some(pos) = branch_name.find('/') {
                                 &branch_name[pos + 1..]
                             } else {
                                 branch_name.as_str()
                             };
-                            
-                            crate::status_log::log_info(&format!("Switching to branch '{}'...", local_name));
+
+                            crate::status_log::log_info(&format!(
+                                "Switching to branch '{}'...",
+                                local_name
+                            ));
                             match switch_branch(repo, &branch_name, true) {
                                 Ok(()) => {
-                                    crate::status_log::log_success(&format!("Switched to branch '{}'", local_name));
+                                    crate::status_log::log_success(&format!(
+                                        "Switched to branch '{}'",
+                                        local_name
+                                    ));
                                     // Trigger immediate refresh by clicking the refresh button
                                     let btn = refresh_btn.clone();
                                     let branch_btn_clone = branch_btn.clone();
@@ -1428,17 +1551,20 @@ pub fn create_git_diff_panel(
                                     let stage_all_btn_clone = stage_all_btn.clone();
                                     let unstage_all_btn_clone = unstage_all_btn.clone();
                                     let refresh_btn_clone = refresh_btn.clone();
-                                    
+
                                     glib::idle_add_local_once(move || {
                                         btn.emit_clicked();
                                         // Re-enable UI elements after refresh
-                                        glib::timeout_add_local_once(std::time::Duration::from_millis(100), move || {
-                                            branch_btn_clone.set_sensitive(true);
-                                            commit_btn_clone.set_sensitive(true);
-                                            stage_all_btn_clone.set_sensitive(true);
-                                            unstage_all_btn_clone.set_sensitive(true);
-                                            refresh_btn_clone.set_sensitive(true);
-                                        });
+                                        glib::timeout_add_local_once(
+                                            std::time::Duration::from_millis(100),
+                                            move || {
+                                                branch_btn_clone.set_sensitive(true);
+                                                commit_btn_clone.set_sensitive(true);
+                                                stage_all_btn_clone.set_sensitive(true);
+                                                unstage_all_btn_clone.set_sensitive(true);
+                                                refresh_btn_clone.set_sensitive(true);
+                                            },
+                                        );
                                     });
                                 }
                                 Err(e) => {
@@ -1454,7 +1580,7 @@ pub fn create_git_diff_panel(
                             }
                         }
                     });
-                    
+
                     new_action_group.add_action(&action);
                     has_remote = true;
                 }
@@ -1480,7 +1606,10 @@ pub fn create_git_diff_panel(
                         GitStatus::Staged | GitStatus::Added => {
                             staged_changes.push(change.clone());
                         }
-                        GitStatus::Modified | GitStatus::Untracked | GitStatus::Deleted | GitStatus::Renamed => {
+                        GitStatus::Modified
+                        | GitStatus::Untracked
+                        | GitStatus::Deleted
+                        | GitStatus::Renamed => {
                             unstaged_changes.push(change.clone());
                         }
                         GitStatus::ModifiedStaged => {
@@ -1494,11 +1623,15 @@ pub fn create_git_diff_panel(
                 // Update commit button text based on state
                 // Priority: incoming commits > staged changes > unpushed commits
                 let incoming_count = count_incoming_commits(&repo);
-                
+
                 if incoming_count > 0 {
                     // There are commits to pull - show "Pull" button
                     commit_button.set_label(&format!("Pull ({})", incoming_count));
-                    commit_button.set_tooltip_text(Some(&format!("Pull {} commit{} from remote", incoming_count, if incoming_count == 1 { "" } else { "s" })));
+                    commit_button.set_tooltip_text(Some(&format!(
+                        "Pull {} commit{} from remote",
+                        incoming_count,
+                        if incoming_count == 1 { "" } else { "s" }
+                    )));
                 } else if !staged_changes.is_empty() {
                     // There are staged changes - show "Commit"
                     commit_button.set_label("Commit");
@@ -1508,7 +1641,11 @@ pub fn create_git_diff_panel(
                     let unpushed_count = count_unpushed_commits(&repo);
                     if unpushed_count > 0 {
                         commit_button.set_label(&format!("Push ({})", unpushed_count));
-                        commit_button.set_tooltip_text(Some(&format!("Push {} unpushed commit{}", unpushed_count, if unpushed_count == 1 { "" } else { "s" })));
+                        commit_button.set_tooltip_text(Some(&format!(
+                            "Push {} unpushed commit{}",
+                            unpushed_count,
+                            if unpushed_count == 1 { "" } else { "s" }
+                        )));
                     } else {
                         commit_button.set_label("Commit");
                         commit_button.set_tooltip_text(Some("No changes to commit"));
@@ -1538,14 +1675,19 @@ pub fn create_git_diff_panel(
                     unstage_btn.set_icon_name("list-remove-symbolic");
                     unstage_btn.set_tooltip_text(Some("Unstage this file"));
                     unstage_btn.set_valign(gtk4::Align::Center);
-                    
+
                     let file_path_for_unstage = change.path.clone();
                     let repo_for_unstage = repo.clone();
                     let update_rc_clone = update_git_status_rc.clone();
                     unstage_btn.connect_clicked(move |_| {
                         if let Ok(()) = unstage_file(&repo_for_unstage, &file_path_for_unstage) {
-                            let rel_path = file_path_for_unstage.strip_prefix(&repo_for_unstage).unwrap_or(&file_path_for_unstage);
-                            crate::status_log::log_success(&format!("Unstaged: {}", rel_path.display()));
+                            let rel_path = file_path_for_unstage
+                                .strip_prefix(&repo_for_unstage)
+                                .unwrap_or(&file_path_for_unstage);
+                            crate::status_log::log_success(&format!(
+                                "Unstaged: {}",
+                                rel_path.display()
+                            ));
                             if let Some(update_fn) = update_rc_clone.borrow().as_ref() {
                                 let update_fn = update_fn.clone();
                                 glib::idle_add_local_once(move || {
@@ -1559,7 +1701,10 @@ pub fn create_git_diff_panel(
                     file_box.append(&unstage_btn);
 
                     // Store file info and indicate it's staged in tooltip
-                    row.set_tooltip_text(Some(&format!("staged:{}", change.path.to_string_lossy())));
+                    row.set_tooltip_text(Some(&format!(
+                        "staged:{}",
+                        change.path.to_string_lossy()
+                    )));
 
                     row.set_child(Some(&file_box));
                     staged_files_list.append(&row);
@@ -1588,14 +1733,19 @@ pub fn create_git_diff_panel(
                     stage_btn.set_icon_name("list-add-symbolic");
                     stage_btn.set_tooltip_text(Some("Stage this file"));
                     stage_btn.set_valign(gtk4::Align::Center);
-                    
+
                     let file_path_for_stage = change.path.clone();
                     let repo_for_stage = repo.clone();
                     let update_rc_clone = update_git_status_rc.clone();
                     stage_btn.connect_clicked(move |_| {
                         if let Ok(()) = stage_file(&repo_for_stage, &file_path_for_stage) {
-                            let rel_path = file_path_for_stage.strip_prefix(&repo_for_stage).unwrap_or(&file_path_for_stage);
-                            crate::status_log::log_success(&format!("Staged: {}", rel_path.display()));
+                            let rel_path = file_path_for_stage
+                                .strip_prefix(&repo_for_stage)
+                                .unwrap_or(&file_path_for_stage);
+                            crate::status_log::log_success(&format!(
+                                "Staged: {}",
+                                rel_path.display()
+                            ));
                             if let Some(update_fn) = update_rc_clone.borrow().as_ref() {
                                 let update_fn = update_fn.clone();
                                 glib::idle_add_local_once(move || {
@@ -1609,7 +1759,10 @@ pub fn create_git_diff_panel(
                     file_box.append(&stage_btn);
 
                     // Store file info and indicate it's unstaged
-                    row.set_tooltip_text(Some(&format!("unstaged:{}", change.path.to_string_lossy())));
+                    row.set_tooltip_text(Some(&format!(
+                        "unstaged:{}",
+                        change.path.to_string_lossy()
+                    )));
 
                     row.set_child(Some(&file_box));
                     files_list.append(&row);
@@ -1621,7 +1774,7 @@ pub fn create_git_diff_panel(
             }
         }) as Rc<dyn Fn()>
     };
-    
+
     // Store the update function in the RefCell so it can reference itself
     *update_git_status_rc.borrow_mut() = Some(update_git_status.clone());
 
@@ -1644,7 +1797,7 @@ pub fn create_git_diff_panel(
             Some(r) => r.clone(),
             None => return,
         };
-        
+
         // Clone the changes to avoid holding a borrow during the update
         let changes_to_stage = changes_for_stage_all.borrow().clone();
         let mut staged_count = 0;
@@ -1656,8 +1809,12 @@ pub fn create_git_diff_panel(
         }
 
         if staged_count > 0 {
-            crate::status_log::log_success(&format!("Staged {} file{}", staged_count, if staged_count == 1 { "" } else { "s" }));
-            
+            crate::status_log::log_success(&format!(
+                "Staged {} file{}",
+                staged_count,
+                if staged_count == 1 { "" } else { "s" }
+            ));
+
             // Schedule UI update on the main thread after current event completes
             let update_clone = update_git_status_for_stage_all.clone();
             glib::idle_add_local_once(move || {
@@ -1675,14 +1832,17 @@ pub fn create_git_diff_panel(
             Some(r) => r.clone(),
             None => return,
         };
-        
+
         // Clone the changes to avoid holding a borrow during the update
         let changes_to_unstage = changes_for_unstage_all.borrow().clone();
         let mut unstaged_count = 0;
 
         // Unstage only files that are currently staged
         for change in changes_to_unstage.iter() {
-            if matches!(change.status, GitStatus::Staged | GitStatus::Added | GitStatus::ModifiedStaged) {
+            if matches!(
+                change.status,
+                GitStatus::Staged | GitStatus::Added | GitStatus::ModifiedStaged
+            ) {
                 if let Ok(()) = unstage_file(&repo, &change.path) {
                     unstaged_count += 1;
                 }
@@ -1690,8 +1850,12 @@ pub fn create_git_diff_panel(
         }
 
         if unstaged_count > 0 {
-            crate::status_log::log_success(&format!("Unstaged {} file{}", unstaged_count, if unstaged_count == 1 { "" } else { "s" }));
-            
+            crate::status_log::log_success(&format!(
+                "Unstaged {} file{}",
+                unstaged_count,
+                if unstaged_count == 1 { "" } else { "s" }
+            ));
+
             // Schedule UI update on the main thread after current event completes
             let update_clone = update_git_status_for_unstage_all.clone();
             glib::idle_add_local_once(move || {
@@ -1705,11 +1869,11 @@ pub fn create_git_diff_panel(
     let editor_notebook_for_staged = editor_notebook.clone();
     let active_tab_path_for_staged = active_tab_path.clone();
     let files_list_for_staged = files_list.clone();
-    
+
     staged_files_list.connect_row_activated(move |_, row| {
         // Unselect the unstaged list
         files_list_for_staged.unselect_all();
-        
+
         if let Some(tooltip) = row.tooltip_text() {
             // Extract file path from tooltip (format: "staged:/path/to/file")
             let file_path_str = tooltip.strip_prefix("staged:").unwrap_or(&tooltip);
@@ -1719,16 +1883,19 @@ pub fn create_git_diff_panel(
                 // Get relative path for the tab title
                 let rel_path = file_path.strip_prefix(repo).unwrap_or(&file_path);
                 let tab_title = format!("Diff (Staged): {}", rel_path.display());
-                
+
                 // Check if a diff tab for this file is already open
                 let mut existing_page = None;
                 let num_pages = editor_notebook_for_staged.n_pages();
-                
+
                 for page_num in 0..num_pages {
                     if let Some(page) = editor_notebook_for_staged.nth_page(Some(page_num)) {
                         if let Some(tab_label) = editor_notebook_for_staged.tab_label(&page) {
                             if let Some(tab_box) = tab_label.downcast_ref::<gtk4::Box>() {
-                                if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                                if let Some(label) = tab_box
+                                    .first_child()
+                                    .and_then(|w| w.downcast::<Label>().ok())
+                                {
                                     let label_text = label.text();
                                     let clean_text = label_text.trim_start_matches('*');
                                     if clean_text == tab_title {
@@ -1740,14 +1907,14 @@ pub fn create_git_diff_panel(
                         }
                     }
                 }
-                
+
                 if let Some(page_num) = existing_page {
                     editor_notebook_for_staged.set_current_page(Some(page_num));
                 } else {
                     // For staged changes: compare HEAD vs staged (index)
                     let old_content = get_old_file_content(repo, &file_path).unwrap_or_default();
                     let new_content = get_staged_file_content(repo, &file_path).unwrap_or_default();
-                    
+
                     create_diff_tab(
                         &editor_notebook_for_staged,
                         &active_tab_path_for_staged,
@@ -1769,11 +1936,11 @@ pub fn create_git_diff_panel(
     let active_tab_path_for_selection = active_tab_path.clone();
     let _parent_window_for_selection = parent_window.clone();
     let staged_files_list_for_selection = staged_files_list.clone();
-    
+
     files_list.connect_row_activated(move |_, row| {
         // Unselect the staged list
         staged_files_list_for_selection.unselect_all();
-        
+
         if let Some(tooltip) = row.tooltip_text() {
             // Extract file path from tooltip (format: "unstaged:/path/to/file")
             let file_path_str = tooltip.strip_prefix("unstaged:").unwrap_or(&tooltip);
@@ -1783,16 +1950,19 @@ pub fn create_git_diff_panel(
                 // Get relative path for the tab title
                 let rel_path = file_path.strip_prefix(repo).unwrap_or(&file_path);
                 let tab_title = format!("Diff: {}", rel_path.display());
-                
+
                 // Check if a diff tab for this file is already open
                 let mut existing_page = None;
                 let num_pages = editor_notebook_for_selection.n_pages();
-                
+
                 for page_num in 0..num_pages {
                     if let Some(page) = editor_notebook_for_selection.nth_page(Some(page_num)) {
                         if let Some(tab_label) = editor_notebook_for_selection.tab_label(&page) {
                             if let Some(tab_box) = tab_label.downcast_ref::<gtk4::Box>() {
-                                if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                                if let Some(label) = tab_box
+                                    .first_child()
+                                    .and_then(|w| w.downcast::<Label>().ok())
+                                {
                                     let label_text = label.text();
                                     let clean_text = label_text.trim_start_matches('*');
                                     if clean_text == tab_title {
@@ -1804,7 +1974,7 @@ pub fn create_git_diff_panel(
                         }
                     }
                 }
-                
+
                 if let Some(page_num) = existing_page {
                     editor_notebook_for_selection.set_current_page(Some(page_num));
                 } else {
@@ -1814,7 +1984,7 @@ pub fn create_git_diff_panel(
                         .or_else(|| get_old_file_content(repo, &file_path))
                         .unwrap_or_default();
                     let new_content = get_new_file_content(&file_path).unwrap_or_default();
-                    
+
                     create_diff_tab(
                         &editor_notebook_for_selection,
                         &active_tab_path_for_selection,
@@ -1870,7 +2040,7 @@ pub fn create_git_diff_panel(
                             return;
                         }
                     };
-                    
+
                     match stage_file(&repo, &file_for_stage) {
                         Ok(()) => {
                             crate::status_log::log_success("File staged");
@@ -1908,7 +2078,7 @@ pub fn create_git_diff_panel(
                             return;
                         }
                     };
-                    
+
                     match unstage_file(&repo, &file_for_unstage) {
                         Ok(()) => {
                             crate::status_log::log_success("File unstaged");
@@ -1947,7 +2117,7 @@ pub fn create_git_diff_panel(
                             return;
                         }
                     };
-                    
+
                     // Show confirmation dialog
                     let dialog = gtk4::MessageDialog::new(
                         None::<&gtk4::Window>,
@@ -1975,7 +2145,10 @@ pub fn create_git_diff_panel(
                                     });
                                 }
                                 Err(e) => {
-                                    crate::status_log::log_error(&format!("Failed to discard: {}", e));
+                                    crate::status_log::log_error(&format!(
+                                        "Failed to discard: {}",
+                                        e
+                                    ));
                                 }
                             }
                         }
@@ -2042,7 +2215,7 @@ pub fn create_git_diff_panel(
                             return;
                         }
                     };
-                    
+
                     match unstage_file(&repo, &file_for_unstage) {
                         Ok(()) => {
                             crate::status_log::log_success("File unstaged");
@@ -2079,13 +2252,13 @@ pub fn create_git_diff_panel(
     let commit_message_view_for_commit = commit_message_view.clone();
     let changes_for_commit = changes_rc.clone();
     let show_placeholder_for_commit = show_placeholder.clone();
-    
+
     commit_button.connect_clicked(move |button| {
         // Prevent spam clicking - disable button during operation
         if !button.is_sensitive() {
             return;
         }
-        
+
         let repo = match repo_path_for_commit.borrow().as_ref() {
             Some(r) => r.clone(),
             None => {
@@ -2093,22 +2266,27 @@ pub fn create_git_diff_panel(
                 return;
             }
         };
-        
+
         // Check if we have staged changes
         let changes = changes_for_commit.borrow();
-        let has_staged = changes.iter().any(|c| matches!(c.status, GitStatus::Staged | GitStatus::Added | GitStatus::ModifiedStaged));
-        
+        let has_staged = changes.iter().any(|c| {
+            matches!(
+                c.status,
+                GitStatus::Staged | GitStatus::Added | GitStatus::ModifiedStaged
+            )
+        });
+
         // Check button label to determine action
         let button_label = button.label();
         let label_str = button_label.as_ref().map(|s| s.as_str()).unwrap_or("");
-        
+
         // Disable button during operation
         button.set_sensitive(false);
-        
+
         if label_str.starts_with("Pull") {
             // Button says "Pull" - perform pull
             crate::status_log::log_info("Pulling from remote...");
-            
+
             match pull_changes(&repo) {
                 Ok(()) => {
                     crate::status_log::log_success("Pulled from remote successfully");
@@ -2122,7 +2300,7 @@ pub fn create_git_diff_panel(
                     crate::status_log::log_error(&format!("Pull failed: {}", e));
                 }
             }
-            
+
             // Re-enable button after operation
             button.set_sensitive(true);
         } else if has_staged {
@@ -2131,14 +2309,14 @@ pub fn create_git_diff_panel(
             let start = buffer.start_iter();
             let end = buffer.end_iter();
             let message = buffer.text(&start, &end, false);
-            
+
             // Skip if message is just the placeholder
             if message.trim().is_empty() || message == "Commit message" {
                 crate::status_log::log_error("Commit message cannot be empty");
                 button.set_sensitive(true);
                 return;
             }
-            
+
             // Perform commit
             match commit_changes(&repo, &message) {
                 Ok(()) => {
@@ -2156,13 +2334,13 @@ pub fn create_git_diff_panel(
                     crate::status_log::log_error(&format!("Commit failed: {}", e));
                 }
             }
-            
+
             // Re-enable button after operation
             button.set_sensitive(true);
         } else if label_str.starts_with("Push") {
             // No staged changes but button says "Push" - perform push
             crate::status_log::log_info("Pushing to remote...");
-            
+
             match push_changes(&repo) {
                 Ok(()) => {
                     crate::status_log::log_success("Pushed to remote successfully");
@@ -2176,7 +2354,7 @@ pub fn create_git_diff_panel(
                     crate::status_log::log_error(&format!("Push failed: {}", e));
                 }
             }
-            
+
             // Re-enable button after operation
             button.set_sensitive(true);
         } else {

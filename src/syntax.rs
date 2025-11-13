@@ -1,16 +1,15 @@
 // Syntax highlighting functionality for the text editor
 // This module manages syntax highlighting based on file types
 
-use sourceview5::{prelude::*, Buffer, LanguageManager, StyleSchemeManager, View};
 use gtk4::ScrolledWindow;
 use gtk4::Settings;
+use sourceview5::{prelude::*, Buffer, LanguageManager, StyleSchemeManager, View};
 use std::path::Path;
 
 /// Determines whether the system is using a dark theme
-/// 
+///
 /// Checks the GTK settings and environment to determine if the system prefers dark mode
 pub fn is_dark_mode_enabled() -> bool {
-    
     // Check for desktop environment specific settings FIRST (more reliable than GTK settings)
     let desktop_env = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
 
@@ -28,32 +27,37 @@ pub fn is_dark_mode_enabled() -> bool {
                         if color_scheme.as_str() == "prefer-dark" {
                             return true;
                         }
-                        if color_scheme.as_str() == "prefer-light" || color_scheme.as_str() == "default" {
+                        if color_scheme.as_str() == "prefer-light"
+                            || color_scheme.as_str() == "default"
+                        {
                             return false; // Explicitly return false for light themes - this is definitive
                         }
                     }
                 }
-                
+
                 // Check the gtk-theme setting as fallback
                 let gtk_theme = gio_settings.string("gtk-theme");
                 let theme_lower = gtk_theme.to_lowercase();
                 if theme_lower.contains("dark") {
                     return true;
-                } else if theme_lower == "yaru" || theme_lower == "adwaita" || theme_lower.contains("light") {
+                } else if theme_lower == "yaru"
+                    || theme_lower == "adwaita"
+                    || theme_lower.contains("light")
+                {
                     return false; // Explicitly return false for known light themes
                 }
-            },
+            }
             Err(_) => {
                 // Schema not available, continue to fallback methods
             }
         }
-        
+
         // Legacy method: Try gsettings command
         let output = std::process::Command::new("gsettings")
             .args(["get", "org.gnome.desktop.interface", "color-scheme"])
             .output()
             .ok();
-            
+
         if let Some(output) = output {
             let output_str = String::from_utf8_lossy(&output.stdout);
             if output_str.contains("dark") {
@@ -62,46 +66,59 @@ pub fn is_dark_mode_enabled() -> bool {
                 return false; // Explicitly return false for light themes
             }
         }
-        
+
         // Also try the gtk-theme setting which might indicate a dark theme
         let output = std::process::Command::new("gsettings")
             .args(["get", "org.gnome.desktop.interface", "gtk-theme"])
             .output()
             .ok();
-            
+
         if let Some(output) = output {
             let output_str = String::from_utf8_lossy(&output.stdout).to_lowercase();
             if output_str.contains("dark") {
                 return true;
-            } else if output_str.contains("light") || output_str.contains("yaru") || output_str.contains("adwaita") {
+            } else if output_str.contains("light")
+                || output_str.contains("yaru")
+                || output_str.contains("adwaita")
+            {
                 return false; // Explicitly return false for known light themes
             }
         }
     } else if desktop_env.contains("KDE") {
         // Try kreadconfig5 for KDE Plasma
         let output = std::process::Command::new("kreadconfig5")
-            .args(["--group", "General", "--key", "ColorScheme", "--file", "kdeglobals"])
+            .args([
+                "--group",
+                "General",
+                "--key",
+                "ColorScheme",
+                "--file",
+                "kdeglobals",
+            ])
             .output()
             .ok();
-            
+
         if let Some(output) = output {
             let output_str = String::from_utf8_lossy(&output.stdout);
-            if output_str.contains("Dark") || output_str.contains("dark") || output_str.contains("Breeze Dark") {
+            if output_str.contains("Dark")
+                || output_str.contains("dark")
+                || output_str.contains("Breeze Dark")
+            {
                 return true;
             }
         }
     }
-    
+
     // NOTE: GTK settings check disabled because it can lag behind system theme changes
     // and override correct GSettings detection. We rely on GSettings which is more reliable.
-    // 
+    //
     // Check GTK settings as a fallback (may not always be accurate with Ubuntu theme switching)
     // if let Some(settings) = Settings::default() {
     //     let gtk_setting = settings.is_gtk_application_prefer_dark_theme();
     //     if gtk_setting {
     //         return true;
     //     }
-    //     
+    //
     //     // Also check the theme name itself
     //     let theme_name = settings.gtk_theme_name();
     //     if let Some(theme) = theme_name {
@@ -110,19 +127,28 @@ pub fn is_dark_mode_enabled() -> bool {
     //         }
     //     }
     // }
-    
+
     // Check for any other common dark theme indicators
     let typical_dark_themes = [
-        "Adwaita-dark", "Breeze-Dark", "Arc-Dark", "Yaru-dark", 
-        "Materia-dark", "Pop-dark", "Nordic", "Dracula"
+        "Adwaita-dark",
+        "Breeze-Dark",
+        "Arc-Dark",
+        "Yaru-dark",
+        "Materia-dark",
+        "Pop-dark",
+        "Nordic",
+        "Dracula",
     ];
-    
+
     if let Ok(current_theme) = std::env::var("GTK_THEME") {
-        if typical_dark_themes.iter().any(|&theme| current_theme.contains(theme)) {
+        if typical_dark_themes
+            .iter()
+            .any(|&theme| current_theme.contains(theme))
+        {
             return true;
         }
     }
-    
+
     // Default to light theme if all detection methods fail
     false
 }
@@ -135,7 +161,7 @@ thread_local! {
 }
 
 /// Gets the appropriate style scheme name based on user preferences
-/// 
+///
 /// Returns user-configured theme for light or dark mode, without fallback logic
 pub fn get_preferred_style_scheme() -> String {
     // Prevent recursive calls when refresh_settings calls back into this function
@@ -147,12 +173,12 @@ pub fn get_preferred_style_scheme() -> String {
             "classic".to_string()
         };
     }
-    
+
     GETTING_STYLE.with(|flag| flag.set(true));
-    
+
     // Get a fresh copy of settings
     let settings = crate::settings::get_settings();
-    
+
     // Return the user's configured theme based on dark/light mode without fallbacks
     let theme = if is_dark_mode_enabled() {
         let theme = settings.get_dark_theme();
@@ -163,38 +189,44 @@ pub fn get_preferred_style_scheme() -> String {
         println!("Using light theme: {}", theme);
         theme
     };
-    
+
     // Reset the flag
     GETTING_STYLE.with(|flag| flag.set(false));
-    
+
     theme
 }
 
 /// Creates a sourceview with syntax highlighting instead of a regular TextView
-/// 
+///
 /// This function replaces the standard TextView with SourceView from the sourceview5 library,
 /// which provides syntax highlighting capabilities based on file extensions.
 pub fn create_source_view() -> (View, Buffer) {
     // Create the buffer first with syntax highlighting
     let buffer = Buffer::new(None);
-    
+
     // Set up syntax highlighting with a style scheme based on user preferences
     let scheme_manager = StyleSchemeManager::new();
     let preferred_scheme = get_preferred_style_scheme();
-    
+
     println!("Creating new source view with theme: {}", preferred_scheme);
-    
+
     // Apply the user's preferred theme directly
     if let Some(scheme) = scheme_manager.scheme(&preferred_scheme) {
-        println!("Successfully applied theme '{}' to new buffer", preferred_scheme);
+        println!(
+            "Successfully applied theme '{}' to new buffer",
+            preferred_scheme
+        );
         buffer.set_style_scheme(Some(&scheme));
     } else {
-        println!("WARNING: Failed to find theme '{}' for new buffer", preferred_scheme);
+        println!(
+            "WARNING: Failed to find theme '{}' for new buffer",
+            preferred_scheme
+        );
     }
 
     // Create the view with the buffer
     let source_view = View::with_buffer(&buffer);
-    
+
     // Configure standard options for the source view
     source_view.set_monospace(true);
     source_view.set_editable(true);
@@ -203,43 +235,50 @@ pub fn create_source_view() -> (View, Buffer) {
     source_view.set_highlight_current_line(true);
     source_view.set_tab_width(4);
     source_view.set_auto_indent(true);
-    
+
     // Apply user's font size setting
     let settings = crate::settings::get_settings();
     let font_size = settings.get_font_size();
     apply_font_size_to_view(&source_view, font_size);
-    
+
     // Enable code completion
     crate::completion::setup_completion(&source_view);
-    
+
     // Setup keyboard shortcuts for completion (Ctrl+Space)
     crate::completion::setup_completion_shortcuts(&source_view);
-    
+
+    // Note: setup_linting is called later when the file path is known
+    // See handlers.rs open_or_focus_tab() which calls setup_linting with the actual file path
+
     (source_view, buffer)
 }
 
 /// Updates the style scheme of an existing buffer based on user theme preference
-/// 
+///
 /// This function can be called when the system theme changes to update
 /// the syntax highlighting style scheme accordingly
 pub fn update_buffer_style_scheme(buffer: &Buffer) {
     // Force refresh of settings to pick up any theme changes
     crate::settings::refresh_settings();
-    
+
     let scheme_manager = StyleSchemeManager::new();
     let preferred_scheme = get_preferred_style_scheme();
-    
+
     println!("Updating buffer style scheme to: {}", preferred_scheme);
-    
+
     // Simply apply the user's preferred theme without fallbacks
     if let Some(scheme) = scheme_manager.scheme(&preferred_scheme) {
         println!("Successfully found and applied theme: {}", preferred_scheme);
         buffer.set_style_scheme(Some(&scheme));
     } else {
-        println!("WARNING: Theme '{}' not found in available schemes!", preferred_scheme);
-        
+        println!(
+            "WARNING: Theme '{}' not found in available schemes!",
+            preferred_scheme
+        );
+
         // List available schemes for debugging
-        let available_schemes: Vec<String> = scheme_manager.scheme_ids()
+        let available_schemes: Vec<String> = scheme_manager
+            .scheme_ids()
             .iter()
             .map(|s| s.to_string())
             .collect();
@@ -256,21 +295,21 @@ pub fn update_buffer_style_scheme(buffer: &Buffer) {
 /// and applies appropriate syntax highlighting to the buffer.
 pub fn set_language_for_file(buffer: &Buffer, file_path: &Path) -> bool {
     let language_manager = LanguageManager::new();
-    
+
     // Get the file extension
-    let extension = file_path.extension()
+    let extension = file_path
+        .extension()
         .and_then(|ext| ext.to_str())
         .unwrap_or("");
-    
+
     // Try to get language from file path directly
-    if let Some(language) = language_manager.guess_language(
-        Some(file_path.to_str().unwrap_or("")), 
-        None
-    ) {
+    if let Some(language) =
+        language_manager.guess_language(Some(file_path.to_str().unwrap_or("")), None)
+    {
         buffer.set_language(Some(&language));
         return true;
-    } 
-    
+    }
+
     // If that fails, try to map the extension to a language ourselves
     let language_id = match extension.to_lowercase().as_str() {
         "rs" => "rust",
@@ -300,14 +339,14 @@ pub fn set_language_for_file(buffer: &Buffer, file_path: &Path) -> bool {
         "svelte" => "html",
         _ => "",
     };
-    
+
     if !language_id.is_empty() {
         if let Some(language) = language_manager.language(language_id) {
             buffer.set_language(Some(&language));
             return true;
         }
     }
-    
+
     // If no language was set, default to plain text (no highlighting)
     buffer.set_language(None);
     false
@@ -329,21 +368,21 @@ pub fn create_source_view_scrolled(source_view: &View) -> ScrolledWindow {
 /// Useful for troubleshooting theme switching issues
 pub fn debug_theme_detection() {
     println!("=== Theme Detection Debug ===");
-    
+
     // Check GTK settings
     if let Some(settings) = Settings::default() {
         let gtk_setting = settings.is_gtk_application_prefer_dark_theme();
         println!("GTK dark theme preference: {}", gtk_setting);
-        
+
         let theme_name = settings.gtk_theme_name();
         println!("Current GTK theme name: {:?}", theme_name);
-        
+
         let icon_theme = settings.gtk_icon_theme_name();
         println!("Current icon theme: {:?}", icon_theme);
     } else {
         println!("GTK settings not available");
     }
-    
+
     // Check GIO settings for GNOME
     use gtk4::gio::prelude::*;
     match std::panic::catch_unwind(|| gtk4::gio::Settings::new("org.gnome.desktop.interface")) {
@@ -354,29 +393,31 @@ pub fn debug_theme_detection() {
                     let color_scheme = gio_settings.string("color-scheme");
                     println!("GNOME color-scheme: {}", color_scheme);
                 } else {
-                    println!("GNOME color-scheme key not available (requires GNOME 42+/Ubuntu 22.04+)");
+                    println!(
+                        "GNOME color-scheme key not available (requires GNOME 42+/Ubuntu 22.04+)"
+                    );
                 }
-                
+
                 if schema.has_key("gtk-theme") {
                     let gtk_theme = gio_settings.string("gtk-theme");
                     println!("GNOME gtk-theme: {}", gtk_theme);
                 }
             }
-        },
+        }
         Err(_) => {
             println!("GNOME desktop interface settings not available");
         }
     }
-    
+
     // Check environment variables
     if let Ok(desktop_env) = std::env::var("XDG_CURRENT_DESKTOP") {
         println!("Desktop environment: {}", desktop_env);
     }
-    
+
     if let Ok(gtk_theme) = std::env::var("GTK_THEME") {
         println!("GTK_THEME environment variable: {}", gtk_theme);
     }
-    
+
     // Final detection result
     let is_dark = is_dark_mode_enabled();
     println!("Final dark mode detection: {}", is_dark);
@@ -389,11 +430,14 @@ pub fn sync_gtk_with_system_theme() {
     if let Some(settings) = Settings::default() {
         let detected_dark_mode = is_dark_mode_enabled();
         let current_gtk_setting = settings.is_gtk_application_prefer_dark_theme();
-        
+
         if detected_dark_mode != current_gtk_setting {
-            println!("Syncing GTK setting: detected={}, current={}", detected_dark_mode, current_gtk_setting);
+            println!(
+                "Syncing GTK setting: detected={}, current={}",
+                detected_dark_mode, current_gtk_setting
+            );
             settings.set_gtk_application_prefer_dark_theme(detected_dark_mode);
-            
+
             // Force refresh of user settings to pick up theme change
             crate::settings::refresh_settings();
         }
@@ -407,14 +451,14 @@ pub fn increase_font_size() {
     let new_size = (current_size + 1).min(72); // Cap at 72pt
     settings.set_font_size(new_size);
     let _ = settings.save();
-    
+
     // Drop the mutex guard before calling refresh
     drop(settings);
     crate::settings::refresh_settings();
-    
+
     // Apply the new font size to all editor views
     apply_font_size_globally(new_size);
-    
+
     crate::status_log::log_info(&format!("Font size increased to {}", new_size));
 }
 
@@ -425,14 +469,14 @@ pub fn decrease_font_size() {
     let new_size = (current_size.saturating_sub(1)).max(6); // Minimum 6pt
     settings.set_font_size(new_size);
     let _ = settings.save();
-    
+
     // Drop the mutex guard before calling refresh
     drop(settings);
     crate::settings::refresh_settings();
-    
+
     // Apply the new font size to all editor views
     apply_font_size_globally(new_size);
-    
+
     crate::status_log::log_info(&format!("Font size decreased to {}", new_size));
 }
 
@@ -442,14 +486,14 @@ pub fn reset_font_size() {
     let default_size = crate::settings::DEFAULT_FONT_SIZE;
     settings.set_font_size(default_size);
     let _ = settings.save();
-    
+
     // Drop the mutex guard before calling refresh
     drop(settings);
     crate::settings::refresh_settings();
-    
+
     // Apply the new font size to all editor views
     apply_font_size_globally(default_size);
-    
+
     crate::status_log::log_info(&format!("Font size reset to default ({})", default_size));
 }
 
@@ -457,17 +501,17 @@ pub fn reset_font_size() {
 fn apply_font_size_to_all_views(font_size: u32) {
     let css = format!(
         "textview {{ font-size: {}pt; }} 
-         sourceview {{ font-size: {}pt; }}", 
+         sourceview {{ font-size: {}pt; }}",
         font_size, font_size
     );
-    
+
     let provider = gtk4::CssProvider::new();
     provider.load_from_data(&css);
-    
+
     gtk4::style_context_add_provider_for_display(
         &gtk4::gdk::Display::default().expect("Could not get default display"),
         &provider,
-        gtk4::STYLE_PROVIDER_PRIORITY_USER // Higher priority than application styles
+        gtk4::STYLE_PROVIDER_PRIORITY_USER, // Higher priority than application styles
     );
 }
 
@@ -475,7 +519,7 @@ fn apply_font_size_to_all_views(font_size: u32) {
 pub fn apply_font_size_globally(font_size: u32) {
     // First apply the global CSS for new views
     apply_font_size_to_all_views(font_size);
-    
+
     // Then find all existing windows and update their SourceViews
     let app = gtk4::gio::Application::default();
     if let Some(app) = app {
@@ -501,7 +545,7 @@ fn find_and_update_source_views(widget: &gtk4::Widget, font_size: u32) {
     if let Ok(source_view) = widget.clone().downcast::<sourceview5::View>() {
         apply_font_size_to_view(&source_view, font_size);
     }
-    
+
     // Recursively search children
     let mut child = widget.first_child();
     while let Some(current_child) = child {
@@ -514,19 +558,19 @@ fn find_and_update_source_views(widget: &gtk4::Widget, font_size: u32) {
 fn apply_font_size_to_view(source_view: &View, font_size: u32) {
     let css_class = format!("font-size-{}", font_size);
     let css = format!(".{} {{ font-size: {}pt; }}", css_class, font_size);
-    
+
     let provider = gtk4::CssProvider::new();
     provider.load_from_data(&css);
-    
+
     // Add the CSS provider to the view's style context
     let style_context = source_view.style_context();
-    
+
     // Remove old font size classes to avoid accumulation
     for size in 6..=72 {
         let old_class = format!("font-size-{}", size);
         style_context.remove_class(&old_class);
     }
-    
+
     style_context.add_provider(&provider, gtk4::STYLE_PROVIDER_PRIORITY_USER);
     style_context.add_class(&css_class);
 }

@@ -2,7 +2,10 @@
 
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, CompositeTemplate, Box as GtkBox, TextView, TextBuffer, ListBox, Button, Label, ScrolledWindow};
+use gtk4::{
+    glib, Box as GtkBox, Button, CompositeTemplate, Label, ListBox, ScrolledWindow, TextBuffer,
+    TextView,
+};
 
 mod imp {
     use super::*;

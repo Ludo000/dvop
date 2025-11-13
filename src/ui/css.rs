@@ -4,28 +4,28 @@
 use gtk4;
 
 /// Apply custom CSS to enhance the appearance of tabs
-/// 
+///
 /// This function creates and applies CSS styles to improve the tab appearance,
 /// making them look less flat and more visually distinct.
 pub fn apply_custom_css() {
     let provider = gtk4::CssProvider::new();
-    
+
     let css = build_complete_css();
-    
+
     // Load and apply the CSS
     provider.load_from_data(&css);
-    
+
     gtk4::style_context_add_provider_for_display(
         &gtk4::gdk::Display::default().expect("Could not get default display"),
         &provider,
-        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION
+        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
 }
 
 /// Builds the complete CSS string by combining all component styles
 fn build_complete_css() -> String {
     format!(
-        "{}{}{}{}{}{}{}{}{}",
+        "{}{}{}{}{}{}{}{}{}{}",
         get_notebook_tab_styles(),
         get_button_styles(),
         get_status_bar_styles(),
@@ -34,7 +34,8 @@ fn build_complete_css() -> String {
         get_file_operation_styles(),
         get_list_styles(),
         get_activity_bar_styles(),
-        get_search_styles()
+        get_search_styles(),
+        get_diagnostics_styles()
     )
 }
 
@@ -107,7 +108,7 @@ fn get_notebook_tab_styles() -> &'static str {
 fn get_button_styles() -> String {
     let is_dark_mode = crate::syntax::is_dark_mode_enabled();
     let active_tab_shade = if is_dark_mode { "2" } else { "0.85" };
-    
+
     format!(
         "
     /* === BUTTON STYLES === */
@@ -180,6 +181,15 @@ fn get_status_bar_styles() -> &'static str {
         font-size: 0.8em;
         color: alpha(@theme_fg_color, 0.7);
         font-family: monospace;
+    }
+    
+    .linter-status {
+        font-size: 0.85em;
+        color: alpha(@theme_fg_color, 0.8);
+        font-family: monospace;
+        padding: 2px 12px;
+        border-radius: 4px;
+        background-color: alpha(@theme_selected_bg_color, 0.05);
     }
     
     /* Log History Popup Styles */
@@ -676,6 +686,60 @@ fn get_search_styles() -> &'static str {
         background-image: none;
         text-decoration: underline;
         color: @theme_selected_bg_color;
+    }
+    "
+}
+
+/// Returns CSS styles for diagnostics panel
+fn get_diagnostics_styles() -> &'static str {
+    "
+    /* === DIAGNOSTICS PANEL STYLES === */
+    
+    /* Error diagnostics - red background, works in both dark and light mode */
+    .diagnostic-error {
+        background-color: alpha(#e74c3c, 0.45);
+        border-left: 3px solid #e74c3c;
+        border-radius: 4px;
+        padding: 12px;
+    }
+    
+    @media (prefers-color-scheme: light) {
+        .diagnostic-error {
+            background-color: alpha(#e74c3c, 0.08);
+        }
+    }
+    
+    /* Warning diagnostics - yellow/orange background */
+    .diagnostic-warning {
+        background-color: alpha(#f39c12, 0.45);
+        border-left: 3px solid #f39c12;
+        border-radius: 4px;
+        padding: 12px;
+    }
+    
+    @media (prefers-color-scheme: light) {
+        .diagnostic-warning {
+            background-color: alpha(#f39c12, 0.08);
+        }
+    }
+    
+    /* Info diagnostics - blue background */
+    .diagnostic-info {
+        background-color: alpha(#3498db, 0.45);
+        border-left: 3px solid #3498db;
+        border-radius: 4px;
+        padding: 12px;
+    }
+    
+    @media (prefers-color-scheme: light) {
+        .diagnostic-info {
+            background-color: alpha(#3498db, 0.08);
+        }
+    }
+
+    /* Collapsible file header in diagnostics panel - match message padding */
+    .diagnostic-file-header {
+        padding: 12px;
     }
     "
 }

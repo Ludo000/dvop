@@ -1,40 +1,51 @@
 // UI module for Dvop
 // Contains all UI component creation and layout functions
 
-pub mod terminal;
-pub mod file_manager;
 pub mod css;
-pub mod settings;
-pub mod global_search;
+pub mod file_manager;
 pub mod git_diff;
-pub mod search_panel_template;
 pub mod git_diff_panel_template;
+pub mod global_search;
+pub mod search_panel_template;
+pub mod settings;
 pub mod settings_dialog_template;
+pub mod terminal;
 
 use gtk4::prelude::*;
 use gtk4::{
+    gio,
+    glib,
+
     // Main application and window components
-    Application, ApplicationWindow, 
-    
+    Application,
+    ApplicationWindow,
+
     // Layout containers
-    Box as GtkBox, Notebook,
-    
+    Box as GtkBox,
     // Common UI elements
-    Button, HeaderBar, Label, Picture, TextView, Image, TextBuffer, Scale,
-    
+    Button,
+    HeaderBar,
+    Image,
+    Label,
     // Menu components for split button functionality
-    MenuButton, gio, glib,
-    
+    MenuButton,
+    Notebook,
+
     // Layout orientation for containers
-    Orientation
+    Orientation,
+    Picture,
+    Scale,
+
+    TextBuffer,
+    TextView,
 };
 
 // Import our modules
 use crate::syntax;
-use std::cell::RefCell;  // For interior mutability pattern
-use std::rc::Rc;         // For shared ownership
-use std::path::PathBuf;  // For file paths
-use std::collections::HashMap;  // For file path manager
+use std::cell::RefCell; // For interior mutability pattern
+use std::collections::HashMap;
+use std::path::PathBuf; // For file paths
+use std::rc::Rc; // For shared ownership // For file path manager
 
 // Template support
 use gtk4::subclass::prelude::*;
@@ -61,7 +72,7 @@ mod imp {
         pub save_main_button: TemplateChild<Button>,
         #[template_child]
         pub save_menu_button: TemplateChild<MenuButton>,
-        
+
         // Path bar widgets
         #[template_child]
         pub path_bar: TemplateChild<GtkBox>,
@@ -81,7 +92,7 @@ mod imp {
         pub refresh_button: TemplateChild<Button>,
         #[template_child]
         pub terminal_button: TemplateChild<Button>,
-        
+
         // Activity bar
         #[template_child]
         pub activity_bar: TemplateChild<GtkBox>,
@@ -91,7 +102,7 @@ mod imp {
         pub search_button: TemplateChild<gtk4::ToggleButton>,
         #[template_child]
         pub git_diff_button: TemplateChild<gtk4::ToggleButton>,
-        
+
         // Main layout
         #[template_child]
         pub paned: TemplateChild<gtk4::Paned>,
@@ -99,33 +110,33 @@ mod imp {
         pub editor_paned: TemplateChild<gtk4::Paned>,
         #[template_child]
         pub sidebar_stack: TemplateChild<gtk4::Stack>,
-        
+
         // File manager
         #[template_child]
         pub file_manager_panel: TemplateChild<GtkBox>,
         #[template_child]
         pub file_list_box: TemplateChild<gtk4::ListBox>,
-        
+
         // Search panel
         #[template_child]
         pub search_panel: TemplateChild<GtkBox>,
-        
+
         // Git diff panel
         #[template_child]
         pub git_diff_panel: TemplateChild<GtkBox>,
-        
+
         // Editor
         #[template_child]
         pub editor_notebook: TemplateChild<Notebook>,
         #[template_child]
         pub search_bar: TemplateChild<gtk4::SearchBar>,
-        
+
         // Terminal
         #[template_child]
         pub terminal_notebook: TemplateChild<Notebook>,
         #[template_child]
         pub add_terminal_button: TemplateChild<Button>,
-        
+
         // Status bar
         #[template_child]
         pub status_bar: TemplateChild<GtkBox>,
@@ -133,6 +144,8 @@ mod imp {
         pub status_button: TemplateChild<Button>,
         #[template_child]
         pub status_label: TemplateChild<Label>,
+        #[template_child]
+        pub linter_status_label: TemplateChild<GtkBox>,
         #[template_child]
         pub secondary_status_label: TemplateChild<Label>,
     }
@@ -169,55 +182,55 @@ impl DvopWindow {
     pub fn new(app: &Application) -> Self {
         // Apply CSS before creating the window
         css::apply_custom_css();
-        
+
         // Load resources
-        let resources = gio::Resource::load(
-            std::path::Path::new(env!("OUT_DIR")).join("resources.gresource")
-        ).expect("Could not load resources");
+        let resources =
+            gio::Resource::load(std::path::Path::new(env!("OUT_DIR")).join("resources.gresource"))
+                .expect("Could not load resources");
         gio::resources_register(&resources);
-        
+
         // Get saved window dimensions from settings
         let settings = crate::settings::get_settings();
         let window_width = settings.get_window_width();
         let window_height = settings.get_window_height();
         let file_panel_width = settings.get_file_panel_width();
         let terminal_height = settings.get_terminal_height();
-        
+
         let window: Self = glib::Object::builder()
             .property("application", app)
             .property("default-width", window_width)
             .property("default-height", window_height)
             .build();
-        
+
         // Load icon
         window.setup_icon();
-        
+
         // Set paned positions
         let imp = window.imp();
         imp.paned.set_position(file_panel_width);
         imp.editor_paned.set_position(terminal_height);
-        
+
         // Set initial volume
         let initial_volume = settings.get_audio_volume();
         imp.global_volume_scale.set_value(initial_volume);
         let volume_percent = (initial_volume * 100.0) as i32;
         imp.volume_label.set_text(&format!("{}%", volume_percent));
-        
+
         window
     }
-    
+
     fn setup_icon(&self) {
         // Load the custom icon into the icon theme
         if let Some(display) = gtk4::gdk::Display::default() {
             let icon_theme = gtk4::IconTheme::for_display(&display);
-            
+
             // Embedded icon data (fallback)
             const ICON_DATA: &[u8] = include_bytes!("../../dvop.svg");
-            
+
             // Try to create icon file in config directory if it doesn't exist in search paths
             let config_dir = crate::settings::get_settings().config_dir();
             let icon_path = config_dir.join("dvop.svg");
-            
+
             // Write embedded icon to config directory if it doesn't exist
             if !icon_path.exists() {
                 if let Ok(()) = std::fs::write(&icon_path, ICON_DATA) {
@@ -226,7 +239,7 @@ impl DvopWindow {
             } else {
                 icon_theme.add_search_path(&config_dir);
             }
-            
+
             // Try to add icon search path from executable directory (for installed version)
             if let Ok(exe_path) = std::env::current_exe() {
                 if let Some(parent) = exe_path.parent() {
@@ -242,7 +255,7 @@ impl DvopWindow {
                     }
                 }
             }
-            
+
             // Also try project root (for development)
             if let Ok(current_dir) = std::env::current_dir() {
                 let dev_icon = current_dir.join("dvop.svg");
@@ -252,7 +265,7 @@ impl DvopWindow {
             }
         }
     }
-    
+
     pub fn imp(&self) -> &imp::DvopWindow {
         imp::DvopWindow::from_obj(self)
     }
@@ -267,13 +280,15 @@ pub fn create_window(app: &Application) -> DvopWindow {
 ///
 /// This function returns references to the action buttons for connecting event handlers.
 /// The header bar is now part of the template and doesn't need to be returned.
-pub fn create_header(window: &DvopWindow) -> (Button, Button, Button, MenuButton, Button, Button, Button) {
+pub fn create_header(
+    window: &DvopWindow,
+) -> (Button, Button, Button, MenuButton, Button, Button, Button) {
     let imp = window.imp();
-    
+
     // Create hidden buttons for backward compatibility
     let new_button = Button::new();
     new_button.set_visible(false);
-    
+
     let save_as_button = Button::new();
     let save_as_button_icon = Image::from_icon_name("document-save-as-symbolic");
     let save_as_button_label = Label::new(Some("Save As"));
@@ -283,13 +298,13 @@ pub fn create_header(window: &DvopWindow) -> (Button, Button, Button, MenuButton
     save_as_button.set_child(Some(&save_as_button_box));
     save_as_button.set_tooltip_text(Some("Save the current file with a new name"));
     save_as_button.set_visible(false);
-    
+
     let save_button = Button::new();
     save_button.set_visible(false);
-    
+
     let settings_button = Button::new();
     settings_button.set_visible(false);
-    
+
     (
         new_button,
         imp.open_button.get(),
@@ -302,7 +317,7 @@ pub fn create_header(window: &DvopWindow) -> (Button, Button, Button, MenuButton
 }
 
 /// Creates the main text editor view components
-/// 
+///
 /// Returns a tuple containing:
 /// - ScrolledWindow: Container for the text view with scrolling capabilities
 /// - TextView: The main text editing widget (actually a SourceView for syntax highlighting)
@@ -316,7 +331,9 @@ pub fn create_header(window: &DvopWindow) -> (Button, Button, Button, MenuButton
 /// - Label: Text label for the initial tab
 /// - Button: Close button for the initial tab
 /// - Button: Add new file tab button
-pub fn create_text_view(window: &DvopWindow) -> (
+pub fn create_text_view(
+    window: &DvopWindow,
+) -> (
     gtk4::ScrolledWindow,
     gtk4::TextView,
     gtk4::TextBuffer,
@@ -328,7 +345,7 @@ pub fn create_text_view(window: &DvopWindow) -> (
     GtkBox,                       // tab_widget for the initial tab
     Label,                        // tab_label for the initial tab
     Button,                       // tab_close_button for the initial tab
-    Button                        // add_file_button for creating new tabs
+    Button,                       // add_file_button for creating new tabs
 ) {
     let imp = window.imp();
     let editor_notebook = imp.editor_notebook.get();
@@ -340,19 +357,19 @@ pub fn create_text_view(window: &DvopWindow) -> (
 
     // Create the first "Untitled" tab
     let (tab_widget, tab_label, tab_close_button) = create_tab_widget("Untitled");
-    
+
     // Add middle mouse click support for the tab
     setup_tab_middle_click(&tab_widget, &tab_close_button);
-    
+
     // Note: Right-click menu setup is deferred until after dependencies are created in main.rs
-    
+
     // Create a source view with syntax highlighting instead of a standard text view
     let (source_view, source_buffer) = syntax::create_source_view();
-    
+
     // Clone source_view before upcast to avoid ownership move
     let text_view = source_view.clone().upcast::<TextView>();
     let buffer = source_buffer.upcast::<TextBuffer>();
-    
+
     // Set up interaction tracking for the initial text editor
     crate::handlers::setup_text_editor_interaction_tracking(&text_view);
 
@@ -362,15 +379,15 @@ pub fn create_text_view(window: &DvopWindow) -> (
     // Add the scrolled window as a page in the notebook with our custom tab widget
     editor_notebook.append_page(&scrolled_window, Some(&tab_widget));
     editor_notebook.set_tab_label(&scrolled_window, Some(&tab_widget));
-    
+
     // Set action widget for add button
     editor_notebook.set_action_widget(&add_file_button, gtk4::PackType::End);
 
     // Initialize shared state objects
     let file_path = Rc::new(RefCell::new(None)); // No file associated with initial tab
-    let error_label = Label::new(None);          // Empty error label
-    let picture = Picture::new();                // Empty picture widget for showing images
-    
+    let error_label = Label::new(None); // Empty error label
+    let picture = Picture::new(); // Empty picture widget for showing images
+
     // Set current directory to the last used folder from settings, or fallback to home directory
     let last_folder = crate::settings::get_settings().get_last_folder();
     let current_dir = Rc::new(RefCell::new(
@@ -378,23 +395,23 @@ pub fn create_text_view(window: &DvopWindow) -> (
             last_folder
         } else {
             home::home_dir().unwrap_or_else(|| PathBuf::from("/"))
-        }
+        },
     ));
 
     // Return all components needed by the application
     (
-        scrolled_window,   // Container for the text view
-        text_view,         // Main editing widget
-        buffer,            // Text content buffer
-        file_path,         // Optional file path for the current document
-        error_label,       // For displaying error messages
-        picture,           // For displaying images
-        current_dir,       // Current working directory
-        editor_notebook.clone(),   // Main tabbed container for multiple documents
-        tab_widget,        // Container for tab components
-        tab_label,         // Label showing filename in tab
-        tab_close_button,  // Button to close the tab
-        add_file_button    // Button to add new file tabs
+        scrolled_window,         // Container for the text view
+        text_view,               // Main editing widget
+        buffer,                  // Text content buffer
+        file_path,               // Optional file path for the current document
+        error_label,             // For displaying error messages
+        picture,                 // For displaying images
+        current_dir,             // Current working directory
+        editor_notebook.clone(), // Main tabbed container for multiple documents
+        tab_widget,              // Container for tab components
+        tab_label,               // Label showing filename in tab
+        tab_close_button,        // Button to close the tab
+        add_file_button,         // Button to add new file tabs
     )
 }
 
@@ -410,12 +427,20 @@ pub fn create_text_view(window: &DvopWindow) -> (
 /// - gtk4::Stack: The sidebar stack for switching panels
 pub fn create_paned(
     window: &DvopWindow,
-) -> (GtkBox, gtk4::Paned, gtk4::Paned, gtk4::ToggleButton, gtk4::ToggleButton, gtk4::ToggleButton, gtk4::Stack) {
+) -> (
+    GtkBox,
+    gtk4::Paned,
+    gtk4::Paned,
+    gtk4::ToggleButton,
+    gtk4::ToggleButton,
+    gtk4::ToggleButton,
+    gtk4::Stack,
+) {
     let imp = window.imp();
-    
+
     // Create dummy box for backward compatibility (not used in template approach)
     let dummy_box = GtkBox::new(Orientation::Horizontal, 0);
-    
+
     (
         dummy_box,
         imp.paned.get(),
@@ -428,7 +453,7 @@ pub fn create_paned(
 }
 
 /// Creates a custom tab widget with a label and close button
-/// 
+///
 /// Each tab in the notebook uses this custom widget instead of just text,
 /// allowing for a close button directly in the tab.
 ///
@@ -439,20 +464,20 @@ pub fn create_paned(
 pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     // Create horizontal container for tab contents with comfortable spacing
     let tab_box = GtkBox::new(Orientation::Horizontal, 4);
-    
+
     // Add CSS class for custom tab styling
     tab_box.add_css_class("tab-box");
-    
+
     // Set comfortable margins
     tab_box.set_margin_top(2);
     tab_box.set_margin_bottom(2);
-    tab_box.set_margin_start(4); 
+    tab_box.set_margin_start(4);
     tab_box.set_margin_end(2);
-    
+
     // Set responsive sizing - min and max width for better adaptability
-    tab_box.set_size_request(100, -1);  // Minimum width
+    tab_box.set_size_request(100, -1); // Minimum width
     tab_box.set_hexpand(false); // Prevent excessive expansion
-    
+
     // Create label with the provided title
     let label = Label::new(Some(tab_title));
     label.set_ellipsize(gtk4::pango::EllipsizeMode::End); // Add ellipsis if text overflows
@@ -461,26 +486,26 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
     label.set_max_width_chars(20); // Limit maximum width for better responsiveness
     label.set_width_chars(12); // Preferred width
     label.add_css_class("tab-label"); // Add custom CSS class for styling
-    
+
     // Create close button with a standard X icon
     let close_button = Button::from_icon_name("window-close-symbolic");
-    
+
     // Use a comfortably sized button
     close_button.add_css_class("circular"); // Make button more rounded
     close_button.set_valign(gtk4::Align::Center);
     close_button.set_halign(gtk4::Align::End); // Align button to the right
     close_button.set_hexpand(false); // Don't expand
-    
+
     // Set comfortable button margins
     close_button.set_margin_start(4);
-    
+
     // Make the button a comfortable size
     close_button.set_size_request(20, 20);
-    
+
     // Assemble tab components: label and close button (no spacer)
     tab_box.append(&label);
     tab_box.append(&close_button);
-    
+
     (tab_box, label, close_button)
 }
 
@@ -490,23 +515,23 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
 /// middle mouse button clicks on the tab and triggers the close action.
 pub fn setup_tab_middle_click(tab_box: &GtkBox, close_button: &Button) {
     use gtk4::prelude::*;
-    
+
     // Create a gesture click controller that responds to middle mouse button clicks
     let middle_click_gesture = gtk4::GestureClick::new();
     middle_click_gesture.set_button(2); // Middle mouse button
-    
+
     // Clone the close button for the closure
     let close_button_clone = close_button.clone();
-    
+
     // Connect the pressed signal to simulate a close button click
     middle_click_gesture.connect_pressed(move |_, _n_press, _x, _y| {
         // Log the middle mouse click for debugging
         crate::status_log::log_info("Middle mouse click detected on tab - closing");
-        
+
         // Emit the clicked signal on the close button to trigger the existing close logic
         close_button_clone.emit_clicked();
     });
-    
+
     // Add the gesture controller to the tab box
     tab_box.add_controller(middle_click_gesture);
 }
@@ -526,11 +551,11 @@ pub fn setup_tab_right_click(
     new_tab_deps: Option<crate::handlers::NewTabDependencies>,
 ) {
     use gtk4::prelude::*;
-    
+
     // Create a gesture click controller that responds to right mouse button clicks
     let right_click_gesture = gtk4::GestureClick::new();
     right_click_gesture.set_button(3); // Right mouse button
-    
+
     // Clone the notebook and tab_box for the closure
     let notebook_clone = notebook.clone();
     let tab_box_clone = tab_box.clone();
@@ -540,7 +565,7 @@ pub fn setup_tab_right_click(
     let _current_dir_clone = current_dir.clone();
     let _file_list_box_clone = file_list_box.clone();
     let _new_tab_deps_clone = new_tab_deps.clone();
-    
+
     // Connect the pressed signal to show context menu
     right_click_gesture.connect_pressed(move |_, _n_press, x, y| {
         crate::status_log::log_info("Right-click detected on tab - showing menu");
@@ -567,6 +592,218 @@ pub fn setup_tab_right_click(
         // Create a box to hold the menu items
         let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
         menu_box.add_css_class("menu");
+        
+        // Create "Close to the Right" button
+        let close_to_right_button = Button::with_label("Close to the Right");
+        close_to_right_button.add_css_class("flat");
+        close_to_right_button.set_hexpand(true);
+        close_to_right_button.set_halign(gtk4::Align::Start);
+        
+        // Disable "Close to the Right" if this is the last tab
+        if let Some(page_num) = clicked_page_num {
+            if page_num >= notebook_clone.n_pages() - 1 {
+                close_to_right_button.set_sensitive(false);
+            }
+        } else {
+            close_to_right_button.set_sensitive(false);
+        }
+        
+        // Clone for the button closure
+        let notebook_for_close_right = notebook_clone.clone();
+        let popover_weak_right = popover.downgrade();
+        let window_for_close_right = window_clone.clone();
+        let file_path_manager_for_close_right = file_path_manager_clone.clone();
+        
+        close_to_right_button.connect_clicked(move |_| {
+            crate::status_log::log_info("Closing tabs to the right...");
+            
+            // Hide the context menu first
+            if let Some(popover) = popover_weak_right.upgrade() {
+                popover.popdown();
+            }
+            
+            // Close all tabs to the right of the clicked tab
+            if let Some(keep_page) = clicked_page_num {
+                // Check if any tabs to the right have unsaved changes
+                let mut unsaved_files = Vec::new();
+                for page_num in (keep_page + 1)..notebook_for_close_right.n_pages() {
+                    if let Some(page_widget) = notebook_for_close_right.nth_page(Some(page_num)) {
+                        if let Some(tab_label_widget) = notebook_for_close_right.tab_label(&page_widget) {
+                            if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                                if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                    if label.text().starts_with('*') {
+                                        // Found an unsaved file
+                                        let filename = file_path_manager_for_close_right.borrow()
+                                            .get(&page_num)
+                                            .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
+                                            .unwrap_or_else(|| "Untitled".to_string());
+                                        unsaved_files.push(filename);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // If there are unsaved files, show confirmation dialog
+                if !unsaved_files.is_empty() {
+                    let message = if unsaved_files.len() == 1 {
+                        format!("You have unsaved changes in {}.\n\nAre you sure you want to close tabs to the right without saving?", unsaved_files[0])
+                    } else {
+                        format!("You have unsaved changes in {} files:\n• {}\n\nAre you sure you want to close tabs to the right without saving?", 
+                                unsaved_files.len(), 
+                                unsaved_files.join("\n• "))
+                    };
+                    
+                    let dialog = gtk4::MessageDialog::new(
+                        Some(&window_for_close_right),
+                        gtk4::DialogFlags::MODAL | gtk4::DialogFlags::DESTROY_WITH_PARENT,
+                        gtk4::MessageType::Warning,
+                        gtk4::ButtonsType::None,
+                        &message
+                    );
+                    
+                    dialog.add_buttons(&[
+                        ("Cancel", gtk4::ResponseType::Cancel),
+                        ("Close Anyway", gtk4::ResponseType::Yes),
+                    ]);
+                    
+                    dialog.set_default_response(gtk4::ResponseType::Cancel);
+                    
+                    let notebook_clone = notebook_for_close_right.clone();
+                    dialog.connect_response(move |d, response| {
+                        if response == gtk4::ResponseType::Yes {
+                            // User confirmed - close tabs to the right without saving
+                            while notebook_clone.n_pages() > keep_page + 1 {
+                                let last_page = notebook_clone.n_pages() - 1;
+                                notebook_clone.remove_page(Some(last_page));
+                            }
+                            crate::status_log::log_success("Tabs to the right closed");
+                        }
+                        d.close();
+                    });
+                    
+                    dialog.show();
+                } else {
+                    // No unsaved files, close tabs to the right directly
+                    while notebook_for_close_right.n_pages() > keep_page + 1 {
+                        let last_page = notebook_for_close_right.n_pages() - 1;
+                        notebook_for_close_right.remove_page(Some(last_page));
+                    }
+                    crate::status_log::log_success("Tabs to the right closed");
+                }
+            }
+        });
+        
+        // Create "Close to the Left" button
+        let close_to_left_button = Button::with_label("Close to the Left");
+        close_to_left_button.add_css_class("flat");
+        close_to_left_button.set_hexpand(true);
+        close_to_left_button.set_halign(gtk4::Align::Start);
+        
+        // Disable "Close to the Left" if this is the first tab
+        if let Some(page_num) = clicked_page_num {
+            if page_num == 0 {
+                close_to_left_button.set_sensitive(false);
+            }
+        } else {
+            close_to_left_button.set_sensitive(false);
+        }
+        
+        // Clone for the button closure
+        let notebook_for_close_left = notebook_clone.clone();
+        let popover_weak_left = popover.downgrade();
+        let window_for_close_left = window_clone.clone();
+        let file_path_manager_for_close_left = file_path_manager_clone.clone();
+        
+        close_to_left_button.connect_clicked(move |_| {
+            crate::status_log::log_info("Closing tabs to the left...");
+            
+            // Hide the context menu first
+            if let Some(popover) = popover_weak_left.upgrade() {
+                popover.popdown();
+            }
+            
+            // Close all tabs to the left of the clicked tab
+            if let Some(keep_page) = clicked_page_num {
+                if keep_page == 0 {
+                    return; // No tabs to the left
+                }
+                
+                // Check if any tabs to the left have unsaved changes
+                let mut unsaved_files = Vec::new();
+                for page_num in 0..keep_page {
+                    if let Some(page_widget) = notebook_for_close_left.nth_page(Some(page_num)) {
+                        if let Some(tab_label_widget) = notebook_for_close_left.tab_label(&page_widget) {
+                            if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                                if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                    if label.text().starts_with('*') {
+                                        // Found an unsaved file
+                                        let filename = file_path_manager_for_close_left.borrow()
+                                            .get(&page_num)
+                                            .and_then(|p| p.file_name().map(|s| s.to_string_lossy().into_owned()))
+                                            .unwrap_or_else(|| "Untitled".to_string());
+                                        unsaved_files.push(filename);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // If there are unsaved files, show confirmation dialog
+                if !unsaved_files.is_empty() {
+                    let message = if unsaved_files.len() == 1 {
+                        format!("You have unsaved changes in {}.\n\nAre you sure you want to close tabs to the left without saving?", unsaved_files[0])
+                    } else {
+                        format!("You have unsaved changes in {} files:\n• {}\n\nAre you sure you want to close tabs to the left without saving?", 
+                                unsaved_files.len(), 
+                                unsaved_files.join("\n• "))
+                    };
+                    
+                    let dialog = gtk4::MessageDialog::new(
+                        Some(&window_for_close_left),
+                        gtk4::DialogFlags::MODAL | gtk4::DialogFlags::DESTROY_WITH_PARENT,
+                        gtk4::MessageType::Warning,
+                        gtk4::ButtonsType::None,
+                        &message
+                    );
+                    
+                    dialog.add_buttons(&[
+                        ("Cancel", gtk4::ResponseType::Cancel),
+                        ("Close Anyway", gtk4::ResponseType::Yes),
+                    ]);
+                    
+                    dialog.set_default_response(gtk4::ResponseType::Cancel);
+                    
+                    let notebook_clone = notebook_for_close_left.clone();
+                    let tabs_to_close = keep_page; // Capture the number of tabs to close
+                    dialog.connect_response(move |d, response| {
+                        if response == gtk4::ResponseType::Yes {
+                            // User confirmed - close tabs to the left without saving
+                            // Close from beginning repeatedly (each removal shifts indices)
+                            for _ in 0..tabs_to_close {
+                                if notebook_clone.n_pages() > 1 {
+                                    notebook_clone.remove_page(Some(0));
+                                }
+                            }
+                            crate::status_log::log_success("Tabs to the left closed");
+                        }
+                        d.close();
+                    });
+                    
+                    dialog.show();
+                } else {
+                    // No unsaved files, close tabs to the left directly
+                    for _ in 0..keep_page {
+                        if notebook_for_close_left.n_pages() > 1 {
+                            notebook_for_close_left.remove_page(Some(0));
+                        }
+                    }
+                    crate::status_log::log_success("Tabs to the left closed");
+                }
+            }
+        });
         
         // Create "Close Others" button
         let close_others_button = Button::with_label("Close Others");
@@ -771,8 +1008,65 @@ pub fn setup_tab_right_click(
             }
         });
         
+        // Create "Close Saved" button
+        let close_saved_button = Button::with_label("Close Saved");
+        close_saved_button.add_css_class("flat");
+        close_saved_button.set_hexpand(true);
+        close_saved_button.set_halign(gtk4::Align::Start);
+        
+        // Clone for the button closure
+        let notebook_for_close_saved = notebook_clone.clone();
+        let popover_weak_saved = popover.downgrade();
+        let file_path_manager_for_close_saved = file_path_manager_clone.clone();
+        
+        close_saved_button.connect_clicked(move |_| {
+            crate::status_log::log_info("Closing saved tabs...");
+            
+            // Hide the context menu first
+            if let Some(popover) = popover_weak_saved.upgrade() {
+                popover.popdown();
+            }
+            
+            // Collect indices of tabs that are saved (not dirty)
+            let mut saved_tabs = Vec::new();
+            for page_num in 0..notebook_for_close_saved.n_pages() {
+                if let Some(page_widget) = notebook_for_close_saved.nth_page(Some(page_num)) {
+                    if let Some(tab_label_widget) = notebook_for_close_saved.tab_label(&page_widget) {
+                        if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                            if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                // If label doesn't start with '*', it's saved
+                                if !label.text().starts_with('*') {
+                                    saved_tabs.push(page_num);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if saved_tabs.is_empty() {
+                crate::status_log::log_info("No saved tabs to close");
+                return;
+            }
+            
+            // Close saved tabs from last to first to avoid index shifting issues
+            saved_tabs.reverse();
+            let count = saved_tabs.len();
+            for page_num in saved_tabs {
+                // Remove from file path manager
+                file_path_manager_for_close_saved.borrow_mut().remove(&page_num);
+                // Close the tab
+                notebook_for_close_saved.remove_page(Some(page_num));
+            }
+            
+            crate::status_log::log_success(&format!("Closed {} saved tab{}", count, if count == 1 { "" } else { "s" }));
+        });
+        
         // Add buttons to menu
+        menu_box.append(&close_to_right_button);
+        menu_box.append(&close_to_left_button);
         menu_box.append(&close_others_button);
+        menu_box.append(&close_saved_button);
         menu_box.append(&close_all_button);
         
         // Set the menu box as the popover's child
@@ -799,7 +1093,7 @@ pub fn setup_tab_right_click(
         // Show the popover
         popover.popup();
     });
-    
+
     // Add the gesture controller to the tab box
     tab_box.add_controller(right_click_gesture);
 }
@@ -809,18 +1103,23 @@ pub fn setup_tab_right_click(
 /// Returns a tuple of:
 /// - GtkBox: Container for the status bar
 /// - Label: Main status text label
+/// - Label: Linter status label (language and status)
 /// - Label: Secondary status information (current file, line/column, etc.)
-pub fn create_status_bar(window: &DvopWindow) -> (GtkBox, Label, Label) {
+pub fn create_status_bar(window: &DvopWindow) -> (GtkBox, Label, GtkBox, Label) {
     let imp = window.imp();
     (
         imp.status_bar.get(),
         imp.status_label.get(),
+        imp.linter_status_label.get(),
         imp.secondary_status_label.get(),
     )
 }
 
 /// Updates the visibility of the volume control based on active tab content
-pub fn update_volume_control_visibility_for_tab(volume_control_box: &GtkBox, active_tab_path: &Option<std::path::PathBuf>) {
+pub fn update_volume_control_visibility_for_tab(
+    volume_control_box: &GtkBox,
+    active_tab_path: &Option<std::path::PathBuf>,
+) {
     let is_media_tab = active_tab_path
         .as_ref()
         .map(|path| crate::audio::is_music_file(path) || crate::video::is_video_file(path))
@@ -829,12 +1128,12 @@ pub fn update_volume_control_visibility_for_tab(volume_control_box: &GtkBox, act
 }
 
 /// Creates and shows a log history popup window
-/// 
+///
 /// # Arguments
 /// * `parent_window` - The parent window to center the popup on
 pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>) {
     use crate::status_log;
-    
+
     // Create the dialog window as an ApplicationWindow for full window controls
     let app_window: &gtk4::ApplicationWindow = parent_window.upcast_ref();
     let dialog = gtk4::ApplicationWindow::new(app_window.application().as_ref().unwrap());
@@ -842,49 +1141,49 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
     // Don't set as transient or modal to allow minimize/maximize
     dialog.set_default_size(600, 500);
     dialog.set_resizable(true);
-    
+
     // Enable window controls and proper window manager hints
     dialog.set_deletable(true);
     dialog.set_decorated(true);
-    
+
     // Set minimum size to prevent it from getting too small
     dialog.set_size_request(400, 300);
-    
+
     // Create a header bar with the clear button
     let header_bar = gtk4::HeaderBar::new();
     header_bar.set_title_widget(Some(&Label::new(Some("Log History"))));
-    
+
     // Show window control buttons explicitly
     header_bar.set_show_title_buttons(true);
-    
+
     // Add clear button to header bar on the left side
     let clear_button = gtk4::Button::with_label("Clear History");
     clear_button.add_css_class("destructive-action");
     header_bar.pack_start(&clear_button);
-    
+
     dialog.set_titlebar(Some(&header_bar));
-    
+
     // Create the main container
     let main_box = GtkBox::new(Orientation::Vertical, 8);
     main_box.set_margin_start(12);
     main_box.set_margin_end(12);
     main_box.set_margin_top(12);
     main_box.set_margin_bottom(12);
-    
+
     // Create scrollable area for log messages (no header box needed now)
     let scrolled_window = gtk4::ScrolledWindow::new();
     scrolled_window.set_policy(gtk4::PolicyType::Never, gtk4::PolicyType::Automatic);
     scrolled_window.set_vexpand(true);
     scrolled_window.set_hexpand(true);
-    
+
     // Create list box for log entries
     let log_list = gtk4::ListBox::new();
     log_list.add_css_class("log-history-list");
     log_list.set_selection_mode(gtk4::SelectionMode::None);
-    
+
     // Populate the list with log history
     let history = status_log::get_log_history();
-    
+
     if history.is_empty() {
         let empty_label = Label::new(Some("No log messages yet."));
         empty_label.add_css_class("dim-label");
@@ -896,18 +1195,19 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
         for log_message in history.iter().rev() {
             let row = gtk4::ListBoxRow::new();
             row.set_activatable(false);
-            
+
             let message_box = GtkBox::new(Orientation::Vertical, 4);
             message_box.set_margin_start(8);
             message_box.set_margin_end(8);
             message_box.set_margin_top(6);
             message_box.set_margin_bottom(6);
-            
+
             // Format timestamp to show both real date/time and relative time
             let timestamp_str = {
                 use chrono::{Datelike, Local, TimeZone};
-                
-                let relative_time = log_message.timestamp
+
+                let relative_time = log_message
+                    .timestamp
                     .elapsed()
                     .map(|duration| {
                         let secs = duration.as_secs();
@@ -922,24 +1222,26 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
                         }
                     })
                     .unwrap_or_else(|_| "just now".to_string());
-                
+
                 match log_message.timestamp.duration_since(std::time::UNIX_EPOCH) {
                     Ok(duration) => {
                         let secs = duration.as_secs() as i64;
                         let nanos = duration.subsec_nanos();
-                        
+
                         if let Some(datetime) = Local.timestamp_opt(secs, nanos).single() {
                             let now = Local::now();
                             let date_today = now.date_naive();
                             let date_message = datetime.date_naive();
-                            
+
                             let formatted_time = if date_message == date_today {
                                 // Today - show time only
                                 datetime.format("%H:%M:%S").to_string()
-                            } else if date_today.signed_duration_since(date_message).num_days() == 1 {
+                            } else if date_today.signed_duration_since(date_message).num_days() == 1
+                            {
                                 // Yesterday
                                 datetime.format("Yesterday %H:%M").to_string()
-                            } else if date_today.signed_duration_since(date_message).num_days() < 7 {
+                            } else if date_today.signed_duration_since(date_message).num_days() < 7
+                            {
                                 // This week - show day name and time
                                 datetime.format("%A %H:%M").to_string()
                             } else if date_message.year() == date_today.year() {
@@ -949,76 +1251,79 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
                                 // Different year - show full date and time
                                 datetime.format("%Y-%m-%d %H:%M").to_string()
                             };
-                            
+
                             // Combine both formats: "Aug 12 14:30 (2m ago)"
                             format!("{} ({})", formatted_time, relative_time)
                         } else {
                             format!("Invalid time ({})", relative_time)
                         }
                     }
-                    Err(_) => format!("Unknown time ({})", relative_time)
+                    Err(_) => format!("Unknown time ({})", relative_time),
                 }
             };
-            
+
             // Create level indicator and message
             let top_line = GtkBox::new(Orientation::Horizontal, 8);
-            
-            let level_label = Label::new(Some(&format!("[{}]", match log_message.level {
-                status_log::LogLevel::Info => "INFO",
-                status_log::LogLevel::Warning => "WARN", 
-                status_log::LogLevel::Error => "ERROR",
-                status_log::LogLevel::Success => "OK",
-            })));
-            
+
+            let level_label = Label::new(Some(&format!(
+                "[{}]",
+                match log_message.level {
+                    status_log::LogLevel::Info => "INFO",
+                    status_log::LogLevel::Warning => "WARN",
+                    status_log::LogLevel::Error => "ERROR",
+                    status_log::LogLevel::Success => "OK",
+                }
+            )));
+
             let level_css_class = match log_message.level {
                 status_log::LogLevel::Info => "log-level-info",
                 status_log::LogLevel::Warning => "log-level-warning",
-                status_log::LogLevel::Error => "log-level-error", 
+                status_log::LogLevel::Error => "log-level-error",
                 status_log::LogLevel::Success => "log-level-success",
             };
             level_label.add_css_class(level_css_class);
             level_label.add_css_class("log-level-badge");
-            
+
             let time_label = Label::new(Some(&timestamp_str));
             time_label.add_css_class("log-timestamp");
             time_label.set_halign(gtk4::Align::End);
             time_label.set_hexpand(true);
-            
+
             top_line.append(&level_label);
             top_line.append(&time_label);
-            
+
             let message_label = Label::new(Some(&log_message.message));
             message_label.set_halign(gtk4::Align::Start);
             message_label.set_wrap(true);
             message_label.set_wrap_mode(gtk4::pango::WrapMode::WordChar);
             message_label.add_css_class("log-message");
-            
+
             message_box.append(&top_line);
             message_box.append(&message_label);
-            
+
             row.set_child(Some(&message_box));
             log_list.append(&row);
         }
     }
-    
+
     scrolled_window.set_child(Some(&log_list));
-    
+
     // Assemble the dialog - just add the scrolled window since we have a header bar now
     main_box.append(&scrolled_window);
-    
+
     dialog.set_child(Some(&main_box));
-    
+
     // Connect clear button event
     let log_list_clone = log_list.clone();
     clear_button.connect_clicked(move |_| {
         // Clear the log history
         status_log::clear_log_history();
-        
+
         // Clear all existing entries from the list
         while let Some(child) = log_list_clone.first_child() {
             log_list_clone.remove(&child);
         }
-        
+
         // Add empty state message
         let empty_label = Label::new(Some("No log messages yet."));
         empty_label.add_css_class("dim-label");
@@ -1026,7 +1331,7 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
         empty_label.set_margin_bottom(20);
         log_list_clone.append(&empty_label);
     });
-    
+
     // Handle Escape key to close
     let key_controller = gtk4::EventControllerKey::new();
     let dialog_clone_for_key = dialog.clone();
@@ -1039,9 +1344,7 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
         }
     });
     dialog.add_controller(key_controller);
-    
+
     // Show the dialog
     dialog.present();
 }
-
-

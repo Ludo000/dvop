@@ -3,10 +3,10 @@
 
 use gtk4::prelude::*;
 use gtk4::Label;
-use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 /// Maximum number of log messages to keep in memory
 const MAX_LOG_HISTORY: usize = 100;
@@ -22,7 +22,8 @@ pub struct LogMessage {
 impl LogMessage {
     /// Serialize log message to a string for file storage
     pub fn to_string(&self) -> String {
-        let timestamp = self.timestamp
+        let timestamp = self
+            .timestamp
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or(std::time::Duration::from_secs(0))
             .as_secs();
@@ -72,7 +73,7 @@ pub enum LogLevel {
 }
 
 /// Simple status log storage (no global state, just for history)
-static STATUS_HISTORY: once_cell::sync::Lazy<Arc<Mutex<VecDeque<LogMessage>>>> = 
+static STATUS_HISTORY: once_cell::sync::Lazy<Arc<Mutex<VecDeque<LogMessage>>>> =
     once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(VecDeque::new())));
 
 /// Get the log file path
@@ -85,7 +86,7 @@ fn get_log_file_path() -> PathBuf {
 /// Load log history from file
 pub fn load_log_history() {
     let log_file = get_log_file_path();
-    
+
     // Create the config directory if it doesn't exist
     if let Some(parent) = log_file.parent() {
         if !parent.exists() {
@@ -95,24 +96,24 @@ pub fn load_log_history() {
             }
         }
     }
-    
+
     match fs::read_to_string(&log_file) {
         Ok(contents) => {
             if let Ok(mut history) = STATUS_HISTORY.lock() {
                 history.clear();
-                
+
                 // Parse each line as a log message
                 for line in contents.lines() {
                     if let Some(log_message) = LogMessage::from_string(line) {
                         history.push_back(log_message);
                     }
                 }
-                
+
                 // Keep only the last MAX_LOG_HISTORY messages
                 while history.len() > MAX_LOG_HISTORY {
                     history.pop_front();
                 }
-                
+
                 println!("Loaded {} log messages from history", history.len());
             }
         }
@@ -129,14 +130,14 @@ pub fn load_log_history() {
 /// Save log history to file
 fn save_log_history() {
     let log_file = get_log_file_path();
-    
+
     if let Ok(history) = STATUS_HISTORY.lock() {
         let mut contents = String::new();
         for message in history.iter() {
             contents.push_str(&message.to_string());
             contents.push('\n');
         }
-        
+
         if let Err(e) = fs::write(&log_file, contents) {
             eprintln!("Failed to save log history: {}", e);
         }
@@ -173,13 +174,13 @@ fn update_status_label(log_message: &LogMessage) {
         if let Some(ref label) = *l.borrow() {
             // Update the label text
             label.set_text(&log_message.message);
-            
+
             // Set appropriate CSS class based on log level
             label.remove_css_class("status-log-info");
             label.remove_css_class("status-log-warning");
             label.remove_css_class("status-log-error");
             label.remove_css_class("status-log-success");
-            
+
             let css_class = match log_message.level {
                 LogLevel::Info => "status-log-info",
                 LogLevel::Warning => "status-log-warning",
@@ -187,20 +188,21 @@ fn update_status_label(log_message: &LogMessage) {
                 LogLevel::Success => "status-log-success",
             };
             label.add_css_class(css_class);
-            
+
             // Update tooltip with timestamp and level
-            let elapsed = log_message.timestamp
+            let elapsed = log_message
+                .timestamp
                 .elapsed()
                 .map(|d| format!("{:.1}s ago", d.as_secs_f32()))
                 .unwrap_or_else(|_| "just now".to_string());
-            
+
             let level_str = match log_message.level {
                 LogLevel::Info => "Info",
-                LogLevel::Warning => "Warning", 
+                LogLevel::Warning => "Warning",
                 LogLevel::Error => "Error",
                 LogLevel::Success => "Success",
             };
-            
+
             let tooltip = format!("{} ({}): {}", level_str, elapsed, log_message.message);
             label.set_tooltip_text(Some(&tooltip));
         }
@@ -218,7 +220,7 @@ fn add_message_to_log(message: String, level: LogLevel) {
     // Add to history
     if let Ok(mut history) = STATUS_HISTORY.lock() {
         history.push_back(log_message.clone());
-        
+
         // Keep only the last MAX_LOG_HISTORY messages
         if history.len() > MAX_LOG_HISTORY {
             history.pop_front();
@@ -236,7 +238,7 @@ fn add_message_to_log(message: String, level: LogLevel) {
 pub fn register_status_labels(status_label: &Label, secondary_label: &Label) {
     set_status_label(status_label);
     set_secondary_status_label(secondary_label);
-    
+
     // Show ready message initially
     log_info("Ready");
 }
@@ -264,7 +266,8 @@ pub fn log_success(message: &str) {
 
 /// Get the complete message history
 pub fn get_log_history() -> Vec<LogMessage> {
-    STATUS_HISTORY.lock()
+    STATUS_HISTORY
+        .lock()
         .map(|history| history.iter().cloned().collect())
         .unwrap_or_default()
 }
@@ -274,13 +277,13 @@ pub fn clear_log_history() {
     if let Ok(mut history) = STATUS_HISTORY.lock() {
         history.clear();
     }
-    
+
     // Also clear the saved file
     let log_file = get_log_file_path();
     if let Err(e) = fs::write(&log_file, "") {
         eprintln!("Failed to clear log history file: {}", e);
     }
-    
+
     // Show ready message
     log_info("Ready");
 }
