@@ -145,6 +145,15 @@
           </object>
         </child>
         <child>
+          <object class="GtkButton" id="revert_all_button">
+            <property name="icon-name">edit-undo-symbolic</property>
+            <property name="tooltip-text">Revert all unstaged changes</property>
+            <property name="valign">center</property>
+            <property name="halign">end</property>
+            <property name="css-classes">destructive-action</property>
+          </object>
+        </child>
+        <child>
           <object class="GtkButton" id="stage_all_button">
             <property name="icon-name">list-add-symbolic</property>
             <property name="tooltip-text">Stage all changes</property>

@@ -533,6 +533,163 @@ fn discard_changes(repo_path: &Path, file_path: &Path) -> Result<(), String> {
     }
 }
 
+/// Revert a file to HEAD (discards all changes including staged)
+fn revert_to_head(repo_path: &Path, file_path: &Path) -> Result<(), String> {
+    let rel_path = file_path
+        .strip_prefix(repo_path)
+        .map_err(|e| format!("Invalid path: {}", e))?;
+
+    let output = Command::new("git")
+        .arg("checkout")
+        .arg("HEAD")
+        .arg("--")
+        .arg(rel_path)
+        .current_dir(repo_path)
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// Revert all unstaged changes (like git checkout -- .)
+fn revert_all_unstaged(repo_path: &Path) -> Result<(), String> {
+    let output = Command::new("git")
+        .arg("checkout")
+        .arg("--")
+        .arg(".")
+        .current_dir(repo_path)
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// Reload open files that were reverted (if they don't have unsaved changes)
+fn reload_reverted_files(
+    notebook: &gtk4::Notebook,
+    file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    _repo_path: &Path,
+) {
+    let num_pages = notebook.n_pages();
+    
+    for page_num in 0..num_pages {
+        if let Some(page) = notebook.nth_page(Some(page_num)) {
+            // Get the tab label to check for unsaved changes (marked with *)
+            if let Some(tab_label) = notebook.tab_label(&page) {
+                if let Some(tab_box) = tab_label.downcast_ref::<gtk4::Box>() {
+                    if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                        let label_text = label.text();
+                        // If the label starts with *, the file has unsaved changes - don't reload
+                        if label_text.starts_with('*') {
+                            continue;
+                        }
+                    }
+                }
+            }
+            
+            // Get file path for this page
+            let file_path = file_path_manager.borrow().get(&page_num).cloned();
+            
+            if let Some(path) = file_path {
+                // Try to get the source view and reload the file
+                if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                    if let Some(view) = scrolled.child().and_then(|c| c.downcast::<sourceview5::View>().ok()) {
+                        if let Ok(contents) = std::fs::read_to_string(&path) {
+                            let buffer = view.buffer();
+                            if let Some(source_buffer) = buffer.downcast_ref::<sourceview5::Buffer>() {
+                                source_buffer.set_text(&contents);
+                                // Reset modified flag
+                                source_buffer.set_modified(false);
+                                
+                                // Update tab label to remove * prefix if present
+                                if let Some(tab_label) = notebook.tab_label(&page) {
+                                    if let Some(tab_box) = tab_label.downcast_ref::<gtk4::Box>() {
+                                        if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                                            let label_text = label.text();
+                                            if label_text.starts_with('*') {
+                                                label.set_text(&label_text[1..]);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Reload a specific file in the editor (if open and no unsaved changes)
+fn reload_file_in_editor(
+    notebook: &gtk4::Notebook,
+    file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    file_path: &Path,
+) {
+    let num_pages = notebook.n_pages();
+    
+    for page_num in 0..num_pages {
+        if let Some(page) = notebook.nth_page(Some(page_num)) {
+            // Check if this page is for the file we're looking for
+            let page_file_path = file_path_manager.borrow().get(&page_num).cloned();
+            
+            if page_file_path.as_deref() != Some(file_path) {
+                continue;
+            }
+            
+            // Get the tab label to check for unsaved changes (marked with *)
+            if let Some(tab_label) = notebook.tab_label(&page) {
+                if let Some(tab_box) = tab_label.downcast_ref::<gtk4::Box>() {
+                    if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                        let label_text = label.text();
+                        // If the label starts with *, the file has unsaved changes - don't reload
+                        if label_text.starts_with('*') {
+                            continue;
+                        }
+                    }
+                }
+            }
+            
+            // Reload the file
+            if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                if let Some(view) = scrolled.child().and_then(|c| c.downcast::<sourceview5::View>().ok()) {
+                    if let Ok(contents) = std::fs::read_to_string(file_path) {
+                        let buffer = view.buffer();
+                        if let Some(source_buffer) = buffer.downcast_ref::<sourceview5::Buffer>() {
+                            source_buffer.set_text(&contents);
+                            // Reset modified flag
+                            source_buffer.set_modified(false);
+                            
+                            // Update tab label to remove * prefix if present
+                            if let Some(tab_label) = notebook.tab_label(&page) {
+                                if let Some(tab_box) = tab_label.downcast_ref::<gtk4::Box>() {
+                                    if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                                        let label_text = label.text();
+                                        if label_text.starts_with('*') {
+                                            label.set_text(&label_text[1..]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            break; // Found and processed the file, no need to continue
+        }
+    }
+}
+
 /// Commit staged changes with a message
 fn commit_changes(repo_path: &Path, message: &str) -> Result<(), String> {
     if message.trim().is_empty() {
@@ -1285,6 +1442,7 @@ pub fn create_git_diff_panel(
 
     // Get references to widgets
     let branch_button = panel.branch_button();
+    let revert_all_button = panel.revert_all_button();
     let refresh_button = panel.refresh_button();
     let stage_all_button = panel.stage_all_button();
     let unstage_all_button = panel.unstage_all_button();
@@ -1788,6 +1946,69 @@ pub fn create_git_diff_panel(
         crate::status_log::log_info("Git status refreshed");
     });
 
+    // Revert all button handler
+    let update_git_status_for_revert_all = update_git_status.clone();
+    let repo_path_for_revert_all = repo_path_rc.clone();
+    let parent_window_for_revert_all = parent_window.clone();
+    let editor_notebook_for_revert_all = editor_notebook.clone();
+    let file_path_manager_for_revert_all = file_path_manager.clone();
+    revert_all_button.connect_clicked(move |_| {
+        // Update git status first
+        update_git_status_for_revert_all();
+        
+        let repo = match repo_path_for_revert_all.borrow().as_ref() {
+            Some(r) => r.clone(),
+            None => {
+                crate::status_log::log_error("Not in a git repository");
+                return;
+            }
+        };
+
+        // Show modal confirmation dialog
+        let dialog = gtk4::MessageDialog::new(
+            Some(parent_window_for_revert_all.as_ref()),
+            gtk4::DialogFlags::MODAL,
+            gtk4::MessageType::Warning,
+            gtk4::ButtonsType::None,
+            "Are you sure you want to revert all unstaged changes?",
+        );
+        dialog.set_secondary_text(Some(
+            "This will discard all unstaged changes in all files. Staged changes will not be affected. This cannot be undone.",
+        ));
+        dialog.add_buttons(&[
+            ("Cancel", gtk4::ResponseType::Cancel),
+            ("Revert Unstaged", gtk4::ResponseType::Accept),
+        ]);
+
+        let repo_clone = repo.clone();
+        let update_clone = update_git_status_for_revert_all.clone();
+        let notebook_clone = editor_notebook_for_revert_all.clone();
+        let file_manager_clone = file_path_manager_for_revert_all.clone();
+        dialog.connect_response(move |d, response| {
+            if response == gtk4::ResponseType::Accept {
+                match revert_all_unstaged(&repo_clone) {
+                    Ok(()) => {
+                        crate::status_log::log_success("All unstaged changes reverted");
+                        
+                        // Reload all open files that don't have unsaved changes
+                        reload_reverted_files(&notebook_clone, &file_manager_clone, &repo_clone);
+                        
+                        let update = update_clone.clone();
+                        glib::idle_add_local_once(move || {
+                            update();
+                        });
+                    }
+                    Err(e) => {
+                        crate::status_log::log_error(&format!("Failed to revert all unstaged: {}", e));
+                    }
+                }
+            }
+            d.close();
+        });
+
+        dialog.show();
+    });
+
     // Stage all button handler
     let update_git_status_for_stage_all = update_git_status.clone();
     let repo_path_for_stage_all = repo_path_rc.clone();
@@ -2003,6 +2224,9 @@ pub fn create_git_diff_panel(
     let files_list_for_menu = files_list.clone();
     let repo_path_for_menu = repo_path_rc.clone();
     let update_git_status_for_menu = update_git_status.clone();
+    let parent_window_for_menu = parent_window.clone();
+    let editor_notebook_for_menu = editor_notebook.clone();
+    let file_path_manager_for_menu = file_path_manager.clone();
 
     let gesture = gtk4::GestureClick::new();
     gesture.set_button(3); // Right click
@@ -2107,6 +2331,7 @@ pub fn create_git_diff_panel(
                 let file_for_discard = file_path.clone();
                 let update_for_discard = update_git_status_for_menu.clone();
                 let popover_for_discard = popover.downgrade();
+                let parent_for_discard = parent_window_for_menu.clone();
                 discard_btn.connect_clicked(move |_| {
                     let repo = match repo_for_discard.borrow().as_ref() {
                         Some(r) => r.clone(),
@@ -2120,7 +2345,7 @@ pub fn create_git_diff_panel(
 
                     // Show confirmation dialog
                     let dialog = gtk4::MessageDialog::new(
-                        None::<&gtk4::Window>,
+                        Some(parent_for_discard.as_ref()),
                         gtk4::DialogFlags::MODAL,
                         gtk4::MessageType::Warning,
                         gtk4::ButtonsType::None,
@@ -2161,9 +2386,84 @@ pub fn create_git_diff_panel(
                     }
                 });
 
+                // Revert to HEAD button
+                let revert_btn = Button::with_label("Revert to HEAD");
+                revert_btn.add_css_class("flat");
+                revert_btn.add_css_class("destructive-action");
+                revert_btn.set_hexpand(true);
+                revert_btn.set_halign(gtk4::Align::Start);
+
+                let repo_for_revert = repo_path_for_menu.clone();
+                let file_for_revert = file_path.clone();
+                let update_for_revert = update_git_status_for_menu.clone();
+                let popover_for_revert = popover.downgrade();
+                let parent_for_revert = parent_window_for_menu.clone();
+                let notebook_for_revert = editor_notebook_for_menu.clone();
+                let file_manager_for_revert = file_path_manager_for_menu.clone();
+                revert_btn.connect_clicked(move |_| {
+                    let repo = match repo_for_revert.borrow().as_ref() {
+                        Some(r) => r.clone(),
+                        None => {
+                            if let Some(p) = popover_for_revert.upgrade() {
+                                p.popdown();
+                            }
+                            return;
+                        }
+                    };
+
+                    // Show confirmation dialog
+                    let dialog = gtk4::MessageDialog::new(
+                        Some(parent_for_revert.as_ref()),
+                        gtk4::DialogFlags::MODAL,
+                        gtk4::MessageType::Warning,
+                        gtk4::ButtonsType::None,
+                        "Are you sure you want to revert to HEAD? This will discard all changes (staged and unstaged). This cannot be undone.",
+                    );
+                    dialog.add_buttons(&[
+                        ("Cancel", gtk4::ResponseType::Cancel),
+                        ("Revert", gtk4::ResponseType::Accept),
+                    ]);
+
+                    let repo_clone = repo.clone();
+                    let file_clone = file_for_revert.clone();
+                    let update_clone = update_for_revert.clone();
+                    let notebook_clone = notebook_for_revert.clone();
+                    let file_manager_clone = file_manager_for_revert.clone();
+                    dialog.connect_response(move |d, response| {
+                        if response == gtk4::ResponseType::Accept {
+                            match revert_to_head(&repo_clone, &file_clone) {
+                                Ok(()) => {
+                                    crate::status_log::log_success("File reverted to HEAD");
+                                    
+                                    // Reload the file in editor if it's open and has no unsaved changes
+                                    reload_file_in_editor(&notebook_clone, &file_manager_clone, &file_clone);
+                                    
+                                    let update = update_clone.clone();
+                                    glib::idle_add_local_once(move || {
+                                        update();
+                                    });
+                                }
+                                Err(e) => {
+                                    crate::status_log::log_error(&format!(
+                                        "Failed to revert: {}",
+                                        e
+                                    ));
+                                }
+                            }
+                        }
+                        d.close();
+                    });
+
+                    dialog.show();
+                    if let Some(p) = popover_for_revert.upgrade() {
+                        p.popdown();
+                    }
+                });
+
                 menu_box.append(&stage_btn);
                 menu_box.append(&unstage_btn);
                 menu_box.append(&discard_btn);
+                menu_box.append(&revert_btn);
 
                 popover.set_child(Some(&menu_box));
 
@@ -2180,6 +2480,9 @@ pub fn create_git_diff_panel(
     let staged_files_list_for_menu = staged_files_list.clone();
     let repo_path_for_staged_menu = repo_path_rc.clone();
     let update_git_status_for_staged_menu = update_git_status.clone();
+    let parent_window_for_staged_menu = parent_window.clone();
+    let editor_notebook_for_staged_menu = editor_notebook.clone();
+    let file_path_manager_for_staged_menu = file_path_manager.clone();
 
     let staged_gesture = gtk4::GestureClick::new();
     staged_gesture.set_button(3); // Right click
@@ -2233,7 +2536,82 @@ pub fn create_git_diff_panel(
                     }
                 });
 
+                // Revert to HEAD button
+                let revert_btn = Button::with_label("Revert to HEAD");
+                revert_btn.add_css_class("flat");
+                revert_btn.add_css_class("destructive-action");
+                revert_btn.set_hexpand(true);
+                revert_btn.set_halign(gtk4::Align::Start);
+
+                let repo_for_revert = repo_path_for_staged_menu.clone();
+                let file_for_revert = file_path.clone();
+                let update_for_revert = update_git_status_for_staged_menu.clone();
+                let popover_for_revert = popover.downgrade();
+                let parent_for_revert = parent_window_for_staged_menu.clone();
+                let notebook_for_revert = editor_notebook_for_staged_menu.clone();
+                let file_manager_for_revert = file_path_manager_for_staged_menu.clone();
+                revert_btn.connect_clicked(move |_| {
+                    let repo = match repo_for_revert.borrow().as_ref() {
+                        Some(r) => r.clone(),
+                        None => {
+                            if let Some(p) = popover_for_revert.upgrade() {
+                                p.popdown();
+                            }
+                            return;
+                        }
+                    };
+
+                    // Show confirmation dialog
+                    let dialog = gtk4::MessageDialog::new(
+                        Some(parent_for_revert.as_ref()),
+                        gtk4::DialogFlags::MODAL,
+                        gtk4::MessageType::Warning,
+                        gtk4::ButtonsType::None,
+                        "Are you sure you want to revert to HEAD? This will discard all changes (staged and unstaged). This cannot be undone.",
+                    );
+                    dialog.add_buttons(&[
+                        ("Cancel", gtk4::ResponseType::Cancel),
+                        ("Revert", gtk4::ResponseType::Accept),
+                    ]);
+
+                    let repo_clone = repo.clone();
+                    let file_clone = file_for_revert.clone();
+                    let update_clone = update_for_revert.clone();
+                    let notebook_clone = notebook_for_revert.clone();
+                    let file_manager_clone = file_manager_for_revert.clone();
+                    dialog.connect_response(move |d, response| {
+                        if response == gtk4::ResponseType::Accept {
+                            match revert_to_head(&repo_clone, &file_clone) {
+                                Ok(()) => {
+                                    crate::status_log::log_success("File reverted to HEAD");
+                                    
+                                    // Reload the file in editor if it's open and has no unsaved changes
+                                    reload_file_in_editor(&notebook_clone, &file_manager_clone, &file_clone);
+                                    
+                                    let update = update_clone.clone();
+                                    glib::idle_add_local_once(move || {
+                                        update();
+                                    });
+                                }
+                                Err(e) => {
+                                    crate::status_log::log_error(&format!(
+                                        "Failed to revert: {}",
+                                        e
+                                    ));
+                                }
+                            }
+                        }
+                        d.close();
+                    });
+
+                    dialog.show();
+                    if let Some(p) = popover_for_revert.upgrade() {
+                        p.popdown();
+                    }
+                });
+
                 menu_box.append(&unstage_btn);
+                menu_box.append(&revert_btn);
 
                 popover.set_child(Some(&menu_box));
 
