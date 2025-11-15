@@ -1958,6 +1958,7 @@ pub fn create_git_diff_panel(
         let repo_path_for_undo = repo_path_rc.clone();
         let update_for_undo = update_git_status.clone();
         let parent_for_undo = parent_window.clone();
+        let commit_view_for_undo = commit_message_view.clone();
         undo_commit_button.connect_clicked(move |_| {
             let repo = match repo_path_for_undo.borrow().as_ref() {
                 Some(r) => r.clone(),
@@ -1965,6 +1966,21 @@ pub fn create_git_diff_panel(
                     crate::status_log::log_error("Not in a git repository");
                     return;
                 }
+            };
+
+            // Get the commit message before undoing
+            let commit_msg_output = std::process::Command::new("git")
+                .arg("log")
+                .arg("-1")
+                .arg("--pretty=%B")
+                .current_dir(&repo)
+                .output();
+
+            let commit_message = match commit_msg_output {
+                Ok(output) if output.status.success() => {
+                    String::from_utf8_lossy(&output.stdout).trim().to_string()
+                }
+                _ => String::new()
             };
 
             // Show confirmation dialog
@@ -1978,6 +1994,7 @@ pub fn create_git_diff_panel(
 
             let repo_for_dialog = repo.clone();
             let update_for_dialog = update_for_undo.clone();
+            let commit_view_for_dialog = commit_view_for_undo.clone();
             dialog.connect_response(move |d, response| {
                 if response == gtk4::ResponseType::Yes {
                     crate::status_log::log_info("Undoing last commit...");
@@ -1992,6 +2009,13 @@ pub fn create_git_diff_panel(
                     match output {
                         Ok(output) if output.status.success() => {
                             crate::status_log::log_success("Last commit undone");
+                            
+                            // Set the commit message in the text view
+                            if !commit_message.is_empty() {
+                                let buffer = commit_view_for_dialog.buffer();
+                                buffer.set_text(&commit_message);
+                            }
+                            
                             update_for_dialog();
                         }
                         Ok(output) => {
