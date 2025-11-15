@@ -1442,6 +1442,7 @@ pub fn create_git_diff_panel(
 
     // Get references to widgets
     let branch_button = panel.branch_button();
+    let git_menu_button = panel.git_menu_button();
     let revert_all_button = panel.revert_all_button();
     let refresh_button = panel.refresh_button();
     let stage_all_button = panel.stage_all_button();
@@ -1938,6 +1939,239 @@ pub fn create_git_diff_panel(
 
     // Initial update
     update_git_status();
+
+    // Set up git menu button with advanced commands
+    {
+        let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
+        menu_box.add_css_class("menu");
+
+        // Undo Last Commit button
+        let undo_commit_button = Button::with_label("Undo Last Commit");
+        undo_commit_button.add_css_class("flat");
+        undo_commit_button.set_hexpand(true);
+        if let Some(child) = undo_commit_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+
+        let repo_path_for_undo = repo_path_rc.clone();
+        let update_for_undo = update_git_status.clone();
+        let parent_for_undo = parent_window.clone();
+        undo_commit_button.connect_clicked(move |_| {
+            let repo = match repo_path_for_undo.borrow().as_ref() {
+                Some(r) => r.clone(),
+                None => {
+                    crate::status_log::log_error("Not in a git repository");
+                    return;
+                }
+            };
+
+            // Show confirmation dialog
+            let dialog = gtk4::MessageDialog::new(
+                Some(parent_for_undo.as_ref()),
+                gtk4::DialogFlags::MODAL,
+                gtk4::MessageType::Warning,
+                gtk4::ButtonsType::YesNo,
+                "Undo last commit? This will keep your changes staged.",
+            );
+
+            let repo_for_dialog = repo.clone();
+            let update_for_dialog = update_for_undo.clone();
+            dialog.connect_response(move |d, response| {
+                if response == gtk4::ResponseType::Yes {
+                    crate::status_log::log_info("Undoing last commit...");
+                    
+                    let output = std::process::Command::new("git")
+                        .arg("reset")
+                        .arg("--soft")
+                        .arg("HEAD~1")
+                        .current_dir(&repo_for_dialog)
+                        .output();
+
+                    match output {
+                        Ok(output) if output.status.success() => {
+                            crate::status_log::log_success("Last commit undone");
+                            update_for_dialog();
+                        }
+                        Ok(output) => {
+                            let error = String::from_utf8_lossy(&output.stderr);
+                            crate::status_log::log_error(&format!("Failed to undo commit: {}", error));
+                        }
+                        Err(e) => {
+                            crate::status_log::log_error(&format!("Failed to run git: {}", e));
+                        }
+                    }
+                }
+                d.close();
+            });
+
+            dialog.show();
+        });
+
+        // Stash Changes button
+        let stash_button = Button::with_label("Stash Changes");
+        stash_button.add_css_class("flat");
+        stash_button.set_hexpand(true);
+        if let Some(child) = stash_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+
+        let repo_path_for_stash = repo_path_rc.clone();
+        let update_for_stash = update_git_status.clone();
+        stash_button.connect_clicked(move |_| {
+            let repo = match repo_path_for_stash.borrow().as_ref() {
+                Some(r) => r.clone(),
+                None => {
+                    crate::status_log::log_error("Not in a git repository");
+                    return;
+                }
+            };
+
+            crate::status_log::log_info("Stashing changes...");
+            
+            let output = std::process::Command::new("git")
+                .arg("stash")
+                .arg("push")
+                .arg("-m")
+                .arg(&format!("Stash from Dvop at {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S")))
+                .current_dir(&repo)
+                .output();
+
+            match output {
+                Ok(output) if output.status.success() => {
+                    crate::status_log::log_success("Changes stashed");
+                    update_for_stash();
+                }
+                Ok(output) => {
+                    let error = String::from_utf8_lossy(&output.stderr);
+                    crate::status_log::log_error(&format!("Failed to stash: {}", error));
+                }
+                Err(e) => {
+                    crate::status_log::log_error(&format!("Failed to run git: {}", e));
+                }
+            }
+        });
+
+        // Pop Stash button
+        let pop_stash_button = Button::with_label("Pop Stash");
+        pop_stash_button.add_css_class("flat");
+        pop_stash_button.set_hexpand(true);
+        if let Some(child) = pop_stash_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+
+        let repo_path_for_pop = repo_path_rc.clone();
+        let update_for_pop = update_git_status.clone();
+        pop_stash_button.connect_clicked(move |_| {
+            let repo = match repo_path_for_pop.borrow().as_ref() {
+                Some(r) => r.clone(),
+                None => {
+                    crate::status_log::log_error("Not in a git repository");
+                    return;
+                }
+            };
+
+            crate::status_log::log_info("Popping stash...");
+            
+            let output = std::process::Command::new("git")
+                .arg("stash")
+                .arg("pop")
+                .current_dir(&repo)
+                .output();
+
+            match output {
+                Ok(output) if output.status.success() => {
+                    crate::status_log::log_success("Stash popped");
+                    update_for_pop();
+                }
+                Ok(output) => {
+                    let error = String::from_utf8_lossy(&output.stderr);
+                    crate::status_log::log_error(&format!("Failed to pop stash: {}", error));
+                }
+                Err(e) => {
+                    crate::status_log::log_error(&format!("Failed to run git: {}", e));
+                }
+            }
+        });
+
+        // Add separator
+        let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
+
+        // Amend Last Commit button
+        let amend_button = Button::with_label("Amend Last Commit");
+        amend_button.add_css_class("flat");
+        amend_button.set_hexpand(true);
+        if let Some(child) = amend_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+
+        let repo_path_for_amend = repo_path_rc.clone();
+        let update_for_amend = update_git_status.clone();
+        let commit_message_view_for_amend = commit_message_view.clone();
+        amend_button.connect_clicked(move |_| {
+            let repo = match repo_path_for_amend.borrow().as_ref() {
+                Some(r) => r.clone(),
+                None => {
+                    crate::status_log::log_error("Not in a git repository");
+                    return;
+                }
+            };
+
+            // Get the commit message from the text view
+            let buffer = commit_message_view_for_amend.buffer();
+            let start = buffer.start_iter();
+            let end = buffer.end_iter();
+            let message = buffer.text(&start, &end, false);
+
+            if message.trim().is_empty() || message == "Commit message" {
+                crate::status_log::log_error("Commit message cannot be empty");
+                return;
+            }
+
+            crate::status_log::log_info("Amending last commit...");
+            
+            let output = std::process::Command::new("git")
+                .arg("commit")
+                .arg("--amend")
+                .arg("-m")
+                .arg(message.as_str())
+                .current_dir(&repo)
+                .output();
+
+            match output {
+                Ok(output) if output.status.success() => {
+                    crate::status_log::log_success("Last commit amended");
+                    update_for_amend();
+                }
+                Ok(output) => {
+                    let error = String::from_utf8_lossy(&output.stderr);
+                    crate::status_log::log_error(&format!("Failed to amend commit: {}", error));
+                }
+                Err(e) => {
+                    crate::status_log::log_error(&format!("Failed to run git: {}", e));
+                }
+            }
+        });
+
+        // Add all buttons to menu
+        menu_box.append(&undo_commit_button);
+        menu_box.append(&stash_button);
+        menu_box.append(&pop_stash_button);
+        menu_box.append(&separator);
+        menu_box.append(&amend_button);
+
+        // Create popover and set it on the menu button
+        let popover = gtk4::Popover::new();
+        popover.set_child(Some(&menu_box));
+        git_menu_button.set_popover(Some(&popover));
+    }
 
     // Refresh button handler
     let update_git_status_for_refresh = update_git_status.clone();

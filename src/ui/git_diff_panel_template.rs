@@ -12,6 +12,8 @@ mod imp {
         #[template_child]
         pub branch_button: TemplateChild<MenuButton>,
         #[template_child]
+        pub git_menu_button: TemplateChild<MenuButton>,
+        #[template_child]
         pub revert_all_button: TemplateChild<Button>,
         #[template_child]
         pub refresh_button: TemplateChild<Button>,
@@ -66,6 +68,10 @@ impl GitDiffPanel {
 
     pub fn branch_button(&self) -> MenuButton {
         self.imp().branch_button.get()
+    }
+
+    pub fn git_menu_button(&self) -> MenuButton {
+        self.imp().git_menu_button.get()
     }
 
     pub fn revert_all_button(&self) -> Button {
