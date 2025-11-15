@@ -597,7 +597,11 @@ pub fn setup_tab_right_click(
         let close_to_right_button = Button::with_label("Close to the Right");
         close_to_right_button.add_css_class("flat");
         close_to_right_button.set_hexpand(true);
-        close_to_right_button.set_halign(gtk4::Align::Start);
+        if let Some(child) = close_to_right_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
         
         // Disable "Close to the Right" if this is the last tab
         if let Some(page_num) = clicked_page_num {
@@ -699,7 +703,11 @@ pub fn setup_tab_right_click(
         let close_to_left_button = Button::with_label("Close to the Left");
         close_to_left_button.add_css_class("flat");
         close_to_left_button.set_hexpand(true);
-        close_to_left_button.set_halign(gtk4::Align::Start);
+        if let Some(child) = close_to_left_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
         
         // Disable "Close to the Left" if this is the first tab
         if let Some(page_num) = clicked_page_num {
@@ -809,7 +817,11 @@ pub fn setup_tab_right_click(
         let close_others_button = Button::with_label("Close Others");
         close_others_button.add_css_class("flat");
         close_others_button.set_hexpand(true);
-        close_others_button.set_halign(gtk4::Align::Start);
+        if let Some(child) = close_others_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
         
         // Disable "Close Others" if there's only one tab
         if notebook_clone.n_pages() <= 1 {
@@ -922,7 +934,11 @@ pub fn setup_tab_right_click(
         let close_all_button = Button::with_label("Close All");
         close_all_button.add_css_class("flat");
         close_all_button.set_hexpand(true);
-        close_all_button.set_halign(gtk4::Align::Start);
+        if let Some(child) = close_all_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
         
         // Clone notebook for the button closure
         let notebook_for_close = notebook_clone.clone();
@@ -1012,7 +1028,11 @@ pub fn setup_tab_right_click(
         let close_saved_button = Button::with_label("Close Saved");
         close_saved_button.add_css_class("flat");
         close_saved_button.set_hexpand(true);
-        close_saved_button.set_halign(gtk4::Align::Start);
+        if let Some(child) = close_saved_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
         
         // Clone for the button closure
         let notebook_for_close_saved = notebook_clone.clone();

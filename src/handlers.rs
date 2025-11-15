@@ -3936,19 +3936,31 @@ fn show_file_context_menu(
     let copy_button = Button::with_label("Copy");
     copy_button.add_css_class("flat");
     copy_button.set_hexpand(true);
-    copy_button.set_halign(gtk4::Align::Start);
+    if let Some(child) = copy_button.child() {
+        if let Ok(label) = child.downcast::<gtk4::Label>() {
+            label.set_xalign(0.0);
+        }
+    }
 
     // Create cut button
     let cut_button = Button::with_label("Cut");
     cut_button.add_css_class("flat");
     cut_button.set_hexpand(true);
-    cut_button.set_halign(gtk4::Align::Start);
+    if let Some(child) = cut_button.child() {
+        if let Ok(label) = child.downcast::<gtk4::Label>() {
+            label.set_xalign(0.0);
+        }
+    }
 
     // Create paste button (if there's content in clipboard)
     let paste_button = Button::with_label("Paste");
     paste_button.add_css_class("flat");
     paste_button.set_hexpand(true);
-    paste_button.set_halign(gtk4::Align::Start);
+    if let Some(child) = paste_button.child() {
+        if let Ok(label) = child.downcast::<gtk4::Label>() {
+            label.set_xalign(0.0);
+        }
+    }
     paste_button.set_sensitive(crate::ui::file_manager::has_clipboard_content());
 
     // Add separator
@@ -3959,7 +3971,11 @@ fn show_file_context_menu(
     delete_button.add_css_class("flat");
     delete_button.add_css_class("destructive-action");
     delete_button.set_hexpand(true);
-    delete_button.set_halign(gtk4::Align::Start);
+    if let Some(child) = delete_button.child() {
+        if let Ok(label) = child.downcast::<gtk4::Label>() {
+            label.set_xalign(0.0);
+        }
+    }
 
     // Clone variables for the copy button closure
     let file_path_copy = file_path.clone();
@@ -4113,13 +4129,21 @@ fn show_file_manager_background_context_menu(
     let new_file_button = Button::with_label("New File");
     new_file_button.add_css_class("flat");
     new_file_button.set_hexpand(true);
-    new_file_button.set_halign(gtk4::Align::Start);
+    if let Some(child) = new_file_button.child() {
+        if let Ok(label) = child.downcast::<gtk4::Label>() {
+            label.set_xalign(0.0);
+        }
+    }
 
     // Create "Paste" button (if there's content in clipboard)
     let paste_button = Button::with_label("Paste");
     paste_button.add_css_class("flat");
     paste_button.set_hexpand(true);
-    paste_button.set_halign(gtk4::Align::Start);
+    if let Some(child) = paste_button.child() {
+        if let Ok(label) = child.downcast::<gtk4::Label>() {
+            label.set_xalign(0.0);
+        }
+    }
     paste_button.set_sensitive(crate::ui::file_manager::has_clipboard_content());
 
     // Add separator
