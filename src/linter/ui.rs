@@ -207,10 +207,19 @@ pub fn check_and_update_rust_ui(dir: &Path) {
     glib::idle_add_once({
         let has_rust = has_rust;
         move || {
-            // Show linter status only for Rust projects (LSP-specific)
+            // Check if we have any diagnostics from any linter
+            let has_diagnostics = if let Ok(store) = DIAGNOSTICS_STORE.lock() {
+                !store.is_empty()
+            } else {
+                false
+            };
+
+            // Show linter status if we have Rust files OR any diagnostics
+            let should_show_status = has_rust || has_diagnostics;
+            
             LINTER_STATUS_VISIBILITY_CALLBACK.with(|cell| {
                 if let Some(ref callback) = *cell.borrow() {
-                    callback(has_rust);
+                    callback(should_show_status);
                 }
             });
 
@@ -526,13 +535,16 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
         let file_uri = format!("file://{}", path.display());
         
         // Store in DIAGNOSTICS_STORE
-        if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
+        let has_any_diagnostics = if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
             if diagnostics.is_empty() {
                 store.remove(&file_uri);
             } else {
                 store.insert(file_uri.clone(), diagnostics.clone());
             }
-        }
+            !store.is_empty()
+        } else {
+            false
+        };
         
         // Also store in the global file diagnostics (for underlines)
         crate::linter::store_file_diagnostics(&path.to_string_lossy(), diagnostics.clone());
@@ -540,6 +552,15 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
         // Apply underlines if we have a source buffer
         if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
             crate::linter::apply_diagnostic_underlines(&source_buffer, &path.to_string_lossy());
+        }
+        
+        // Show linter status widget if we have any diagnostics
+        if has_any_diagnostics {
+            LINTER_STATUS_VISIBILITY_CALLBACK.with(|cell| {
+                if let Some(ref callback) = *cell.borrow() {
+                    callback(true);
+                }
+            });
         }
         
         // Refresh the diagnostics panel
