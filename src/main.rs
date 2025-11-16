@@ -930,6 +930,113 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    // Add drag gesture to activity bar to allow dragging sidebar open
+    let activity_bar = imp.activity_bar.get();
+    let drag_gesture = gtk4::GestureDrag::new();
+    drag_gesture.set_propagation_phase(gtk4::PropagationPhase::Capture);
+    
+    let explorer_button_for_drag = explorer_button.clone();
+    let search_button_for_drag = search_button.clone();
+    let git_diff_button_for_drag = git_diff_button.clone();
+    let paned_for_drag = paned.clone();
+    let sidebar_stack_for_drag = sidebar_stack.clone();
+    
+    // Track the initial state
+    let drag_start_width = Rc::new(RefCell::new(0i32));
+    let drag_was_visible = Rc::new(RefCell::new(false));
+    
+    let drag_start_width_clone = drag_start_width.clone();
+    let drag_was_visible_clone = drag_was_visible.clone();
+    let paned_for_drag_start = paned_for_drag.clone();
+    
+    drag_gesture.connect_drag_begin(move |_, _x, _y| {
+        // Store initial paned width
+        *drag_start_width_clone.borrow_mut() = paned_for_drag_start.position();
+        
+        // Check if sidebar is visible
+        if let Some(start_child) = paned_for_drag_start.start_child() {
+            *drag_was_visible_clone.borrow_mut() = start_child.is_visible();
+            
+            // If sidebar is hidden, make it visible but at width 0 to prepare for drag
+            if !start_child.is_visible() {
+                start_child.set_visible(true);
+                paned_for_drag_start.set_position(0);
+            }
+        }
+    });
+    
+    let drag_start_width_clone2 = drag_start_width.clone();
+    let paned_for_drag_update = paned_for_drag.clone();
+    
+    drag_gesture.connect_drag_update(move |_, offset_x, _offset_y| {
+        // Update paned position based on drag offset
+        let start_width = *drag_start_width_clone2.borrow();
+        let new_width = (start_width as f64 + offset_x).max(0.0).min(400.0) as i32;
+        paned_for_drag_update.set_position(new_width);
+    });
+    
+    let drag_was_visible_clone2 = drag_was_visible.clone();
+    let paned_for_drag_end = paned_for_drag.clone();
+    
+    drag_gesture.connect_drag_end(move |_, offset_x, _offset_y| {
+        let final_width = paned_for_drag_end.position();
+        let was_visible = *drag_was_visible_clone2.borrow();
+        
+        // Determine what to do based on final position
+        if final_width < 50 {
+            // If dragged to less than 50px, hide it
+            if let Some(start_child) = paned_for_drag_end.start_child() {
+                start_child.set_visible(false);
+                paned_for_drag_end.set_position(0);
+            }
+            explorer_button_for_drag.set_active(false);
+            search_button_for_drag.set_active(false);
+            git_diff_button_for_drag.set_active(false);
+            
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(false);
+            let _ = settings.save();
+        } else {
+            // If dragged to more than 50px, keep it open and activate appropriate button
+            if !was_visible || offset_x > 10.0 {
+                // Determine which button to activate based on current visible child
+                let visible_child_name = sidebar_stack_for_drag.visible_child_name();
+                
+                if let Some(ref name) = visible_child_name {
+                    match name.as_str() {
+                        "search" => {
+                            search_button_for_drag.set_active(true);
+                            explorer_button_for_drag.set_active(false);
+                            git_diff_button_for_drag.set_active(false);
+                        },
+                        "git-diff" => {
+                            git_diff_button_for_drag.set_active(true);
+                            explorer_button_for_drag.set_active(false);
+                            search_button_for_drag.set_active(false);
+                        },
+                        _ => {
+                            explorer_button_for_drag.set_active(true);
+                            search_button_for_drag.set_active(false);
+                            git_diff_button_for_drag.set_active(false);
+                        }
+                    }
+                } else {
+                    explorer_button_for_drag.set_active(true);
+                    search_button_for_drag.set_active(false);
+                    git_diff_button_for_drag.set_active(false);
+                }
+                
+                // Save the new width
+                let mut settings = crate::settings::get_settings_mut();
+                settings.set_file_panel_width(final_width);
+                settings.set_sidebar_visible(true);
+                let _ = settings.save();
+            }
+        }
+    });
+    
+    activity_bar.add_controller(drag_gesture);
+
     // Monitor paned position and auto-hide when width goes below 50px
     let explorer_button_for_monitor = explorer_button.clone();
     let search_button_for_monitor = search_button.clone();
