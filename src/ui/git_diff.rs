@@ -36,6 +36,36 @@ pub fn set_git_status_update_callback(callback: Rc<dyn Fn()>) {
     });
 }
 
+/// Trigger git status update with debouncing
+/// This should be called after file save operations to refresh the git panel
+pub fn trigger_git_status_update() {
+    PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
+        // Cancel any pending update
+        if let Some(id) = timeout_cell.borrow_mut().take() {
+            id.remove();
+        }
+
+        // Schedule a new update after a short delay (debouncing)
+        let new_id = glib::timeout_add_local_once(
+            std::time::Duration::from_millis(300),
+            move || {
+                GIT_STATUS_UPDATE_CALLBACK.with(|callback_cell| {
+                    if let Some(callback) = callback_cell.borrow().as_ref() {
+                        callback();
+                    }
+                });
+                
+                // Clear the timeout ID after execution
+                PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
+                    *timeout_cell.borrow_mut() = None;
+                });
+            },
+        );
+
+        *timeout_cell.borrow_mut() = Some(new_id);
+    });
+}
+
 #[derive(Clone, Debug)]
 struct GitFileChange {
     path: PathBuf,
