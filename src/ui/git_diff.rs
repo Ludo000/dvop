@@ -2166,6 +2166,144 @@ pub fn create_git_diff_panel(
             }
         });
 
+        // Pop Specific Stash button
+        let pop_specific_stash_button = Button::with_label("Pop Specific Stash...");
+        pop_specific_stash_button.add_css_class("flat");
+        pop_specific_stash_button.set_hexpand(true);
+        if let Some(child) = pop_specific_stash_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+
+        let repo_path_for_pop_specific = repo_path_rc.clone();
+        let update_for_pop_specific = update_git_status.clone();
+        let parent_for_pop_specific = parent_window.clone();
+        pop_specific_stash_button.connect_clicked(move |_| {
+            let repo = match repo_path_for_pop_specific.borrow().as_ref() {
+                Some(r) => r.clone(),
+                None => {
+                    crate::status_log::log_error("Not in a git repository");
+                    return;
+                }
+            };
+
+            // Get list of stashes
+            let stash_list_output = std::process::Command::new("git")
+                .arg("stash")
+                .arg("list")
+                .current_dir(&repo)
+                .output();
+
+            let stashes = match stash_list_output {
+                Ok(output) if output.status.success() => {
+                    String::from_utf8_lossy(&output.stdout)
+                        .lines()
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>()
+                }
+                _ => {
+                    crate::status_log::log_error("No stashes found or failed to list stashes");
+                    return;
+                }
+            };
+
+            if stashes.is_empty() {
+                crate::status_log::log_info("No stashes available");
+                return;
+            }
+
+            // Create a dialog with a list of stashes
+            let dialog = gtk4::Dialog::with_buttons(
+                Some("Pop Specific Stash"),
+                Some(parent_for_pop_specific.as_ref()),
+                gtk4::DialogFlags::MODAL,
+                &[("Cancel", gtk4::ResponseType::Cancel), ("Pop", gtk4::ResponseType::Ok)],
+            );
+
+            dialog.set_default_size(500, 300);
+
+            let content_area = dialog.content_area();
+            content_area.set_spacing(12);
+            content_area.set_margin_top(12);
+            content_area.set_margin_bottom(12);
+            content_area.set_margin_start(12);
+            content_area.set_margin_end(12);
+
+            let label = gtk4::Label::new(Some("Select a stash to pop:"));
+            label.set_halign(gtk4::Align::Start);
+            content_area.append(&label);
+
+            // Create scrolled window for the list
+            let scrolled = gtk4::ScrolledWindow::new();
+            scrolled.set_vexpand(true);
+            scrolled.set_hexpand(true);
+            scrolled.set_min_content_height(200);
+
+            // Create list box
+            let list_box = gtk4::ListBox::new();
+            list_box.set_selection_mode(gtk4::SelectionMode::Single);
+            list_box.add_css_class("boxed-list");
+
+            // Add stashes to the list
+            for stash in &stashes {
+                let row = gtk4::ListBoxRow::new();
+                let stash_label = gtk4::Label::new(Some(stash));
+                stash_label.set_xalign(0.0);
+                stash_label.set_margin_top(8);
+                stash_label.set_margin_bottom(8);
+                stash_label.set_margin_start(8);
+                stash_label.set_margin_end(8);
+                row.set_child(Some(&stash_label));
+                list_box.append(&row);
+            }
+
+            // Select the first item by default
+            if let Some(first_row) = list_box.row_at_index(0) {
+                list_box.select_row(Some(&first_row));
+            }
+
+            scrolled.set_child(Some(&list_box));
+            content_area.append(&scrolled);
+
+            let repo_for_dialog = repo.clone();
+            let update_for_dialog = update_for_pop_specific.clone();
+            dialog.connect_response(move |d, response| {
+                if response == gtk4::ResponseType::Ok {
+                    if let Some(selected_row) = list_box.selected_row() {
+                        let index = selected_row.index();
+                        let stash_ref = format!("stash@{{{}}}", index);
+
+                        crate::status_log::log_info(&format!("Popping stash: {}", stash_ref));
+
+                        let output = std::process::Command::new("git")
+                            .arg("stash")
+                            .arg("pop")
+                            .arg(&stash_ref)
+                            .current_dir(&repo_for_dialog)
+                            .output();
+
+                        match output {
+                            Ok(output) if output.status.success() => {
+                                crate::status_log::log_success(&format!("Stash {} popped", stash_ref));
+                                update_for_dialog();
+                            }
+                            Ok(output) => {
+                                let error = String::from_utf8_lossy(&output.stderr);
+                                crate::status_log::log_error(&format!("Failed to pop stash: {}", error));
+                            }
+                            Err(e) => {
+                                crate::status_log::log_error(&format!("Failed to run git: {}", e));
+                            }
+                        }
+                    }
+                }
+                d.close();
+            });
+
+            dialog.show();
+        });
+
         // Add separator
         let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
 
@@ -2231,6 +2369,7 @@ pub fn create_git_diff_panel(
         menu_box.append(&undo_commit_button);
         menu_box.append(&stash_button);
         menu_box.append(&pop_stash_button);
+        menu_box.append(&pop_specific_stash_button);
         menu_box.append(&separator);
         menu_box.append(&amend_button);
 
