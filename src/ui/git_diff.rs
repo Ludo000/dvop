@@ -2045,6 +2045,7 @@ pub fn create_git_diff_panel(
 
         let repo_path_for_stash = repo_path_rc.clone();
         let update_for_stash = update_git_status.clone();
+        let parent_for_stash = parent_window.clone();
         stash_button.connect_clicked(move |_| {
             let repo = match repo_path_for_stash.borrow().as_ref() {
                 Some(r) => r.clone(),
@@ -2054,29 +2055,71 @@ pub fn create_git_diff_panel(
                 }
             };
 
-            crate::status_log::log_info("Stashing changes...");
-            
-            let output = std::process::Command::new("git")
-                .arg("stash")
-                .arg("push")
-                .arg("-m")
-                .arg(&format!("Stash from Dvop at {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S")))
-                .current_dir(&repo)
-                .output();
+            // Create a dialog to ask for stash message
+            let dialog = gtk4::Dialog::with_buttons(
+                Some("Stash Changes"),
+                Some(parent_for_stash.as_ref()),
+                gtk4::DialogFlags::MODAL,
+                &[("Cancel", gtk4::ResponseType::Cancel), ("Stash", gtk4::ResponseType::Ok)],
+            );
 
-            match output {
-                Ok(output) if output.status.success() => {
-                    crate::status_log::log_success("Changes stashed");
-                    update_for_stash();
+            let content_area = dialog.content_area();
+            content_area.set_spacing(12);
+            content_area.set_margin_top(12);
+            content_area.set_margin_bottom(12);
+            content_area.set_margin_start(12);
+            content_area.set_margin_end(12);
+
+            let label = gtk4::Label::new(Some("Enter a message for this stash:"));
+            label.set_halign(gtk4::Align::Start);
+            content_area.append(&label);
+
+            let entry = gtk4::Entry::new();
+            entry.set_placeholder_text(Some(&format!("Stash at {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))));
+            entry.set_activates_default(true);
+            content_area.append(&entry);
+
+            dialog.set_default_response(gtk4::ResponseType::Ok);
+
+            let repo_for_dialog = repo.clone();
+            let update_for_dialog = update_for_stash.clone();
+            dialog.connect_response(move |d, response| {
+                if response == gtk4::ResponseType::Ok {
+                    let stash_message = entry.text();
+                    let message = if stash_message.is_empty() {
+                        format!("Stash from Dvop at {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))
+                    } else {
+                        stash_message.to_string()
+                    };
+
+                    crate::status_log::log_info("Stashing changes...");
+                    
+                    let output = std::process::Command::new("git")
+                        .arg("stash")
+                        .arg("push")
+                        .arg("-m")
+                        .arg(&message)
+                        .current_dir(&repo_for_dialog)
+                        .output();
+
+                    match output {
+                        Ok(output) if output.status.success() => {
+                            crate::status_log::log_success("Changes stashed");
+                            update_for_dialog();
+                        }
+                        Ok(output) => {
+                            let error = String::from_utf8_lossy(&output.stderr);
+                            crate::status_log::log_error(&format!("Failed to stash: {}", error));
+                        }
+                        Err(e) => {
+                            crate::status_log::log_error(&format!("Failed to run git: {}", e));
+                        }
+                    }
                 }
-                Ok(output) => {
-                    let error = String::from_utf8_lossy(&output.stderr);
-                    crate::status_log::log_error(&format!("Failed to stash: {}", error));
-                }
-                Err(e) => {
-                    crate::status_log::log_error(&format!("Failed to run git: {}", e));
-                }
-            }
+                d.close();
+            });
+
+            dialog.show();
         });
 
         // Pop Stash button
