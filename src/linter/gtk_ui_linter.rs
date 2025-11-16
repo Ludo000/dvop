@@ -6,6 +6,13 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 use std::collections::{HashMap, HashSet};
 
+/// Represents an element in the XML stack with its class name
+#[derive(Clone)]
+struct StackElement {
+    tag_name: String,
+    class_name: Option<String>,
+}
+
 /// Lint GTK UI XML file
 pub fn lint_gtk_ui(content: &str) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
@@ -14,7 +21,7 @@ pub fn lint_gtk_ui(content: &str) -> Vec<Diagnostic> {
 
     let mut buf = Vec::new();
     let mut line_number = 1;
-    let mut element_stack = Vec::new();
+    let mut element_stack: Vec<StackElement> = Vec::new();
     let mut object_ids = HashMap::new(); // Track object IDs and their line numbers
     let mut duplicate_ids = HashSet::new();
     let mut found_interface = false;
@@ -27,7 +34,25 @@ pub fn lint_gtk_ui(content: &str) -> Vec<Diagnostic> {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
                 let tag_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
-                element_stack.push(tag_name.clone());
+                
+                // Extract class name for object/template elements
+                let mut class_name = None;
+                if tag_name == "object" || tag_name == "template" {
+                    for attr in e.attributes() {
+                        if let Ok(attr) = attr {
+                            let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
+                            if key == "class" || key == "parent" {
+                                class_name = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                element_stack.push(StackElement {
+                    tag_name: tag_name.clone(),
+                    class_name,
+                });
 
                 // Check for root element
                 if tag_name == "interface" {
@@ -37,6 +62,11 @@ pub fn lint_gtk_ui(content: &str) -> Vec<Diagnostic> {
                 // Validate object elements
                 if tag_name == "object" {
                     validate_object_element(&e, line_number, &mut diagnostics, &known_widgets, &mut object_ids, &mut duplicate_ids);
+                }
+
+                // Validate template elements (similar to object)
+                if tag_name == "template" {
+                    validate_template_element(&e, line_number, &mut diagnostics);
                 }
 
                 // Validate property elements
@@ -161,10 +191,53 @@ fn validate_object_element(
     }
 }
 
+/// Validate template element attributes
+fn validate_template_element(
+    element: &BytesStart,
+    line_number: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut has_class = false;
+    let mut has_parent = false;
+
+    for attr in element.attributes() {
+        if let Ok(attr) = attr {
+            let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
+            
+            match key.as_str() {
+                "class" => has_class = true,
+                "parent" => has_parent = true,
+                _ => {}
+            }
+        }
+    }
+
+    // Template must have both class and parent attributes
+    if !has_class {
+        diagnostics.push(Diagnostic::new(
+            DiagnosticSeverity::Error,
+            "Template element missing required 'class' attribute".to_string(),
+            line_number,
+            0,
+            "missing-class".to_string(),
+        ));
+    }
+    
+    if !has_parent {
+        diagnostics.push(Diagnostic::new(
+            DiagnosticSeverity::Error,
+            "Template element missing required 'parent' attribute".to_string(),
+            line_number,
+            0,
+            "missing-parent".to_string(),
+        ));
+    }
+}
+
 /// Validate property element
 fn validate_property_element(
     element: &BytesStart,
-    element_stack: &[String],
+    element_stack: &[StackElement],
     line_number: usize,
     diagnostics: &mut Vec<Diagnostic>,
     known_properties: &HashMap<&str, HashSet<&str>>,
@@ -209,7 +282,7 @@ fn validate_property_element(
 /// Validate child element
 fn validate_child_element(
     _element: &BytesStart,
-    element_stack: &[String],
+    element_stack: &[StackElement],
     line_number: usize,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
@@ -260,13 +333,12 @@ fn check_deprecated_attributes(
 }
 
 /// Find parent object class from element stack
-fn find_parent_object_class(element_stack: &[String]) -> Option<String> {
-    // Walk backwards through stack to find the nearest object/template
+fn find_parent_object_class(element_stack: &[StackElement]) -> Option<String> {
+    // Walk backwards through stack to find the nearest object/template with a class
     for i in (0..element_stack.len()).rev() {
-        if element_stack[i] == "object" || element_stack[i] == "template" {
-            // Return the class name (would need to track this separately in real implementation)
-            // For now, we'll return a placeholder
-            return Some("GtkWidget".to_string());
+        let elem = &element_stack[i];
+        if (elem.tag_name == "object" || elem.tag_name == "template") && elem.class_name.is_some() {
+            return elem.class_name.clone();
         }
     }
     None
