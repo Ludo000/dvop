@@ -930,6 +930,43 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    // Monitor paned position and auto-hide when width goes below 50px
+    let explorer_button_for_monitor = explorer_button.clone();
+    let search_button_for_monitor = search_button.clone();
+    let git_diff_button_for_monitor = git_diff_button.clone();
+    paned.connect_position_notify(move |p| {
+        let position = p.position();
+        // Only act if the sidebar is currently visible and position is being reduced
+        if let Some(start_child) = p.start_child() {
+            if start_child.is_visible() && position < 50 && position > 0 {
+                // Auto-hide the panel by deactivating all sidebar buttons
+                explorer_button_for_monitor.set_active(false);
+                search_button_for_monitor.set_active(false);
+                git_diff_button_for_monitor.set_active(false);
+            }
+        }
+    });
+
+    // Monitor editor_paned position and auto-hide terminal when height goes below 50px
+    editor_paned.connect_position_notify(move |p| {
+        let position = p.position();
+        let total_height = p.allocation().height();
+        let terminal_height = total_height - position;
+        
+        // Only act if terminal is currently visible and its height is being reduced below 50px
+        if let Some(end_child) = p.end_child() {
+            if end_child.is_visible() && terminal_height < 50 && terminal_height > 0 {
+                // Auto-hide the terminal
+                end_child.set_visible(false);
+                p.set_position(total_height);
+                // Save terminal hidden state
+                let mut settings = crate::settings::get_settings_mut();
+                settings.set_terminal_visible(false);
+                let _ = settings.save();
+            }
+        }
+    });
+
     // Get the search panel from the sidebar stack and populate it with global search UI
     if let Some(search_panel_widget) = sidebar_stack.child_by_name("search") {
         if let Some(search_panel_box) = search_panel_widget.downcast_ref::<gtk4::Box>() {

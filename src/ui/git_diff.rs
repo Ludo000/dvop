@@ -1,7 +1,7 @@
 // Git Diff UI components for Dvop
 // Displays git status and diff information in the sidebar
 
-use gtk4::{glib, gio};
+use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{pango, Box as GtkBox, Button, DrawingArea, Label, ListBoxRow, Orientation};
 use sourceview5::prelude::{BufferExt, ViewExt};
@@ -1317,143 +1317,8 @@ fn setup_diff_tab_right_click(tab_box: &gtk4::Box, notebook: &gtk4::Notebook) {
                 crate::status_log::log_success("Diff tab closed");
             }
         });
-
-        // Create "Close to the Right" button
-        let close_to_right_button = gtk4::Button::with_label("Close to the Right");
-        close_to_right_button.add_css_class("flat");
-        close_to_right_button.set_hexpand(true);
-        if let Some(child) = close_to_right_button.child() {
-            if let Ok(label) = child.downcast::<gtk4::Label>() {
-                label.set_xalign(0.0);
-            }
-        }
-        
-        // Disable "Close to the Right" if this is the last tab
-        if let Some(page_num) = clicked_page_num {
-            if page_num >= notebook_clone.n_pages() - 1 {
-                close_to_right_button.set_sensitive(false);
-            }
-        } else {
-            close_to_right_button.set_sensitive(false);
-        }
-        
-        let notebook_for_close_right = notebook_clone.clone();
-        let popover_weak_right = popover.downgrade();
-        close_to_right_button.connect_clicked(move |_| {
-            if let Some(popover) = popover_weak_right.upgrade() {
-                popover.popdown();
-            }
-            
-            if let Some(keep_page) = clicked_page_num {
-                while notebook_for_close_right.n_pages() > keep_page + 1 {
-                    let last_page = notebook_for_close_right.n_pages() - 1;
-                    notebook_for_close_right.remove_page(Some(last_page));
-                }
-                crate::status_log::log_success("Tabs to the right closed");
-            }
-        });
-
-        // Create "Close to the Left" button
-        let close_to_left_button = gtk4::Button::with_label("Close to the Left");
-        close_to_left_button.add_css_class("flat");
-        close_to_left_button.set_hexpand(true);
-        if let Some(child) = close_to_left_button.child() {
-            if let Ok(label) = child.downcast::<gtk4::Label>() {
-                label.set_xalign(0.0);
-            }
-        }
-        
-        // Disable "Close to the Left" if this is the first tab
-        if let Some(page_num) = clicked_page_num {
-            if page_num == 0 {
-                close_to_left_button.set_sensitive(false);
-            }
-        } else {
-            close_to_left_button.set_sensitive(false);
-        }
-        
-        let notebook_for_close_left = notebook_clone.clone();
-        let popover_weak_left = popover.downgrade();
-        close_to_left_button.connect_clicked(move |_| {
-            if let Some(popover) = popover_weak_left.upgrade() {
-                popover.popdown();
-            }
-            
-            if let Some(keep_page) = clicked_page_num {
-                // Close from beginning repeatedly (each removal shifts indices)
-                for _ in 0..keep_page {
-                    if notebook_for_close_left.n_pages() > 1 {
-                        notebook_for_close_left.remove_page(Some(0));
-                    }
-                }
-                crate::status_log::log_success("Tabs to the left closed");
-            }
-        });
-
-        // Create "Close Others" button
-        let close_others_button = gtk4::Button::with_label("Close Others");
-        close_others_button.add_css_class("flat");
-        close_others_button.set_hexpand(true);
-        if let Some(child) = close_others_button.child() {
-            if let Ok(label) = child.downcast::<gtk4::Label>() {
-                label.set_xalign(0.0);
-            }
-        }
-        
-        let notebook_for_close_others = notebook_clone.clone();
-        let popover_weak_others = popover.downgrade();
-        close_others_button.connect_clicked(move |_| {
-            if let Some(popover) = popover_weak_others.upgrade() {
-                popover.popdown();
-            }
-            
-            if let Some(keep_page) = clicked_page_num {
-                // Close all tabs after the kept page first (from end to beginning)
-                while notebook_for_close_others.n_pages() > keep_page + 1 {
-                    let last_page = notebook_for_close_others.n_pages() - 1;
-                    notebook_for_close_others.remove_page(Some(last_page));
-                }
-                
-                // Close all tabs before the kept page (from beginning)
-                for _ in 0..keep_page {
-                    if notebook_for_close_others.n_pages() > 1 {
-                        notebook_for_close_others.remove_page(Some(0));
-                    }
-                }
-                
-                crate::status_log::log_success("Other tabs closed");
-            }
-        });
-
-        // Create "Close All" button
-        let close_all_button = gtk4::Button::with_label("Close All");
-        close_all_button.add_css_class("flat");
-        close_all_button.set_hexpand(true);
-        if let Some(child) = close_all_button.child() {
-            if let Ok(label) = child.downcast::<gtk4::Label>() {
-                label.set_xalign(0.0);
-            }
-        }
-        
-        let notebook_for_close_all = notebook_clone.clone();
-        let popover_weak_all = popover.downgrade();
-        close_all_button.connect_clicked(move |_| {
-            if let Some(popover) = popover_weak_all.upgrade() {
-                popover.popdown();
-            }
-            
-            while notebook_for_close_all.n_pages() > 0 {
-                let last_page = notebook_for_close_all.n_pages() - 1;
-                notebook_for_close_all.remove_page(Some(last_page));
-            }
-            crate::status_log::log_success("All tabs closed");
-        });
         
         menu_box.append(&close_tab_button);
-        menu_box.append(&close_to_right_button);
-        menu_box.append(&close_to_left_button);
-        menu_box.append(&close_others_button);
-        menu_box.append(&close_all_button);
         
         // Set the menu box as the popover's child
         popover.set_child(Some(&menu_box));
@@ -1493,243 +1358,209 @@ fn create_diff_tab(
     new_content: &str,
     tab_title: &str,
 ) {
-    // Create tab widget first for immediate feedback
-    let (tab_widget, _tab_label, tab_close_button) = crate::ui::create_tab_widget(tab_title);
-    
-    // Create a simple placeholder while content loads
-    let placeholder = gtk4::Label::new(Some("Loading diff..."));
-    placeholder.set_vexpand(true);
-    placeholder.set_hexpand(true);
-    
-    // Add the tab immediately with placeholder
-    let page_num = editor_notebook.append_page(&placeholder, Some(&tab_widget));
-    editor_notebook.set_tab_label(&placeholder, Some(&tab_widget));
-    
-    // Set up middle-click to close
-    crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
-    
-    // Set up right-click context menu with basic close options
-    setup_diff_tab_right_click(&tab_widget, editor_notebook);
-    
-    // Focus the new tab
-    editor_notebook.set_current_page(Some(page_num));
-    
-    // Don't track this in file_path_manager since it's not a real file
-    *active_tab_path.borrow_mut() = None;
-    
-    // Now do the heavy work asynchronously
-    let old_content = old_content.to_string();
-    let new_content = new_content.to_string();
-    let file_path = file_path.to_path_buf();
-    let editor_notebook = editor_notebook.clone();
-    let tab_widget_clone = tab_widget.clone();
-    let tab_close_button_clone = tab_close_button.clone();
-    
-    // Process diff in background thread to avoid blocking UI
-    glib::spawn_future_local(async move {
-        // Run heavy processing in a blocking thread pool
-        let result = gio::spawn_blocking(move || {
-            // Align the content for side-by-side comparison
-            let (aligned_old, aligned_new, left_line_map, right_line_map, old_width, new_width) =
-                align_diff_content(&old_content, &new_content);
-            
-            // Compute line changes
-            let changes = compute_line_changes(&aligned_old, &aligned_new, old_width, new_width);
-            
-            (aligned_old, aligned_new, left_line_map, right_line_map, old_width, new_width, changes)
-        }).await.expect("Failed to process diff");
-        
-        let (aligned_old, aligned_new, left_line_map, right_line_map, old_width, new_width, changes) = result;
+    // Align the content for side-by-side comparison
+    let (aligned_old, aligned_new, left_line_map, right_line_map, old_width, new_width) =
+        align_diff_content(old_content, new_content);
 
-        // Track line change types for minimap
-        let line_changes = Rc::new(RefCell::new(changes.clone()));
+    // Create a horizontal paned widget for side-by-side view
+    let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
+    paned.set_wide_handle(true);
+    paned.set_shrink_start_child(false);
+    paned.set_shrink_end_child(false);
 
-        // Create a horizontal paned widget for side-by-side view
-        let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
-        paned.set_wide_handle(true);
-        paned.set_shrink_start_child(false);
-        paned.set_shrink_end_child(false);
+    // Track line change types for minimap
+    let line_changes = Rc::new(RefCell::new(Vec::new()));
 
-        // Create left side (old version)
-        let (left_view, left_buffer) = crate::syntax::create_source_view();
-        left_buffer.set_text(&aligned_old);
-        left_view.set_editable(false);
-        left_view.set_cursor_visible(false);
-        left_view.set_show_line_numbers(false); // Line numbers are embedded in text
+    // Create left side (old version)
+    let (left_view, left_buffer) = crate::syntax::create_source_view();
+    left_buffer.set_text(&aligned_old);
+    left_view.set_editable(false);
+    left_view.set_cursor_visible(false);
+    left_view.set_show_line_numbers(false); // Line numbers are embedded in text
 
-        // Set up copy handler to strip line numbers
-        setup_copy_handler(&left_view, &left_buffer);
+    // Set up copy handler to strip line numbers
+    setup_copy_handler(&left_view, &left_buffer);
 
-        let left_scrolled = crate::syntax::create_source_view_scrolled(&left_view);
-        left_scrolled.set_vexpand(true);
-        left_scrolled.set_hexpand(true);
+    let left_scrolled = crate::syntax::create_source_view_scrolled(&left_view);
+    left_scrolled.set_vexpand(true);
+    left_scrolled.set_hexpand(true);
 
-        // Create left header
-        let left_header = Label::new(Some("Original"));
-        left_header.set_halign(gtk4::Align::Start);
-        left_header.add_css_class("heading");
-        left_header.set_margin_start(10);
-        left_header.set_margin_top(5);
-        left_header.set_margin_bottom(5);
+    // Create left header
+    let left_header = Label::new(Some("Original"));
+    left_header.set_halign(gtk4::Align::Start);
+    left_header.add_css_class("heading");
+    left_header.set_margin_start(10);
+    left_header.set_margin_top(5);
+    left_header.set_margin_bottom(5);
 
-        // Create minimap container (left side with minimap + content)
-        let left_container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-        left_container.set_hexpand(true);
+    // Create minimap container (left side with minimap + content)
+    let left_container = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    left_container.set_hexpand(true);
 
-        // Create minimap for left side
-        let left_minimap = DrawingArea::new();
-        left_minimap.set_width_request(30);
-        left_minimap.set_vexpand(true);
-        left_minimap.set_valign(gtk4::Align::Fill);
+    // Create minimap for left side
+    let left_minimap = DrawingArea::new();
+    left_minimap.set_width_request(30);
+    left_minimap.set_vexpand(true);
+    left_minimap.set_valign(gtk4::Align::Fill);
 
-        let left_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
-        left_box.set_hexpand(true);
-        left_box.append(&left_header);
+    let left_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    left_box.set_hexpand(true);
+    left_box.append(&left_header);
 
-        let left_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-        left_content_box.set_hexpand(true);
-        left_content_box.append(&left_scrolled);
-        left_content_box.append(&left_minimap);
+    let left_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    left_content_box.set_hexpand(true);
+    left_content_box.append(&left_scrolled);
+    left_content_box.append(&left_minimap);
 
-        left_box.append(&left_content_box);
+    left_box.append(&left_content_box);
 
-        // Create right side (new version)
-        let (right_view, right_buffer) = crate::syntax::create_source_view();
-        right_buffer.set_text(&aligned_new);
-        right_view.set_editable(false);
-        right_view.set_cursor_visible(false);
-        right_view.set_show_line_numbers(false); // Line numbers are embedded in text
+    // Create right side (new version)
+    let (right_view, right_buffer) = crate::syntax::create_source_view();
+    right_buffer.set_text(&aligned_new);
+    right_view.set_editable(false);
+    right_view.set_cursor_visible(false);
+    right_view.set_show_line_numbers(false); // Line numbers are embedded in text
 
-        // Set up copy handler to strip line numbers
-        setup_copy_handler(&right_view, &right_buffer);
+    // Set up copy handler to strip line numbers
+    setup_copy_handler(&right_view, &right_buffer);
 
-        let right_scrolled = crate::syntax::create_source_view_scrolled(&right_view);
-        right_scrolled.set_vexpand(true);
-        right_scrolled.set_hexpand(true);
+    let right_scrolled = crate::syntax::create_source_view_scrolled(&right_view);
+    right_scrolled.set_vexpand(true);
+    right_scrolled.set_hexpand(true);
 
-        // Create right header
-        let right_header = Label::new(Some("Modified"));
-        right_header.set_halign(gtk4::Align::Start);
-        right_header.add_css_class("heading");
-        right_header.set_margin_start(10);
-        right_header.set_margin_top(5);
-        right_header.set_margin_bottom(5);
+    // Create right header
+    let right_header = Label::new(Some("Modified"));
+    right_header.set_halign(gtk4::Align::Start);
+    right_header.add_css_class("heading");
+    right_header.set_margin_start(10);
+    right_header.set_margin_top(5);
+    right_header.set_margin_bottom(5);
 
-        // Create minimap for right side
-        let right_minimap = DrawingArea::new();
-        right_minimap.set_width_request(30);
-        right_minimap.set_vexpand(true);
-        right_minimap.set_valign(gtk4::Align::Fill);
+    // Create minimap for right side
+    let right_minimap = DrawingArea::new();
+    right_minimap.set_width_request(30);
+    right_minimap.set_vexpand(true);
+    right_minimap.set_valign(gtk4::Align::Fill);
 
-        let right_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
-        right_box.set_hexpand(true);
-        right_box.append(&right_header);
+    let right_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    right_box.set_hexpand(true);
+    right_box.append(&right_header);
 
-        let right_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-        right_content_box.set_hexpand(true);
-        right_content_box.append(&right_scrolled);
-        right_content_box.append(&right_minimap);
+    let right_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    right_content_box.set_hexpand(true);
+    right_content_box.append(&right_scrolled);
+    right_content_box.append(&right_minimap);
 
-        right_box.append(&right_content_box);
+    right_box.append(&right_content_box);
 
-        // Detect language from file extension
-        let lang_manager = sourceview5::LanguageManager::new();
-        if let Some(_extension) = file_path.extension().and_then(|e| e.to_str()) {
-            if let Some(lang) = lang_manager.guess_language(Some(&file_path), None) {
-                left_buffer.set_language(Some(&lang));
-                right_buffer.set_language(Some(&lang));
-            }
+    // Detect language from file extension
+    let lang_manager = sourceview5::LanguageManager::new();
+    if let Some(_extension) = file_path.extension().and_then(|e| e.to_str()) {
+        if let Some(lang) = lang_manager.guess_language(Some(file_path), None) {
+            left_buffer.set_language(Some(&lang));
+            right_buffer.set_language(Some(&lang));
         }
+    }
 
-        // Apply diff highlighting using aligned content (changes already computed)
-        apply_diff_highlighting(
-            &left_buffer,
-            &right_buffer,
-            &aligned_old,
-            &aligned_new,
-            old_width,
-            new_width,
-        );
+    // Apply diff highlighting using aligned content and collect line changes
+    let changes = compute_line_changes(&aligned_old, &aligned_new, old_width, new_width);
+    *line_changes.borrow_mut() = changes.clone();
+    apply_diff_highlighting(
+        &left_buffer,
+        &right_buffer,
+        &aligned_old,
+        &aligned_new,
+        old_width,
+        new_width,
+    );
 
-        // Make line numbers non-selectable (invisible to selection/copy)
-        make_line_numbers_invisible(&left_buffer, &left_line_map);
-        make_line_numbers_invisible(&right_buffer, &right_line_map);
+    // Make line numbers non-selectable (invisible to selection/copy)
+    make_line_numbers_invisible(&left_buffer, &left_line_map);
+    make_line_numbers_invisible(&right_buffer, &right_line_map);
 
-        // Set up scroll synchronization
-        let left_vadj = left_scrolled.vadjustment();
-        let right_vadj = right_scrolled.vadjustment();
+    // Set up scroll synchronization
+    let left_vadj = left_scrolled.vadjustment();
+    let right_vadj = right_scrolled.vadjustment();
 
-        let right_vadj_clone = right_vadj.clone();
-        let left_minimap_clone = left_minimap.clone();
-        let right_minimap_clone = right_minimap.clone();
-        left_vadj.connect_value_changed(move |adj| {
-            right_vadj_clone.set_value(adj.value());
-            left_minimap_clone.queue_draw();
-            right_minimap_clone.queue_draw();
-        });
+    let right_vadj_clone = right_vadj.clone();
+    let left_minimap_clone = left_minimap.clone();
+    let right_minimap_clone = right_minimap.clone();
+    left_vadj.connect_value_changed(move |adj| {
+        right_vadj_clone.set_value(adj.value());
+        left_minimap_clone.queue_draw();
+        right_minimap_clone.queue_draw();
+    });
 
-        let left_vadj_clone = left_vadj.clone();
-        let left_minimap_clone2 = left_minimap.clone();
-        let right_minimap_clone2 = right_minimap.clone();
-        right_vadj.connect_value_changed(move |adj| {
-            left_vadj_clone.set_value(adj.value());
-            left_minimap_clone2.queue_draw();
-            right_minimap_clone2.queue_draw();
-        });
+    let left_vadj_clone = left_vadj.clone();
+    let left_minimap_clone2 = left_minimap.clone();
+    let right_minimap_clone2 = right_minimap.clone();
+    right_vadj.connect_value_changed(move |adj| {
+        left_vadj_clone.set_value(adj.value());
+        left_minimap_clone2.queue_draw();
+        right_minimap_clone2.queue_draw();
+    });
 
-        // Set up minimap drawing
-        setup_minimap_drawing(
-            &left_minimap,
-            &left_scrolled,
-            &left_buffer,
-            &line_changes,
-            true,
-        );
-        setup_minimap_drawing(
-            &right_minimap,
-            &right_scrolled,
-            &right_buffer,
-            &line_changes,
-            false,
-        );
+    // Set up minimap drawing
+    setup_minimap_drawing(
+        &left_minimap,
+        &left_scrolled,
+        &left_buffer,
+        &line_changes,
+        true,
+    );
+    setup_minimap_drawing(
+        &right_minimap,
+        &right_scrolled,
+        &right_buffer,
+        &line_changes,
+        false,
+    );
 
-        // Add both sides to the paned widget
-        paned.set_start_child(Some(&left_box));
-        paned.set_end_child(Some(&right_box));
-        paned.set_resize_start_child(true);
-        paned.set_resize_end_child(true);
-        paned.set_shrink_start_child(false);
-        paned.set_shrink_end_child(false);
+    // Add both sides to the paned widget
+    paned.set_start_child(Some(&left_box));
+    paned.set_end_child(Some(&right_box));
+    paned.set_resize_start_child(true);
+    paned.set_resize_end_child(true);
+    paned.set_shrink_start_child(false);
+    paned.set_shrink_end_child(false);
 
-        // Set initial position to middle after the paned is realized
-        paned.connect_realize(|p| {
-            let width = p.width();
-            if width > 0 {
-                p.set_position(width / 2);
-            }
-        });
-        
-        // Replace placeholder with actual content
-        if let Some(_page) = editor_notebook.nth_page(Some(page_num)) {
-            editor_notebook.remove_page(Some(page_num));
-            editor_notebook.insert_page(&paned, Some(&tab_widget_clone), Some(page_num));
-            editor_notebook.set_tab_label(&paned, Some(&tab_widget_clone));
-            
-            // Close button handler
-            let notebook_clone = editor_notebook.clone();
-            tab_close_button_clone.connect_clicked(move |_| {
-                if let Some(page) = notebook_clone.nth_page(Some(page_num)) {
-                    let page_index = notebook_clone.page_num(&page);
-                    if let Some(idx) = page_index {
-                        notebook_clone.remove_page(Some(idx));
-                    }
-                }
-            });
-            
-            // Keep the tab focused
-            editor_notebook.set_current_page(Some(page_num));
+    // Set initial position to middle after the paned is realized
+    paned.connect_realize(|p| {
+        let width = p.width();
+        if width > 0 {
+            p.set_position(width / 2);
         }
     });
+
+    // Create tab widget
+    let (tab_widget, _tab_label, tab_close_button) = crate::ui::create_tab_widget(tab_title);
+
+    // Add the tab
+    let page_num = editor_notebook.append_page(&paned, Some(&tab_widget));
+    editor_notebook.set_tab_label(&paned, Some(&tab_widget));
+
+    // Set up middle-click to close
+    crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
+
+    // Set up right-click context menu with basic close options
+    setup_diff_tab_right_click(&tab_widget, editor_notebook);
+
+    // Close button handler
+    let notebook_clone = editor_notebook.clone();
+    tab_close_button.connect_clicked(move |_| {
+        if let Some(page) = notebook_clone.nth_page(Some(page_num)) {
+            let page_index = notebook_clone.page_num(&page);
+            if let Some(idx) = page_index {
+                notebook_clone.remove_page(Some(idx));
+            }
+        }
+    });
+
+    // Focus the new tab
+    editor_notebook.set_current_page(Some(page_num));
+
+    // Don't track this in file_path_manager since it's not a real file
+    *active_tab_path.borrow_mut() = None;
 }
 
 /// Creates the git diff panel UI (for embedding in the activity bar sidebar)
@@ -2996,42 +2827,18 @@ pub fn create_git_diff_panel(
                     editor_notebook_for_staged.set_current_page(Some(page_num));
                 } else {
                     // For staged changes: compare HEAD vs staged (index)
-                    // Run git commands asynchronously to avoid blocking UI
-                    let repo = repo.clone();
-                    let file_path = file_path.clone();
-                    let editor_notebook = editor_notebook_for_staged.clone();
-                    let active_tab_path = active_tab_path_for_staged.clone();
-                    let tab_title = tab_title.clone();
-                    
-                    crate::status_log::log_info("Loading diff...");
-                    
-                    glib::spawn_future_local(async move {
-                        let repo_clone = repo.clone();
-                        let file_clone = file_path.clone();
-                        
-                        let result = gtk4::gio::spawn_blocking(move || {
-                            let old_content = get_old_file_content(&repo_clone, &file_clone).unwrap_or_default();
-                            let new_content = get_staged_file_content(&repo_clone, &file_clone).unwrap_or_default();
-                            (old_content, new_content)
-                        }).await;
-                        
-                        match result {
-                            Ok((old_content, new_content)) => {
-                                create_diff_tab(
-                                    &editor_notebook,
-                                    &active_tab_path,
-                                    &file_path,
-                                    &repo,
-                                    &old_content,
-                                    &new_content,
-                                    &tab_title,
-                                );
-                            }
-                            Err(e) => {
-                                crate::status_log::log_error(&format!("Failed to load diff: {:?}", e));
-                            }
-                        }
-                    });
+                    let old_content = get_old_file_content(repo, &file_path).unwrap_or_default();
+                    let new_content = get_staged_file_content(repo, &file_path).unwrap_or_default();
+
+                    create_diff_tab(
+                        &editor_notebook_for_staged,
+                        &active_tab_path_for_staged,
+                        &file_path,
+                        repo,
+                        &old_content,
+                        &new_content,
+                        &tab_title,
+                    );
                 }
             }
         }
@@ -3088,44 +2895,20 @@ pub fn create_git_diff_panel(
                 } else {
                     // For unstaged changes: compare staged (index) vs working directory
                     // If there's no staged version, compare HEAD vs working directory
-                    // Run git commands asynchronously to avoid blocking UI
-                    let repo = repo.clone();
-                    let file_path = file_path.clone();
-                    let editor_notebook = editor_notebook_for_selection.clone();
-                    let active_tab_path = active_tab_path_for_selection.clone();
-                    let tab_title = tab_title.clone();
-                    
-                    crate::status_log::log_info("Loading diff...");
-                    
-                    glib::spawn_future_local(async move {
-                        let repo_clone = repo.clone();
-                        let file_clone = file_path.clone();
-                        
-                        let result = gtk4::gio::spawn_blocking(move || {
-                            let old_content = get_staged_file_content(&repo_clone, &file_clone)
-                                .or_else(|| get_old_file_content(&repo_clone, &file_clone))
-                                .unwrap_or_default();
-                            let new_content = get_new_file_content(&file_clone).unwrap_or_default();
-                            (old_content, new_content)
-                        }).await;
-                        
-                        match result {
-                            Ok((old_content, new_content)) => {
-                                create_diff_tab(
-                                    &editor_notebook,
-                                    &active_tab_path,
-                                    &file_path,
-                                    &repo,
-                                    &old_content,
-                                    &new_content,
-                                    &tab_title,
-                                );
-                            }
-                            Err(e) => {
-                                crate::status_log::log_error(&format!("Failed to load diff: {:?}", e));
-                            }
-                        }
-                    });
+                    let old_content = get_staged_file_content(repo, &file_path)
+                        .or_else(|| get_old_file_content(repo, &file_path))
+                        .unwrap_or_default();
+                    let new_content = get_new_file_content(&file_path).unwrap_or_default();
+
+                    create_diff_tab(
+                        &editor_notebook_for_selection,
+                        &active_tab_path_for_selection,
+                        &file_path,
+                        repo,
+                        &old_content,
+                        &new_content,
+                        &tab_title,
+                    );
                 }
             }
         }
