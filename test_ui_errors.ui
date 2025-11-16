@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="TestWindow" parent="GtkApplicationWindow">
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
+    <property name="resizable">true</property>
+    
+    <!-- Error: Missing class attribute -->
+    <child>
+      <object id="test_box">
+        <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
+      </object>
+    </child>
+    
+    <!-- Error: Unknown widget class -->
+    <child>
+      <object class="GtkUnknownWidget" id="unknown_widget">
+        <property name="visible">true</property>
+      </object>
+    </child>
+    
+    <!-- Duplicate ID error -->
+    <child>
+      <object class="GtkBox" id="duplicate_id">
+        <property name="orientation">horizontal</property>
+      </object>
+    </child>
+    
+    <!-- Duplicate ID error (same as above) -->
+    <child>
+      <object class="GtkLabel" id="duplicate_id">
+        <property name="label">Test</property>
+      </object>
+    </child>
+    
+    <!-- Unknown property warning -->
+    <child>
+      <object class="GtkButton" id="test_button">
+        <property name="label">Click Me</property>
+        <property name="unknown-property">value</property>
+      </object>
+    </child>
+    
+    <!-- Deprecated property warning -->
+    <child>
+      <object class="GtkButton" id="stock_button">
+        <property name="stock">gtk-ok</property>
+      </object>
+    </child>
+    
+  </template>
+</interface>

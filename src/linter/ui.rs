@@ -126,7 +126,7 @@ pub fn update_linter_status(status: &str) {
 }
 
 /// Update the linter status with icons
-pub fn update_linter_status_with_icons(rust_icon: bool, errors: usize, warnings: usize) {
+pub fn update_linter_status_with_icons(_rust_icon: bool, errors: usize, warnings: usize) {
     glib::idle_add_once(move || {
         LINTER_STATUS_BOX.with(|cell| {
             if let Some(ref status_box) = *cell.borrow() {
@@ -135,16 +135,7 @@ pub fn update_linter_status_with_icons(rust_icon: bool, errors: usize, warnings:
                     status_box.remove(&child);
                 }
                 
-                // Add Rust icon if requested
-                if rust_icon {
-                    let icon = Image::from_icon_name("application-x-executable-symbolic");
-                    icon.set_pixel_size(16);
-                    status_box.append(&icon);
-                    
-                    let rust_label = Label::new(Some("Rust:"));
-                    status_box.append(&rust_label);
-                }
-                
+                // Show diagnostics counts directly without "Rust:" prefix
                 if errors > 0 || warnings > 0 {
                     // Add error icon and count
                     if errors > 0 {
@@ -216,17 +207,16 @@ pub fn check_and_update_rust_ui(dir: &Path) {
     glib::idle_add_once({
         let has_rust = has_rust;
         move || {
+            // Show linter status only for Rust projects (LSP-specific)
             LINTER_STATUS_VISIBILITY_CALLBACK.with(|cell| {
                 if let Some(ref callback) = *cell.borrow() {
                     callback(has_rust);
                 }
             });
 
-            DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
-                if let Some(ref callback) = *cell.borrow() {
-                    callback(has_rust);
-                }
-            });
+            // Diagnostics panel is NOT hidden here - it will be shown/hidden
+            // based on whether any file has diagnostics (not just Rust files)
+            // This allows UI files and other lintable files to show diagnostics
 
             if has_rust {
                 refresh_diagnostics_panel();
@@ -260,7 +250,7 @@ pub fn initialize_rust_analyzer() {
     let mut manager_guard = RUST_ANALYZER.lock().unwrap();
     if manager_guard.is_none() {
         *manager_guard = Some(crate::lsp::rust_analyzer::RustAnalyzerManager::new());
-        update_linter_status("Rust: Initializing...");
+        update_linter_status("Initializing...");
     }
 }
 
@@ -330,12 +320,16 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
         if path.extension().and_then(|e| e.to_str()) == Some("rs") {
             println!("🦀 Detected Rust file, initializing rust-analyzer");
             initialize_rust_analyzer();
-            show_diagnostics_panel();
             setup_lsp_for_file(source_view, path);
         } else {
-            println!("❌ Not a Rust file, extension: {:?}", path.extension());
+            println!("📄 Non-Rust file detected, will use local linter");
         }
+        
+        // Run linter and show diagnostics panel for all supported file types
         run_linter(&source_view, &buffer, file_path);
+        
+        // Show diagnostics panel if we have diagnostics
+        show_diagnostics_panel();
     } else {
         println!("⚠️  No file path provided to setup_linting");
     }
@@ -365,7 +359,7 @@ fn setup_lsp_for_file(_source_view: &View, file_path: &Path) {
                         "✓ Got rust-analyzer client for workspace: {:?}",
                         workspace_root
                     );
-                    update_linter_status("Rust: Ready");
+                    update_linter_status("Ready");
 
                     // Setup diagnostic callback
                     let diagnostics_store = DIAGNOSTICS_STORE.clone();
@@ -509,9 +503,9 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
         }
     };
 
-    // Display diagnostics
+    // Display diagnostics in console
     if !diagnostics.is_empty() {
-        println!("Linter found {} diagnostic(s)", diagnostics.len());
+        println!("🔍 Linter found {} diagnostic(s)", diagnostics.len());
         for diag in &diagnostics {
             let severity_str = match diag.severity {
                 DiagnosticSeverity::Error => "ERROR",
@@ -523,9 +517,35 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
                 severity_str, diag.line, diag.message, diag.rule
             );
         }
+    } else {
+        println!("✅ Linter found no issues");
+    }
 
-        // TODO: Display diagnostics in the UI (underlines, margin icons, etc.)
-        // For now, we're just logging them
+    // Store diagnostics and update UI
+    if let Some(path) = file_path {
+        let file_uri = format!("file://{}", path.display());
+        
+        // Store in DIAGNOSTICS_STORE
+        if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
+            if diagnostics.is_empty() {
+                store.remove(&file_uri);
+            } else {
+                store.insert(file_uri.clone(), diagnostics.clone());
+            }
+        }
+        
+        // Also store in the global file diagnostics (for underlines)
+        crate::linter::store_file_diagnostics(&path.to_string_lossy(), diagnostics.clone());
+        
+        // Apply underlines if we have a source buffer
+        if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
+            crate::linter::apply_diagnostic_underlines(&source_buffer, &path.to_string_lossy());
+        }
+        
+        // Refresh the diagnostics panel
+        glib::idle_add_local_once(|| {
+            refresh_diagnostics_panel();
+        });
     }
 }
 

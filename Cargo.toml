@@ -31,6 +31,7 @@ serde_repr = "0.1"  # Serde support for repr enums
 tokio = { version = "1.42", features = ["full"] }  # Async runtime for LSP
 async-channel = "2.3"  # Async channels for LSP communication
 url = "2.5"  # URL parsing (used by lsp-types)
+quick-xml = "0.38"  # XML parsing for GTK UI file validation
 
 [build-dependencies]
 glib-build-tools = "0.21"

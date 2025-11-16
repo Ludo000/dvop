@@ -3,6 +3,7 @@
 
 pub mod diagnostics_panel;
 pub mod rust_linter;
+pub mod gtk_ui_linter;
 pub mod ui;
 
 use std::path::Path;
@@ -60,6 +61,7 @@ pub fn lint_file(file_path: &Path, content: &str) -> Vec<Diagnostic> {
     if let Some(ext) = file_path.extension().and_then(|e| e.to_str()) {
         match ext {
             "rs" => rust_linter::lint_rust_code(content),
+            "ui" => gtk_ui_linter::lint_gtk_ui(content),
             // Add more languages here as they are implemented
             _ => Vec::new(),
         }

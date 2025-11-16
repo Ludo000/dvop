@@ -685,7 +685,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Add hover cursor to indicate it's clickable
     linter_status_label.set_cursor_from_name(Some("pointer"));
 
-    // Hide diagnostics panel by default (will be shown when Rust files are opened)
+    // Hide diagnostics panel by default (will be shown when any lintable file is opened)
     diagnostics_panel.set_visible(false);
 
     // Set up callback to show/hide diagnostics panel based on linting activity
