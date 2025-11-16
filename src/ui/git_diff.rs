@@ -1509,8 +1509,9 @@ pub fn create_git_diff_panel(
             let end = buffer_for_save.end_iter();
             let text = buffer_for_save.text(&start, &end, false);
             
+            // Save the text (even if empty to clear saved message)
             // Don't save placeholder text
-            if !text.is_empty() && text != "Commit message" {
+            if text.is_empty() || text != "Commit message" {
                 let mut settings = crate::settings::get_settings_mut();
                 settings.set_git_commit_message(&text);
                 // Save immediately to ensure it's persisted
