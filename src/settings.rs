@@ -399,6 +399,17 @@ impl EditorSettings {
     pub fn config_dir(&self) -> PathBuf {
         get_config_dir()
     }
+
+    /// Gets the saved git commit message
+    pub fn get_git_commit_message(&self) -> String {
+        self.get("git_commit_message")
+            .map_or(String::new(), |s| s.clone())
+    }
+
+    /// Sets the git commit message to save
+    pub fn set_git_commit_message(&mut self, message: &str) {
+        self.set("git_commit_message", message);
+    }
 }
 
 /// Helper function to save the current folder to settings

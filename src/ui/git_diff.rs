@@ -1492,6 +1492,33 @@ pub fn create_git_diff_panel(
     // Initialize with placeholder
     show_placeholder();
 
+    // Restore saved commit message from settings
+    {
+        let settings = crate::settings::get_settings();
+        let saved_message = settings.get_git_commit_message();
+        if !saved_message.is_empty() {
+            buffer.set_text(&saved_message);
+        }
+    }
+
+    // Auto-save commit message on text change
+    {
+        let buffer_for_save = buffer.clone();
+        buffer.connect_changed(move |_| {
+            let start = buffer_for_save.start_iter();
+            let end = buffer_for_save.end_iter();
+            let text = buffer_for_save.text(&start, &end, false);
+            
+            // Don't save placeholder text
+            if !text.is_empty() && text != "Commit message" {
+                let mut settings = crate::settings::get_settings_mut();
+                settings.set_git_commit_message(&text);
+                // Save immediately to ensure it's persisted
+                let _ = settings.save();
+            }
+        });
+    }
+
     // Use focus controller for GTK4
     let focus_controller = gtk4::EventControllerFocus::new();
 
