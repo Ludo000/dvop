@@ -58,6 +58,22 @@ pub fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView,
     // Get the current page number, then use it to find the page widget
     notebook.current_page().and_then(|page_num| {
         notebook.nth_page(Some(page_num)).and_then(|page_widget| {
+            // First, check if the page is a Paned widget (for Markdown/SVG split view)
+            if let Some(paned) = page_widget.downcast_ref::<gtk4::Paned>() {
+                // Get the left child (which contains the code editor)
+                if let Some(left_child) = paned.start_child() {
+                    // The left child should be a ScrolledWindow containing the TextView
+                    if let Some(scrolled_window) = left_child.downcast_ref::<ScrolledWindow>() {
+                        if let Some(child) = scrolled_window.child() {
+                            if let Some(text_view) = child.downcast_ref::<TextView>() {
+                                return Some((text_view.clone(), text_view.buffer()));
+                            }
+                        }
+                    }
+                }
+                return None;
+            }
+            
             // Check if the page contains a ScrolledWindow (typical for text content)
             if let Some(scrolled_window) = page_widget.downcast_ref::<ScrolledWindow>() {
                 // Get the child of the ScrolledWindow
