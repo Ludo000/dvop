@@ -1941,9 +1941,13 @@ pub fn create_git_diff_panel(
     update_git_status();
 
     // Set up git menu button with advanced commands
-    {
+    let git_menu_popover = {
         let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
         menu_box.add_css_class("menu");
+
+        // Create popover early so we can reference it in button handlers
+        let popover = gtk4::Popover::new();
+        let popover_weak = popover.downgrade();
 
         // Undo Last Commit button
         let undo_commit_button = Button::with_label("Undo Last Commit");
@@ -1959,7 +1963,13 @@ pub fn create_git_diff_panel(
         let update_for_undo = update_git_status.clone();
         let parent_for_undo = parent_window.clone();
         let commit_view_for_undo = commit_message_view.clone();
+        let popover_for_undo = popover_weak.clone();
         undo_commit_button.connect_clicked(move |_| {
+            // Close the hamburger menu
+            if let Some(p) = popover_for_undo.upgrade() {
+                p.popdown();
+            }
+
             let repo = match repo_path_for_undo.borrow().as_ref() {
                 Some(r) => r.clone(),
                 None => {
@@ -2046,7 +2056,13 @@ pub fn create_git_diff_panel(
         let repo_path_for_stash = repo_path_rc.clone();
         let update_for_stash = update_git_status.clone();
         let parent_for_stash = parent_window.clone();
+        let popover_for_stash = popover_weak.clone();
         stash_button.connect_clicked(move |_| {
+            // Close the hamburger menu
+            if let Some(p) = popover_for_stash.upgrade() {
+                p.popdown();
+            }
+
             let repo = match repo_path_for_stash.borrow().as_ref() {
                 Some(r) => r.clone(),
                 None => {
@@ -2179,7 +2195,13 @@ pub fn create_git_diff_panel(
         let repo_path_for_pop_specific = repo_path_rc.clone();
         let update_for_pop_specific = update_git_status.clone();
         let parent_for_pop_specific = parent_window.clone();
+        let popover_for_pop_specific = popover_weak.clone();
         pop_specific_stash_button.connect_clicked(move |_| {
+            // Close the hamburger menu
+            if let Some(p) = popover_for_pop_specific.upgrade() {
+                p.popdown();
+            }
+
             let repo = match repo_path_for_pop_specific.borrow().as_ref() {
                 Some(r) => r.clone(),
                 None => {
@@ -2373,11 +2395,13 @@ pub fn create_git_diff_panel(
         menu_box.append(&separator);
         menu_box.append(&amend_button);
 
-        // Create popover and set it on the menu button
-        let popover = gtk4::Popover::new();
+        // Set child and return popover
         popover.set_child(Some(&menu_box));
-        git_menu_button.set_popover(Some(&popover));
-    }
+        popover
+    };
+
+    // Set the popover on the menu button
+    git_menu_button.set_popover(Some(&git_menu_popover));
 
     // Refresh button handler
     let update_git_status_for_refresh = update_git_status.clone();
