@@ -1360,16 +1360,127 @@ fn create_diff_tab(
     new_content: &str,
     tab_title: &str,
 ) {
-    // Align the content for side-by-side comparison
-    let (aligned_old, aligned_new, left_line_map, right_line_map, old_width, new_width) =
-        align_diff_content(old_content, new_content);
-
     // Create a horizontal paned widget for side-by-side view
     let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
     paned.set_wide_handle(true);
     paned.set_shrink_start_child(false);
     paned.set_shrink_end_child(false);
+    
+    // Create a loading placeholder
+    let loading_box = gtk4::Box::new(gtk4::Orientation::Vertical, 10);
+    loading_box.set_vexpand(true);
+    loading_box.set_hexpand(true);
+    loading_box.set_valign(gtk4::Align::Center);
+    loading_box.set_halign(gtk4::Align::Center);
+    
+    let loading_spinner = gtk4::Spinner::new();
+    loading_spinner.set_spinning(true);
+    loading_spinner.set_size_request(48, 48);
+    
+    let loading_label = gtk4::Label::new(Some("Computing diff..."));
+    loading_label.add_css_class("dim-label");
+    
+    loading_box.append(&loading_spinner);
+    loading_box.append(&loading_label);
+    
+    paned.set_start_child(Some(&loading_box));
 
+    // Create tab widget
+    let (tab_widget, _tab_label, tab_close_button) = crate::ui::create_tab_widget(tab_title);
+
+    // Add the tab immediately with loading state
+    let page_num = editor_notebook.append_page(&paned, Some(&tab_widget));
+    editor_notebook.set_tab_label(&paned, Some(&tab_widget));
+    editor_notebook.set_current_page(Some(page_num));
+
+    // Set up middle-click to close
+    crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
+
+    // Set up right-click menu
+    setup_diff_tab_right_click(&tab_widget, editor_notebook);
+
+    // Clone data needed for background computation
+    let old_content_owned = old_content.to_string();
+    let new_content_owned = new_content.to_string();
+    let file_path_owned = file_path.to_path_buf();
+    let paned_weak = paned.downgrade();
+    let editor_notebook_weak = editor_notebook.downgrade();
+
+    // Compute diff in background thread
+    crate::status_log::log_info(&format!("Computing diff for {}...", tab_title));
+    
+    glib::spawn_future_local(async move {
+        let result = gtk4::gio::spawn_blocking(move || {
+            // This runs in a background thread
+            align_diff_content(&old_content_owned, &new_content_owned)
+        }).await;
+
+        // Back on main thread - update UI with results
+        match result {
+            Ok(diff_result) => {
+                let (aligned_old, aligned_new, left_line_map, right_line_map, old_width, new_width) = diff_result;
+                
+                if let Some(paned) = paned_weak.upgrade() {
+                    // Remove loading placeholder
+                    if let Some(_child) = paned.start_child() {
+                        paned.set_start_child(None::<&gtk4::Widget>);
+                    }
+                    
+                    // Now create the actual diff view
+                    create_diff_view_content(
+                        &paned,
+                        &aligned_old,
+                        &aligned_new,
+                        &left_line_map,
+                        &right_line_map,
+                        old_width,
+                        new_width,
+                        &file_path_owned,
+                    );
+                    
+                    crate::status_log::log_success("Diff computed successfully");
+                }
+            }
+            Err(_e) => {
+                crate::status_log::log_error("Failed to compute diff");
+                
+                // Close the tab on error
+                if let (Some(paned), Some(notebook)) = (paned_weak.upgrade(), editor_notebook_weak.upgrade()) {
+                    if let Some(page_num) = notebook.page_num(&paned) {
+                        notebook.remove_page(Some(page_num));
+                    }
+                }
+            }
+        }
+    });
+
+    // Handle close button
+    let editor_notebook_for_close = editor_notebook.clone();
+    let paned_for_close = paned.clone();
+    let active_tab_path_for_close = active_tab_path.clone();
+    tab_close_button.connect_clicked(move |_| {
+        if let Some(page_num) = editor_notebook_for_close.page_num(&paned_for_close) {
+            editor_notebook_for_close.remove_page(Some(page_num));
+            // Reset active tab path since we're closing a diff view
+            *active_tab_path_for_close.borrow_mut() = None;
+        }
+    });
+
+    // Reset active tab path for diff tabs
+    *active_tab_path.borrow_mut() = None;
+}
+
+/// Helper function to create the actual diff view content (called after background computation)
+fn create_diff_view_content(
+    paned: &gtk4::Paned,
+    aligned_old: &str,
+    aligned_new: &str,
+    left_line_map: &[Option<usize>],
+    right_line_map: &[Option<usize>],
+    old_width: usize,
+    new_width: usize,
+    file_path: &Path,
+) {
     // Track line change types for minimap
     let line_changes = Rc::new(RefCell::new(Vec::new()));
 
@@ -1533,36 +1644,6 @@ fn create_diff_tab(
             p.set_position(width / 2);
         }
     });
-
-    // Create tab widget
-    let (tab_widget, _tab_label, tab_close_button) = crate::ui::create_tab_widget(tab_title);
-
-    // Add the tab
-    let page_num = editor_notebook.append_page(&paned, Some(&tab_widget));
-    editor_notebook.set_tab_label(&paned, Some(&tab_widget));
-
-    // Set up middle-click to close
-    crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
-
-    // Set up right-click context menu with basic close options
-    setup_diff_tab_right_click(&tab_widget, editor_notebook);
-
-    // Close button handler
-    let notebook_clone = editor_notebook.clone();
-    tab_close_button.connect_clicked(move |_| {
-        if let Some(page) = notebook_clone.nth_page(Some(page_num)) {
-            let page_index = notebook_clone.page_num(&page);
-            if let Some(idx) = page_index {
-                notebook_clone.remove_page(Some(idx));
-            }
-        }
-    });
-
-    // Focus the new tab
-    editor_notebook.set_current_page(Some(page_num));
-
-    // Don't track this in file_path_manager since it's not a real file
-    *active_tab_path.borrow_mut() = None;
 }
 
 /// Creates the git diff panel UI (for embedding in the activity bar sidebar)
