@@ -12,6 +12,51 @@ use std::rc::Rc;
 
 use super::git_diff_panel_template::GitDiffPanel;
 
+// Global git status update callback with debouncing
+thread_local! {
+    static GIT_STATUS_UPDATE_CALLBACK: RefCell<Option<Rc<dyn Fn()>>> = RefCell::new(None);
+    static PENDING_UPDATE_TIMEOUT: RefCell<Option<glib::SourceId>> = RefCell::new(None);
+}
+
+/// Set the git status update callback (called once during initialization)
+pub fn set_git_status_update_callback(callback: Rc<dyn Fn()>) {
+    GIT_STATUS_UPDATE_CALLBACK.with(|cell| {
+        *cell.borrow_mut() = Some(callback);
+    });
+}
+
+/// Trigger a debounced git status update
+/// This will delay the actual update by 500ms to avoid rapid successive calls
+pub fn trigger_git_status_update() {
+    // Cancel any pending update
+    PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
+        if let Some(timeout_id) = timeout_cell.borrow_mut().take() {
+            timeout_id.remove();
+        }
+    });
+
+    // Schedule a new update after a delay
+    GIT_STATUS_UPDATE_CALLBACK.with(|callback_cell| {
+        if let Some(callback) = callback_cell.borrow().as_ref() {
+            let callback_clone = callback.clone();
+            let timeout_id = glib::timeout_add_local_once(
+                std::time::Duration::from_millis(500),
+                move || {
+                    callback_clone();
+                    // Clear the pending timeout ID
+                    PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
+                        *timeout_cell.borrow_mut() = None;
+                    });
+                },
+            );
+            
+            PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
+                *timeout_cell.borrow_mut() = Some(timeout_id);
+            });
+        }
+    });
+}
+
 #[derive(Clone, Debug)]
 struct GitFileChange {
     path: PathBuf,
@@ -746,13 +791,11 @@ fn count_unpushed_commits(repo_path: &Path) -> usize {
 }
 
 /// Count the number of commits to pull from remote
+/// Note: This does NOT fetch from remote automatically to avoid UI freezes.
+/// Users should manually fetch/pull when needed.
 fn count_incoming_commits(repo_path: &Path) -> usize {
-    // First, fetch to get latest remote info (silently)
-    let _ = Command::new("git")
-        .arg("fetch")
-        .current_dir(repo_path)
-        .output();
-
+    // Check for incoming commits based on last fetch
+    // Do NOT fetch here as it can hang the UI on network issues
     let output = Command::new("git")
         .arg("rev-list")
         .arg("--count")
@@ -1965,6 +2008,9 @@ pub fn create_git_diff_panel(
     // Store the update function in the RefCell so it can reference itself
     *update_git_status_rc.borrow_mut() = Some(update_git_status.clone());
 
+    // Register the update function globally for debounced updates on file save
+    set_git_status_update_callback(update_git_status.clone());
+
     // Initial update
     update_git_status();
 
@@ -2354,6 +2400,69 @@ pub fn create_git_diff_panel(
             dialog.show();
         });
 
+        // Fetch from Remote button
+        let fetch_button = Button::with_label("Fetch from Remote");
+        fetch_button.add_css_class("flat");
+        fetch_button.set_hexpand(true);
+        if let Some(child) = fetch_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+
+        let repo_path_for_fetch = repo_path_rc.clone();
+        let update_for_fetch = update_git_status.clone();
+        let popover_for_fetch = popover_weak.clone();
+        fetch_button.connect_clicked(move |button| {
+            // Close the hamburger menu
+            if let Some(p) = popover_for_fetch.upgrade() {
+                p.popdown();
+            }
+
+            let repo = match repo_path_for_fetch.borrow().as_ref() {
+                Some(r) => r.clone(),
+                None => {
+                    crate::status_log::log_error("Not in a git repository");
+                    return;
+                }
+            };
+
+            // Disable button during fetch
+            button.set_sensitive(false);
+            crate::status_log::log_info("Fetching from remote...");
+
+            // Run fetch in a background task to avoid blocking UI
+            let button_clone = button.clone();
+            let update_clone = update_for_fetch.clone();
+            
+            glib::spawn_future_local(async move {
+                let result = gtk4::gio::spawn_blocking(move || {
+                    std::process::Command::new("git")
+                        .arg("fetch")
+                        .current_dir(&repo)
+                        .output()
+                }).await;
+
+                let success = match &result {
+                    Ok(Ok(output)) => output.status.success(),
+                    _ => false,
+                };
+
+                if success {
+                    crate::status_log::log_success("Fetched from remote successfully");
+                    update_clone();
+                } else {
+                    let error_msg = match result {
+                        Ok(Ok(output)) => String::from_utf8_lossy(&output.stderr).to_string(),
+                        Ok(Err(e)) => format!("Failed to run git: {}", e),
+                        Err(_) => "Task failed".to_string(),
+                    };
+                    crate::status_log::log_error(&format!("Fetch failed: {}", error_msg));
+                }
+                button_clone.set_sensitive(true);
+            });
+        });
+
         // Add separator
         let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
 
@@ -2417,6 +2526,7 @@ pub fn create_git_diff_panel(
 
         // Add all buttons to menu
         menu_box.append(&undo_commit_button);
+        menu_box.append(&fetch_button);
         menu_box.append(&stash_button);
         menu_box.append(&pop_stash_button);
         menu_box.append(&pop_specific_stash_button);

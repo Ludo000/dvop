@@ -2505,6 +2505,9 @@ fn setup_save_button_handler(
                                     // Notify LSP that file was saved (for rust-analyzer)
                                     crate::linter::ui::notify_file_saved(&path_to_save);
 
+                                    // Trigger debounced git status update
+                                    crate::ui::git_diff::trigger_git_status_update();
+
                                     crate::status_log::log_success(&format!("Saved {}", filename));
                                 }
                                 Err(e) => {
@@ -2612,6 +2615,9 @@ fn setup_save_button_handler(
 
                                             // Notify LSP that file was saved (for rust-analyzer)
                                             crate::linter::ui::notify_file_saved(&file);
+
+                                            // Trigger debounced git status update
+                                            crate::ui::git_diff::trigger_git_status_update();
 
                                             // Update main window title potentially
                                             if let Some(parent) = file.parent() {
@@ -2789,6 +2795,9 @@ fn setup_save_as_button_handler(
 
                                             // Notify LSP that file was saved (for rust-analyzer)
                                             crate::linter::ui::notify_file_saved(&file_to_save);
+
+                                            // Trigger debounced git status update
+                                            crate::ui::git_diff::trigger_git_status_update();
 
                                             if let Some(parent) = file_to_save.parent() {
                                                 *current_dir_clone.borrow_mut() =
