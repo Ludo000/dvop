@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+// Type aliases for complex callback types
+type VisibilityCallback = RefCell<Option<Rc<dyn Fn(bool)>>>;
 use super::{lint_by_language, lint_file, Diagnostic, DiagnosticSeverity};
 
 /// Detect if the current directory contains Rust files or is a Rust project
@@ -19,16 +21,16 @@ pub fn is_rust_project(dir: &Path) -> bool {
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "rs") {
+            if path.extension().is_some_and(|ext| ext == "rs") {
                 return true;
             }
-            if path.is_dir() && path.file_name().map_or(false, |name| name == "src") {
+            if path.is_dir() && path.file_name().is_some_and(|name| name == "src") {
                 if let Ok(src_entries) = std::fs::read_dir(&path) {
                     for src_entry in src_entries.flatten() {
                         if src_entry
                             .path()
                             .extension()
-                            .map_or(false, |ext| ext == "rs")
+                            .is_some_and(|ext| ext == "rs")
                         {
                             return true;
                         }
@@ -64,9 +66,9 @@ lazy_static::lazy_static! {
 
 // Thread-local callback for diagnostics panel visibility
 thread_local! {
-    static DIAGNOSTICS_PANEL_CALLBACK: RefCell<Option<Rc<dyn Fn(bool)>>> = RefCell::new(None);
-    static LINTER_STATUS_BOX: RefCell<Option<GtkBox>> = RefCell::new(None);
-    static LINTER_STATUS_VISIBILITY_CALLBACK: RefCell<Option<Rc<dyn Fn(bool)>>> = RefCell::new(None);
+    static DIAGNOSTICS_PANEL_CALLBACK: VisibilityCallback = RefCell::new(None);
+    static LINTER_STATUS_BOX: RefCell<Option<GtkBox>> = const { RefCell::new(None) };
+    static LINTER_STATUS_VISIBILITY_CALLBACK: VisibilityCallback = RefCell::new(None);
     
     // Track open buffers by file URI for reapplying diagnostics (thread-local since GTK is single-threaded)
     static BUFFER_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::Buffer>>> = 
@@ -335,7 +337,7 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
         }
         
         // Run linter and show diagnostics panel for all supported file types
-        run_linter(&source_view, &buffer, file_path);
+        run_linter(source_view, &buffer, file_path);
         
         // Show diagnostics panel if we have diagnostics
         show_diagnostics_panel();
@@ -385,7 +387,7 @@ fn setup_lsp_for_file(_source_view: &View, file_path: &Path) {
                         // Convert LSP diagnostics to our format
                         let diagnostics: Vec<Diagnostic> = lsp_diagnostics
                             .iter()
-                            .map(|d| crate::lsp::convert_lsp_diagnostic(d))
+                            .map(crate::lsp::convert_lsp_diagnostic)
                             .collect();
 
                         // Store diagnostics (remove from store if empty)
@@ -551,7 +553,7 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
         
         // Apply underlines if we have a source buffer
         if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
-            crate::linter::apply_diagnostic_underlines(&source_buffer, &path.to_string_lossy());
+            crate::linter::apply_diagnostic_underlines(source_buffer, &path.to_string_lossy());
         }
         
         // Show linter status widget if we have any diagnostics

@@ -288,7 +288,7 @@ impl EditorSettings {
     /// Gets the last used folder path
     pub fn get_last_folder(&self) -> PathBuf {
         self.get("last_folder")
-            .map(|s| PathBuf::from(s))
+            .map(PathBuf::from)
             .unwrap_or_else(|| {
                 // Fallback to home directory
                 home_dir().unwrap_or_else(|| PathBuf::from("."))
@@ -313,7 +313,7 @@ impl EditorSettings {
 
     /// Gets the sidebar visibility state
     pub fn get_sidebar_visible(&self) -> bool {
-        self.get("sidebar_visible").map_or(true, |s| s == "true")
+        self.get("sidebar_visible").is_none_or(|s| s == "true")
     }
 
     /// Sets the sidebar visibility state
@@ -323,7 +323,7 @@ impl EditorSettings {
 
     /// Gets the terminal visibility state
     pub fn get_terminal_visible(&self) -> bool {
-        self.get("terminal_visible").map_or(false, |s| s == "true")
+        self.get("terminal_visible").is_some_and(|s| s == "true")
     }
 
     /// Sets the terminal visibility state
@@ -334,7 +334,7 @@ impl EditorSettings {
     /// Gets the search case sensitive setting
     pub fn get_search_case_sensitive(&self) -> bool {
         self.get("search_case_sensitive")
-            .map_or(false, |s| s == "true")
+            .is_some_and(|s| s == "true")
     }
 
     /// Sets the search case sensitive setting
@@ -347,7 +347,7 @@ impl EditorSettings {
 
     /// Gets the search whole word setting
     pub fn get_search_whole_word(&self) -> bool {
-        self.get("search_whole_word").map_or(false, |s| s == "true")
+        self.get("search_whole_word").is_some_and(|s| s == "true")
     }
 
     /// Sets the search whole word setting

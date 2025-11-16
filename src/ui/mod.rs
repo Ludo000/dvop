@@ -47,6 +47,21 @@ use std::collections::HashMap;
 use std::path::PathBuf; // For file paths
 use std::rc::Rc; // For shared ownership // For file path manager
 
+// Type alias for the complex return type of create_text_view
+type TextViewComponents = (
+    gtk4::ScrolledWindow,
+    gtk4::TextView,
+    gtk4::TextBuffer,
+    Rc<RefCell<Option<PathBuf>>>, // file_path
+    Label,                        // error_label
+    Picture,                      // picture for images
+    Rc<RefCell<PathBuf>>,         // current_dir
+    Notebook,                     // editor_notebook
+    GtkBox,                       // tab_widget for the initial tab
+    Label,                        // tab_label for the initial tab
+    Button,                       // tab_close_button for the initial tab
+    Button,                       // add_file_button for creating new tabs
+);
 // Template support
 use gtk4::subclass::prelude::*;
 
@@ -327,26 +342,12 @@ pub fn create_header(
 /// - Picture: Widget for displaying images when opening image files
 /// - Rc<RefCell<PathBuf>>: Current working directory
 /// - Notebook: Main tabbed container for managing multiple documents
-/// - GtkBox: Custom tab widget for the initial tab
 /// - Label: Text label for the initial tab
 /// - Button: Close button for the initial tab
 /// - Button: Add new file tab button
 pub fn create_text_view(
     window: &DvopWindow,
-) -> (
-    gtk4::ScrolledWindow,
-    gtk4::TextView,
-    gtk4::TextBuffer,
-    Rc<RefCell<Option<PathBuf>>>, // file_path
-    Label,                        // error_label
-    Picture,                      // picture for images
-    Rc<RefCell<PathBuf>>,         // current_dir
-    Notebook,                     // editor_notebook
-    GtkBox,                       // tab_widget for the initial tab
-    Label,                        // tab_label for the initial tab
-    Button,                       // tab_close_button for the initial tab
-    Button,                       // add_file_button for creating new tabs
-) {
+) -> TextViewComponents {
     let imp = window.imp();
     let editor_notebook = imp.editor_notebook.get();
 

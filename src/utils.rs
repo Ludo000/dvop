@@ -11,6 +11,9 @@ use std::rc::Rc;
 
 use mime_guess::Mime;
 
+// Type alias for complex callback type
+type TabPathUpdateCallback = RefCell<Option<Box<dyn Fn(&PathBuf, &PathBuf)>>>;
+
 // Global storage for file list refresh callback
 thread_local! {
     static FILE_LIST_REFRESH_CALLBACK: RefCell<Option<Box<dyn Fn()>>> = RefCell::new(None);
@@ -18,7 +21,7 @@ thread_local! {
 
 // Global storage for tab path update callback (for when files are moved)
 thread_local! {
-    static TAB_PATH_UPDATE_CALLBACK: RefCell<Option<Box<dyn Fn(&PathBuf, &PathBuf)>>> = RefCell::new(None);
+    static TAB_PATH_UPDATE_CALLBACK: TabPathUpdateCallback = RefCell::new(None);
 }
 
 /// Set a callback function to refresh the file list
@@ -214,7 +217,7 @@ pub fn update_file_list(
                 }
 
                 // Categorize as folder or file
-                if entry.file_type().map_or(false, |ft| ft.is_dir()) {
+                if entry.file_type().is_ok_and(|ft| ft.is_dir()) {
                     folders.push((file_name_str.to_string(), entry));
                 } else {
                     files.push((file_name_str.to_string(), entry));
@@ -273,7 +276,7 @@ pub fn update_file_list(
                     FileSelectionSource::TabSwitch => {
                         // For tab switches, use a subtle CSS class
                         row.add_css_class("file-selected-by-tab");
-                        label.set_markup(&format!("{}", file_name_str));
+                        label.set_markup(&file_name_str.to_string());
                     }
                     FileSelectionSource::DirectClick => {
                         // For direct clicks, use a more prominent CSS class
@@ -543,7 +546,7 @@ pub fn update_path_buttons(
         button.set_has_frame(false); // Make it look like a link
 
         // Set up drop target for this path button to allow dragging files/folders onto it
-        setup_path_button_drop_target(&button, &path);
+        setup_path_button_drop_target(&button, path);
 
         // Clone needed variables for the closure
         let path_clone = path.clone();

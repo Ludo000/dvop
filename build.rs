@@ -7,7 +7,7 @@ fn main() {
     // Ensure rust-analyzer is installed
     println!("cargo:warning=Checking for rust-analyzer...");
     let status = Command::new("rustup")
-        .args(&["component", "list", "--installed"])
+        .args(["component", "list", "--installed"])
         .output();
     
     if let Ok(output) = status {
@@ -15,7 +15,7 @@ fn main() {
         if !installed.contains("rust-analyzer") {
             println!("cargo:warning=Installing rust-analyzer component...");
             let install_status = Command::new("rustup")
-                .args(&["component", "add", "rust-analyzer"])
+                .args(["component", "add", "rust-analyzer"])
                 .status();
             
             match install_status {

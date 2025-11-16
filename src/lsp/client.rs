@@ -12,6 +12,9 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 
+// Type alias for diagnostic callback
+type DiagnosticCallback = Arc<Mutex<Option<Box<dyn Fn(Uri, Vec<Diagnostic>) + Send + 'static>>>>;
+
 /// JSON-RPC message structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct JsonRpcMessage {
@@ -32,7 +35,7 @@ struct JsonRpcMessage {
 pub struct LspClient {
     process: Arc<Mutex<Option<Child>>>,
     next_id: Arc<Mutex<i32>>,
-    diagnostic_callback: Arc<Mutex<Option<Box<dyn Fn(Uri, Vec<Diagnostic>) + Send + 'static>>>>,
+    diagnostic_callback: DiagnosticCallback,
     workspace_root: PathBuf,
 }
 
@@ -56,10 +59,8 @@ impl LspClient {
         if let Some(stderr) = process.stderr.take() {
             std::thread::spawn(move || {
                 let reader = BufReader::new(stderr);
-                for line in reader.lines() {
-                    if let Ok(line) = line {
-                        eprintln!("[rust-analyzer stderr] {}", line);
-                    }
+                for line in reader.lines().flatten() {
+                    eprintln!("[rust-analyzer stderr] {}", line);
                 }
             });
         }
@@ -339,7 +340,7 @@ impl LspClient {
     /// Read and parse messages from the language server
     fn read_messages<R: BufRead>(
         mut reader: R,
-        diagnostic_callback: Arc<Mutex<Option<Box<dyn Fn(Uri, Vec<Diagnostic>) + Send + 'static>>>>,
+        diagnostic_callback: DiagnosticCallback,
     ) {
         loop {
             // Read Content-Length header
@@ -383,9 +384,7 @@ impl LspClient {
     /// Handle a received message from the language server
     fn handle_message(
         message: JsonRpcMessage,
-        diagnostic_callback: &Arc<
-            Mutex<Option<Box<dyn Fn(Uri, Vec<Diagnostic>) + Send + 'static>>>,
-        >,
+        diagnostic_callback: &DiagnosticCallback,
     ) {
         if let Some(method) = &message.method {
             if method == PublishDiagnostics::METHOD {

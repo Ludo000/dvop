@@ -12,48 +12,27 @@ use std::rc::Rc;
 
 use super::git_diff_panel_template::GitDiffPanel;
 
+// Type aliases for complex types
+type DiffAlignResult = (
+    String,
+    String,
+    Vec<Option<usize>>,
+    Vec<Option<usize>>,
+    usize,
+    usize,
+);
+type CallbackCell = Rc<RefCell<Option<Rc<dyn Fn()>>>>;
+
 // Global git status update callback with debouncing
 thread_local! {
     static GIT_STATUS_UPDATE_CALLBACK: RefCell<Option<Rc<dyn Fn()>>> = RefCell::new(None);
-    static PENDING_UPDATE_TIMEOUT: RefCell<Option<glib::SourceId>> = RefCell::new(None);
+    static PENDING_UPDATE_TIMEOUT: RefCell<Option<glib::SourceId>> = const { RefCell::new(None) };
 }
 
 /// Set the git status update callback (called once during initialization)
 pub fn set_git_status_update_callback(callback: Rc<dyn Fn()>) {
     GIT_STATUS_UPDATE_CALLBACK.with(|cell| {
         *cell.borrow_mut() = Some(callback);
-    });
-}
-
-/// Trigger a debounced git status update
-/// This will delay the actual update by 500ms to avoid rapid successive calls
-pub fn trigger_git_status_update() {
-    // Cancel any pending update
-    PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
-        if let Some(timeout_id) = timeout_cell.borrow_mut().take() {
-            timeout_id.remove();
-        }
-    });
-
-    // Schedule a new update after a delay
-    GIT_STATUS_UPDATE_CALLBACK.with(|callback_cell| {
-        if let Some(callback) = callback_cell.borrow().as_ref() {
-            let callback_clone = callback.clone();
-            let timeout_id = glib::timeout_add_local_once(
-                std::time::Duration::from_millis(500),
-                move || {
-                    callback_clone();
-                    // Clear the pending timeout ID
-                    PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
-                        *timeout_cell.borrow_mut() = None;
-                    });
-                },
-            );
-            
-            PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
-                *timeout_cell.borrow_mut() = Some(timeout_id);
-            });
-        }
     });
 }
 
@@ -212,14 +191,7 @@ fn get_staged_file_content(repo_path: &Path, file_path: &Path) -> Option<String>
 fn align_diff_content(
     old_content: &str,
     new_content: &str,
-) -> (
-    String,
-    String,
-    Vec<Option<usize>>,
-    Vec<Option<usize>>,
-    usize,
-    usize,
-) {
+) -> DiffAlignResult {
     let old_lines: Vec<&str> = old_content.lines().collect();
     let new_lines: Vec<&str> = new_content.lines().collect();
 
@@ -367,7 +339,7 @@ fn make_line_numbers_invisible(buffer: &sourceview5::Buffer, line_map: &[Option<
     // Apply the tag to line number portions (start of each line until content)
     for (line_idx, _) in line_map.iter().enumerate() {
         if let Some(line_start) = buffer.iter_at_line(line_idx as i32) {
-            let mut line_end = line_start.clone();
+            let mut line_end = line_start;
             line_end.forward_to_line_end();
 
             let text = buffer.text(&line_start, &line_end, false);
@@ -377,7 +349,7 @@ fn make_line_numbers_invisible(buffer: &sourceview5::Buffer, line_map: &[Option<
             // This marks the end of line number section
             if let Some(pos) = text_str.find("  ") {
                 // Apply invisible tag from start of line to end of line number + 2 spaces
-                let mut num_end = line_start.clone();
+                let mut num_end = line_start;
                 num_end.forward_chars((pos + 2) as i32);
                 buffer.apply_tag(&invisible_tag, &line_start, &num_end);
             }
@@ -468,27 +440,27 @@ fn apply_diff_highlighting(
         if old_line.is_empty() && !new_line.is_empty() {
             // Added line (blank on left, content on right)
             if let Some(right_start) = right_buffer.iter_at_line(i as i32) {
-                let mut right_end = right_start.clone();
+                let mut right_end = right_start;
                 right_end.forward_to_line_end();
                 right_buffer.apply_tag(&add_tag, &right_start, &right_end);
             }
         } else if !old_line.is_empty() && new_line.is_empty() {
             // Deleted line (content on left, blank on right)
             if let Some(left_start) = left_buffer.iter_at_line(i as i32) {
-                let mut left_end = left_start.clone();
+                let mut left_end = left_start;
                 left_end.forward_to_line_end();
                 left_buffer.apply_tag(&delete_tag, &left_start, &left_end);
             }
         } else if old_line != new_line && !old_line.is_empty() && !new_line.is_empty() {
             // Modified line (different content on both sides)
             if let Some(left_start) = left_buffer.iter_at_line(i as i32) {
-                let mut left_end = left_start.clone();
+                let mut left_end = left_start;
                 left_end.forward_to_line_end();
                 left_buffer.apply_tag(&left_modify_tag, &left_start, &left_end);
             }
 
             if let Some(right_start) = right_buffer.iter_at_line(i as i32) {
-                let mut right_end = right_start.clone();
+                let mut right_end = right_start;
                 right_end.forward_to_line_end();
                 right_buffer.apply_tag(&right_modify_tag, &right_start, &right_end);
             }
@@ -1171,7 +1143,7 @@ fn setup_minimap_drawing(
                 }
             }
 
-            let _ = cr.rectangle(0.0, y, width as f64, line_height.max(1.0));
+            cr.rectangle(0.0, y, width as f64, line_height.max(1.0));
             let _ = cr.fill();
         }
 
@@ -1191,7 +1163,7 @@ fn setup_minimap_drawing(
             } else {
                 cr.set_source_rgba(0.0, 0.0, 0.0, 0.15);
             }
-            let _ = cr.rectangle(0.0, viewport_start, width as f64, viewport_height);
+            cr.rectangle(0.0, viewport_start, width as f64, viewport_height);
             let _ = cr.fill();
 
             // Border for viewport
@@ -1201,7 +1173,7 @@ fn setup_minimap_drawing(
                 cr.set_source_rgba(0.0, 0.0, 0.0, 0.4);
             }
             cr.set_line_width(1.0);
-            let _ = cr.rectangle(0.0, viewport_start, width as f64, viewport_height);
+            cr.rectangle(0.0, viewport_start, width as f64, viewport_height);
             let _ = cr.stroke();
         }
     });
@@ -1680,7 +1652,7 @@ pub fn create_git_diff_panel(
     let action_group_rc = Rc::new(RefCell::new(gtk4::gio::SimpleActionGroup::new()));
 
     // Create a RefCell to hold the update function (for self-reference)
-    let update_git_status_rc: Rc<RefCell<Option<Rc<dyn Fn()>>>> = Rc::new(RefCell::new(None));
+    let update_git_status_rc: CallbackCell = Rc::new(RefCell::new(None));
 
     // Clone widgets early for use in branch actions
     let refresh_button_for_actions = refresh_button.clone();

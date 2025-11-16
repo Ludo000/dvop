@@ -17,7 +17,7 @@ use super::search_panel_template::SearchPanel;
 
 // Thread-local storage for the global search dialog to maintain state
 thread_local! {
-    static GLOBAL_SEARCH_DIALOG: RefCell<Option<gtk::Dialog>> = RefCell::new(None);
+    static GLOBAL_SEARCH_DIALOG: RefCell<Option<gtk::Dialog>> = const { RefCell::new(None) };
 }
 
 #[derive(Clone, Debug)]
@@ -1565,7 +1565,7 @@ pub fn show_global_search_dialog(
 
                                     // Add zebra striping
                                     let count = *result_count_c.borrow();
-                                    if count % 2 == 0 {
+                                    if count.is_multiple_of(2) {
                                         row.add_css_class("zebra-even");
                                     } else {
                                         row.add_css_class("zebra-odd");
@@ -1940,7 +1940,7 @@ pub fn show_global_search_dialog(
                     Vec<(usize, usize, String, bool)>,
                 > = std::collections::HashMap::new();
                 for (path, line, col, needle, case_sensitive) in replacements {
-                    files_map.entry(path).or_insert_with(Vec::new).push((
+                    files_map.entry(path).or_default().push((
                         line,
                         col,
                         needle,
@@ -2537,7 +2537,7 @@ pub fn create_global_search_panel(
 
                                 // Add zebra striping
                                 let count = *result_count_c.borrow();
-                                if count % 2 == 0 {
+                                if count.is_multiple_of(2) {
                                     row.add_css_class("zebra-even");
                                 } else {
                                     row.add_css_class("zebra-odd");
@@ -2912,7 +2912,7 @@ pub fn create_global_search_panel(
                     Vec<(usize, usize, String, bool)>,
                 > = std::collections::HashMap::new();
                 for (path, line, col, needle, case_sensitive) in replacements {
-                    files_map.entry(path).or_insert_with(Vec::new).push((
+                    files_map.entry(path).or_default().push((
                         line,
                         col,
                         needle,

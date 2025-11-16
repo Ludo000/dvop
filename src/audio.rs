@@ -8,7 +8,6 @@ use gtk4::{
     Box as GtkBox, Button, DrawingArea, GestureClick, Image, Label, MenuButton, Orientation,
     Popover,
 };
-use hound;
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::cell::RefCell;
 use std::path::Path;
@@ -85,7 +84,7 @@ impl GlobalVolumeManager {
 
 // Global volume manager instance
 use once_cell::sync::Lazy;
-static GLOBAL_VOLUME_MANAGER: Lazy<GlobalVolumeManager> = Lazy::new(|| GlobalVolumeManager::new());
+static GLOBAL_VOLUME_MANAGER: Lazy<GlobalVolumeManager> = Lazy::new(GlobalVolumeManager::new);
 
 /// Global audio playback manager to coordinate multiple audio players
 #[derive(Clone)]
@@ -284,7 +283,7 @@ impl GlobalAudioManager {
 }
 
 // Global audio manager instance
-static GLOBAL_AUDIO_MANAGER: Lazy<GlobalAudioManager> = Lazy::new(|| GlobalAudioManager::new());
+static GLOBAL_AUDIO_MANAGER: Lazy<GlobalAudioManager> = Lazy::new(GlobalAudioManager::new);
 
 /// Public function to update global volume from UI components
 pub fn set_global_volume(volume: f64) {
@@ -411,12 +410,10 @@ fn is_music_content(audio_path: &Path) -> bool {
     if file_name
         .chars()
         .next()
-        .map_or(false, |c| c.is_ascii_digit())
-    {
-        if file_name.contains(". ") || file_name.contains(" - ") {
+        .is_some_and(|c| c.is_ascii_digit())
+        && (file_name.contains(". ") || file_name.contains(" - ")) {
             return true;
         }
-    }
 
     // Default assumption: if it's a common audio format in a typical location,
     // it's likely music
@@ -1200,7 +1197,7 @@ impl AudioPlayer {
 
             // Draw waveform if available
             if let Some(ref waveform) = *waveform_data_draw.borrow() {
-                draw_waveform(cr, &waveform, width, height);
+                draw_waveform(cr, waveform, width, height);
             } else {
                 // Show loading message
                 cr.set_source_rgb(0.7, 0.7, 0.7);
@@ -1681,7 +1678,7 @@ fn read_audio_with_gstreamer_fast(
         )
         .build();
 
-    pipeline.add_many(&[
+    pipeline.add_many([
         &uridecodebin,
         &audioconvert,
         &audioresample,
@@ -1689,7 +1686,7 @@ fn read_audio_with_gstreamer_fast(
     ])?;
 
     // Link elements (uridecodebin will be linked dynamically)
-    gstreamer::Element::link_many(&[&audioconvert, &audioresample, appsink.upcast_ref()])?;
+    gstreamer::Element::link_many([&audioconvert, &audioresample, appsink.upcast_ref()])?;
 
     // Connect pad-added signal for dynamic linking
     let audioconvert_clone = audioconvert.clone();
@@ -2134,7 +2131,7 @@ fn read_audio_with_gstreamer(
         )
         .build();
 
-    pipeline.add_many(&[
+    pipeline.add_many([
         &uridecodebin,
         &audioconvert,
         &audioresample,
@@ -2142,7 +2139,7 @@ fn read_audio_with_gstreamer(
     ])?;
 
     // Link elements (uridecodebin will be linked dynamically)
-    gstreamer::Element::link_many(&[&audioconvert, &audioresample, appsink.upcast_ref()])?;
+    gstreamer::Element::link_many([&audioconvert, &audioresample, appsink.upcast_ref()])?;
 
     // Connect pad-added signal for dynamic linking
     let audioconvert_clone = audioconvert.clone();

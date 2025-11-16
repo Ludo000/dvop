@@ -38,13 +38,11 @@ pub fn lint_gtk_ui(content: &str) -> Vec<Diagnostic> {
                 // Extract class name for object/template elements
                 let mut class_name = None;
                 if tag_name == "object" || tag_name == "template" {
-                    for attr in e.attributes() {
-                        if let Ok(attr) = attr {
-                            let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
-                            if key == "class" || key == "parent" {
-                                class_name = Some(String::from_utf8_lossy(&attr.value).to_string());
-                                break;
-                            }
+                    for attr in e.attributes().flatten() {
+                        let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
+                        if key == "class" || key == "parent" {
+                            class_name = Some(String::from_utf8_lossy(&attr.value).to_string());
+                            break;
                         }
                     }
                 }
@@ -200,15 +198,13 @@ fn validate_template_element(
     let mut has_class = false;
     let mut has_parent = false;
 
-    for attr in element.attributes() {
-        if let Ok(attr) = attr {
-            let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
-            
-            match key.as_str() {
-                "class" => has_class = true,
-                "parent" => has_parent = true,
-                _ => {}
-            }
+    for attr in element.attributes().flatten() {
+        let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
+        
+        match key.as_str() {
+            "class" => has_class = true,
+            "parent" => has_parent = true,
+            _ => {}
         }
     }
 
@@ -244,14 +240,12 @@ fn validate_property_element(
 ) {
     let mut property_name = None;
 
-    for attr in element.attributes() {
-        if let Ok(attr) = attr {
-            let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
-            let value = String::from_utf8_lossy(&attr.value).to_string();
+    for attr in element.attributes().flatten() {
+        let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
+        let value = String::from_utf8_lossy(&attr.value).to_string();
 
-            if key == "name" {
-                property_name = Some(value);
-            }
+        if key == "name" {
+            property_name = Some(value);
         }
     }
 

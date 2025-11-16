@@ -10,6 +10,8 @@ use std::sync::{Arc, Mutex};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
+// Type alias for complex row index type
+type RowIndexMap = Rc<RefCell<HashMap<String, Vec<(usize, glib::WeakRef<ListBoxRow>)>>>>;
 
 // Channel for sending messages to the diagnostics panel
 static DIAGNOSTICS_SENDER: Lazy<Arc<Mutex<Option<Sender<DiagnosticMessage>>>>> =
@@ -77,8 +79,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
     }
     
     // Per-panel indices for focusing
-    let row_index: Rc<RefCell<HashMap<String, Vec<(usize, glib::WeakRef<ListBoxRow>)>>>> =
-        Rc::new(RefCell::new(HashMap::new()));
+    let row_index: RowIndexMap = Rc::new(RefCell::new(HashMap::new()));
     let file_expanders: Rc<RefCell<HashMap<String, glib::WeakRef<Expander>>>> =
         Rc::new(RefCell::new(HashMap::new()));
 

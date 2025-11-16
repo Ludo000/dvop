@@ -212,7 +212,7 @@ impl GlobalVideoManager {
 
 // Global video manager instance
 use once_cell::sync::Lazy;
-static GLOBAL_VIDEO_MANAGER: Lazy<GlobalVideoManager> = Lazy::new(|| GlobalVideoManager::new());
+static GLOBAL_VIDEO_MANAGER: Lazy<GlobalVideoManager> = Lazy::new(GlobalVideoManager::new);
 
 /// Public function to check if a file path represents video content
 pub fn is_video_file(path: &std::path::Path) -> bool {
@@ -618,7 +618,7 @@ impl VideoPlayer {
         gstreamer::init().map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
 
         let pipeline = gstreamer::ElementFactory::make("playbin")
-            .property("uri", &format!("file://{}", video_path.display()))
+            .property("uri", format!("file://{}", video_path.display()))
             .build()
             .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?
             .downcast::<gstreamer::Pipeline>()

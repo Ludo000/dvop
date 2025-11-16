@@ -146,7 +146,7 @@ fn save_log_history() {
 
 // Store a reference to the current secondary status label (if any)
 thread_local! {
-    static CURRENT_SECONDARY_STATUS_LABEL: std::cell::RefCell<Option<Label>> = std::cell::RefCell::new(None);
+    static CURRENT_SECONDARY_STATUS_LABEL: std::cell::RefCell<Option<Label>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Set the current secondary status label for this thread
@@ -158,7 +158,7 @@ pub fn set_secondary_status_label(label: &Label) {
 
 // Store a reference to the current status label (if any)
 thread_local! {
-    static CURRENT_STATUS_LABEL: std::cell::RefCell<Option<Label>> = std::cell::RefCell::new(None);
+    static CURRENT_STATUS_LABEL: std::cell::RefCell<Option<Label>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Set the current status label for this thread

@@ -400,7 +400,7 @@ impl SearchState {
         let mut start_iter = buffer.start_iter();
         let mut count = 0;
 
-        while let Some((_, match_end, _wrapped)) = context.forward(&mut start_iter) {
+        while let Some((_, match_end, _wrapped)) = context.forward(&start_iter) {
             count += 1;
             start_iter = match_end;
         }
@@ -419,7 +419,7 @@ impl SearchState {
         let mut start_iter = buffer.start_iter();
         let mut position = 0;
 
-        while let Some((match_start, match_end, _wrapped)) = context.forward(&mut start_iter) {
+        while let Some((match_start, match_end, _wrapped)) = context.forward(&start_iter) {
             if match_start.offset() >= cursor_iter.offset() {
                 break;
             }
@@ -428,8 +428,8 @@ impl SearchState {
         }
 
         // If cursor is at or in a match, include it
-        let mut check_iter = cursor_iter;
-        if let Some((match_start, _match_end, _wrapped)) = context.backward(&mut check_iter) {
+        let check_iter = cursor_iter;
+        if let Some((match_start, _match_end, _wrapped)) = context.backward(&check_iter) {
             if match_start.offset() <= cursor_iter.offset() {
                 position += 1;
             }
@@ -445,9 +445,9 @@ impl SearchState {
     /// Highlights the first match in the buffer
     fn highlight_first_match(context: &SearchContext) {
         let buffer = context.buffer();
-        let mut start_iter = buffer.start_iter();
+        let start_iter = buffer.start_iter();
 
-        if let Some((match_start, match_end, _wrapped)) = context.forward(&mut start_iter) {
+        if let Some((match_start, match_end, _wrapped)) = context.forward(&start_iter) {
             // Move cursor to the match and select it
             buffer.place_cursor(&match_start);
             buffer.select_range(&match_start, &match_end);
@@ -471,7 +471,7 @@ impl SearchState {
             start_iter = end;
         }
 
-        if let Some((match_start, match_end, wrapped)) = context.forward(&mut start_iter) {
+        if let Some((match_start, match_end, wrapped)) = context.forward(&start_iter) {
             buffer.place_cursor(&match_start);
             buffer.select_range(&match_start, &match_end);
 
@@ -497,7 +497,7 @@ impl SearchState {
             end_iter = start;
         }
 
-        if let Some((match_start, match_end, wrapped)) = context.backward(&mut end_iter) {
+        if let Some((match_start, match_end, wrapped)) = context.backward(&end_iter) {
             buffer.place_cursor(&match_start);
             buffer.select_range(&match_start, &match_end);
 
@@ -548,8 +548,8 @@ impl SearchState {
             // Perform replacement (robust approach maintaining iter validity)
             buffer.begin_user_action();
             let insert_offset = start.offset();
-            let mut del_start = start.clone();
-            let mut del_end = end.clone();
+            let mut del_start = start;
+            let mut del_end = end;
             buffer.delete(&mut del_start, &mut del_end);
             if !replace_text.is_empty() {
                 let mut insert_iter = buffer.iter_at_offset(insert_offset);
@@ -572,7 +572,7 @@ impl SearchState {
 
         // Collect all matches first to avoid iterator invalidation
         let mut matches = Vec::new();
-        while let Some((match_start, match_end, _wrapped)) = context.forward(&mut start_iter) {
+        while let Some((match_start, match_end, _wrapped)) = context.forward(&start_iter) {
             matches.push((match_start.offset(), match_end.offset()));
             start_iter = match_end;
         }

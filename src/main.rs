@@ -802,9 +802,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let sidebar_stack_for_save = sidebar_stack.clone();
     sidebar_stack.connect_visible_child_notify(move |_| {
         let visible_child_name = sidebar_stack_for_save.visible_child_name();
-        if let Some(name) = visible_child_name {
+        if let Some(ref name) = visible_child_name {
             let mut settings = settings::get_settings_mut();
-            settings.set_active_sidebar_tab(&name);
+            settings.set_active_sidebar_tab(name);
             let _ = settings.save();
         }
     });
@@ -2014,7 +2014,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 // Close any empty untitled tabs before opening the file
                 handlers::close_empty_untitled_tabs(&editor_notebook, &file_path_manager);
 
-                let mut mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                let mut mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
 
                 // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
                 // but should be treated as TypeScript files (text/plain)
@@ -2027,12 +2027,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
                 if utils::is_allowed_mime_type(&mime_type) {
                     // Try to read the file content
-                    match std::fs::read_to_string(&file_path) {
+                    match std::fs::read_to_string(file_path) {
                         Ok(content) => {
                             // Open the file in a new tab
                             handlers::open_or_focus_tab(
                                 &editor_notebook,
-                                &file_path,
+                                file_path,
                                 &content,
                                 &active_tab_path,
                                 &file_path_manager,
@@ -2073,7 +2073,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     // Handle image files
                     handlers::open_or_focus_tab(
                         &editor_notebook,
-                        &file_path,
+                        file_path,
                         "", // Empty content for images
                         &active_tab_path,
                         &file_path_manager,
@@ -2108,7 +2108,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     // Handle unsupported file types by opening them with empty content
                     handlers::open_or_focus_tab(
                         &editor_notebook,
-                        &file_path,
+                        file_path,
                         "", // Empty content for unsupported files
                         &active_tab_path,
                         &file_path_manager,
@@ -2507,7 +2507,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         println!("Total notebook pages: {}", n_pages);
         for i in 0..n_pages {
             if editor_notebook_for_close.nth_page(Some(i)).is_some() {
-                let page_num = i as u32;
+                let page_num = i;
                 if let Some(path) = file_path_manager_for_close.borrow().get(&page_num) {
                     println!("  Page {}: {:?}", page_num, path);
                     opened_files.push(path.clone());

@@ -32,7 +32,7 @@ pub struct FileClipboard {
 
 // Global file clipboard state - using thread-local storage for safety
 thread_local! {
-    static FILE_CLIPBOARD: RefCell<Option<FileClipboard>> = RefCell::new(None);
+    static FILE_CLIPBOARD: RefCell<Option<FileClipboard>> = const { RefCell::new(None) };
 }
 
 /// Copy a file to the clipboard

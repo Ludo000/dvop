@@ -52,15 +52,13 @@ fn get_buffer_language(buffer: &Buffer) -> String {
             detected_lang
         } else {
             // Fall back to the first supported language if the detected one isn't available
-            supported_languages
-                .get(0)
+            supported_languages.first()
                 .unwrap_or(&"rust".to_string())
                 .clone()
         }
     } else {
         // Default to first supported language when no language is detected
-        supported_languages
-            .get(0)
+        supported_languages.first()
             .unwrap_or(&"rust".to_string())
             .clone()
     }
@@ -1018,7 +1016,7 @@ fn extract_import_path(context: &str) -> Option<String> {
         // Extract module name from 'module' or "module"
         if let Some(from_pos) = current_line_trimmed.rfind("from") {
             let after_from = &current_line_trimmed[from_pos + 4..].trim();
-            if let Some(quote_start) = after_from.find(|c| c == '\'' || c == '"') {
+            if let Some(quote_start) = after_from.find(['\'', '"']) {
                 let quote_char = after_from.chars().nth(quote_start).unwrap();
                 let module_part = &after_from[quote_start + 1..];
                 if let Some(quote_end) = module_part.find(quote_char) {
@@ -1031,7 +1029,7 @@ fn extract_import_path(context: &str) -> Option<String> {
     // JavaScript: "const module = require('module')" or "import('module')"
     if let Some(require_pos) = current_line_trimmed.find("require(") {
         let after_require = &current_line_trimmed[require_pos + 8..];
-        if let Some(quote_start) = after_require.find(|c| c == '\'' || c == '"') {
+        if let Some(quote_start) = after_require.find(['\'', '"']) {
             let quote_char = after_require.chars().nth(quote_start).unwrap();
             let module_part = &after_require[quote_start + 1..];
             if let Some(quote_end) = module_part.find(quote_char) {

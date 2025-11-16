@@ -272,8 +272,7 @@ impl JsonCompletionProvider {
                 .modules
                 .iter()
                 .map(|module| &module.path)
-                .filter(|path| path.starts_with(partial_path))
-                .map(|path| path.clone())
+                .filter(|path| path.starts_with(partial_path)).cloned()
                 .collect();
         }
         Vec::new()

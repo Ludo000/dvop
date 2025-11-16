@@ -83,8 +83,11 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
 
+// Type alias for diagnostics storage
+type DiagnosticsMap = Arc<Mutex<HashMap<String, Vec<Diagnostic>>>>;
+
 // Global storage for file diagnostics
-static FILE_DIAGNOSTICS: Lazy<Arc<Mutex<HashMap<String, Vec<Diagnostic>>>>> =
+static FILE_DIAGNOSTICS: Lazy<DiagnosticsMap> =
     Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 /// Store diagnostics for a file
@@ -219,13 +222,13 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
                     }
                     iter
                 } else {
-                    let mut iter = start_iter.clone();
+                    let mut iter = start_iter;
                     iter.forward_to_line_end();
                     iter
                 }
             } else {
                 // No end position specified, underline the whole line
-                let mut iter = start_iter.clone();
+                let mut iter = start_iter;
                 iter.forward_to_line_end();
                 iter
             };

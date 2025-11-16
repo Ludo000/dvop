@@ -36,7 +36,7 @@ use gtk4::{
 };
 
 // SourceView specific imports
-use sourceview5; // For specific types like Buffer and View
+ // For specific types like Buffer and View
 
 // Standard library imports
 use std::cell::RefCell; // Interior mutability pattern
@@ -63,13 +63,7 @@ pub fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView,
                 // Get the child of the ScrolledWindow
                 scrolled_window.child().and_then(|child| {
                     // Try to cast the child to a TextView
-                    if let Some(text_view) = child.downcast_ref::<TextView>() {
-                        // Return the TextView and its associated TextBuffer
-                        Some((text_view.clone(), text_view.buffer()))
-                    } else {
-                        // Child exists but is not a TextView
-                        None
-                    }
+                    child.downcast_ref::<TextView>().map(|text_view| (text_view.clone(), text_view.buffer()))
                 })
             } else {
                 // Page widget is not a ScrolledWindow
@@ -111,13 +105,7 @@ pub fn get_text_view_and_buffer_for_page(
             // Get the child of the ScrolledWindow
             scrolled_window.child().and_then(|child| {
                 // Try to cast the child to a TextView
-                if let Some(text_view) = child.downcast_ref::<TextView>() {
-                    // Return the TextView and its associated TextBuffer
-                    Some((text_view.clone(), text_view.buffer()))
-                } else {
-                    // Child exists but is not a TextView
-                    None
-                }
+                child.downcast_ref::<TextView>().map(|text_view| (text_view.clone(), text_view.buffer()))
             })
         } else {
             // Page widget is not a ScrolledWindow
@@ -246,8 +234,8 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     // Update the file browser to reflect the current state
     utils::update_file_list(
         &deps.file_list_box,
-        &*current_dir_ref,
-        &*active_path_ref,
+        &current_dir_ref,
+        &active_path_ref,
         utils::FileSelectionSource::TabSwitch,
     );
 
@@ -422,7 +410,7 @@ pub fn handle_close_tab_request(
                 DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                 MessageType::Question,
                 ButtonsType::None,
-                &format!("Save changes to {} before closing?", filename_str),
+                format!("Save changes to {} before closing?", filename_str),
             );
             dialog.add_buttons(&[
                 ("Cancel", ResponseType::Cancel),
@@ -1347,7 +1335,7 @@ pub fn open_or_focus_tab(
         crate::status_log::log_success(&format!("Focused {}", filename));
     } else {
         // Get file MIME type
-        let mut mime_type = mime_guess::from_path(&file_to_open).first_or_octet_stream();
+        let mut mime_type = mime_guess::from_path(file_to_open).first_or_octet_stream();
 
         // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
         // but should be treated as TypeScript files (text/plain)
@@ -1569,14 +1557,14 @@ pub fn open_or_focus_tab(
 
             if is_gif {
                 // Check file size to decide loading strategy
-                let file_size = std::fs::metadata(&file_to_open)
+                let file_size = std::fs::metadata(file_to_open)
                     .map(|m| m.len())
                     .unwrap_or(0);
 
                 if file_size > 10 * 1024 * 1024 {
                     // > 10MB
                     // Large GIF - load only first frame to prevent crash
-                    if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file_to_open) {
+                    if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(file_to_open) {
                         let picture = Picture::new();
                         picture.set_pixbuf(Some(&pixbuf));
                         picture.set_can_focus(true);
@@ -1752,7 +1740,7 @@ pub fn open_or_focus_tab(
                 }
             } else {
                 // Load as static image for non-GIF files
-                if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(&file_to_open) {
+                if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(file_to_open) {
                     let picture = Picture::new();
                     picture.set_pixbuf(Some(&pixbuf));
                     picture.set_can_focus(true);
@@ -1802,7 +1790,7 @@ pub fn open_or_focus_tab(
             }
         } else if mime_type.type_() == "audio" {
             // Handle audio file
-            match crate::audio::AudioPlayer::new(&file_to_open) {
+            match crate::audio::AudioPlayer::new(file_to_open) {
                 Ok(audio_player) => {
                     new_scrolled_window.set_child(Some(&audio_player.widget));
                 }
@@ -1817,7 +1805,7 @@ pub fn open_or_focus_tab(
             }
         } else if mime_type.type_() == "video" {
             // Handle video file
-            match crate::video::VideoPlayer::new(&file_to_open) {
+            match crate::video::VideoPlayer::new(file_to_open) {
                 Ok(video_player) => {
                     new_scrolled_window.set_child(Some(&video_player.widget));
                 }
@@ -1970,7 +1958,7 @@ pub fn open_or_focus_tab(
             current_dir: current_dir.clone(),
             save_button: save_button.clone(),
             save_as_button: save_as_button.clone(),
-            _save_menu_button: _save_menu_button.map(|btn| btn.clone()), // Pass the save menu button if available
+            _save_menu_button: _save_menu_button.cloned(), // Pass the save menu button if available
         };
 
         tab_close_button.connect_clicked(move |_| {
@@ -2844,7 +2832,7 @@ pub enum LastActiveArea {
 
 // Global state to track the last active area
 thread_local! {
-    pub static LAST_ACTIVE_AREA: RefCell<LastActiveArea> = RefCell::new(LastActiveArea::TextEditor);
+    pub static LAST_ACTIVE_AREA: RefCell<LastActiveArea> = const { RefCell::new(LastActiveArea::TextEditor) };
 }
 
 /// Adds interaction tracking to a text view to detect when user actively uses it
@@ -2975,7 +2963,7 @@ fn setup_file_selection_handler(
     let save_as_button_clone = save_as_button.clone();
     let window_clone = window.clone(); // For NewTabDependencies
                                        // Clone the MenuButton option to own it
-    let save_menu_button_option = _save_menu_button.map(|btn| btn.clone());
+    let save_menu_button_option = _save_menu_button.cloned();
     // Clone the path box option
     let path_box_option = path_box.cloned();
     // Clone the selection source tracker
@@ -3009,7 +2997,7 @@ fn setup_file_selection_handler(
                         {
                             let file_name = label.text();
                             let mut file_path = current_dir_for_key.borrow().clone();
-                            file_path.push(&file_name.as_str());
+                            file_path.push(file_name.as_str());
 
                             if file_path.is_file() {
                                 crate::ui::file_manager::copy_file_to_clipboard(&file_path);
@@ -3053,7 +3041,7 @@ fn setup_file_selection_handler(
                         {
                             let file_name = label.text();
                             let mut file_path = current_dir_for_key.borrow().clone();
-                            file_path.push(&file_name.as_str());
+                            file_path.push(file_name.as_str());
 
                             if file_path.is_file() {
                                 crate::ui::file_manager::cut_file_to_clipboard(&file_path);
@@ -3121,7 +3109,7 @@ fn setup_file_selection_handler(
                 {
                     let file_name = label.text();
                     let mut file_path = current_dir_for_key.borrow().clone();
-                    file_path.push(&file_name.as_str());
+                    file_path.push(file_name.as_str());
                     println!("DEBUG: File from selected row: {:?}", file_path);
 
                     // Only delete files, not directories
@@ -3198,7 +3186,7 @@ fn setup_file_selection_handler(
             if let Some(label) = row.child().and_then(|c| c.downcast::<Label>().ok()) {
                 let file_name = label.text();
                 let mut file_path = current_dir_for_context.borrow().clone();
-                file_path.push(&file_name.as_str());
+                file_path.push(file_name.as_str());
 
                 // Only show context menu for files, not directories
                 if file_path.is_file() {
@@ -3320,7 +3308,7 @@ fn setup_file_selection_handler(
         if let Some(label) = row.child().and_then(|c| c.downcast::<Label>().ok()) {
             let file_name = label.text();
             let mut path_from_list = current_dir_for_handler.borrow().clone(); // Use cloned current_dir
-            path_from_list.push(&file_name.as_str());
+            path_from_list.push(file_name.as_str());
 
             // If it's a file (not a directory), close any empty untitled tabs before opening
             if path_from_list.is_file() {
@@ -3666,7 +3654,7 @@ pub fn handle_file_deletion(
                 DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                 MessageType::Warning,
                 ButtonsType::None,
-                &format!(
+                format!(
                     "Are you sure you want to delete '{}'?\n\nThis action cannot be undone.",
                     file_name_clone
                 ),
@@ -3710,7 +3698,7 @@ pub fn handle_file_deletion(
                                 DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                                 MessageType::Error,
                                 ButtonsType::Ok,
-                                &format!("Failed to delete file: {}", e),
+                                format!("Failed to delete file: {}", e),
                             );
                             error_dialog.show();
                         }
@@ -3793,7 +3781,7 @@ fn close_tab_if_file_open_with_save_prompt(
                         DialogFlags::MODAL | DialogFlags::DESTROY_WITH_PARENT,
                         MessageType::Question,
                         ButtonsType::None,
-                        &format!("The file '{}' has unsaved changes.\n\nSave changes before closing and deleting?", filename_str)
+                        format!("The file '{}' has unsaved changes.\n\nSave changes before closing and deleting?", filename_str)
                     );
 
                     dialog.add_buttons(&[
@@ -4241,11 +4229,12 @@ fn show_file_manager_background_context_menu(
 use once_cell::sync::Lazy;
 use std::sync::Mutex as StdMutex;
 
+// Type alias for complex callback type
+type OpenFileCallbackType = StdMutex<Option<Box<dyn Fn(PathBuf, usize, usize) + Send + Sync>>>;
+
 /// Global callback for opening files and jumping to locations
 /// This is set by main.rs and used by the diagnostics panel
-pub static OPEN_FILE_CALLBACK: Lazy<
-    StdMutex<Option<Box<dyn Fn(PathBuf, usize, usize) + Send + Sync>>>,
-> = Lazy::new(|| StdMutex::new(None));
+pub static OPEN_FILE_CALLBACK: Lazy<OpenFileCallbackType> = Lazy::new(|| StdMutex::new(None));
 
 /// Open a file and jump to a specific line and column
 /// This is used by the diagnostics panel to navigate to error locations

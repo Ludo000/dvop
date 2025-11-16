@@ -61,6 +61,12 @@ glib::wrapper! {
         @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget, gtk4::Orientable;
 }
 
+impl Default for GitDiffPanel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GitDiffPanel {
     pub fn new() -> Self {
         glib::Object::builder().build()

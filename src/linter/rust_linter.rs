@@ -34,7 +34,7 @@ impl RustLintVisitor {
             .chars()
             .all(|c| c.is_uppercase() || c.is_numeric() || c == '_');
         let is_camel_case =
-            name.chars().next().map_or(false, |c| c.is_uppercase()) && !name.contains('_');
+            name.chars().next().is_some_and(|c| c.is_uppercase()) && !name.contains('_');
 
         let valid = match expected_style {
             "snake_case" => is_snake_case,
