@@ -1,8 +1,8 @@
 # Dvop - Comprehensive Functional Features Documentation
 **Version 0.1.0 | Last Updated: November 17, 2025**
 
-**Total Features: 193+ functional features documented**
-**Total Tests: 285 tests (89 unit + 195 E2E + 1 quick)**
+**Total Features: 194+ functional features documented**
+**Total Tests: 287 tests (89 unit + 196 E2E + 2 quick)**
 
 ## Quick Index
 - **Text Editor**: Features #1-17 (Multi-tab editing, syntax highlighting, file operations)
@@ -1505,17 +1505,29 @@
 - Matches file panel tab context menu functionality
 - Works for both staged and unstaged file diffs
 
+### Feature #194: Git Diff Panel Open Related File Button
+**Code:** `src/ui/git_diff.rs:1567-1587`  
+**Tests:** E2E test #194 (`test_feature_194_git_diff_panel_open_related_file`), Quick test #9
+- "Open Related File" button in git diff tab label (tab bar)
+- Opens the actual file in the editor from diff view
+- Button positioned between file path label and close button
+- Tab label shows full file path with middle ellipsization
+- Uses global OPEN_FILE_CALLBACK mechanism
+- Opens file at line 1, column 1 by default
+- Provides quick navigation from diff to actual file
+- Works for both staged and unstaged file diffs
+
 ---
 
 ## Summary
 
-**Dvop provides 193 documented functional features** across 12 main categories:
+**Dvop provides 194 documented functional features** across 12 main categories:
 - 18 core text editor features
 - 18 file management capabilities
 - 18 code intelligence features
 - 11 search and navigation tools
 - 10 terminal integration features
-- 15 version control features
+- 16 version control features
 - 20 media playback capabilities
 - 18 user interface elements
 - 18 settings and customization options

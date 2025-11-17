@@ -1539,6 +1539,7 @@ fn create_diff_tab(
     old_content: &str,
     new_content: &str,
     tab_title: &str,
+    new_tab_deps: Option<crate::handlers::NewTabDependencies>,
 ) {
     // Create a horizontal paned widget for side-by-side view
     let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
@@ -1566,7 +1567,27 @@ fn create_diff_tab(
     paned.set_start_child(Some(&loading_box));
 
     // Create tab widget
-    let (tab_widget, _tab_label, tab_close_button) = crate::ui::create_tab_widget(tab_title);
+    let (tab_widget, tab_label, tab_close_button) = crate::ui::create_tab_widget(tab_title);
+    
+    // Update tab label to show full file path instead of just filename
+    tab_label.set_label(&file_path.display().to_string());
+    tab_label.set_ellipsize(pango::EllipsizeMode::Middle);
+    tab_label.set_tooltip_text(Some(&file_path.display().to_string()));
+    
+    // Add "Open Related File" button to tab widget (before close button)
+    let open_file_button = Button::from_icon_name("document-open-symbolic");
+    open_file_button.set_tooltip_text(Some("Open this file in the editor"));
+    open_file_button.add_css_class("flat");
+    open_file_button.set_size_request(20, 20);
+    open_file_button.set_margin_start(4);
+    
+    let file_path_for_button = file_path.to_path_buf();
+    open_file_button.connect_clicked(move |_| {
+        crate::handlers::open_file_and_jump_to_location(file_path_for_button.clone(), 1, 1);
+    });
+    
+    // Insert button before close button (close button is last child)
+    tab_widget.insert_child_after(&open_file_button, Some(&tab_label));
 
     // Add the tab immediately with loading state
     let page_num = editor_notebook.append_page(&paned, Some(&tab_widget));
@@ -1585,6 +1606,7 @@ fn create_diff_tab(
     let file_path_owned = file_path.to_path_buf();
     let paned_weak = paned.downgrade();
     let editor_notebook_weak = editor_notebook.downgrade();
+    let new_tab_deps_clone = new_tab_deps.clone();
 
     // Compute diff in background thread
     crate::status_log::log_info(&format!("Computing diff for {}...", tab_title));
@@ -1616,6 +1638,7 @@ fn create_diff_tab(
                         old_width,
                         new_width,
                         &file_path_owned,
+                        new_tab_deps_clone,
                     );
                     
                     crate::status_log::log_success("Diff computed successfully");
@@ -1660,6 +1683,7 @@ fn create_diff_view_content(
     old_width: usize,
     new_width: usize,
     file_path: &Path,
+    _new_tab_deps: Option<crate::handlers::NewTabDependencies>,
 ) {
     // Track line change types for minimap
     let line_changes = Rc::new(RefCell::new(Vec::new()));
@@ -1808,22 +1832,32 @@ fn create_diff_view_content(
         &line_changes,
         false,
     );
+    
+    // Create a horizontal paned for the diff content (left and right sides)
+    let content_paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
+    content_paned.set_wide_handle(true);
+    content_paned.set_vexpand(true);
+    content_paned.set_hexpand(true);
 
-    // Add both sides to the paned widget
-    paned.set_start_child(Some(&left_box));
-    paned.set_end_child(Some(&right_box));
-    paned.set_resize_start_child(true);
-    paned.set_resize_end_child(true);
-    paned.set_shrink_start_child(false);
-    paned.set_shrink_end_child(false);
+    // Add both sides to the content paned widget
+    content_paned.set_start_child(Some(&left_box));
+    content_paned.set_end_child(Some(&right_box));
+    content_paned.set_resize_start_child(true);
+    content_paned.set_resize_end_child(true);
+    content_paned.set_shrink_start_child(false);
+    content_paned.set_shrink_end_child(false);
 
     // Set initial position to middle after the paned is realized
-    paned.connect_realize(|p| {
+    content_paned.connect_realize(|p| {
         let width = p.width();
         if width > 0 {
             p.set_position(width / 2);
         }
     });
+    
+    // Set the content paned as the child of the outer paned
+    paned.set_start_child(Some(&content_paned));
+    paned.set_end_child(None::<&gtk4::Widget>);
 }
 
 /// Creates the git diff panel UI (for embedding in the activity bar sidebar)
@@ -3047,6 +3081,17 @@ pub fn create_git_diff_panel(
     let editor_notebook_for_staged = editor_notebook.clone();
     let active_tab_path_for_staged = active_tab_path.clone();
     let files_list_for_staged = files_list.clone();
+    let new_tab_deps_for_staged = Some(crate::handlers::NewTabDependencies {
+        editor_notebook: editor_notebook.clone(),
+        window: parent_window.clone().upcast(),
+        file_list_box: files_list.clone(),
+        active_tab_path: active_tab_path.clone(),
+        file_path_manager: file_path_manager.clone(),
+        current_dir: current_dir.clone(),
+        save_button: Button::new(), // Placeholder - not used in this context
+        save_as_button: Button::new(), // Placeholder - not used in this context
+        _save_menu_button: None,
+    });
 
     staged_files_list.connect_row_activated(move |_, row| {
         // Unselect the unstaged list
@@ -3101,6 +3146,7 @@ pub fn create_git_diff_panel(
                         &old_content,
                         &new_content,
                         &tab_title,
+                        new_tab_deps_for_staged.clone(),
                     );
                 }
             }
@@ -3114,6 +3160,17 @@ pub fn create_git_diff_panel(
     let active_tab_path_for_selection = active_tab_path.clone();
     let _parent_window_for_selection = parent_window.clone();
     let staged_files_list_for_selection = staged_files_list.clone();
+    let new_tab_deps_for_selection = Some(crate::handlers::NewTabDependencies {
+        editor_notebook: editor_notebook.clone(),
+        window: parent_window.clone().upcast(),
+        file_list_box: files_list.clone(),
+        active_tab_path: active_tab_path.clone(),
+        file_path_manager: file_path_manager.clone(),
+        current_dir: current_dir.clone(),
+        save_button: Button::new(), // Placeholder - not used in this context
+        save_as_button: Button::new(), // Placeholder - not used in this context
+        _save_menu_button: None,
+    });
 
     files_list.connect_row_activated(move |_, row| {
         // Unselect the staged list
@@ -3171,6 +3228,7 @@ pub fn create_git_diff_panel(
                         &old_content,
                         &new_content,
                         &tab_title,
+                        new_tab_deps_for_selection.clone(),
                     );
                 }
             }

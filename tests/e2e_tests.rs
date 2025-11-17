@@ -3661,6 +3661,62 @@ fn test_feature_193_git_diff_panel_close_menu_deep() {
 
 #[serial]
 #[test]
+fn test_feature_194_git_diff_panel_open_related_file() {
+    init_gtk();
+    
+    use std::sync::{Arc, Mutex};
+    
+    // Test that the open file callback mechanism works for git diff panel
+    let test_file = std::path::PathBuf::from("/tmp/test_diff_file.rs");
+    let callback_invoked = Arc::new(Mutex::new(false));
+    let callback_invoked_clone = callback_invoked.clone();
+    let test_file_clone = test_file.clone();
+    
+    // Set up a test callback
+    let callback = Box::new(move |path: std::path::PathBuf, line: usize, column: usize| {
+        assert_eq!(path, test_file_clone, "File path should match");
+        assert_eq!(line, 1, "Should open at line 1");
+        assert_eq!(column, 1, "Should open at column 1");
+        *callback_invoked_clone.lock().unwrap() = true;
+    });
+    
+    // Set the global callback
+    if let Ok(mut guard) = dvop::handlers::OPEN_FILE_CALLBACK.lock() {
+        *guard = Some(callback);
+    }
+    
+    // Simulate the "Open Related File" button click
+    dvop::handlers::open_file_and_jump_to_location(test_file.clone(), 1, 1);
+    
+    // Verify the callback was invoked
+    assert!(*callback_invoked.lock().unwrap(), "Open file callback should be invoked when button is clicked");
+    
+    // Test that file path is correctly passed
+    let another_file = std::path::PathBuf::from("/tmp/another_test.py");
+    let another_invoked = Arc::new(Mutex::new(false));
+    let another_invoked_clone = another_invoked.clone();
+    let another_file_clone = another_file.clone();
+    
+    let callback2 = Box::new(move |path: std::path::PathBuf, _line: usize, _column: usize| {
+        assert_eq!(path, another_file_clone, "Second file path should match");
+        *another_invoked_clone.lock().unwrap() = true;
+    });
+    
+    if let Ok(mut guard) = dvop::handlers::OPEN_FILE_CALLBACK.lock() {
+        *guard = Some(callback2);
+    }
+    
+    dvop::handlers::open_file_and_jump_to_location(another_file, 1, 1);
+    assert!(*another_invoked.lock().unwrap(), "Callback should work for different files");
+    
+    // Clean up
+    if let Ok(mut guard) = dvop::handlers::OPEN_FILE_CALLBACK.lock() {
+        *guard = None;
+    }
+}
+
+#[serial]
+#[test]
 fn test_comprehensive_feature_count() {
     // Verify we're testing the right number of features
     // This is a meta-test to ensure test coverage

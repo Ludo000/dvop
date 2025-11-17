@@ -172,5 +172,37 @@ fn test_all_features() {
         assert_eq!(notebook.n_pages(), 0, "Should have 0 tabs after closing all");
     }
     
-    println!("✓ All 8 tests passed!");
+    // Test 9: Git diff panel open related file button
+    {
+        // Test that the open file callback can be set and called
+        use std::sync::{Arc, Mutex};
+        
+        let test_file = PathBuf::from("/tmp/test_file.txt");
+        let callback_called = Arc::new(Mutex::new(false));
+        let callback_called_clone = callback_called.clone();
+        let test_file_clone = test_file.clone();
+        
+        let callback = Box::new(move |path: PathBuf, _line: usize, _col: usize| {
+            assert_eq!(path, test_file_clone);
+            *callback_called_clone.lock().unwrap() = true;
+        });
+        
+        // Set the callback
+        if let Ok(mut guard) = dvop::handlers::OPEN_FILE_CALLBACK.lock() {
+            *guard = Some(callback);
+        }
+        
+        // Simulate button click by calling the callback directly
+        dvop::handlers::open_file_and_jump_to_location(test_file.clone(), 1, 1);
+        
+        // Verify callback was called
+        assert!(*callback_called.lock().unwrap(), "Open file callback should be invoked");
+        
+        // Clean up
+        if let Ok(mut guard) = dvop::handlers::OPEN_FILE_CALLBACK.lock() {
+            *guard = None;
+        }
+    }
+    
+    println!("✓ All 9 tests passed!");
 }
