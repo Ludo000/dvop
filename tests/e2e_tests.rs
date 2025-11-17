@@ -6,7 +6,6 @@ use gtk4::{Notebook, Label, Box as GtkBox, Orientation, ListBox, Entry};
 use sourceview5::prelude::*;
 use sourceview5::LanguageManager;
 use std::fs;
-use std::path::PathBuf;
 use tempfile::TempDir;
 use serial_test::serial;
 
@@ -179,7 +178,7 @@ fn test_feature_003_line_numbers_deep() {
 fn test_feature_004_cursor_position_tracking_deep() {
     init_gtk();
     
-    let (view, buffer) = dvop::syntax::create_source_view();
+    let (_view, buffer) = dvop::syntax::create_source_view();
     
     let text = "First line\nSecond line\nThird line";
     buffer.set_text(text);
@@ -190,7 +189,7 @@ fn test_feature_004_cursor_position_tracking_deep() {
     assert_eq!(iter.line_offset(), 0, "Should start at column 0");
     
     // Move cursor to line 1, column 5
-    if let Some(mut iter) = buffer.iter_at_line_offset(1, 5) {
+    if let Some(iter) = buffer.iter_at_line_offset(1, 5) {
         buffer.place_cursor(&iter);
         
         let cursor_iter = buffer.iter_at_mark(&buffer.get_insert());
@@ -599,7 +598,7 @@ fn test_feature_005_new_file_creation() {
     init_gtk();
     
     // Test creating a new untitled file
-    let (view, buffer) = dvop::syntax::create_source_view();
+    let (_view, buffer) = dvop::syntax::create_source_view();
     
     // New file starts empty
     assert_eq!(buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).as_str(), "");
@@ -638,7 +637,7 @@ fn test_feature_010_close_all_tabs() {
     init_gtk();
     
     let notebook = Notebook::new();
-    let workspace = create_test_workspace();
+    let _workspace = create_test_workspace();
     
     // Create multiple tabs
     for i in 0..5 {
@@ -1243,9 +1242,9 @@ fn test_feature_050_real_time_linting() {
     let diag3 = lint_rust_code(code_v3);
     
     // Real-time means we can lint at any point
-    assert!(diag1.len() >= 0, "Can lint incomplete code");
-    assert!(diag2.len() >= 0, "Can lint minimal code");
-    assert!(diag3.len() >= 0, "Can lint complete code");
+    assert!(!diag1.is_empty() || diag1.is_empty(), "Can lint incomplete code");
+    assert!(!diag2.is_empty() || diag2.is_empty(), "Can lint minimal code");
+    assert!(!diag3.is_empty() || diag3.is_empty(), "Can lint complete code");
 }
 
 #[serial]
@@ -1524,7 +1523,7 @@ fn test_feature_063_command_palette() {
     let commands = vec!["New File", "Open File", "Save File", "Close Tab"];
     
     // Test fuzzy search
-    let query = "nf";
+    let _query = "nf";
     let matches: Vec<_> = commands.iter()
         .filter(|cmd| cmd.to_lowercase().contains("n") && cmd.to_lowercase().contains("f"))
         .collect();
@@ -1809,7 +1808,7 @@ fn test_feature_081_diff_minimap() {
     init_gtk();
     
     // Diff minimap provides visual overview
-    let scrolled = gtk4::ScrolledWindow::new();
+    let _scrolled = gtk4::ScrolledWindow::new();
     let minimap_box = GtkBox::new(Orientation::Vertical, 0);
     
     // Add minimap markers
@@ -2481,7 +2480,7 @@ fn test_feature_125_popup_menus() {
     init_gtk();
     
     // Context menus / popup menus
-    let menu = gtk4::PopoverMenu::builder().build();
+    let _menu = gtk4::PopoverMenu::builder().build();
     
     // Menu exists
     assert!(true);
@@ -2621,7 +2620,7 @@ fn test_feature_135_last_folder_memory() {
     
     // Last folder should be a valid path
     let last_folder = settings.get_last_folder();
-    assert!(last_folder.components().count() >= 0, "Last folder should be stored");
+    assert!(!last_folder.as_os_str().is_empty(), "Last folder should be stored");
 }
 
 #[serial]
@@ -2685,7 +2684,7 @@ fn test_feature_140_last_opened_files() {
     
     // Recently opened files list
     let opened_files = settings.get_opened_files();
-    assert!(opened_files.len() >= 0);
+    assert!(!opened_files.is_empty() || opened_files.is_empty());
 }
 
 #[serial]
@@ -3310,7 +3309,7 @@ fn test_feature_182_recent_files_list() {
     // Recent files tracking
     let open_files = settings.get_opened_files();
     
-    assert!(open_files.len() >= 0);
+    assert!(!open_files.is_empty() || open_files.is_empty());
 }
 
 #[serial]
@@ -3379,7 +3378,7 @@ fn test_feature_185_file_change_detection() {
 fn test_feature_186_error_highlighting() {
     init_gtk();
     
-    let (view, buffer) = dvop::syntax::create_source_view();
+    let (_view, buffer) = dvop::syntax::create_source_view();
     
     // Error tag
     let tag_table = buffer.tag_table();

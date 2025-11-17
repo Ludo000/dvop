@@ -578,7 +578,6 @@ fn detect_os_default_themes() -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use tempfile::TempDir;
 
     #[test]

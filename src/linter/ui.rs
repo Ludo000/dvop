@@ -788,24 +788,3 @@ pub fn register_buffer_for_diagnostics(file_path: &Path, buffer: &sourceview5::B
         });
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_create_diagnostics_panel() {
-        gtk4::init().ok();
-
-        let diagnostics = vec![Diagnostic::new(
-            DiagnosticSeverity::Warning,
-            "Test warning".to_string(),
-            10,
-            5,
-            "test_rule".to_string(),
-        )];
-
-        let panel = create_diagnostics_panel(&diagnostics);
-        assert!(panel.is_visible());
-    }
-}

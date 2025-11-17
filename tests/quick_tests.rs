@@ -49,7 +49,7 @@ fn test_all_features() {
         let notebook = Notebook::new();
         
         for i in 0..3 {
-            let (view, _) = dvop::syntax::create_source_view();
+            let (view, _buffer) = dvop::syntax::create_source_view();
             let scrolled = dvop::syntax::create_source_view_scrolled(&view);
             let (tab_widget, _, _) = dvop::ui::create_tab_widget(&format!("Tab {}", i));
             notebook.append_page(&scrolled, Some(&tab_widget));

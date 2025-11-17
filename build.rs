@@ -4,8 +4,7 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    // Ensure rust-analyzer is installed
-    println!("cargo:warning=Checking for rust-analyzer...");
+    // Ensure rust-analyzer is installed (silently)
     let status = Command::new("rustup")
         .args(["component", "list", "--installed"])
         .output();
@@ -13,24 +12,9 @@ fn main() {
     if let Ok(output) = status {
         let installed = String::from_utf8_lossy(&output.stdout);
         if !installed.contains("rust-analyzer") {
-            println!("cargo:warning=Installing rust-analyzer component...");
-            let install_status = Command::new("rustup")
+            let _install_status = Command::new("rustup")
                 .args(["component", "add", "rust-analyzer"])
                 .status();
-            
-            match install_status {
-                Ok(status) if status.success() => {
-                    println!("cargo:warning=rust-analyzer installed successfully");
-                }
-                Ok(_) => {
-                    println!("cargo:warning=Failed to install rust-analyzer");
-                }
-                Err(e) => {
-                    println!("cargo:warning=Error installing rust-analyzer: {}", e);
-                }
-            }
-        } else {
-            println!("cargo:warning=rust-analyzer is already installed");
         }
     }
 

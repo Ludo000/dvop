@@ -574,3 +574,15 @@ fn apply_font_size_to_view(source_view: &View, font_size: u32) {
     style_context.add_provider(&provider, gtk4::STYLE_PROVIDER_PRIORITY_USER);
     style_context.add_class(&css_class);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_preferred_style_scheme() {
+        let scheme = get_preferred_style_scheme();
+        // Should return a valid scheme name
+        assert!(!scheme.is_empty());
+    }
+}

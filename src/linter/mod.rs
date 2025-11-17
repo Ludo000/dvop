@@ -322,6 +322,7 @@ mod tests {
     fn test_lint_by_language() {
         let rust_code = "fn main() { }";
         let diagnostics = lint_by_language("rust", rust_code);
-        assert!(diagnostics.len() >= 0);
+        // Should successfully lint Rust code without panicking
+        drop(diagnostics);
     }
 }
