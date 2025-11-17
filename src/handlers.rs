@@ -1222,7 +1222,14 @@ fn create_markdown_split_view(
 
     // Render initial content
     let initial_html = markdown_to_html(content);
-    webview.load_html(&initial_html, None);
+    
+    // Set base URI to the file's directory so relative links work
+    let base_uri = file_path
+        .parent()
+        .and_then(|p| p.to_str())
+        .map(|p| format!("file://{}/", p));
+    
+    webview.load_html(&initial_html, base_uri.as_deref());
 
     // WebView handles its own scrolling, add it directly
     right_box.append(&webview);
@@ -1231,6 +1238,7 @@ fn create_markdown_split_view(
     let tab_label_weak = tab_actual_label.downgrade();
     let file_name_clone = file_name.to_string();
     let webview_clone = webview.clone();
+    let file_path_clone = file_path.to_path_buf();
     let text_buffer = source_buffer.clone().upcast::<TextBuffer>();
 
     text_buffer.connect_changed(move |buffer| {
@@ -1251,7 +1259,14 @@ fn create_markdown_split_view(
         let end = buffer.end_iter();
         let markdown_content = buffer.text(&start, &end, false);
         let html = markdown_to_html(&markdown_content.to_string());
-        webview_clone.load_html(&html, None);
+        
+        // Set base URI so relative links work
+        let base_uri = file_path_clone
+            .parent()
+            .and_then(|p| p.to_str())
+            .map(|p| format!("file://{}/", p));
+        
+        webview_clone.load_html(&html, base_uri.as_deref());
     });
 
     // OLD TextView code removed - now using WebView
