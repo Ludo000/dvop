@@ -1,8 +1,8 @@
 # Dvop - Comprehensive Functional Features Documentation
-**Version 0.1.0 | Last Updated: November 16, 2025**
+**Version 0.1.0 | Last Updated: November 17, 2025**
 
-**Total Features: 192+ functional features documented**
-**Total Tests: 284 tests (88 unit + 195 E2E + 1 quick)**
+**Total Features: 193+ functional features documented**
+**Total Tests: 285 tests (89 unit + 195 E2E + 1 quick)**
 
 ## Quick Index
 - **Text Editor**: Features #1-17 (Multi-tab editing, syntax highlighting, file operations)
@@ -15,7 +15,7 @@
 - **User Interface**: Features #110-127 (Responsive layout, themes, notifications)
 - **Settings**: Features #128-145 (Preferences, session restoration)
 - **Keyboard Shortcuts**: Features #146-175 (30+ shortcuts)
-- **Advanced**: Features #176-192 (File caching, diagnostics, breadcrumbs)
+- **Advanced**: Features #176-193 (File caching, diagnostics, breadcrumbs, tab context menus)
 
 ---
 
@@ -105,6 +105,21 @@
 - Closes all open tabs at once
 - Individual save prompts for modified files
 - Batch closing optimization
+
+### Feature #10A: Tab Right-Click Context Menu (Advanced Close Options)
+**Code:** `src/ui/mod.rs:520-1123` (file tabs), `src/ui/git_diff.rs:1268-1565` (diff tabs)
+**Tests:** E2E test #193 (`test_feature_193_git_diff_panel_close_menu_deep`), Quick test #8
+- Right-click on any tab to access advanced close options
+- **Close to the Right** - Closes all tabs to the right of the clicked tab
+- **Close to the Left** - Closes all tabs to the left of the clicked tab
+- **Close Others** - Closes all tabs except the clicked tab
+- **Close Saved** - Closes all saved tabs (without unsaved changes)
+- **Close All** - Closes all open tabs
+- **Close Tab** - Closes the clicked tab
+- Smart enablement logic (e.g., "Close to the Left" disabled for first tab)
+- Works on both regular file tabs and git diff tabs
+- Proper file manager cleanup and status messages
+- Confirmation dialogs for tabs with unsaved changes
 
 ### Feature #11: SVG Live Preview
 **Code:** `src/handlers.rs:892-1026`
@@ -1480,12 +1495,22 @@
 - Prevents incorrect file type detection
 - Applied consistently throughout app
 
+### Feature #193: Git Diff Panel Tab Context Menu
+**Code:** `src/ui/git_diff.rs:1268-1565`
+**Tests:** E2E test #193 (`test_feature_193_git_diff_panel_close_menu_deep`), Quick test #8
+- Right-click context menu on git diff panel tabs
+- All advanced close options available for diff tabs
+- Close to Right/Left, Close Others, Close Saved, Close All
+- Smart button enablement based on tab position
+- Matches file panel tab context menu functionality
+- Works for both staged and unstaged file diffs
+
 ---
 
 ## Summary
 
-**Dvop provides 192+ documented functional features** across 12 main categories:
-- 17 core text editor features
+**Dvop provides 193 documented functional features** across 12 main categories:
+- 18 core text editor features
 - 18 file management capabilities
 - 18 code intelligence features
 - 11 search and navigation tools

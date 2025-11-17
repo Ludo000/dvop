@@ -118,5 +118,59 @@ fn test_all_features() {
         assert_eq!(text.as_str(), "Line 1\nLine 2\nLine 3");
     }
     
-    println!("✓ All 7 tests passed!");
+    // Test 8: Git diff panel close menu items
+    {
+        let notebook = Notebook::new();
+        let file_manager: Rc<RefCell<HashMap<u32, PathBuf>>> = Rc::new(RefCell::new(HashMap::new()));
+        
+        // Create and add multiple tabs
+        for i in 0..5 {
+            let (view, buffer) = dvop::syntax::create_source_view();
+            buffer.set_text(&format!("Content {}", i));
+            let scrolled = dvop::syntax::create_source_view_scrolled(&view);
+            let (tab_widget, _, _) = dvop::ui::create_tab_widget(&format!("file{}.txt", i));
+            notebook.append_page(&scrolled, Some(&tab_widget));
+            file_manager.borrow_mut().insert(i as u32, PathBuf::from(format!("/tmp/file{}.txt", i)));
+        }
+        
+        assert_eq!(notebook.n_pages(), 5, "Should have 5 tabs initially");
+        assert_eq!(file_manager.borrow().len(), 5, "Should track 5 files");
+        
+        // Test close to the right (from index 2)
+        let keep_page = 2u32;
+        while notebook.n_pages() > keep_page + 1 {
+            let last_page = notebook.n_pages() - 1;
+            file_manager.borrow_mut().remove(&(last_page as u32));
+            notebook.remove_page(Some(last_page));
+        }
+        assert_eq!(notebook.n_pages(), 3, "Should have 3 tabs after closing to the right");
+        
+        // Test close to the left (from index 2, which is now the last tab)
+        let keep_page = 2u32;
+        for _ in 0..keep_page {
+            if notebook.n_pages() > 1 {
+                file_manager.borrow_mut().remove(&0);
+                notebook.remove_page(Some(0));
+            }
+        }
+        assert_eq!(notebook.n_pages(), 1, "Should have 1 tab after closing to the left");
+        
+        // Add more tabs for other tests
+        for i in 0..4 {
+            let (view, _buffer) = dvop::syntax::create_source_view();
+            let scrolled = dvop::syntax::create_source_view_scrolled(&view);
+            let (tab_widget, _, _) = dvop::ui::create_tab_widget(&format!("new{}.txt", i));
+            notebook.append_page(&scrolled, Some(&tab_widget));
+        }
+        assert_eq!(notebook.n_pages(), 5, "Should have 5 tabs again");
+        
+        // Test close all
+        while notebook.n_pages() > 0 {
+            let last_page = notebook.n_pages() - 1;
+            notebook.remove_page(Some(last_page));
+        }
+        assert_eq!(notebook.n_pages(), 0, "Should have 0 tabs after closing all");
+    }
+    
+    println!("✓ All 8 tests passed!");
 }

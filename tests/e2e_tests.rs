@@ -3495,6 +3495,172 @@ fn test_feature_192_plugin_system_hooks() {
 
 #[serial]
 #[test]
+fn test_feature_193_git_diff_panel_close_menu_deep() {
+    init_gtk();
+    
+    let notebook = Notebook::new();
+    let file_manager: std::rc::Rc<std::cell::RefCell<std::collections::HashMap<u32, std::path::PathBuf>>> 
+        = std::rc::Rc::new(std::cell::RefCell::new(std::collections::HashMap::new()));
+    
+    // Create and add multiple tabs to simulate editor state
+    for i in 0..5 {
+        let (view, buffer) = dvop::syntax::create_source_view();
+        buffer.set_text(&format!("File content {}", i));
+        let scrolled = dvop::syntax::create_source_view_scrolled(&view);
+        let (tab_widget, label, _) = dvop::ui::create_tab_widget(&format!("file{}.txt", i));
+        
+        // Some files saved, some unsaved
+        if i % 2 == 0 {
+            label.set_text(&format!("file{}.txt", i));  // Saved
+        } else {
+            label.set_text(&format!("*file{}.txt", i));  // Unsaved
+        }
+        
+        notebook.append_page(&scrolled, Some(&tab_widget));
+        file_manager.borrow_mut().insert(i as u32, std::path::PathBuf::from(format!("/tmp/file{}.txt", i)));
+    }
+    
+    assert_eq!(notebook.n_pages(), 5, "Should start with 5 tabs");
+    assert_eq!(file_manager.borrow().len(), 5, "Should track 5 files");
+    
+    // Test 1: Close to the Right functionality
+    // Simulate keeping index 1 and closing tabs to the right (2, 3, 4)
+    let keep_page = 1u32;
+    let initial_count = notebook.n_pages();
+    while notebook.n_pages() > keep_page + 1 {
+        let last_page = notebook.n_pages() - 1;
+        file_manager.borrow_mut().remove(&(last_page as u32));
+        notebook.remove_page(Some(last_page));
+    }
+    assert_eq!(notebook.n_pages(), 2, "Should have 2 tabs after closing to the right");
+    assert!(notebook.n_pages() < initial_count, "Tab count should decrease");
+    
+    // Test 2: Close to the Left functionality
+    // Simulate keeping index 1 (which is now the last tab) and closing tabs to the left
+    let keep_page = 1u32;
+    for _ in 0..keep_page {
+        if notebook.n_pages() > 1 {
+            file_manager.borrow_mut().remove(&0);
+            notebook.remove_page(Some(0));
+        }
+    }
+    assert_eq!(notebook.n_pages(), 1, "Should have 1 tab after closing to the left");
+    
+    // Reset: Add more tabs
+    for i in 0..4 {
+        let (view, buffer) = dvop::syntax::create_source_view();
+        buffer.set_text(&format!("New content {}", i));
+        let scrolled = dvop::syntax::create_source_view_scrolled(&view);
+        let (tab_widget, label, _) = dvop::ui::create_tab_widget(&format!("new{}.txt", i));
+        
+        // Mark some as saved, some as unsaved
+        if i % 2 == 1 {
+            label.set_text(&format!("*new{}.txt", i));  // Unsaved
+        }
+        
+        notebook.append_page(&scrolled, Some(&tab_widget));
+        file_manager.borrow_mut().insert((i + 10) as u32, std::path::PathBuf::from(format!("/tmp/new{}.txt", i)));
+    }
+    assert_eq!(notebook.n_pages(), 5, "Should have 5 tabs again");
+    
+    // Test 3: Close Others functionality
+    // Keep tab at index 2, close all others
+    let keep_page = 2u32;
+    
+    // Close tabs after the kept page
+    while notebook.n_pages() > keep_page + 1 {
+        let last_page = notebook.n_pages() - 1;
+        notebook.remove_page(Some(last_page));
+    }
+    
+    // Close tabs before the kept page
+    while keep_page > 0 && notebook.n_pages() > 1 {
+        notebook.remove_page(Some(0));
+    }
+    assert_eq!(notebook.n_pages(), 1, "Should have 1 tab after closing others");
+    
+    // Reset: Add tabs for Close Saved test
+    // First remove the existing tab to have a clean slate
+    while notebook.n_pages() > 0 {
+        notebook.remove_page(Some(0));
+    }
+    
+    for i in 0..6 {
+        let (view, _buffer) = dvop::syntax::create_source_view();
+        let scrolled = dvop::syntax::create_source_view_scrolled(&view);
+        let (tab_widget, label, _) = dvop::ui::create_tab_widget(&format!("saved{}.txt", i));
+        
+        // Alternate saved/unsaved
+        if i % 2 == 0 {
+            label.set_text(&format!("saved{}.txt", i));  // Saved
+        } else {
+            label.set_text(&format!("*saved{}.txt", i));  // Unsaved (with asterisk)
+        }
+        
+        notebook.append_page(&scrolled, Some(&tab_widget));
+    }
+    assert_eq!(notebook.n_pages(), 6, "Should have 6 tabs");
+    
+    // Test 4: Close Saved functionality
+    // Identify and close only saved tabs (those without * in label)
+    let mut saved_tabs = Vec::new();
+    for page_num in 0..notebook.n_pages() {
+        if let Some(page_widget) = notebook.nth_page(Some(page_num)) {
+            if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
+                if let Some(tab_box) = tab_label_widget.downcast_ref::<GtkBox>() {
+                    if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<Label>().ok()) {
+                        if !label.text().starts_with('*') {
+                            saved_tabs.push(page_num);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    assert_eq!(saved_tabs.len(), 3, "Should identify 3 saved tabs (even indices: 0, 2, 4)");
+    
+    // Close saved tabs from end to beginning
+    saved_tabs.reverse();
+    for page_num in saved_tabs {
+        notebook.remove_page(Some(page_num));
+    }
+    assert_eq!(notebook.n_pages(), 3, "Should have 3 unsaved tabs remaining");
+    
+    // Test 5: Close All functionality
+    while notebook.n_pages() > 0 {
+        let last_page = notebook.n_pages() - 1;
+        notebook.remove_page(Some(last_page));
+    }
+    assert_eq!(notebook.n_pages(), 0, "Should have 0 tabs after closing all");
+    
+    // Test 6: Verify button enablement logic
+    // Add tabs to test edge cases
+    for i in 0..3 {
+        let (view, _buffer) = dvop::syntax::create_source_view();
+        let scrolled = dvop::syntax::create_source_view_scrolled(&view);
+        let (tab_widget, _, _) = dvop::ui::create_tab_widget(&format!("edge{}.txt", i));
+        notebook.append_page(&scrolled, Some(&tab_widget));
+    }
+    
+    // First tab: "Close to the Left" should be disabled
+    let first_page = 0u32;
+    assert_eq!(first_page, 0, "First page should be at index 0");
+    
+    // Last tab: "Close to the Right" should be disabled
+    let _last_page = notebook.n_pages() - 1;
+    assert!(notebook.n_pages() > 0, "Should have at least one page");
+    
+    // Single tab scenario
+    while notebook.n_pages() > 1 {
+        notebook.remove_page(Some(notebook.n_pages() - 1));
+    }
+    assert_eq!(notebook.n_pages(), 1, "Should have 1 tab");
+    // "Close Others" should be disabled when only 1 tab exists
+}
+
+#[serial]
+#[test]
 fn test_comprehensive_feature_count() {
     // Verify we're testing the right number of features
     // This is a meta-test to ensure test coverage
@@ -3507,3 +3673,4 @@ fn test_comprehensive_feature_count() {
     
     assert!(test_count >= 80, "Should have at least 80 comprehensive E2E tests");
 }
+

@@ -1261,7 +1261,7 @@ fn setup_minimap_drawing(
     minimap.add_controller(drag_gesture);
 }
 
-/// Set up right-click context menu for diff tabs (simplified version)
+/// Set up right-click context menu for diff tabs with full close menu options
 fn setup_diff_tab_right_click(tab_box: &gtk4::Box, notebook: &gtk4::Notebook) {
     use gtk4::prelude::*;
 
@@ -1320,7 +1320,187 @@ fn setup_diff_tab_right_click(tab_box: &gtk4::Box, notebook: &gtk4::Notebook) {
             }
         });
         
+        // Create "Close to the Right" button
+        let close_to_right_button = gtk4::Button::with_label("Close to the Right");
+        close_to_right_button.add_css_class("flat");
+        close_to_right_button.set_hexpand(true);
+        if let Some(child) = close_to_right_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+        
+        // Disable if this is the last tab
+        if let Some(page_num) = clicked_page_num {
+            if page_num >= notebook_clone.n_pages() - 1 {
+                close_to_right_button.set_sensitive(false);
+            }
+        } else {
+            close_to_right_button.set_sensitive(false);
+        }
+        
+        let notebook_for_close_right = notebook_clone.clone();
+        let popover_weak_right = popover.downgrade();
+        close_to_right_button.connect_clicked(move |_| {
+            if let Some(popover) = popover_weak_right.upgrade() {
+                popover.popdown();
+            }
+            
+            if let Some(keep_page) = clicked_page_num {
+                while notebook_for_close_right.n_pages() > keep_page + 1 {
+                    let last_page = notebook_for_close_right.n_pages() - 1;
+                    notebook_for_close_right.remove_page(Some(last_page));
+                }
+                crate::status_log::log_success("Tabs to the right closed");
+            }
+        });
+        
+        // Create "Close to the Left" button
+        let close_to_left_button = gtk4::Button::with_label("Close to the Left");
+        close_to_left_button.add_css_class("flat");
+        close_to_left_button.set_hexpand(true);
+        if let Some(child) = close_to_left_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+        
+        // Disable if this is the first tab
+        if let Some(page_num) = clicked_page_num {
+            if page_num == 0 {
+                close_to_left_button.set_sensitive(false);
+            }
+        } else {
+            close_to_left_button.set_sensitive(false);
+        }
+        
+        let notebook_for_close_left = notebook_clone.clone();
+        let popover_weak_left = popover.downgrade();
+        close_to_left_button.connect_clicked(move |_| {
+            if let Some(popover) = popover_weak_left.upgrade() {
+                popover.popdown();
+            }
+            
+            if let Some(keep_page) = clicked_page_num {
+                for _ in 0..keep_page {
+                    if notebook_for_close_left.n_pages() > 1 {
+                        notebook_for_close_left.remove_page(Some(0));
+                    }
+                }
+                crate::status_log::log_success("Tabs to the left closed");
+            }
+        });
+        
+        // Create "Close Others" button
+        let close_others_button = gtk4::Button::with_label("Close Others");
+        close_others_button.add_css_class("flat");
+        close_others_button.set_hexpand(true);
+        if let Some(child) = close_others_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+        
+        // Disable if there's only one tab
+        if notebook_clone.n_pages() <= 1 {
+            close_others_button.set_sensitive(false);
+        }
+        
+        let notebook_for_close_others = notebook_clone.clone();
+        let popover_weak_others = popover.downgrade();
+        close_others_button.connect_clicked(move |_| {
+            if let Some(popover) = popover_weak_others.upgrade() {
+                popover.popdown();
+            }
+            
+            if let Some(keep_page) = clicked_page_num {
+                // Close tabs after the kept page first
+                while notebook_for_close_others.n_pages() > keep_page + 1 {
+                    let last_page = notebook_for_close_others.n_pages() - 1;
+                    notebook_for_close_others.remove_page(Some(last_page));
+                }
+                // Close tabs before the kept page
+                while keep_page > 0 && notebook_for_close_others.n_pages() > 1 {
+                    notebook_for_close_others.remove_page(Some(0));
+                }
+                crate::status_log::log_success("Other tabs closed");
+            }
+        });
+        
+        // Create "Close All" button
+        let close_all_button = gtk4::Button::with_label("Close All");
+        close_all_button.add_css_class("flat");
+        close_all_button.set_hexpand(true);
+        if let Some(child) = close_all_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+        
+        let notebook_for_close_all = notebook_clone.clone();
+        let popover_weak_all = popover.downgrade();
+        close_all_button.connect_clicked(move |_| {
+            if let Some(popover) = popover_weak_all.upgrade() {
+                popover.popdown();
+            }
+            
+            while notebook_for_close_all.n_pages() > 0 {
+                let last_page = notebook_for_close_all.n_pages() - 1;
+                notebook_for_close_all.remove_page(Some(last_page));
+            }
+            crate::status_log::log_success("All tabs closed");
+        });
+        
+        // Create "Close Saved" button
+        let close_saved_button = gtk4::Button::with_label("Close Saved");
+        close_saved_button.add_css_class("flat");
+        close_saved_button.set_hexpand(true);
+        if let Some(child) = close_saved_button.child() {
+            if let Ok(label) = child.downcast::<gtk4::Label>() {
+                label.set_xalign(0.0);
+            }
+        }
+        
+        let notebook_for_close_saved = notebook_clone.clone();
+        let popover_weak_saved = popover.downgrade();
+        close_saved_button.connect_clicked(move |_| {
+            if let Some(popover) = popover_weak_saved.upgrade() {
+                popover.popdown();
+            }
+            
+            // Collect page numbers of saved tabs (those without * in label)
+            let mut saved_tabs = Vec::new();
+            for page_num in 0..notebook_for_close_saved.n_pages() {
+                if let Some(page_widget) = notebook_for_close_saved.nth_page(Some(page_num)) {
+                    if let Some(tab_label_widget) = notebook_for_close_saved.tab_label(&page_widget) {
+                        if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                            if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                if !label.text().starts_with('*') {
+                                    saved_tabs.push(page_num);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Close saved tabs from end to beginning to maintain indices
+            saved_tabs.reverse();
+            let count = saved_tabs.len();
+            for page_num in saved_tabs {
+                notebook_for_close_saved.remove_page(Some(page_num));
+            }
+            
+            crate::status_log::log_success(&format!("Closed {} saved tab{}", count, if count == 1 { "" } else { "s" }));
+        });
+        
+        // Add buttons to menu in order
         menu_box.append(&close_tab_button);
+        menu_box.append(&close_to_right_button);
+        menu_box.append(&close_to_left_button);
+        menu_box.append(&close_others_button);
+        menu_box.append(&close_saved_button);
+        menu_box.append(&close_all_button);
         
         // Set the menu box as the popover's child
         popover.set_child(Some(&menu_box));
@@ -3281,11 +3461,191 @@ pub fn create_git_diff_panel(
                     }
                 });
 
+                // Close to the Right button
+                let close_to_right_button = Button::with_label("Close to the Right");
+                close_to_right_button.add_css_class("flat");
+                close_to_right_button.set_hexpand(true);
+                close_to_right_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_right = editor_notebook_for_menu.clone();
+                let file_manager_for_close_right = file_path_manager_for_menu.clone();
+                let file_for_close_right = file_path.clone();
+                let popover_for_close_right = popover.downgrade();
+                
+                // Find the page number of the clicked file
+                let mut clicked_page_num = None;
+                for (page_num, path) in file_manager_for_close_right.borrow().iter() {
+                    if path == &file_for_close_right {
+                        clicked_page_num = Some(*page_num);
+                        break;
+                    }
+                }
+                
+                // Disable if no page found or if it's the last tab
+                if let Some(page_num) = clicked_page_num {
+                    if page_num >= notebook_for_close_right.n_pages() - 1 {
+                        close_to_right_button.set_sensitive(false);
+                    }
+                } else {
+                    close_to_right_button.set_sensitive(false);
+                }
+                
+                close_to_right_button.connect_clicked(move |_| {
+                    if let Some(keep_page) = clicked_page_num {
+                        while notebook_for_close_right.n_pages() > keep_page + 1 {
+                            let last_page = notebook_for_close_right.n_pages() - 1;
+                            file_manager_for_close_right.borrow_mut().remove(&(last_page as u32));
+                            notebook_for_close_right.remove_page(Some(last_page));
+                        }
+                        crate::status_log::log_success("Tabs to the right closed");
+                    }
+                    if let Some(p) = popover_for_close_right.upgrade() {
+                        p.popdown();
+                    }
+                });
+
+                // Close to the Left button
+                let close_to_left_button = Button::with_label("Close to the Left");
+                close_to_left_button.add_css_class("flat");
+                close_to_left_button.set_hexpand(true);
+                close_to_left_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_left = editor_notebook_for_menu.clone();
+                let file_manager_for_close_left = file_path_manager_for_menu.clone();
+                let popover_for_close_left = popover.downgrade();
+                
+                // Disable if no page found or if it's the first tab
+                if let Some(page_num) = clicked_page_num {
+                    if page_num == 0 {
+                        close_to_left_button.set_sensitive(false);
+                    }
+                } else {
+                    close_to_left_button.set_sensitive(false);
+                }
+                
+                close_to_left_button.connect_clicked(move |_| {
+                    if let Some(keep_page) = clicked_page_num {
+                        for _ in 0..keep_page {
+                            if notebook_for_close_left.n_pages() > 1 {
+                                file_manager_for_close_left.borrow_mut().remove(&0);
+                                notebook_for_close_left.remove_page(Some(0));
+                            }
+                        }
+                        crate::status_log::log_success("Tabs to the left closed");
+                    }
+                    if let Some(p) = popover_for_close_left.upgrade() {
+                        p.popdown();
+                    }
+                });
+
+                // Close Others button
+                let close_others_button = Button::with_label("Close Others");
+                close_others_button.add_css_class("flat");
+                close_others_button.set_hexpand(true);
+                close_others_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_others = editor_notebook_for_menu.clone();
+                let file_manager_for_close_others = file_path_manager_for_menu.clone();
+                let popover_for_close_others = popover.downgrade();
+                
+                // Disable if there's only one tab or no page found
+                if notebook_for_close_others.n_pages() <= 1 || clicked_page_num.is_none() {
+                    close_others_button.set_sensitive(false);
+                }
+                
+                close_others_button.connect_clicked(move |_| {
+                    if let Some(keep_page) = clicked_page_num {
+                        // Close tabs after the kept page first
+                        while notebook_for_close_others.n_pages() > keep_page + 1 {
+                            let last_page = notebook_for_close_others.n_pages() - 1;
+                            file_manager_for_close_others.borrow_mut().remove(&(last_page as u32));
+                            notebook_for_close_others.remove_page(Some(last_page));
+                        }
+                        // Close tabs before the kept page
+                        while keep_page > 0 && notebook_for_close_others.n_pages() > 1 {
+                            file_manager_for_close_others.borrow_mut().remove(&0);
+                            notebook_for_close_others.remove_page(Some(0));
+                        }
+                        crate::status_log::log_success("Other tabs closed");
+                    }
+                    if let Some(p) = popover_for_close_others.upgrade() {
+                        p.popdown();
+                    }
+                });
+
+                // Close All button
+                let close_all_button = Button::with_label("Close All");
+                close_all_button.add_css_class("flat");
+                close_all_button.set_hexpand(true);
+                close_all_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_all = editor_notebook_for_menu.clone();
+                let file_manager_for_close_all = file_path_manager_for_menu.clone();
+                let popover_for_close_all = popover.downgrade();
+                
+                close_all_button.connect_clicked(move |_| {
+                    while notebook_for_close_all.n_pages() > 0 {
+                        let last_page = notebook_for_close_all.n_pages() - 1;
+                        file_manager_for_close_all.borrow_mut().remove(&(last_page as u32));
+                        notebook_for_close_all.remove_page(Some(last_page));
+                    }
+                    crate::status_log::log_success("All tabs closed");
+                    if let Some(p) = popover_for_close_all.upgrade() {
+                        p.popdown();
+                    }
+                });
+
+                // Close Saved button
+                let close_saved_button = Button::with_label("Close Saved");
+                close_saved_button.add_css_class("flat");
+                close_saved_button.set_hexpand(true);
+                close_saved_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_saved = editor_notebook_for_menu.clone();
+                let file_manager_for_close_saved = file_path_manager_for_menu.clone();
+                let popover_for_close_saved = popover.downgrade();
+                
+                close_saved_button.connect_clicked(move |_| {
+                    // Collect page numbers of saved tabs (those without * in label)
+                    let mut saved_tabs = Vec::new();
+                    for page_num in 0..notebook_for_close_saved.n_pages() {
+                        if let Some(page_widget) = notebook_for_close_saved.nth_page(Some(page_num)) {
+                            if let Some(tab_label_widget) = notebook_for_close_saved.tab_label(&page_widget) {
+                                if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                                    if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                        if !label.text().starts_with('*') {
+                                            saved_tabs.push(page_num);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Close saved tabs from end to beginning to maintain indices
+                    saved_tabs.reverse();
+                    let count = saved_tabs.len();
+                    for page_num in saved_tabs {
+                        file_manager_for_close_saved.borrow_mut().remove(&(page_num as u32));
+                        notebook_for_close_saved.remove_page(Some(page_num));
+                    }
+                    
+                    crate::status_log::log_success(&format!("Closed {} saved tab{}", count, if count == 1 { "" } else { "s" }));
+                    if let Some(p) = popover_for_close_saved.upgrade() {
+                        p.popdown();
+                    }
+                });
+
                 menu_box.append(&stage_btn);
                 menu_box.append(&unstage_btn);
                 menu_box.append(&discard_btn);
                 menu_box.append(&revert_btn);
                 menu_box.append(&close_tab_btn);
+                menu_box.append(&close_to_right_button);
+                menu_box.append(&close_to_left_button);
+                menu_box.append(&close_others_button);
+                menu_box.append(&close_saved_button);
+                menu_box.append(&close_all_button);
 
                 popover.set_child(Some(&menu_box));
 
@@ -3476,9 +3836,189 @@ pub fn create_git_diff_panel(
                     }
                 });
 
+                // Close to the Right button
+                let close_to_right_button = Button::with_label("Close to the Right");
+                close_to_right_button.add_css_class("flat");
+                close_to_right_button.set_hexpand(true);
+                close_to_right_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_right = editor_notebook_for_staged_menu.clone();
+                let file_manager_for_close_right = file_path_manager_for_staged_menu.clone();
+                let file_for_close_right = file_path.clone();
+                let popover_for_close_right = popover.downgrade();
+                
+                // Find the page number of the clicked file
+                let mut clicked_page_num = None;
+                for (page_num, path) in file_manager_for_close_right.borrow().iter() {
+                    if path == &file_for_close_right {
+                        clicked_page_num = Some(*page_num);
+                        break;
+                    }
+                }
+                
+                // Disable if no page found or if it's the last tab
+                if let Some(page_num) = clicked_page_num {
+                    if page_num >= notebook_for_close_right.n_pages() - 1 {
+                        close_to_right_button.set_sensitive(false);
+                    }
+                } else {
+                    close_to_right_button.set_sensitive(false);
+                }
+                
+                close_to_right_button.connect_clicked(move |_| {
+                    if let Some(keep_page) = clicked_page_num {
+                        while notebook_for_close_right.n_pages() > keep_page + 1 {
+                            let last_page = notebook_for_close_right.n_pages() - 1;
+                            file_manager_for_close_right.borrow_mut().remove(&(last_page as u32));
+                            notebook_for_close_right.remove_page(Some(last_page));
+                        }
+                        crate::status_log::log_success("Tabs to the right closed");
+                    }
+                    if let Some(p) = popover_for_close_right.upgrade() {
+                        p.popdown();
+                    }
+                });
+
+                // Close to the Left button
+                let close_to_left_button = Button::with_label("Close to the Left");
+                close_to_left_button.add_css_class("flat");
+                close_to_left_button.set_hexpand(true);
+                close_to_left_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_left = editor_notebook_for_staged_menu.clone();
+                let file_manager_for_close_left = file_path_manager_for_staged_menu.clone();
+                let popover_for_close_left = popover.downgrade();
+                
+                // Disable if no page found or if it's the first tab
+                if let Some(page_num) = clicked_page_num {
+                    if page_num == 0 {
+                        close_to_left_button.set_sensitive(false);
+                    }
+                } else {
+                    close_to_left_button.set_sensitive(false);
+                }
+                
+                close_to_left_button.connect_clicked(move |_| {
+                    if let Some(keep_page) = clicked_page_num {
+                        for _ in 0..keep_page {
+                            if notebook_for_close_left.n_pages() > 1 {
+                                file_manager_for_close_left.borrow_mut().remove(&0);
+                                notebook_for_close_left.remove_page(Some(0));
+                            }
+                        }
+                        crate::status_log::log_success("Tabs to the left closed");
+                    }
+                    if let Some(p) = popover_for_close_left.upgrade() {
+                        p.popdown();
+                    }
+                });
+
+                // Close Others button
+                let close_others_button = Button::with_label("Close Others");
+                close_others_button.add_css_class("flat");
+                close_others_button.set_hexpand(true);
+                close_others_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_others = editor_notebook_for_staged_menu.clone();
+                let file_manager_for_close_others = file_path_manager_for_staged_menu.clone();
+                let popover_for_close_others = popover.downgrade();
+                
+                // Disable if there's only one tab or no page found
+                if notebook_for_close_others.n_pages() <= 1 || clicked_page_num.is_none() {
+                    close_others_button.set_sensitive(false);
+                }
+                
+                close_others_button.connect_clicked(move |_| {
+                    if let Some(keep_page) = clicked_page_num {
+                        // Close tabs after the kept page first
+                        while notebook_for_close_others.n_pages() > keep_page + 1 {
+                            let last_page = notebook_for_close_others.n_pages() - 1;
+                            file_manager_for_close_others.borrow_mut().remove(&(last_page as u32));
+                            notebook_for_close_others.remove_page(Some(last_page));
+                        }
+                        // Close tabs before the kept page
+                        while keep_page > 0 && notebook_for_close_others.n_pages() > 1 {
+                            file_manager_for_close_others.borrow_mut().remove(&0);
+                            notebook_for_close_others.remove_page(Some(0));
+                        }
+                        crate::status_log::log_success("Other tabs closed");
+                    }
+                    if let Some(p) = popover_for_close_others.upgrade() {
+                        p.popdown();
+                    }
+                });
+
+                // Close All button
+                let close_all_button = Button::with_label("Close All");
+                close_all_button.add_css_class("flat");
+                close_all_button.set_hexpand(true);
+                close_all_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_all = editor_notebook_for_staged_menu.clone();
+                let file_manager_for_close_all = file_path_manager_for_staged_menu.clone();
+                let popover_for_close_all = popover.downgrade();
+                
+                close_all_button.connect_clicked(move |_| {
+                    while notebook_for_close_all.n_pages() > 0 {
+                        let last_page = notebook_for_close_all.n_pages() - 1;
+                        file_manager_for_close_all.borrow_mut().remove(&(last_page as u32));
+                        notebook_for_close_all.remove_page(Some(last_page));
+                    }
+                    crate::status_log::log_success("All tabs closed");
+                    if let Some(p) = popover_for_close_all.upgrade() {
+                        p.popdown();
+                    }
+                });
+
+                // Close Saved button
+                let close_saved_button = Button::with_label("Close Saved");
+                close_saved_button.add_css_class("flat");
+                close_saved_button.set_hexpand(true);
+                close_saved_button.set_halign(gtk4::Align::Start);
+                
+                let notebook_for_close_saved = editor_notebook_for_staged_menu.clone();
+                let file_manager_for_close_saved = file_path_manager_for_staged_menu.clone();
+                let popover_for_close_saved = popover.downgrade();
+                
+                close_saved_button.connect_clicked(move |_| {
+                    // Collect page numbers of saved tabs (those without * in label)
+                    let mut saved_tabs = Vec::new();
+                    for page_num in 0..notebook_for_close_saved.n_pages() {
+                        if let Some(page_widget) = notebook_for_close_saved.nth_page(Some(page_num)) {
+                            if let Some(tab_label_widget) = notebook_for_close_saved.tab_label(&page_widget) {
+                                if let Some(tab_box) = tab_label_widget.downcast_ref::<gtk4::Box>() {
+                                    if let Some(label) = tab_box.first_child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
+                                        if !label.text().starts_with('*') {
+                                            saved_tabs.push(page_num);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Close saved tabs from end to beginning to maintain indices
+                    saved_tabs.reverse();
+                    let count = saved_tabs.len();
+                    for page_num in saved_tabs {
+                        file_manager_for_close_saved.borrow_mut().remove(&(page_num as u32));
+                        notebook_for_close_saved.remove_page(Some(page_num));
+                    }
+                    
+                    crate::status_log::log_success(&format!("Closed {} saved tab{}", count, if count == 1 { "" } else { "s" }));
+                    if let Some(p) = popover_for_close_saved.upgrade() {
+                        p.popdown();
+                    }
+                });
+
                 menu_box.append(&unstage_btn);
                 menu_box.append(&revert_btn);
                 menu_box.append(&close_tab_btn);
+                menu_box.append(&close_to_right_button);
+                menu_box.append(&close_to_left_button);
+                menu_box.append(&close_others_button);
+                menu_box.append(&close_saved_button);
+                menu_box.append(&close_all_button);
 
                 popover.set_child(Some(&menu_box));
 
