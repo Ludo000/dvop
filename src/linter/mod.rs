@@ -60,7 +60,7 @@ pub fn lint_file(file_path: &Path, content: &str) -> Vec<Diagnostic> {
     // Determine language from file extension
     if let Some(ext) = file_path.extension().and_then(|e| e.to_str()) {
         match ext {
-            "rs" => rust_linter::lint_rust_code(content),
+            "rs" => Vec::new(), // Rust files use rust-analyzer via LSP, not local linter
             "ui" => gtk_ui_linter::lint_gtk_ui(content),
             // Add more languages here as they are implemented
             _ => Vec::new(),
