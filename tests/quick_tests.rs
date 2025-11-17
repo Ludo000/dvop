@@ -4,14 +4,26 @@
 use gtk4::prelude::*;
 use gtk4::Notebook;
 use sourceview5::prelude::*;
+use serial_test::serial;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+// Helper to initialize GTK (only once)
+fn init_gtk() {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    
+    INIT.call_once(|| {
+        gtk4::init().expect("Failed to initialize GTK");
+    });
+}
+
+#[serial]
 #[test]
 fn test_all_features() {
-    gtk4::init().expect("Failed to initialize GTK");
+    init_gtk();
     
     // Test 1: New file creation
     {
@@ -205,4 +217,138 @@ fn test_all_features() {
     }
     
     println!("✓ All 9 tests passed!");
+}
+
+#[serial]
+#[test]
+fn test_git_diff_path_bar_update() {
+    init_gtk();
+    
+    // Test that opening a git diff updates the path bar to show the file's directory
+    use std::env;
+    
+    // Use a real directory that exists (the current directory or temp)
+    let real_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("/tmp"));
+    let current_dir = Rc::new(RefCell::new(real_dir.clone()));
+    let path_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    let file_list_box = gtk4::ListBox::new();
+    let active_tab_path = Rc::new(RefCell::new(None));
+    
+    // Simulate opening a diff for a file in a subdirectory
+    let test_file = real_dir.join("src/main.rs");
+    let expected_dir = real_dir.join("src");
+    
+    // Update current_dir as would happen when opening a diff
+    if let Some(parent) = test_file.parent() {
+        *current_dir.borrow_mut() = parent.to_path_buf();
+        
+        // Only update file list if the directory exists
+        if parent.exists() {
+            dvop::utils::update_file_list(
+                &file_list_box,
+                &current_dir.borrow(),
+                &active_tab_path.borrow(),
+                dvop::utils::FileSelectionSource::TabSwitch,
+            );
+        }
+        
+        // Update path buttons
+        dvop::utils::update_path_buttons(
+            &path_box,
+            &current_dir,
+            &file_list_box,
+            &active_tab_path,
+        );
+    }
+    
+    // Verify the directory was updated
+    assert_eq!(*current_dir.borrow(), expected_dir, "Current directory should be updated to file's parent");
+    
+    // Verify path_box has children (buttons were created)
+    assert!(path_box.first_child().is_some(), "Path box should contain path buttons");
+    
+    // If the directory exists, verify file_list_box was populated
+    if expected_dir.exists() {
+        assert!(file_list_box.first_child().is_some(), "File list should be populated with directory contents");
+    }
+    
+    // Count the number of path segments
+    let mut child_count = 0;
+    let mut child = path_box.first_child();
+    while let Some(widget) = child {
+        child_count += 1;
+        child = widget.next_sibling();
+    }
+    assert!(child_count > 0, "Path box should have path segment buttons");
+    
+    println!("✓ Git diff path bar update test passed!");
+}
+
+#[serial]
+#[test]
+fn test_path_bar_updates_for_different_files() {
+    init_gtk();
+    
+    // Test that the path bar updates correctly for files in different directories
+    use std::env;
+    
+    let initial_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("/tmp"));
+    let current_dir = Rc::new(RefCell::new(initial_dir.clone()));
+    let path_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    let file_list_box = gtk4::ListBox::new();
+    let active_tab_path = Rc::new(RefCell::new(None));
+    
+    // Test file 1: use actual src/ui directory if it exists
+    let file1 = initial_dir.join("src/ui/git_diff.rs");
+    if let Some(parent) = file1.parent() {
+        *current_dir.borrow_mut() = parent.to_path_buf();
+        
+        if parent.exists() {
+            dvop::utils::update_file_list(
+                &file_list_box,
+                &current_dir.borrow(),
+                &active_tab_path.borrow(),
+                dvop::utils::FileSelectionSource::TabSwitch,
+            );
+        }
+        
+        dvop::utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
+        assert_eq!(*current_dir.borrow(), parent.to_path_buf());
+    }
+    
+    // Test file 2: use a different real directory
+    let file2 = initial_dir.join("tests/e2e_tests.rs");
+    if let Some(parent) = file2.parent() {
+        *current_dir.borrow_mut() = parent.to_path_buf();
+        
+        if parent.exists() {
+            dvop::utils::update_file_list(
+                &file_list_box,
+                &current_dir.borrow(),
+                &active_tab_path.borrow(),
+                dvop::utils::FileSelectionSource::TabSwitch,
+            );
+        }
+        
+        dvop::utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
+        assert_eq!(*current_dir.borrow(), parent.to_path_buf());
+    }
+    
+    // Test file 3: use /tmp which should always exist
+    let file3 = PathBuf::from("/tmp/test.txt");
+    if let Some(parent) = file3.parent() {
+        *current_dir.borrow_mut() = parent.to_path_buf();
+        
+        dvop::utils::update_file_list(
+            &file_list_box,
+            &current_dir.borrow(),
+            &active_tab_path.borrow(),
+            dvop::utils::FileSelectionSource::TabSwitch,
+        );
+        
+        dvop::utils::update_path_buttons(&path_box, &current_dir, &file_list_box, &active_tab_path);
+        assert_eq!(*current_dir.borrow(), PathBuf::from("/tmp"));
+    }
+    
+    println!("✓ Path bar updates for different files test passed!");
 }

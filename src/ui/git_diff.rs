@@ -1540,6 +1540,9 @@ fn create_diff_tab(
     new_content: &str,
     tab_title: &str,
     new_tab_deps: Option<crate::handlers::NewTabDependencies>,
+    path_box: Option<&gtk4::Box>,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    file_list_box: &gtk4::ListBox,
 ) {
     // Create a horizontal paned widget for side-by-side view
     let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
@@ -1593,6 +1596,33 @@ fn create_diff_tab(
     let page_num = editor_notebook.append_page(&paned, Some(&tab_widget));
     editor_notebook.set_tab_label(&paned, Some(&tab_widget));
     editor_notebook.set_current_page(Some(page_num));
+
+    // Update the path bar and file manager panel to show the file path of the diff
+    if let Some(pb) = path_box {
+        // Get the parent directory of the file being diffed
+        if let Some(parent) = file_path.parent() {
+            *current_dir.borrow_mut() = parent.to_path_buf();
+            
+            // Update the file list to show files in the directory
+            crate::utils::update_file_list(
+                file_list_box,
+                &current_dir.borrow(),
+                &active_tab_path.borrow(),
+                crate::utils::FileSelectionSource::TabSwitch,
+            );
+            
+            // Update the path buttons to show the file's directory
+            crate::utils::update_path_buttons(
+                pb,
+                current_dir,
+                file_list_box,
+                active_tab_path,
+            );
+            
+            // Check for Rust files and update linter UI visibility
+            crate::linter::ui::check_and_update_rust_ui(&parent.to_path_buf());
+        }
+    }
 
     // Set up middle-click to close
     crate::ui::setup_tab_middle_click(&tab_widget, &tab_close_button);
@@ -1868,6 +1898,8 @@ pub fn create_git_diff_panel(
     editor_notebook: &gtk4::Notebook,
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+    path_box: Option<&gtk4::Box>,
+    main_file_list_box: Option<&gtk4::ListBox>,
 ) -> GtkBox {
     // Create the template-based panel
     let panel = GitDiffPanel::new();
@@ -3081,6 +3113,9 @@ pub fn create_git_diff_panel(
     let editor_notebook_for_staged = editor_notebook.clone();
     let active_tab_path_for_staged = active_tab_path.clone();
     let files_list_for_staged = files_list.clone();
+    let path_box_for_staged = path_box.cloned();
+    let current_dir_for_staged = current_dir.clone();
+    let main_file_list_for_staged = main_file_list_box.cloned();
     let new_tab_deps_for_staged = Some(crate::handlers::NewTabDependencies {
         editor_notebook: editor_notebook.clone(),
         window: parent_window.clone().upcast(),
@@ -3147,6 +3182,9 @@ pub fn create_git_diff_panel(
                         &new_content,
                         &tab_title,
                         new_tab_deps_for_staged.clone(),
+                        path_box_for_staged.as_ref(),
+                        &current_dir_for_staged,
+                        &main_file_list_for_staged.as_ref().unwrap_or(&files_list_for_staged),
                     );
                 }
             }
@@ -3160,6 +3198,10 @@ pub fn create_git_diff_panel(
     let active_tab_path_for_selection = active_tab_path.clone();
     let _parent_window_for_selection = parent_window.clone();
     let staged_files_list_for_selection = staged_files_list.clone();
+    let path_box_for_selection = path_box.cloned();
+    let current_dir_for_selection = current_dir.clone();
+    let main_file_list_for_selection = main_file_list_box.cloned();
+    let files_list_for_selection = files_list.clone();
     let new_tab_deps_for_selection = Some(crate::handlers::NewTabDependencies {
         editor_notebook: editor_notebook.clone(),
         window: parent_window.clone().upcast(),
@@ -3229,6 +3271,9 @@ pub fn create_git_diff_panel(
                         &new_content,
                         &tab_title,
                         new_tab_deps_for_selection.clone(),
+                        path_box_for_selection.as_ref(),
+                        &current_dir_for_selection,
+                        &main_file_list_for_selection.as_ref().unwrap_or(&files_list_for_selection),
                     );
                 }
             }
@@ -4225,6 +4270,61 @@ pub fn create_git_diff_panel(
 
     // Trigger initial update
     update_git_status();
+
+    // Set up editor notebook switch-page handler to update path bar when switching between diff tabs
+    if let (Some(pb), Some(main_flb)) = (path_box, main_file_list_box) {
+        let path_box_for_switch = pb.clone();
+        let current_dir_for_switch = current_dir.clone();
+        let file_list_for_switch = main_flb.clone();
+        let active_tab_path_for_switch = active_tab_path.clone();
+        
+        editor_notebook.connect_switch_page(move |notebook, page, _page_num| {
+            // Get the tab label for this page
+            if let Some(tab_label) = notebook.tab_label(page) {
+                if let Some(tab_box) = tab_label.downcast_ref::<gtk4::Box>() {
+                    // Look for the label widget which has the tooltip with the file path
+                    let mut child = tab_box.first_child();
+                    while let Some(widget) = child {
+                        let next = widget.next_sibling();
+                        
+                        if let Ok(label) = widget.downcast::<Label>() {
+                            // Get the file path from the tooltip
+                            if let Some(tooltip) = label.tooltip_text() {
+                                let file_path = PathBuf::from(tooltip.as_str());
+                                
+                                // Update the path bar and file list to the file's directory
+                                if let Some(parent) = file_path.parent() {
+                                    *current_dir_for_switch.borrow_mut() = parent.to_path_buf();
+                                    
+                                    // Update file list
+                                    crate::utils::update_file_list(
+                                        &file_list_for_switch,
+                                        &current_dir_for_switch.borrow(),
+                                        &active_tab_path_for_switch.borrow(),
+                                        crate::utils::FileSelectionSource::TabSwitch,
+                                    );
+                                    
+                                    // Update path buttons
+                                    crate::utils::update_path_buttons(
+                                        &path_box_for_switch,
+                                        &current_dir_for_switch,
+                                        &file_list_for_switch,
+                                        &active_tab_path_for_switch,
+                                    );
+                                    
+                                    // Update linter UI
+                                    crate::linter::ui::check_and_update_rust_ui(&parent.to_path_buf());
+                                }
+                                break;
+                            }
+                        }
+                        
+                        child = next;
+                    }
+                }
+            }
+        });
+    }
 
     // Return the panel as a GtkBox
     panel.upcast::<GtkBox>()

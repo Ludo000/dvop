@@ -1107,6 +1107,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 &editor_notebook,
                 &file_path_manager,
                 &active_tab_path,
+                Some(&path_box),
+                Some(&file_list_box),
             );
 
             // Clear placeholder and add the real git diff panel

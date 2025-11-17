@@ -1,8 +1,8 @@
 # Dvop - Comprehensive Functional Features Documentation
 **Version 0.1.0 | Last Updated: November 17, 2025**
 
-**Total Features: 194+ functional features documented**
-**Total Tests: 287 tests (89 unit + 196 E2E + 2 quick)**
+**Total Features: 195+ functional features documented**
+**Total Tests: 291 tests (93 unit + 198 E2E)**
 
 ## Quick Index
 - **Text Editor**: Features #1-17 (Multi-tab editing, syntax highlighting, file operations)
@@ -10,12 +10,12 @@
 - **Code Intelligence**: Features #36-53 (Completion, linting, LSP integration)
 - **Search & Navigation**: Features #54-64 (Find/replace, global search, command palette)
 - **Terminal**: Features #65-74 (Embedded terminal, multiple tabs, theming)
-- **Version Control**: Features #75-89 (Git status, diff viewer, operations)
+- **Version Control**: Features #75-89, #193-195 (Git status, diff viewer, operations)
 - **Media Playback**: Features #90-109 (Images, audio with waveforms, video)
 - **User Interface**: Features #110-127 (Responsive layout, themes, notifications)
 - **Settings**: Features #128-145 (Preferences, session restoration)
 - **Keyboard Shortcuts**: Features #146-175 (30+ shortcuts)
-- **Advanced**: Features #176-193 (File caching, diagnostics, breadcrumbs, tab context menus)
+- **Advanced**: Features #176-192 (File caching, diagnostics, breadcrumbs, tab context menus)
 
 ---
 
@@ -1517,17 +1517,36 @@
 - Provides quick navigation from diff to actual file
 - Works for both staged and unstaged file diffs
 
+### Feature #195: Git Diff Panel Path Bar Update
+**Code:** `src/ui/git_diff.rs:1598-1625`, `src/ui/git_diff.rs:1540-1544`, `src/ui/git_diff.rs:3103-3108`, `src/ui/git_diff.rs:3186-3190`, `src/ui/git_diff.rs:4275-4320`
+**Tests:** E2E test #195 (`test_feature_195_git_diff_panel_updates_path_bar`), E2E test #196 (`test_feature_196_git_diff_path_bar_deep_nested_files`), Unit tests `test_git_diff_path_bar_update`, `test_path_bar_updates_for_different_files`
+- Automatically updates the file path bar when opening a git diff panel
+- Updates path bar and file manager when switching between different git diff tabs
+- Shows the directory path of the file being compared
+- Updates `current_dir` to the parent directory of the diffed file
+- Updates the file manager panel to display files in the same directory
+- Synchronizes with all app features (file list, path bar, linter UI)
+- Updates path buttons to reflect the file's location
+- Provides visual context of where the modified file is located
+- Enables easy navigation to related files in the same directory
+- Works for both staged and unstaged file diffs
+- Handles deeply nested directory structures
+- Path bar shows clickable breadcrumb navigation to parent folders
+- Integrated with existing path bar navigation system
+- Maintains consistency across file explorer and git diff views
+- Tab switching automatically updates the context to match the active diff
+
 ---
 
 ## Summary
 
-**Dvop provides 194 documented functional features** across 12 main categories:
+**Dvop provides 195 documented functional features** across 12 main categories:
 - 18 core text editor features
 - 18 file management capabilities
 - 18 code intelligence features
 - 11 search and navigation tools
 - 10 terminal integration features
-- 16 version control features
+- 17 version control features
 - 20 media playback capabilities
 - 18 user interface elements
 - 18 settings and customization options

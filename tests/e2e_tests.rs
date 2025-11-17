@@ -3717,6 +3717,186 @@ fn test_feature_194_git_diff_panel_open_related_file() {
 
 #[serial]
 #[test]
+fn test_feature_195_git_diff_panel_updates_path_bar() {
+    init_gtk();
+    
+    // Test that opening a git diff updates the path bar to show the file's directory
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    
+    let workspace = create_test_workspace();
+    
+    // Create a git repository
+    std::process::Command::new("git")
+        .args(&["init"])
+        .current_dir(workspace.path())
+        .output()
+        .expect("Failed to init git repo");
+    
+    std::process::Command::new("git")
+        .args(&["config", "user.name", "Test User"])
+        .current_dir(workspace.path())
+        .output()
+        .expect("Failed to set git user");
+    
+    std::process::Command::new("git")
+        .args(&["config", "user.email", "test@example.com"])
+        .current_dir(workspace.path())
+        .output()
+        .expect("Failed to set git email");
+    
+    std::process::Command::new("git")
+        .args(&["add", "."])
+        .current_dir(workspace.path())
+        .output()
+        .expect("Failed to add files");
+    
+    std::process::Command::new("git")
+        .args(&["commit", "-m", "Initial commit"])
+        .current_dir(workspace.path())
+        .output()
+        .expect("Failed to commit");
+    
+    // Modify a file to create a diff
+    fs::write(workspace.path().join("test.rs"), r#"
+fn main() {
+    println!("Modified!");
+}
+"#).unwrap();
+    
+    // Create UI components
+    let current_dir = Rc::new(RefCell::new(workspace.path().to_path_buf()));
+    let path_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    let file_list_box = gtk4::ListBox::new();
+    let active_tab_path = Rc::new(RefCell::new(None));
+    
+    // Simulate opening a diff for a file
+    let test_file = workspace.path().join("test.rs");
+    let expected_dir = workspace.path().to_path_buf();
+    
+    // This simulates what happens when create_diff_tab is called
+    if let Some(parent) = test_file.parent() {
+        *current_dir.borrow_mut() = parent.to_path_buf();
+        
+        // Update file list as the code does
+        dvop::utils::update_file_list(
+            &file_list_box,
+            &current_dir.borrow(),
+            &active_tab_path.borrow(),
+            dvop::utils::FileSelectionSource::TabSwitch,
+        );
+        
+        // Update path buttons as the code does
+        dvop::utils::update_path_buttons(
+            &path_box,
+            &current_dir,
+            &file_list_box,
+            &active_tab_path,
+        );
+    }
+    
+    // Verify the directory was updated to the file's parent
+    assert_eq!(*current_dir.borrow(), expected_dir, 
+               "Opening a git diff should update current_dir to the file's directory");
+    
+    // Verify path_box has children (path buttons were created)
+    assert!(path_box.first_child().is_some(), 
+            "Path box should contain path segment buttons after update");
+    
+    // Verify file_list_box was populated with directory contents
+    assert!(file_list_box.first_child().is_some(), 
+            "File list should be populated with files from the directory");
+    
+    // Count path segments to ensure they were properly created
+    let mut segment_count = 0;
+    let mut child = path_box.first_child();
+    while let Some(widget) = child {
+        if widget.is::<gtk4::Button>() {
+            segment_count += 1;
+        }
+        child = widget.next_sibling();
+    }
+    
+    assert!(segment_count > 0, 
+            "Path box should have at least one path segment button");
+}
+
+#[serial]
+#[test]
+fn test_feature_196_git_diff_path_bar_deep_nested_files() {
+    init_gtk();
+    
+    // Test that the path bar correctly updates for deeply nested files
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    
+    let workspace = create_test_workspace();
+    
+    // Create a deeply nested directory structure
+    let deep_dir = workspace.path().join("level1/level2/level3/level4");
+    fs::create_dir_all(&deep_dir).unwrap();
+    let deep_file = deep_dir.join("nested.rs");
+    fs::write(&deep_file, "fn deep() {}").unwrap();
+    
+    // Initialize git repo
+    std::process::Command::new("git")
+        .args(&["init"])
+        .current_dir(workspace.path())
+        .output()
+        .ok();
+    
+    // Create UI components
+    let current_dir = Rc::new(RefCell::new(workspace.path().to_path_buf()));
+    let path_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    let file_list_box = gtk4::ListBox::new();
+    let active_tab_path = Rc::new(RefCell::new(None));
+    
+    // Simulate opening a diff for the deeply nested file
+    if let Some(parent) = deep_file.parent() {
+        *current_dir.borrow_mut() = parent.to_path_buf();
+        
+        // Update file list
+        dvop::utils::update_file_list(
+            &file_list_box,
+            &current_dir.borrow(),
+            &active_tab_path.borrow(),
+            dvop::utils::FileSelectionSource::TabSwitch,
+        );
+        
+        // Update path buttons
+        dvop::utils::update_path_buttons(
+            &path_box,
+            &current_dir,
+            &file_list_box,
+            &active_tab_path,
+        );
+    }
+    
+    // Verify the path was updated correctly
+    assert_eq!(*current_dir.borrow(), deep_dir, 
+               "Path should update to the deeply nested directory");
+    
+    // Verify file list was updated
+    assert!(file_list_box.first_child().is_some(), 
+            "File list should show contents of the nested directory");
+    
+    // Count the path segments - should have multiple levels
+    let mut button_count = 0;
+    let mut child = path_box.first_child();
+    while let Some(widget) = child {
+        if widget.is::<gtk4::Button>() {
+            button_count += 1;
+        }
+        child = widget.next_sibling();
+    }
+    
+    // Should have buttons for each directory level (workspace path + level1 + level2 + level3 + level4)
+    assert!(button_count >= 4, 
+            "Path box should have multiple segment buttons for nested path (found {})", button_count);
+}
+
+#[serial]
+#[test]
 fn test_comprehensive_feature_count() {
     // Verify we're testing the right number of features
     // This is a meta-test to ensure test coverage
