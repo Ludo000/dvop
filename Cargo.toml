@@ -3,6 +3,16 @@ name = "dvop"
 version = "0.1.0"
 edition = "2021"
 
+# Library target for testing
+[lib]
+name = "dvop"
+path = "src/lib.rs"
+
+# Binary target
+[[bin]]
+name = "dvop"
+path = "src/main.rs"
+
 [dependencies]
 gtk4 = "0.10"
 glib = "0.21"
@@ -32,6 +42,10 @@ tokio = { version = "1.42", features = ["full"] }  # Async runtime for LSP
 async-channel = "2.3"  # Async channels for LSP communication
 url = "2.5"  # URL parsing (used by lsp-types)
 quick-xml = "0.38"  # XML parsing for GTK UI file validation
+
+[dev-dependencies]
+# Testing dependencies
+serial_test = "3.2"  # For running tests serially (needed for GTK)
 
 [build-dependencies]
 glib-build-tools = "0.21"

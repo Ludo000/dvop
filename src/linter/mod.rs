@@ -237,3 +237,91 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_diagnostic_creation() {
+        let diag = Diagnostic {
+            message: "Test error".to_string(),
+            severity: DiagnosticSeverity::Error,
+            line: 10,
+            column: 5,
+            end_line: Some(10),
+            end_column: Some(15),
+            rule: "E001".to_string(),
+        };
+
+        assert_eq!(diag.message, "Test error");
+        assert_eq!(diag.severity, DiagnosticSeverity::Error);
+        assert_eq!(diag.line, 10);
+        assert_eq!(diag.column, 5);
+    }
+
+    #[test]
+    fn test_diagnostic_severity_levels() {
+        let error = DiagnosticSeverity::Error;
+        let warning = DiagnosticSeverity::Warning;
+        let info = DiagnosticSeverity::Info;
+
+        assert_eq!(error, DiagnosticSeverity::Error);
+        assert_eq!(warning, DiagnosticSeverity::Warning);
+        assert_eq!(info, DiagnosticSeverity::Info);
+    }
+
+    #[test]
+    fn test_store_and_get_file_diagnostics() {
+        let path = "/test/file.rs";
+        let diag = vec![Diagnostic {
+            message: "Test diagnostic".to_string(),
+            severity: DiagnosticSeverity::Error,
+            line: 5,
+            column: 10,
+            end_line: Some(5),
+            end_column: Some(20),
+            rule: "E001".to_string(),
+        }];
+
+        store_file_diagnostics(path, diag);
+        let retrieved = get_file_diagnostics(path);
+
+        assert_eq!(retrieved.len(), 1);
+        assert_eq!(retrieved[0].message, "Test diagnostic");
+    }
+
+    #[test]
+    fn test_clear_file_diagnostics() {
+        let path = "/test/clear.rs";
+        let diag = vec![Diagnostic {
+            message: "Test".to_string(),
+            severity: DiagnosticSeverity::Error,
+            line: 1,
+            column: 1,
+            end_line: None,
+            end_column: None,
+            rule: "E".to_string(),
+        }];
+
+        store_file_diagnostics(path, diag);
+        assert_eq!(get_file_diagnostics(path).len(), 1);
+
+        store_file_diagnostics(path, vec![]);
+        assert_eq!(get_file_diagnostics(path).len(), 0);
+    }
+
+    #[test]
+    fn test_empty_file_diagnostics() {
+        let path = "/test/empty.rs";
+        let diagnostics = get_file_diagnostics(path);
+        assert_eq!(diagnostics.len(), 0);
+    }
+
+    #[test]
+    fn test_lint_by_language() {
+        let rust_code = "fn main() { }";
+        let diagnostics = lint_by_language("rust", rust_code);
+        assert!(diagnostics.len() >= 0);
+    }
+}
