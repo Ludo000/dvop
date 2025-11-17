@@ -69,6 +69,9 @@ Dvop requires GTK4, VTE, GtkSourceView5, and GStreamer libraries. Below are plat
        libglib2.0-dev \
        libpango1.0-dev \
        libgtksourceview-5-dev \
+       libwebkitgtk-6.0-dev \
+       libjavascriptcoregtk-6.0-dev \
+       libsoup-3.0-dev \
        libgstreamer1.0-dev \
        libgstreamer-plugins-base1.0-dev \
        gstreamer1.0-plugins-good \

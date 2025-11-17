@@ -1046,8 +1046,6 @@ fn create_markdown_split_view(
     tab_actual_label: &Label,
     file_name: &str,
 ) -> gtk4::Paned {
-    use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
-
     // Create the paned widget for split view
     let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
     paned.set_wide_handle(true);
@@ -1092,211 +1090,147 @@ fn create_markdown_split_view(
     preview_label.add_css_class("dim-label");
     right_box.append(&preview_label);
 
-    // Create TextView for preview with styling
-    let preview_view = TextView::builder()
-        .editable(false)
-        .cursor_visible(false)
-        .wrap_mode(gtk4::WrapMode::Word)
-        .left_margin(20)
-        .right_margin(20)
-        .top_margin(20)
-        .bottom_margin(20)
-        .build();
+    // Create WebView for HTML preview
+    use webkit6::WebView;
+    use webkit6::prelude::*;
+    let webview = WebView::new();
+    webview.set_vexpand(true);
+    webview.set_hexpand(true);
 
-    let preview_buffer = preview_view.buffer();
-
-    // Create text tags for different markdown elements
-    let tag_table = preview_buffer.tag_table();
-
-    // Heading tags
-    let h1_tag = gtk4::TextTag::new(Some("h1"));
-    h1_tag.set_scale(2.0);
-    h1_tag.set_weight(700);
-    tag_table.add(&h1_tag);
-
-    let h2_tag = gtk4::TextTag::new(Some("h2"));
-    h2_tag.set_scale(1.5);
-    h2_tag.set_weight(700);
-    tag_table.add(&h2_tag);
-
-    let h3_tag = gtk4::TextTag::new(Some("h3"));
-    h3_tag.set_scale(1.25);
-    h3_tag.set_weight(700);
-    tag_table.add(&h3_tag);
-
-    let h4_tag = gtk4::TextTag::new(Some("h4"));
-    h4_tag.set_weight(700);
-    tag_table.add(&h4_tag);
-
-    // Code tag
-    let code_tag = gtk4::TextTag::new(Some("code"));
-    code_tag.set_family(Some("monospace"));
-    code_tag.set_background_rgba(Some(&gtk4::gdk::RGBA::new(0.9, 0.9, 0.9, 1.0)));
-    code_tag.set_foreground_rgba(Some(&gtk4::gdk::RGBA::new(0.0, 0.0, 0.0, 1.0))); // Black text
-    tag_table.add(&code_tag);
-
-    // Bold tag
-    let bold_tag = gtk4::TextTag::new(Some("bold"));
-    bold_tag.set_weight(700);
-    tag_table.add(&bold_tag);
-
-    // Italic tag
-    let italic_tag = gtk4::TextTag::new(Some("italic"));
-    italic_tag.set_style(gtk4::pango::Style::Italic);
-    tag_table.add(&italic_tag);
-
-    // Link tag
-    let link_tag = gtk4::TextTag::new(Some("link"));
-    link_tag.set_foreground_rgba(Some(&gtk4::gdk::RGBA::new(0.0, 0.4, 0.8, 1.0)));
-    link_tag.set_underline(gtk4::pango::Underline::Single);
-    tag_table.add(&link_tag);
-
-    // Helper function to render markdown content to the buffer
-    let render_markdown = |buffer: &gtk4::TextBuffer, markdown_text: &str| {
-        buffer.set_text("");
-
+    // Helper function to convert markdown to HTML
+    let markdown_to_html = |markdown_text: &str| -> String {
+        use pulldown_cmark::{html, Options, Parser};
+        
         let mut options = Options::empty();
         options.insert(Options::ENABLE_STRIKETHROUGH);
         options.insert(Options::ENABLE_TABLES);
         options.insert(Options::ENABLE_FOOTNOTES);
         options.insert(Options::ENABLE_TASKLISTS);
-
+        
         let parser = Parser::new_ext(markdown_text, options);
-
-        let mut current_tag: Option<String> = None;
-        let mut in_code_block = false;
-
-        for event in parser {
-            match event {
-                Event::Start(tag) => match tag {
-                    Tag::Heading { level, .. } => {
-                        current_tag = Some(
-                            match level {
-                                HeadingLevel::H1 => "h1",
-                                HeadingLevel::H2 => "h2",
-                                HeadingLevel::H3 => "h3",
-                                _ => "h4",
-                            }
-                            .to_string(),
-                        );
-                    }
-                    Tag::CodeBlock(_) => {
-                        in_code_block = true;
-                        current_tag = Some("code".to_string());
-                    }
-                    Tag::Emphasis => {
-                        current_tag = Some("italic".to_string());
-                    }
-                    Tag::Strong => {
-                        current_tag = Some("bold".to_string());
-                    }
-                    Tag::Link { .. } => {
-                        current_tag = Some("link".to_string());
-                    }
-                    Tag::List(_) => {
-                        // Add spacing before lists
-                        let mut end_iter = buffer.end_iter();
-                        buffer.insert(&mut end_iter, "\n");
-                    }
-                    Tag::Item => {
-                        // Add bullet point for list items
-                        let mut end_iter = buffer.end_iter();
-                        buffer.insert(&mut end_iter, "• ");
-                    }
-                    Tag::BlockQuote(_) => {
-                        let mut end_iter = buffer.end_iter();
-                        buffer.insert(&mut end_iter, "\n");
-                    }
-                    Tag::Paragraph => {}
-                    _ => {}
-                },
-                Event::End(tag) => match tag {
-                    TagEnd::Heading(_) | TagEnd::Paragraph => {
-                        let mut end_iter = buffer.end_iter();
-                        buffer.insert(&mut end_iter, "\n\n");
-                        current_tag = None;
-                    }
-                    TagEnd::CodeBlock => {
-                        let mut end_iter = buffer.end_iter();
-                        buffer.insert(&mut end_iter, "\n\n");
-                        in_code_block = false;
-                        current_tag = None;
-                    }
-                    TagEnd::Item => {
-                        let mut end_iter = buffer.end_iter();
-                        buffer.insert(&mut end_iter, "\n");
-                    }
-                    TagEnd::List(_) => {
-                        let mut end_iter = buffer.end_iter();
-                        buffer.insert(&mut end_iter, "\n");
-                    }
-                    TagEnd::BlockQuote(_) => {
-                        let mut end_iter = buffer.end_iter();
-                        buffer.insert(&mut end_iter, "\n");
-                    }
-                    _ => {
-                        current_tag = None;
-                    }
-                },
-                Event::Text(text) => {
-                    let mut end_iter = buffer.end_iter();
-                    let start_offset = end_iter.offset();
-                    buffer.insert(&mut end_iter, &text);
-
-                    if let Some(tag_name) = &current_tag {
-                        let start = buffer.iter_at_offset(start_offset);
-                        let end = buffer.end_iter();
-                        if let Some(tag) = buffer.tag_table().lookup(tag_name) {
-                            buffer.apply_tag(&tag, &start, &end);
-                        }
-                    }
-                }
-                Event::Code(code) => {
-                    let mut end_iter = buffer.end_iter();
-                    let start_offset = end_iter.offset();
-                    buffer.insert(&mut end_iter, &code);
-
-                    let start = buffer.iter_at_offset(start_offset);
-                    let end = buffer.end_iter();
-                    if let Some(tag) = buffer.tag_table().lookup("code") {
-                        buffer.apply_tag(&tag, &start, &end);
-                    }
-                }
-                Event::SoftBreak => {
-                    let mut end_iter = buffer.end_iter();
-                    if in_code_block {
-                        buffer.insert(&mut end_iter, "\n");
-                    } else {
-                        buffer.insert(&mut end_iter, " ");
-                    }
-                }
-                Event::HardBreak => {
-                    // Hard breaks should always insert a newline
-                    let mut end_iter = buffer.end_iter();
-                    buffer.insert(&mut end_iter, "\n");
-                }
-                _ => {}
-            }
-        }
+        let mut html_output = String::new();
+        html::push_html(&mut html_output, parser);
+        
+        // Wrap in a styled HTML document with dark mode support
+        format!(
+            r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="color-scheme" content="light dark">
+    <style>
+        :root {{
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --border-color: #dddddd;
+            --table-header-bg: #f2f2f2;
+            --table-stripe-bg: #f9f9f9;
+            --code-bg: #f4f4f4;
+            --code-text: #000000;
+            --link-color: #0366d6;
+            --blockquote-border: #dddddd;
+            --blockquote-text: #666666;
+            --heading-border: #eeeeee;
+        }}
+        
+        @media (prefers-color-scheme: dark) {{
+            :root {{
+                --bg-color: #1e1e1e;
+                --text-color: #d4d4d4;
+                --border-color: #404040;
+                --table-header-bg: #2d2d2d;
+                --table-stripe-bg: #252525;
+                --code-bg: #2d2d2d;
+                --code-text: #d4d4d4;
+                --link-color: #4dabf7;
+                --blockquote-border: #404040;
+                --blockquote-text: #999999;
+                --heading-border: #404040;
+            }}
+        }}
+        
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }}
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }}
+        th, td {{
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }}
+        th {{
+            background-color: var(--table-header-bg);
+            font-weight: bold;
+        }}
+        tr:nth-child(even) {{
+            background-color: var(--table-stripe-bg);
+        }}
+        code {{
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }}
+        pre {{
+            background-color: var(--code-bg);
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }}
+        pre code {{
+            background-color: transparent;
+            padding: 0;
+        }}
+        h1, h2, h3, h4, h5, h6 {{
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+        }}
+        h1 {{ font-size: 2em; border-bottom: 1px solid var(--heading-border); padding-bottom: 10px; }}
+        h2 {{ font-size: 1.5em; border-bottom: 1px solid var(--heading-border); padding-bottom: 8px; }}
+        h3 {{ font-size: 1.25em; }}
+        a {{ color: var(--link-color); text-decoration: none; }}
+        a:hover {{ text-decoration: underline; }}
+        blockquote {{
+            border-left: 4px solid var(--blockquote-border);
+            padding-left: 16px;
+            color: var(--blockquote-text);
+            margin: 0;
+        }}
+        ul, ol {{ padding-left: 2em; }}
+    </style>
+</head>
+<body>
+{}
+</body>
+</html>"#,
+            html_output
+        )
     };
 
     // Render initial content
-    render_markdown(&preview_buffer, content);
+    let initial_html = markdown_to_html(content);
+    webview.load_html(&initial_html, None);
 
-    // Put preview in scrolled window
-    let right_scrolled = ScrolledWindow::builder()
-        .hscrollbar_policy(gtk4::PolicyType::Automatic)
-        .vscrollbar_policy(gtk4::PolicyType::Automatic)
-        .vexpand(true)
-        .hexpand(true)
-        .build();
-    right_scrolled.set_child(Some(&preview_view));
-    right_box.append(&right_scrolled);
+    // WebView handles its own scrolling, add it directly
+    right_box.append(&webview);
 
     // Track changes for dirty state and update preview
     let tab_label_weak = tab_actual_label.downgrade();
     let file_name_clone = file_name.to_string();
-    let preview_buffer_clone = preview_buffer.clone();
+    let webview_clone = webview.clone();
     let text_buffer = source_buffer.clone().upcast::<TextBuffer>();
 
     text_buffer.connect_changed(move |buffer| {
@@ -1316,8 +1250,12 @@ fn create_markdown_split_view(
         let start = buffer.start_iter();
         let end = buffer.end_iter();
         let markdown_content = buffer.text(&start, &end, false);
-        render_markdown(&preview_buffer_clone, &markdown_content);
+        let html = markdown_to_html(&markdown_content.to_string());
+        webview_clone.load_html(&html, None);
     });
+
+    // OLD TextView code removed - now using WebView
+    // Add both sides to the paned widget
 
     // Add both sides to the paned widget
     paned.set_start_child(Some(&left_scrolled));
