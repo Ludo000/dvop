@@ -1193,6 +1193,20 @@ fn create_markdown_split_view(
                     Tag::Link { .. } => {
                         current_tag = Some("link".to_string());
                     }
+                    Tag::List(_) => {
+                        // Add spacing before lists
+                        let mut end_iter = buffer.end_iter();
+                        buffer.insert(&mut end_iter, "\n");
+                    }
+                    Tag::Item => {
+                        // Add bullet point for list items
+                        let mut end_iter = buffer.end_iter();
+                        buffer.insert(&mut end_iter, "• ");
+                    }
+                    Tag::BlockQuote(_) => {
+                        let mut end_iter = buffer.end_iter();
+                        buffer.insert(&mut end_iter, "\n");
+                    }
                     Tag::Paragraph => {}
                     _ => {}
                 },
@@ -1204,9 +1218,21 @@ fn create_markdown_split_view(
                     }
                     TagEnd::CodeBlock => {
                         let mut end_iter = buffer.end_iter();
-                        buffer.insert(&mut end_iter, "\n");
+                        buffer.insert(&mut end_iter, "\n\n");
                         in_code_block = false;
                         current_tag = None;
+                    }
+                    TagEnd::Item => {
+                        let mut end_iter = buffer.end_iter();
+                        buffer.insert(&mut end_iter, "\n");
+                    }
+                    TagEnd::List(_) => {
+                        let mut end_iter = buffer.end_iter();
+                        buffer.insert(&mut end_iter, "\n");
+                    }
+                    TagEnd::BlockQuote(_) => {
+                        let mut end_iter = buffer.end_iter();
+                        buffer.insert(&mut end_iter, "\n");
                     }
                     _ => {
                         current_tag = None;
@@ -1236,14 +1262,18 @@ fn create_markdown_split_view(
                         buffer.apply_tag(&tag, &start, &end);
                     }
                 }
-                Event::SoftBreak | Event::HardBreak => {
+                Event::SoftBreak => {
+                    let mut end_iter = buffer.end_iter();
                     if in_code_block {
-                        let mut end_iter = buffer.end_iter();
                         buffer.insert(&mut end_iter, "\n");
                     } else {
-                        let mut end_iter = buffer.end_iter();
                         buffer.insert(&mut end_iter, " ");
                     }
+                }
+                Event::HardBreak => {
+                    // Hard breaks should always insert a newline
+                    let mut end_iter = buffer.end_iter();
+                    buffer.insert(&mut end_iter, "\n");
                 }
                 _ => {}
             }
