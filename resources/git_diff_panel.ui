@@ -91,54 +91,69 @@
       </object>
     </child>
     
-    <!-- Staged changes section -->
+    <!-- Staged changes section (wrapped in revealer) -->
     <child>
-      <object class="GtkBox">
-        <property name="orientation">horizontal</property>
-        <property name="spacing">8</property>
-        <property name="margin-bottom">4</property>
+      <object class="GtkRevealer" id="staged_revealer">
+        <property name="reveal-child">true</property>
+        <property name="transition-type">slide-down</property>
         <child>
-          <object class="GtkLabel" id="staged_label">
-            <property name="label">Staged Changes</property>
-            <property name="xalign">0.0</property>
-            <property name="hexpand">true</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkButton" id="unstage_all_button">
-            <property name="icon-name">list-remove-symbolic</property>
-            <property name="tooltip-text">Unstage all changes</property>
-            <property name="valign">center</property>
-            <property name="halign">end</property>
-          </object>
-        </child>
-      </object>
-    </child>
-    
-    <child>
-      <object class="GtkScrolledWindow" id="staged_scroller">
-        <property name="hscrollbar-policy">never</property>
-        <property name="vscrollbar-policy">automatic</property>
-        <property name="vexpand">true</property>
-        <property name="hexpand">true</property>
-        <property name="min-content-height">100</property>
-        <child>
-          <object class="GtkListBox" id="staged_files_list">
-            <property name="selection-mode">single</property>
-            <property name="css-classes">boxed-list</property>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">0</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <property name="margin-bottom">4</property>
+                <child>
+                  <object class="GtkLabel" id="staged_label">
+                    <property name="label">Staged Changes</property>
+                    <property name="xalign">0.0</property>
+                    <property name="hexpand">true</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="unstage_all_button">
+                    <property name="icon-name">list-remove-symbolic</property>
+                    <property name="tooltip-text">Unstage all changes</property>
+                    <property name="valign">center</property>
+                    <property name="halign">end</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <child>
+              <object class="GtkScrolledWindow" id="staged_scroller">
+                <property name="hscrollbar-policy">never</property>
+                <property name="vscrollbar-policy">automatic</property>
+                <property name="vexpand">false</property>
+                <property name="hexpand">true</property>
+                <property name="min-content-height">100</property>
+                <property name="max-content-height">200</property>
+                <child>
+                  <object class="GtkListBox" id="staged_files_list">
+                    <property name="selection-mode">single</property>
+                    <property name="css-classes">boxed-list</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <!-- Separator after staged section -->
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">horizontal</property>
+                <property name="margin-top">8</property>
+                <property name="margin-bottom">8</property>
+              </object>
+            </child>
           </object>
         </child>
       </object>
     </child>
     
     <!-- Unstaged changes section -->
-    <child>
-      <object class="GtkSeparator">
-        <property name="orientation">horizontal</property>
-        <property name="margin-top">8</property>
-        <property name="margin-bottom">8</property>
-      </object>
-    </child>
     
     <child>
       <object class="GtkBox">

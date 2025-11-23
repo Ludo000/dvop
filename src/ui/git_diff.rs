@@ -1915,6 +1915,7 @@ pub fn create_git_diff_panel(
     let files_list = panel.files_list();
     let commit_message_view = panel.commit_message_view();
     let commit_button = panel.commit_button();
+    let staged_revealer = panel.staged_revealer();
 
     // Set up placeholder text behavior for commit message
     let buffer = commit_message_view.buffer();
@@ -2025,6 +2026,7 @@ pub fn create_git_diff_panel(
         let changes_rc = changes_rc.clone();
         let branch_button = branch_button.clone();
         let staged_files_list = staged_files_list.clone();
+        let staged_revealer = staged_revealer.clone();
         let files_list = files_list.clone();
         let commit_button = commit_button.clone();
         let action_group_rc = action_group_rc.clone();
@@ -2361,6 +2363,9 @@ pub fn create_git_diff_panel(
                     staged_files_list.append(&row);
                 }
 
+                // Show/hide the staged revealer based on whether there are staged changes
+                staged_revealer.set_reveal_child(!staged_changes.is_empty());
+
                 // Populate unstaged files list
                 for change in &unstaged_changes {
                     let row = ListBoxRow::new();
@@ -2422,6 +2427,8 @@ pub fn create_git_diff_panel(
                 *repo_path_rc.borrow_mut() = None;
                 branch_button.set_label("Not a git repository");
                 branch_button.set_menu_model(Option::<&gtk4::gio::Menu>::None);
+                // Hide staged revealer when not in a git repository
+                staged_revealer.set_reveal_child(false);
             }
         }) as Rc<dyn Fn()>
     };

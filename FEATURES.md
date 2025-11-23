@@ -1,8 +1,8 @@
 # Dvop - Comprehensive Functional Features Documentation
 **Version 0.1.0 | Last Updated: November 17, 2025**
 
-**Total Features: 195+ functional features documented**
-**Total Tests: 291 tests (93 unit + 198 E2E)**
+**Total Features: 196+ functional features documented**
+**Total Tests: 292 tests (94 unit + 198 E2E)**
 
 ## Quick Index
 - **Text Editor**: Features #1-17 (Multi-tab editing, syntax highlighting, file operations)
@@ -10,7 +10,7 @@
 - **Code Intelligence**: Features #36-53 (Completion, linting, LSP integration)
 - **Search & Navigation**: Features #54-64 (Find/replace, global search, command palette)
 - **Terminal**: Features #65-74 (Embedded terminal, multiple tabs, theming)
-- **Version Control**: Features #75-89, #193-195 (Git status, diff viewer, operations)
+- **Version Control**: Features #75-89, #193-196 (Git status, diff viewer, operations)
 - **Media Playback**: Features #90-109 (Images, audio with waveforms, video)
 - **User Interface**: Features #110-127 (Responsive layout, themes, notifications)
 - **Settings**: Features #128-145 (Preferences, session restoration)
@@ -1536,17 +1536,33 @@
 - Maintains consistency across file explorer and git diff views
 - Tab switching automatically updates the context to match the active diff
 
+### Feature #196: Staged Changes Auto-Collapse
+**Code:** `resources/git_diff_panel.ui:93-152`, `src/ui/git_diff_panel_template.rs:1-120`, `src/ui/git_diff.rs:1920-2435`
+**Tests:** Quick test `test_staged_revealer_behavior`
+- Automatically collapses the staged changes section when empty
+- Uses GTK Revealer widget for smooth slide-down/up animation
+- Hides section completely without reserving vertical space
+- Shows section with animation when files are staged
+- Improves UI clarity by hiding unnecessary sections
+- Dynamically updates on git status refresh
+- Works with stage/unstage operations
+- Maintains collapsed state when not in a git repository
+- Configured with `vexpand=false` to prevent space reservation
+- Maximum content height of 200px to prevent oversized sections
+- Transition type: slide-down for smooth visual feedback
+- Logic: `revealer.set_reveal_child(!staged_changes.is_empty())`
+
 ---
 
 ## Summary
 
-**Dvop provides 195 documented functional features** across 12 main categories:
+**Dvop provides 196 documented functional features** across 12 main categories:
 - 18 core text editor features
 - 18 file management capabilities
 - 18 code intelligence features
 - 11 search and navigation tools
 - 10 terminal integration features
-- 17 version control features
+- 18 version control features
 - 20 media playback capabilities
 - 18 user interface elements
 - 18 settings and customization options

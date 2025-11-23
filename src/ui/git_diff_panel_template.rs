@@ -1,7 +1,7 @@
 // Template-based git diff panel widget
 
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, ListBox, MenuButton, ScrolledWindow};
+use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, ListBox, MenuButton, ScrolledWindow, Revealer};
 
 mod imp {
     use super::*;
@@ -33,6 +33,8 @@ mod imp {
         pub commit_message_view: TemplateChild<gtk4::TextView>,
         #[template_child]
         pub commit_button: TemplateChild<Button>,
+        #[template_child]
+        pub staged_revealer: TemplateChild<Revealer>,
     }
 
     #[glib::object_subclass]
@@ -110,5 +112,9 @@ impl GitDiffPanel {
 
     pub fn commit_button(&self) -> Button {
         self.imp().commit_button.get()
+    }
+
+    pub fn staged_revealer(&self) -> Revealer {
+        self.imp().staged_revealer.get()
     }
 }
