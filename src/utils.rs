@@ -905,6 +905,7 @@ pub fn setup_keyboard_shortcuts(
     explorer_button: Option<&gtk4::ToggleButton>,
     search_button: Option<&gtk4::ToggleButton>,
     git_diff_button: Option<&gtk4::ToggleButton>,
+    debugger_button: Option<&gtk4::ToggleButton>,
     sidebar_stack: Option<&gtk4::Stack>,
     editor_paned: Option<&gtk4::Paned>,
     terminal_notebook: Option<&gtk4::Notebook>,
@@ -930,10 +931,11 @@ pub fn setup_keyboard_shortcuts(
     let editor_notebook_clone = editor_notebook.cloned();
     let file_path_manager_clone = file_path_manager.cloned();
 
-    // Clone sidebar toggle buttons for Ctrl+B and Ctrl+Shift+E/F/G
+    // Clone sidebar toggle buttons for Ctrl+B and Ctrl+Shift+E/F/G/D
     let explorer_button_clone = explorer_button.cloned();
     let search_button_clone = search_button.cloned();
     let git_diff_button_clone = git_diff_button.cloned();
+    let debugger_button_clone = debugger_button.cloned();
     let _sidebar_stack_clone = sidebar_stack.cloned();
 
     // Clone editor_paned for Ctrl+T (toggle terminal)
@@ -1065,6 +1067,17 @@ pub fn setup_keyboard_shortcuts(
                         git_diff.set_active(!git_diff.is_active());
                         println!("Keyboard shortcut: Ctrl+Shift+G (Toggle Source Control)");
                         return glib::Propagation::Stop;
+                    }
+                    return glib::Propagation::Proceed;
+                },
+                // Ctrl+Shift+D: Toggle Rust Debugger
+                Some("D") => {
+                    if let Some(debugger) = &debugger_button_clone {
+                        if debugger.is_visible() {
+                            debugger.set_active(!debugger.is_active());
+                            println!("Keyboard shortcut: Ctrl+Shift+D (Toggle Rust Debugger)");
+                            return glib::Propagation::Stop;
+                        }
                     }
                     return glib::Propagation::Proceed;
                 },

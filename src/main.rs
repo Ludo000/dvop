@@ -1,6 +1,7 @@
 // Module declarations for the application components
 mod audio; // Audio file playback functionality
 mod completion; // Code completion functionality
+mod debugger; // Rust debugger functionality
 mod file_cache; // File content caching for performance optimization
 mod handlers; // Event handlers and business logic
 mod linter; // Code linting and diagnostics
@@ -100,6 +101,11 @@ fn get_menu_commands() -> Vec<MenuCommand> {
             label: "Source Control",
             action: "win.toggle-git",
             keywords: vec!["git", "source", "control", "version"],
+        },
+        MenuCommand {
+            label: "Rust Debugger",
+            action: "win.toggle-debugger",
+            keywords: vec!["debugger", "debug", "rust", "breakpoint"],
         },
         MenuCommand {
             label: "Refresh File List",
@@ -643,12 +649,16 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         explorer_button,
         search_button,
         git_diff_button,
+        debugger_button,
         sidebar_stack,
     ) = ui::create_paned(&window);
 
     // Setup terminal notebook now that we have editor_paned
     let terminal_notebook_template = imp.terminal_notebook.get();
     let add_terminal_button = imp.add_terminal_button.get();
+
+    // Pass terminal notebook reference to debugger UI
+    debugger::ui::set_terminal_notebook(terminal_notebook_template.clone());
 
     // Add diagnostics panel as the first tab
     let diagnostics_panel = linter::diagnostics_panel::create_diagnostics_panel();
@@ -785,6 +795,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     } else if saved_sidebar_tab == "git-diff" {
         git_diff_button.set_active(saved_sidebar_visible);
         sidebar_stack.set_visible_child_name("git-diff");
+    } else if saved_sidebar_tab == "debugger" {
+        debugger_button.set_active(saved_sidebar_visible);
+        sidebar_stack.set_visible_child_name("debugger");
     } else {
         explorer_button.set_active(saved_sidebar_visible);
         sidebar_stack.set_visible_child_name("explorer");
@@ -812,12 +825,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Setup explorer and search button toggle behavior
     let search_button_clone = search_button.clone();
     let git_diff_button_clone = git_diff_button.clone();
+    let debugger_button_clone = debugger_button.clone();
     let sidebar_stack_clone = sidebar_stack.clone();
     let paned_clone = paned.clone();
     explorer_button.connect_toggled(move |button| {
         if button.is_active() {
             search_button_clone.set_active(false);
             git_diff_button_clone.set_active(false);
+            debugger_button_clone.set_active(false);
             sidebar_stack_clone.set_visible_child_name("explorer");
             // Show the sidebar by setting the first child visible
             if let Some(start_child) = paned_clone.start_child() {
@@ -852,12 +867,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     let explorer_button_clone = explorer_button.clone();
     let git_diff_button_clone2 = git_diff_button.clone();
+    let debugger_button_clone1 = debugger_button.clone();
     let sidebar_stack_clone2 = sidebar_stack.clone();
     let paned_clone2 = paned.clone();
     search_button.connect_toggled(move |button| {
         if button.is_active() {
             explorer_button_clone.set_active(false);
             git_diff_button_clone2.set_active(false);
+            debugger_button_clone1.set_active(false);
             sidebar_stack_clone2.set_visible_child_name("search");
             // Show the sidebar by setting the first child visible
             if let Some(start_child) = paned_clone2.start_child() {
@@ -892,12 +909,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     let explorer_button_clone2 = explorer_button.clone();
     let search_button_clone2 = search_button.clone();
+    let debugger_button_clone2 = debugger_button.clone();
     let sidebar_stack_clone3 = sidebar_stack.clone();
     let paned_clone3 = paned.clone();
     git_diff_button.connect_toggled(move |button| {
         if button.is_active() {
             explorer_button_clone2.set_active(false);
             search_button_clone2.set_active(false);
+            debugger_button_clone2.set_active(false);
             sidebar_stack_clone3.set_visible_child_name("git-diff");
             // Show the sidebar by setting the first child visible
             if let Some(start_child) = paned_clone3.start_child() {
@@ -930,6 +949,48 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    let explorer_button_clone3 = explorer_button.clone();
+    let search_button_clone3 = search_button.clone();
+    let git_diff_button_clone3 = git_diff_button.clone();
+    let sidebar_stack_clone4 = sidebar_stack.clone();
+    let paned_clone4 = paned.clone();
+    debugger_button.connect_toggled(move |button| {
+        if button.is_active() {
+            explorer_button_clone3.set_active(false);
+            search_button_clone3.set_active(false);
+            git_diff_button_clone3.set_active(false);
+            sidebar_stack_clone4.set_visible_child_name("debugger");
+            // Show the sidebar by setting the first child visible
+            if let Some(start_child) = paned_clone4.start_child() {
+                start_child.set_visible(true);
+                let settings = crate::settings::get_settings();
+                let width = settings.get_file_panel_width();
+                paned_clone4.set_position(width);
+            }
+            // Save sidebar visible state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(true);
+            let _ = settings.save();
+        } else {
+            // If the button is deactivated, hide the sidebar completely
+            if let Some(start_child) = paned_clone4.start_child() {
+                // Save current width before hiding
+                let current_width = paned_clone4.position();
+                if current_width > 0 {
+                    let mut settings = crate::settings::get_settings_mut();
+                    settings.set_file_panel_width(current_width);
+                    let _ = settings.save();
+                }
+                start_child.set_visible(false);
+                paned_clone4.set_position(0);
+            }
+            // Save sidebar hidden state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(false);
+            let _ = settings.save();
+        }
+    });
+
     // Add drag gesture to activity bar to allow dragging sidebar open
     let activity_bar = imp.activity_bar.get();
     let drag_gesture = gtk4::GestureDrag::new();
@@ -938,6 +999,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let explorer_button_for_drag = explorer_button.clone();
     let search_button_for_drag = search_button.clone();
     let git_diff_button_for_drag = git_diff_button.clone();
+    let _debugger_button_for_drag = debugger_button.clone();
     let paned_for_drag = paned.clone();
     let sidebar_stack_for_drag = sidebar_stack.clone();
     
@@ -1119,6 +1181,29 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // Get the debugger panel from the sidebar stack and populate it
+    if let Some(debugger_panel_widget) = sidebar_stack.child_by_name("debugger") {
+        if let Some(debugger_panel_box) = debugger_panel_widget.downcast_ref::<gtk4::Box>() {
+            // Create the debugger panel UI
+            let debugger_panel = debugger::ui::create_debugger_panel();
+
+            // Clear placeholder and add the real debugger panel
+            while let Some(child) = debugger_panel_box.first_child() {
+                debugger_panel_box.remove(&child);
+            }
+            debugger_panel_box.append(&debugger_panel);
+
+            // Check if there are Rust files in the current directory
+            let has_rust = debugger::has_rust_files(&current_dir.borrow());
+            debugger_button.set_visible(has_rust);
+            
+            // Update debugger with current directory
+            if has_rust {
+                debugger::ui::set_debugger_current_dir(current_dir.borrow().clone());
+            }
+        }
+    }
+
     // Set up keyboard shortcuts for common operations (including Ctrl+B, Ctrl+Shift+E/F/G, and Ctrl+L for path editing)
     utils::setup_keyboard_shortcuts(
         &window,
@@ -1136,6 +1221,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         Some(&explorer_button),
         Some(&search_button),
         Some(&git_diff_button),
+        Some(&debugger_button),
         Some(&sidebar_stack),
         Some(&editor_paned),
         Some(&terminal_notebook_template),
@@ -1307,6 +1393,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let toggle_explorer_action = gio::SimpleAction::new("toggle-explorer", None);
     let toggle_search_action = gio::SimpleAction::new("toggle-search", None);
     let toggle_git_action = gio::SimpleAction::new("toggle-git", None);
+    let toggle_debugger_action = gio::SimpleAction::new("toggle-debugger", None);
     let refresh_action = gio::SimpleAction::new("refresh", None);
     let new_terminal_action = gio::SimpleAction::new("new-terminal", None);
     let toggle_terminal_action = gio::SimpleAction::new("toggle-terminal", None);
@@ -1324,6 +1411,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let explorer_button_clone_for_action = explorer_button.clone();
     let search_button_clone_for_action = search_button.clone();
     let git_diff_button_clone_for_action = git_diff_button.clone();
+    let debugger_button_clone_for_action = debugger_button.clone();
     let refresh_button_clone = refresh_button.clone();
     let terminal_notebook_clone_for_new_terminal = terminal_notebook_template.clone();
     let editor_paned_clone_for_new_terminal = editor_paned.clone();
@@ -1429,6 +1517,13 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Connect toggle git action
     toggle_git_action.connect_activate(move |_, _| {
         git_diff_button_clone_for_action.set_active(!git_diff_button_clone_for_action.is_active());
+    });
+
+    // Connect toggle debugger action
+    toggle_debugger_action.connect_activate(move |_, _| {
+        if debugger_button_clone_for_action.is_visible() {
+            debugger_button_clone_for_action.set_active(!debugger_button_clone_for_action.is_active());
+        }
     });
 
     // Connect refresh action
@@ -1545,6 +1640,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     window_as_app_window.add_action(&toggle_explorer_action);
     window_as_app_window.add_action(&toggle_search_action);
     window_as_app_window.add_action(&toggle_git_action);
+    window_as_app_window.add_action(&toggle_debugger_action);
     window_as_app_window.add_action(&refresh_action);
     window_as_app_window.add_action(&new_terminal_action);
     window_as_app_window.add_action(&toggle_terminal_action);
@@ -1986,6 +2082,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         Some(&save_menu_button),   // Split button menu component
         Some(&path_box),           // Path box for the status bar with clickable segments
         &current_selection_source, // Track selection source for click-outside detection
+        Some(&debugger_button),    // Debugger button
     );
 
     // Set up file list refresh callback for drag and drop operations
@@ -2046,6 +2143,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let file_list_box_for_refresh = file_list_box.clone();
     let current_dir_for_refresh = current_dir.clone();
     let active_tab_path_for_refresh = active_tab_path.clone();
+    let debugger_button_for_refresh = debugger_button.clone();
     let refresh_button = imp.refresh_button.get();
     refresh_button.connect_clicked(move |_| {
         utils::update_file_list(
@@ -2054,6 +2152,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             &active_tab_path_for_refresh.borrow(),
             utils::FileSelectionSource::TabSwitch,
         );
+        // Update debugger button visibility based on Rust files
+        let has_rust = debugger::has_rust_files(&current_dir_for_refresh.borrow());
+        debugger_button_for_refresh.set_visible(has_rust);
+        if has_rust {
+            debugger::ui::set_debugger_current_dir(current_dir_for_refresh.borrow().clone());
+        }
         crate::status_log::log_info("File list refreshed");
     });
 

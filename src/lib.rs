@@ -15,6 +15,7 @@ pub mod completion;
 pub mod linter;
 pub mod lsp;
 pub mod ui;
+pub mod debugger;
 
 // Re-export specific functions from main that are used by modules
 // Note: In a refactor, these should be moved to appropriate modules
@@ -30,3 +31,6 @@ pub fn update_all_buffer_themes(window: &impl IsA<gtk4::Widget>) {
 // Common imports that tests might need
 pub use gtk4;
 pub use sourceview5;
+
+// Re-export commonly used debugger functions
+pub use debugger::has_rust_files;

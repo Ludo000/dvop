@@ -218,6 +218,14 @@
                     </child>
                   </object>
                 </child>
+                <child>
+                  <object class="GtkToggleButton" id="debugger_button">
+                    <property name="icon-name">builder-debugger-symbolic</property>
+                    <property name="css-classes">activity-bar-button</property>
+                    <property name="tooltip-text">Rust Debugger (Ctrl+Shift+D)</property>
+                    <property name="visible">false</property>
+                  </object>
+                </child>
               </object>
             </child>
             
@@ -292,6 +300,19 @@
                             <property name="child">
                               <object class="GtkBox" id="git_diff_panel">
                                 <property name="css-classes">git-diff-panel</property>
+                                <property name="orientation">vertical</property>
+                                <property name="width-request">0</property>
+                                <property name="hexpand">true</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkStackPage">
+                            <property name="name">debugger</property>
+                            <property name="child">
+                              <object class="GtkBox" id="debugger_panel">
+                                <property name="css-classes">debugger-panel</property>
                                 <property name="orientation">vertical</property>
                                 <property name="width-request">0</property>
                                 <property name="hexpand">true</property>
@@ -504,6 +525,11 @@
           <attribute name="label">Source Control</attribute>
           <attribute name="action">win.toggle-git</attribute>
           <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;g</attribute>
+        </item>
+        <item>
+          <attribute name="label">Rust Debugger</attribute>
+          <attribute name="action">win.toggle-debugger</attribute>
+          <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;d</attribute>
         </item>
       </section>
       <section>

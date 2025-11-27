@@ -48,6 +48,7 @@ use std::rc::Rc; // Reference counting for shared ownership // File writing capa
 
 // Internal imports
 use crate::utils; // Utility functions
+use crate::debugger; // Debugger functionality
 
 /// Gets the TextView and TextBuffer from the currently active notebook tab
 ///
@@ -933,6 +934,9 @@ fn create_svg_split_view(
     // Setup linting for the file
     crate::linter::ui::setup_linting(&source_view, Some(file_path));
 
+    // Setup debugger breakpoint support for Rust files
+    crate::debugger::ui::setup_breakpoint_support(&source_view, Some(file_path));
+
     // Set up interaction tracking for the text editor
     let text_view = source_view.clone().upcast::<TextView>();
     setup_text_editor_interaction_tracking(&text_view);
@@ -1067,6 +1071,9 @@ fn create_markdown_split_view(
 
     // Setup linting for the file
     crate::linter::ui::setup_linting(&source_view, Some(file_path));
+
+    // Setup debugger breakpoint support for Rust files
+    crate::debugger::ui::setup_breakpoint_support(&source_view, Some(file_path));
 
     // Set up interaction tracking for the text editor
     let text_view = source_view.clone().upcast::<TextView>();
@@ -1841,6 +1848,9 @@ pub fn open_or_focus_tab(
             // Setup linting for the file
             crate::linter::ui::setup_linting(&source_view, Some(file_to_open));
 
+            // Setup debugger breakpoint support for Rust files
+            crate::debugger::ui::setup_breakpoint_support(&source_view, Some(file_to_open));
+
             // Ctrl+Click on an underlined diagnostic focuses corresponding entry in diagnostics panel
             {
                 let source_view_for_gesture = source_view.clone();
@@ -2006,6 +2016,7 @@ pub fn setup_button_handlers(
     _save_menu_button: Option<&MenuButton>, // Prefix with underscore to acknowledge it's unused
     path_box: Option<&gtk4::Box>,  // Optional path box for status bar
     current_selection_source: &Rc<RefCell<utils::FileSelectionSource>>, // Track selection source for click-outside detection
+    debugger_button: Option<&gtk4::ToggleButton>, // Optional debugger button
 ) {
     setup_new_button_handler(
         new_button,
@@ -2079,7 +2090,8 @@ pub fn setup_button_handlers(
         file_list_box,
         active_tab_path,
         path_box,
-    ); // Pass active_tab_path and path_box
+        debugger_button,
+    ); // Pass active_tab_path, path_box, and debugger_button
 }
 
 fn setup_new_button_handler(
@@ -3520,11 +3532,13 @@ fn setup_up_button_handler(
     file_list_box: &ListBox,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>, // Changed from file_path
     path_box: Option<&gtk4::Box>,                   // Optional path box for status bar
+    debugger_button: Option<&gtk4::ToggleButton>,   // Optional debugger button
 ) {
     let current_dir = current_dir.clone();
     let file_list_box_clone = file_list_box.clone();
     let active_tab_path = active_tab_path.clone(); // Clone Rc for closure
     let path_box = path_box.cloned(); // Clone the optional Box widget
+    let debugger_button = debugger_button.cloned(); // Clone the optional debugger button
 
     up_button.connect_clicked(move |_| {
         let mut path = current_dir.borrow().clone();
@@ -3550,6 +3564,12 @@ fn setup_up_button_handler(
 
             // Check for Rust files and update linter UI visibility
             crate::linter::ui::check_and_update_rust_ui(&path);
+            
+            // Check for Rust files and update debugger button visibility
+            if let Some(debugger_btn) = &debugger_button {
+                let has_rust = debugger::has_rust_files(&path);
+                debugger_btn.set_visible(has_rust);
+            }
         }
     });
 }

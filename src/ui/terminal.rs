@@ -62,6 +62,23 @@ pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
     terminal
 }
 
+/// Creates a read-only terminal for displaying output (e.g., debug output)
+///
+/// This creates a terminal without spawning a shell - it's meant for displaying
+/// program output only, not for interactive use.
+pub fn create_read_only_terminal() -> VteTerminal {
+    let terminal = VteTerminal::new();
+    
+    // Set terminal colors to match the editor's theme
+    setup_terminal_theme(&terminal);
+    
+    // Apply font size from settings
+    apply_terminal_font_size(&terminal);
+    
+    // Don't spawn a shell - this is output-only
+    terminal
+}
+
 /// Sets up the terminal color theme to match the editor's syntax highlighting theme
 ///
 /// This function configures the VTE terminal colors to match the editor's color scheme
