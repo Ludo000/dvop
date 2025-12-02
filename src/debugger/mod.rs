@@ -71,25 +71,35 @@ impl Debugger {
     }
 
     pub fn start(&mut self) -> Result<(), String> {
+        println!("[DEBUG] Debugger::start() called");
         let binary_path = self.binary_path.as_ref()
             .ok_or("No binary path set")?;
 
+        println!("[DEBUG] Binary path: {:?}", binary_path);
+        
         if !binary_path.exists() {
+            println!("[DEBUG] Binary does not exist!");
             return Err(format!("Binary not found: {:?}", binary_path));
         }
 
+        println!("[DEBUG] Calling start_debug_session...");
         let mut child = start_debug_session(binary_path)
-            .map_err(|e| format!("Failed to start debugger: {}", e))?;
+            .map_err(|e| {
+                println!("[DEBUG] start_debug_session failed: {}", e);
+                format!("Failed to start debugger: {}", e)
+            })?;
+        println!("[DEBUG] GDB process spawned with PID: {:?}", child.id());
 
         // Take stdin and wrap it for shared access
         let stdin = child.stdin.take().ok_or("Failed to get GDB stdin")?;
         let stdin_arc = Arc::new(Mutex::new(stdin));
         
-        // Send breakpoints to GDB
+        // Send commands to GDB
         {
             use std::io::Write;
             let mut stdin_guard = stdin_arc.lock().unwrap();
             
+            // Set breakpoints first
             for breakpoint in &self.breakpoints {
                 let cmd = format!("-break-insert {}:{}\n", breakpoint.file, breakpoint.line);
                 println!("[DEBUG] Setting breakpoint: {}", cmd.trim());
@@ -97,12 +107,7 @@ impl Debugger {
                 let _ = stdin_guard.flush();
             }
             
-            // Small delay to let breakpoints be processed
-            drop(stdin_guard);
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            let mut stdin_guard = stdin_arc.lock().unwrap();
-            
-            // Start execution
+            // Start execution - GDB will use the working directory we set when spawning the process
             println!("[DEBUG] Sending -exec-run command");
             let _ = stdin_guard.write_all(b"-exec-run\n");
             let _ = stdin_guard.flush();
@@ -117,6 +122,10 @@ impl Debugger {
                 for line in reader.lines() {
                     if let Ok(text) = line {
                         println!("[GDB-ERR] {}", text);
+                        // Also send to debug terminal
+                        ui::handle_debug_event(ui::DebugEvent::ProgramOutput {
+                            text: format!("[GDB] {}\n", text)
+                        });
                     }
                 }
             });
@@ -313,19 +322,39 @@ pub fn has_rust_files(dir: &Path) -> bool {
 
 /// Start a debug session for a Rust binary
 pub fn start_debug_session(binary_path: &Path) -> Result<Child, std::io::Error> {
+    println!("[DEBUG] start_debug_session called with path: {:?}", binary_path);
+    
     // For now, we'll use rust-gdb or lldb
     // Try rust-gdb first, fall back to gdb
     let debugger = if Command::new("rust-gdb").arg("--version").output().is_ok() {
+        println!("[DEBUG] Using rust-gdb");
         "rust-gdb"
     } else if Command::new("rust-lldb").arg("--version").output().is_ok() {
+        println!("[DEBUG] Using rust-lldb");
         "rust-lldb"
     } else if Command::new("gdb").arg("--version").output().is_ok() {
+        println!("[DEBUG] Using gdb");
         "gdb"
     } else {
+        println!("[DEBUG] No debugger found!");
         return Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "No debugger found (tried rust-gdb, rust-lldb, gdb)",
         ));
+    };
+
+    // Find the project root to set as working directory
+    // Find the project root to set as working directory
+    // Binary is at: project_root/target/debug/binary_name
+    // So we go up 2 levels: binary_name -> debug -> target -> project_root
+    let working_dir = if let Some(debug_dir) = binary_path.parent() {
+        if let Some(target_dir) = debug_dir.parent() {
+            target_dir.parent()
+        } else {
+            None
+        }
+    } else {
+        None
     };
 
     // Build a representation of the debugger command for the UI
@@ -333,13 +362,20 @@ pub fn start_debug_session(binary_path: &Path) -> Result<Child, std::io::Error> 
     // Notify the UI about the debugger configuration (for debugging purposes)
     ui::handle_debug_event(ui::DebugEvent::GdbConfig { config: config.clone() });
 
-    Command::new(debugger)
-        .arg("--interpreter=mi")
+    let mut cmd = Command::new(debugger);
+    cmd.arg("--interpreter=mi")
         .arg(binary_path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+        .stderr(Stdio::piped());
+    
+    // Set the working directory to the project root if found
+    if let Some(dir) = working_dir {
+        println!("[DEBUG] Setting GDB working directory to: {}", dir.display());
+        cmd.current_dir(dir);
+    }
+    
+    cmd.spawn()
 }
 
 /// Find Rust binary to debug in the current project

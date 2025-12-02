@@ -114,7 +114,7 @@ pub fn handle_debug_event(event: DebugEvent) {
     // Schedule GTK updates on the main thread
     match event {
         DebugEvent::Stopped { reason: _, line, file } => {
-            glib::idle_add_local_once(move || {
+            glib::idle_add_once(move || {
                 DEBUG_STATE_REF.with(|state_ref| {
                     if let Some(state) = state_ref.borrow().as_ref() {
                         *state.borrow_mut() = DebugState::Paused;
@@ -131,18 +131,18 @@ pub fn handle_debug_event(event: DebugEvent) {
             });
         }
         DebugEvent::Running => {
-            glib::idle_add_local_once(|| {
+            glib::idle_add_once(|| {
                 DEBUG_STATE_REF.with(|state_ref| {
                     if let Some(state) = state_ref.borrow().as_ref() {
                         *state.borrow_mut() = DebugState::Running;
                     }
                 });
                 println!("[UI] Program running");
-                crate::status_log::log_success("▶️  Program is running");
+                crate::status_log::log_success("▶️  Program is running (a new window should open)");
             });
         }
         DebugEvent::Exited => {
-            glib::idle_add_local_once(|| {
+            glib::idle_add_once(|| {
                 DEBUG_STATE_REF.with(|state_ref| {
                     if let Some(state) = state_ref.borrow().as_ref() {
                         *state.borrow_mut() = DebugState::NotRunning;
@@ -150,11 +150,12 @@ pub fn handle_debug_event(event: DebugEvent) {
                 });
                 println!("[UI] Program exited");
                 crate::status_log::log_success("✓ Program exited");
+                write_to_debug_terminal("\n=== Debug session ended ===\n");
             });
         }
         DebugEvent::GdbConfig { config } => {
             // Update the visible label with the config string
-            glib::idle_add_local_once(move || {
+            glib::idle_add_once(move || {
                 GDB_CONFIG_LABEL.with(|lbl| {
                     if let Some(label) = lbl.borrow().as_ref() {
                         label.set_text(&format!("GDB: {}", config));
@@ -171,7 +172,7 @@ pub fn handle_debug_event(event: DebugEvent) {
             });
         }
         DebugEvent::StackFrame { frames } => {
-            glib::idle_add_local_once(move || {
+            glib::idle_add_once(move || {
                 CALLSTACK_LIST.with(|list_ref| {
                     if let Some(list) = list_ref.borrow().as_ref() {
                         clear_list(list);
@@ -184,7 +185,7 @@ pub fn handle_debug_event(event: DebugEvent) {
             });
         }
         DebugEvent::Variables { vars } => {
-            glib::idle_add_local_once(move || {
+            glib::idle_add_once(move || {
                 VARIABLES_LIST.with(|list_ref| {
                     if let Some(list) = list_ref.borrow().as_ref() {
                         clear_list(list);
@@ -198,6 +199,11 @@ pub fn handle_debug_event(event: DebugEvent) {
     }
 }
 
+/// Ensure debug terminal exists and switch to it
+fn ensure_debug_terminal() {
+    write_to_debug_terminal(""); // This will create the terminal if it doesn't exist
+}
+
 /// Write text to the debug output terminal
 fn write_to_debug_terminal(text: &str) {
     use vte4::TerminalExt;
@@ -206,8 +212,11 @@ fn write_to_debug_terminal(text: &str) {
         if let Some(notebook) = nb_ref.borrow().as_ref() {
             println!("[DEBUG-UI] Terminal notebook found");
             DEBUG_TERMINAL_PAGE.with(|page_ref| {
-                // Get or create the debug terminal page
-                let page_num = if let Some(page) = *page_ref.borrow() {
+                // Check if page already exists (separate borrow scope)
+                let page_exists = page_ref.borrow().is_some();
+                
+                let page_num = if page_exists {
+                    let page = page_ref.borrow().unwrap();
                     println!("[DEBUG-UI] Using existing debug terminal page: {}", page);
                     page
                 } else {
@@ -510,9 +519,13 @@ pub fn create_debugger_panel() -> GtkBox {
                             btn.set_sensitive(false);
                             
                             crate::status_log::log_success(&format!(
-                                "Debug session started for '{}'. Program is running under GDB.", 
+                                "🐛 Debugging '{}' - Check for a new window or watch for breakpoints", 
                                 binary_name
                             ));
+                            
+                            // Create debug terminal and show initial message
+                            ensure_debug_terminal();
+                            write_to_debug_terminal(&format!("=== Debug session started: {} ===\n", binary_name));
                             
                             // Clear previous data
                             clear_list(&variables_list_for_start);
