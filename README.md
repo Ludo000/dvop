@@ -314,18 +314,3 @@ It was not created as part of any employment relationship, nor under any instruc
 **Copyright © 2025 Ludovic Scholz**
 
 The author retains full copyright ownership of the original source code.
-
----
-
-## Acknowledgments
-
-Built with amazing open-source technologies:
-- The Rust community for an exceptional programming language
-- The GNOME project for GTK and related libraries
-- All contributors to the Rust and GTK ecosystems
-
----
-
-<p align="center">
-  Made with ❤️ and Rust
-</p>
