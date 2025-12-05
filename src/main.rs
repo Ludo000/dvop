@@ -4,6 +4,7 @@ mod completion; // Code completion functionality
 mod file_cache; // File content caching for performance optimization
 mod handlers; // Event handlers and business logic
 mod linter; // Code linting and diagnostics
+mod debugger; // Debugger functionality
 mod lsp;
 mod search; // Find and replace functionality
 mod settings; // User settings and preferences
@@ -643,6 +644,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         explorer_button,
         search_button,
         git_diff_button,
+        debugger_button,
         sidebar_stack,
     ) = ui::create_paned(&window);
 
@@ -812,12 +814,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Setup explorer and search button toggle behavior
     let search_button_clone = search_button.clone();
     let git_diff_button_clone = git_diff_button.clone();
+    let debugger_button_clone = debugger_button.clone();
     let sidebar_stack_clone = sidebar_stack.clone();
     let paned_clone = paned.clone();
     explorer_button.connect_toggled(move |button| {
         if button.is_active() {
             search_button_clone.set_active(false);
             git_diff_button_clone.set_active(false);
+            debugger_button_clone.set_active(false);
             sidebar_stack_clone.set_visible_child_name("explorer");
             // Show the sidebar by setting the first child visible
             if let Some(start_child) = paned_clone.start_child() {
@@ -852,12 +856,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     let explorer_button_clone = explorer_button.clone();
     let git_diff_button_clone2 = git_diff_button.clone();
+    let debugger_button_clone2 = debugger_button.clone();
     let sidebar_stack_clone2 = sidebar_stack.clone();
     let paned_clone2 = paned.clone();
     search_button.connect_toggled(move |button| {
         if button.is_active() {
             explorer_button_clone.set_active(false);
             git_diff_button_clone2.set_active(false);
+            debugger_button_clone2.set_active(false);
             sidebar_stack_clone2.set_visible_child_name("search");
             // Show the sidebar by setting the first child visible
             if let Some(start_child) = paned_clone2.start_child() {
@@ -892,12 +898,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     let explorer_button_clone2 = explorer_button.clone();
     let search_button_clone2 = search_button.clone();
+    let debugger_button_clone3 = debugger_button.clone();
     let sidebar_stack_clone3 = sidebar_stack.clone();
     let paned_clone3 = paned.clone();
     git_diff_button.connect_toggled(move |button| {
         if button.is_active() {
             explorer_button_clone2.set_active(false);
             search_button_clone2.set_active(false);
+            debugger_button_clone3.set_active(false);
             sidebar_stack_clone3.set_visible_child_name("git-diff");
             // Show the sidebar by setting the first child visible
             if let Some(start_child) = paned_clone3.start_child() {
@@ -930,6 +938,48 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    let explorer_button_clone3 = explorer_button.clone();
+    let search_button_clone3 = search_button.clone();
+    let git_diff_button_clone3 = git_diff_button.clone();
+    let sidebar_stack_clone4 = sidebar_stack.clone();
+    let paned_clone4 = paned.clone();
+    debugger_button.connect_toggled(move |button| {
+        if button.is_active() {
+            explorer_button_clone3.set_active(false);
+            search_button_clone3.set_active(false);
+            git_diff_button_clone3.set_active(false);
+            sidebar_stack_clone4.set_visible_child_name("debugger");
+            // Show the sidebar by setting the first child visible
+            if let Some(start_child) = paned_clone4.start_child() {
+                start_child.set_visible(true);
+                let settings = crate::settings::get_settings();
+                let width = settings.get_file_panel_width();
+                paned_clone4.set_position(width);
+            }
+            // Save sidebar visible state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(true);
+            let _ = settings.save();
+        } else {
+            // If the button is deactivated, hide the sidebar completely
+            if let Some(start_child) = paned_clone4.start_child() {
+                // Save current width before hiding
+                let current_width = paned_clone4.position();
+                if current_width > 0 {
+                    let mut settings = crate::settings::get_settings_mut();
+                    settings.set_file_panel_width(current_width);
+                    let _ = settings.save();
+                }
+                start_child.set_visible(false);
+                paned_clone4.set_position(0);
+            }
+            // Save sidebar hidden state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(false);
+            let _ = settings.save();
+        }
+    });
+
     // Add drag gesture to activity bar to allow dragging sidebar open
     let activity_bar = imp.activity_bar.get();
     let drag_gesture = gtk4::GestureDrag::new();
@@ -938,6 +988,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let explorer_button_for_drag = explorer_button.clone();
     let search_button_for_drag = search_button.clone();
     let git_diff_button_for_drag = git_diff_button.clone();
+    let debugger_button_for_drag = debugger_button.clone();
     let paned_for_drag = paned.clone();
     let sidebar_stack_for_drag = sidebar_stack.clone();
     
@@ -992,6 +1043,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             explorer_button_for_drag.set_active(false);
             search_button_for_drag.set_active(false);
             git_diff_button_for_drag.set_active(false);
+            debugger_button_for_drag.set_active(false);
             
             let mut settings = crate::settings::get_settings_mut();
             settings.set_sidebar_visible(false);
@@ -1008,16 +1060,25 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                             search_button_for_drag.set_active(true);
                             explorer_button_for_drag.set_active(false);
                             git_diff_button_for_drag.set_active(false);
+                            debugger_button_for_drag.set_active(false);
                         },
                         "git-diff" => {
                             git_diff_button_for_drag.set_active(true);
                             explorer_button_for_drag.set_active(false);
                             search_button_for_drag.set_active(false);
+                            debugger_button_for_drag.set_active(false);
+                        },
+                        "debugger" => {
+                            debugger_button_for_drag.set_active(true);
+                            explorer_button_for_drag.set_active(false);
+                            search_button_for_drag.set_active(false);
+                            git_diff_button_for_drag.set_active(false);
                         },
                         _ => {
                             explorer_button_for_drag.set_active(true);
                             search_button_for_drag.set_active(false);
                             git_diff_button_for_drag.set_active(false);
+                            debugger_button_for_drag.set_active(false);
                         }
                     }
                 } else {
@@ -1041,6 +1102,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let explorer_button_for_monitor = explorer_button.clone();
     let search_button_for_monitor = search_button.clone();
     let git_diff_button_for_monitor = git_diff_button.clone();
+    let debugger_button_for_monitor = debugger_button.clone();
     paned.connect_position_notify(move |p| {
         let position = p.position();
         // Only act if the sidebar is currently visible and position is being reduced
@@ -1050,6 +1112,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 explorer_button_for_monitor.set_active(false);
                 search_button_for_monitor.set_active(false);
                 git_diff_button_for_monitor.set_active(false);
+                debugger_button_for_monitor.set_active(false);
             }
         }
     });
@@ -1116,6 +1179,23 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 git_diff_panel_box.remove(&child);
             }
             git_diff_panel_box.append(&git_diff_panel);
+        }
+    }
+
+    // Get the debugger panel from the sidebar stack and populate it
+    if let Some(debugger_panel_widget) = sidebar_stack.child_by_name("debugger") {
+        if let Some(debugger_panel_box) = debugger_panel_widget.downcast_ref::<gtk4::Box>() {
+            // Create the full debugger panel
+            let debugger_panel = crate::debugger::ui::create_debugger_panel(
+                current_dir.borrow().clone(),
+                terminal_notebook_template.clone(),
+            );
+
+            // Clear placeholder and add the real debugger panel
+            while let Some(child) = debugger_panel_box.first_child() {
+                debugger_panel_box.remove(&child);
+            }
+            debugger_panel_box.append(&debugger_panel);
         }
     }
 

@@ -117,6 +117,8 @@ mod imp {
         pub search_button: TemplateChild<gtk4::ToggleButton>,
         #[template_child]
         pub git_diff_button: TemplateChild<gtk4::ToggleButton>,
+        #[template_child]
+        pub debugger_button: TemplateChild<gtk4::ToggleButton>,
 
         // Main layout
         #[template_child]
@@ -435,6 +437,7 @@ pub fn create_paned(
     gtk4::ToggleButton,
     gtk4::ToggleButton,
     gtk4::ToggleButton,
+    gtk4::ToggleButton,
     gtk4::Stack,
 ) {
     let imp = window.imp();
@@ -449,6 +452,7 @@ pub fn create_paned(
         imp.explorer_button.get(),
         imp.search_button.get(),
         imp.git_diff_button.get(),
+        imp.debugger_button.get(),
         imp.sidebar_stack.get(),
     )
 }

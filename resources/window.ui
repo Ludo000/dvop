@@ -218,6 +218,13 @@
                     </child>
                   </object>
                 </child>
+                <child>
+                  <object class="GtkToggleButton" id="debugger_button">
+                    <property name="icon-name">bug-symbolic</property>
+                    <property name="css-classes">activity-bar-button</property>
+                    <property name="tooltip-text">Debugger (Ctrl+Shift+D)</property>
+                  </object>
+                </child>
               </object>
             </child>
             
@@ -295,6 +302,27 @@
                                 <property name="orientation">vertical</property>
                                 <property name="width-request">0</property>
                                 <property name="hexpand">true</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkStackPage">
+                            <property name="name">debugger</property>
+                            <property name="child">
+                              <object class="GtkBox" id="debugger_panel">
+                                <property name="css-classes">debugger-panel</property>
+                                <property name="orientation">vertical</property>
+                                <property name="width-request">0</property>
+                                <property name="hexpand">true</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">Debugger Panel</property>
+                                    <property name="vexpand">true</property>
+                                    <property name="halign">center</property>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
                               </object>
                             </property>
                           </object>
