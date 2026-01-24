@@ -193,6 +193,15 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
 
     // Create a new source view with syntax highlighting capabilities
     let (source_view, source_buffer) = crate::syntax::create_source_view();
+    
+    // Setup breakpoints
+    crate::debugger::breakpoints::setup_breakpoint_attributes(&source_view);
+    crate::debugger::breakpoints::setup_gutter_click_handler(
+        &source_view, 
+        deps.editor_notebook.clone(), 
+        deps.file_path_manager.clone()
+    );
+
     source_buffer.set_text(""); // Start with empty content
 
     // Clone source_view to avoid ownership move - use Rc instead of full clone for efficiency
@@ -1821,6 +1830,16 @@ pub fn open_or_focus_tab(
             // Handle text file - use cached file reading for performance
             // Create source view with syntax highlighting
             let (source_view, source_buffer) = crate::syntax::create_source_view();
+            
+            // Setup breakpoints
+            crate::debugger::breakpoints::setup_breakpoint_attributes(&source_view);
+            crate::debugger::breakpoints::setup_gutter_click_handler(
+                &source_view, 
+                notebook.clone(), 
+                file_path_manager.clone()
+            );
+            crate::debugger::breakpoints::update_visual_breakpoints(&source_view, file_to_open);
+
             source_buffer.set_text(content);
 
             // Apply syntax highlighting based on file extension

@@ -307,9 +307,15 @@ fn main() {
 
     // Create the main GTK application with a unique application ID
     // Set flags to handle file opening
+    let mut flags = gio::ApplicationFlags::HANDLES_OPEN;
+
+    if cfg!(debug_assertions) {
+        flags |= gio::ApplicationFlags::NON_UNIQUE;
+    }
+
     let app = Application::builder()
         .application_id("com.example.Dvop")
-        .flags(gio::ApplicationFlags::HANDLES_OPEN)
+        .flags(flags)
         .build();
 
     // Force GTK to respect system dark mode settings
@@ -540,7 +546,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Returns multiple widgets and associated state for the editor UI
     let (
         _initial_scrolled_window, // Container for the first tab's TextView with scrolling capability
-        _initial_text_view,       // The editable text view widget for the first tab
+        initial_text_view,       // The editable text view widget for the first tab
         initial_text_buffer,      // Buffer holding the text content for the first tab
         _initial_tab_file_path_rc, // Reference-counted path for the first tab's file
         error_label,              // Label for displaying error messages to the user
@@ -566,6 +572,16 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Create a mapping between notebook tab indexes and their corresponding file paths
     // This allows tracking which file is open in each tab - optimized for efficiency
     let file_path_manager = Rc::new(RefCell::new(HashMap::<u32, PathBuf>::new()));
+
+    // Setup breakpoint handler for the initial tab
+    if let Some(source_view) = initial_text_view.dynamic_cast_ref::<sourceview5::View>() {
+        crate::debugger::breakpoints::setup_gutter_click_handler(
+            source_view,
+            editor_notebook.clone(),
+            file_path_manager.clone(),
+        );
+        crate::debugger::breakpoints::setup_breakpoint_attributes(source_view);
+    }
 
     // Track the file path of the currently active tab
     let active_tab_path = Rc::new(RefCell::new(None::<PathBuf>));
@@ -629,7 +645,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     crate::status_log::register_status_labels(&status_label, &secondary_status_label);
 
     // Initialize secondary status for the initial untitled tab with cursor position
-    if let Some(text_view) = _initial_text_view.downcast_ref::<sourceview5::View>() {
+    if let Some(text_view) = initial_text_view.downcast_ref::<sourceview5::View>() {
         update_cursor_position_status(text_view, &secondary_status_label, "Untitled", None);
     } else {
         // For non-source views, just show empty status initially
@@ -1257,7 +1273,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 
     // Set up cursor position tracking for the initial tab
-    if let Some(text_view) = _initial_text_view.downcast_ref::<sourceview5::View>() {
+    if let Some(text_view) = initial_text_view.downcast_ref::<sourceview5::View>() {
         let text_view_clone = text_view.clone();
         let secondary_status_clone = secondary_status_label.clone();
 
