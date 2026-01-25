@@ -42,6 +42,7 @@ pub enum DebuggerState {
 #[derive(Debug, Clone)]
 pub struct Breakpoint {
     pub id: u32,
+    pub gdb_id: Option<u32>,  // GDB's breakpoint number (set when debugger is running)
     pub file: PathBuf,
     pub line: u32,
     pub enabled: bool,
@@ -264,6 +265,29 @@ impl RustDebugger {
             for line in reader.lines() {
                 match line {
                     Ok(line) => {
+                        // Detect GDB stop events and update state to Paused
+                        // GDB/MI sends *stopped when the inferior stops
+                        // Also check for "hit Breakpoint" or other stop indicators
+                        if line.contains("*stopped") || 
+                           line.contains("hit Breakpoint") ||
+                           line.contains("Breakpoint ") && line.contains(" at ") ||
+                           line.starts_with("Program received signal") ||
+                           line.contains("exited normally") ||
+                           line.contains("exited with code") {
+                            let mut state_guard = state.lock().unwrap();
+                            if *state_guard == DebuggerState::Running {
+                                *state_guard = DebuggerState::Paused;
+                            }
+                        }
+                        
+                        // Detect when program continues running
+                        if line.contains("*running") || line == "^running" {
+                            let mut state_guard = state.lock().unwrap();
+                            if *state_guard == DebuggerState::Paused {
+                                *state_guard = DebuggerState::Running;
+                            }
+                        }
+                        
                         // Parse inferior PID from GDB output - multiple patterns
                         // Pattern 1: "[Inferior 1 (process 12345)" 
                         // Pattern 2: "process 12345"
@@ -379,15 +403,28 @@ impl RustDebugger {
     fn apply_breakpoints(&self) -> Result<(), String> {
         let breakpoints = self.breakpoints.lock().unwrap().clone();
         
+        println!("[DEBUG] Applying {} breakpoints to GDB", breakpoints.len());
+        
         for bp in breakpoints {
             if bp.enabled {
-                let _ = self.send_command_no_wait(&format!(
-                    "-break-insert {}:{}",
-                    bp.file.display(),
-                    bp.line
-                ));
+                // Only set breakpoints on source files GDB can use (not .ui, .xml, etc.)
+                let ext = bp.file.extension().and_then(|s| s.to_str()).unwrap_or("");
+                let is_source_file = matches!(ext, "rs" | "c" | "cpp" | "cc" | "cxx" | "h" | "hpp" | "py" | "go" | "java");
+                
+                if is_source_file {
+                    // Use -t flag for temporary breakpoint (auto-deletes after first hit)
+                    // This prevents getting stuck on functions called multiple times
+                    let cmd = format!("-break-insert -t {}:{}", bp.file.display(), bp.line);
+                    println!("[DEBUG] Sending breakpoint command: {}", cmd);
+                    let _ = self.send_command_no_wait(&cmd);
+                } else {
+                    println!("[DEBUG] Skipping breakpoint on non-source file: {}:{}", bp.file.display(), bp.line);
+                }
             }
         }
+        
+        // Small delay to let GDB process the breakpoint commands before running
+        thread::sleep(Duration::from_millis(50));
         
         Ok(())
     }
@@ -688,6 +725,7 @@ impl RustDebugger {
 
         let breakpoint = Breakpoint {
             id,
+            gdb_id: None,
             file: file.clone(),
             line,
             enabled: true,
@@ -708,13 +746,57 @@ impl RustDebugger {
     /// Remove a breakpoint
     pub fn remove_breakpoint(&self, id: u32) -> Result<(), String> {
         let mut breakpoints = self.breakpoints.lock().unwrap();
+        
+        // Find the breakpoint to get its file:line before removing
+        let bp_location = breakpoints.iter()
+            .find(|bp| bp.id == id)
+            .map(|bp| (bp.file.clone(), bp.line));
+        
         breakpoints.retain(|bp| bp.id != id);
+        drop(breakpoints); // Release lock before sending command
 
-        // If debugger is running, remove breakpoint
+        // If debugger is running, remove breakpoint from GDB using file:line
         if self.state() != DebuggerState::Stopped {
-            self.send_command(&format!("-break-delete {}", id))?;
+            if let Some((file, line)) = bp_location {
+                // Use "clear" console command which works with file:line
+                let cmd = format!("-interpreter-exec console \"clear {}:{}\"", file.display(), line);
+                let _ = self.send_command_no_wait(&cmd);
+            }
         }
 
+        Ok(())
+    }
+    
+    /// Remove a breakpoint by file and line (useful when clicking in gutter)
+    pub fn remove_breakpoint_at(&self, file: &std::path::Path, line: u32) -> Result<(), String> {
+        let mut breakpoints = self.breakpoints.lock().unwrap();
+        
+        // Remove from internal list
+        breakpoints.retain(|bp| !(bp.file == file && bp.line == line));
+        drop(breakpoints); // Release lock before sending command
+
+        // If debugger is running, remove breakpoint from GDB
+        if self.state() != DebuggerState::Stopped {
+            let cmd = format!("-interpreter-exec console \"clear {}:{}\"", file.display(), line);
+            let _ = self.send_command_no_wait(&cmd);
+        }
+
+        Ok(())
+    }
+    
+    /// Remove all breakpoints (both internal list and from GDB)
+    pub fn clear_all_breakpoints(&self) -> Result<(), String> {
+        // Clear from GDB first (delete all breakpoints)
+        if self.state() != DebuggerState::Stopped {
+            // Use console command "delete" which deletes all breakpoints
+            // The MI command -break-delete without args doesn't work reliably
+            let _ = self.send_command_no_wait("-interpreter-exec console \"delete breakpoints\"");
+        }
+        
+        // Clear internal list
+        self.breakpoints.lock().unwrap().clear();
+        *self.next_breakpoint_id.lock().unwrap() = 1;
+        
         Ok(())
     }
 

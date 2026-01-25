@@ -1199,6 +1199,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // Set up the breakpoint change callback to refresh the debugger panel's breakpoint list
+    // when breakpoints are added/removed from the editor gutter
+    syntax::set_breakpoint_change_callback(|| {
+        debugger::ui::refresh_breakpoint_list();
+    });
+
     // Update debugger button visibility based on current directory
     debugger::ui::update_debugger_visibility(&debugger_button, &current_dir.borrow());
 

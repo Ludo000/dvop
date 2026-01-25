@@ -15,6 +15,22 @@ use std::sync::Arc;
 use super::{DebugConfig, RustDebugger, Breakpoint};
 use super::rust_project::{find_rust_project_root, get_rust_project_info, RustBinary, RustProject};
 
+/// Thread-local storage for the debugger panel's breakpoints list and debugger instance
+/// This allows the syntax module to refresh the list when breakpoints change from the editor
+thread_local! {
+    static BREAKPOINTS_LIST: RefCell<Option<ListBox>> = const { RefCell::new(None) };
+    static DEBUGGER_INSTANCE: RefCell<Option<Arc<RustDebugger>>> = const { RefCell::new(None) };
+    static OUTPUT_VIEW: RefCell<Option<TextView>> = const { RefCell::new(None) };
+}
+
+/// Gets the global debugger instance if available
+/// This is used by the syntax module to add/remove breakpoints from the gutter
+pub fn get_debugger_instance() -> Option<Arc<RustDebugger>> {
+    DEBUGGER_INSTANCE.with(|cell| {
+        cell.borrow().clone()
+    })
+}
+
 /// Debugger panel state
 pub struct DebuggerPanel {
     pub container: GtkBox,
@@ -100,6 +116,17 @@ pub fn create_debugger_panel(
     // === Output Section ===
     let (output_section, output_view) = create_output_section();
     panel.append(&output_section);
+
+    // Store references for external refresh (e.g., from gutter breakpoint clicks)
+    BREAKPOINTS_LIST.with(|cell| {
+        *cell.borrow_mut() = Some(breakpoints_list.clone());
+    });
+    DEBUGGER_INSTANCE.with(|cell| {
+        *cell.borrow_mut() = Some(debugger.clone());
+    });
+    OUTPUT_VIEW.with(|cell| {
+        *cell.borrow_mut() = Some(output_view.clone());
+    });
 
     // === Status Bar ===
     let status_bar = create_status_bar(debugger.clone());
@@ -945,11 +972,8 @@ fn connect_breakpoint_controls(
     let output_for_clear = output_view.clone();
     
     clear_bp_button.connect_clicked(move |_| {
-        // Get all breakpoint IDs and remove them
-        let breakpoints = debugger_for_clear.get_breakpoints();
-        for bp in breakpoints {
-            let _ = debugger_for_clear.remove_breakpoint(bp.id);
-        }
+        // Use the new clear_all_breakpoints method which removes from both internal list and GDB
+        let _ = debugger_for_clear.clear_all_breakpoints();
         
         // Clear the list UI
         while let Some(child) = list_for_clear.first_child() {
@@ -1042,6 +1066,41 @@ fn create_breakpoint_row_with_delete(
 
     row.set_child(Some(&box_widget));
     row
+}
+
+/// Refreshes the breakpoint list UI to match the debugger's current breakpoints
+/// This is called when breakpoints are added/removed from the editor gutter
+pub fn refresh_breakpoint_list() {
+    BREAKPOINTS_LIST.with(|list_cell| {
+        DEBUGGER_INSTANCE.with(|debugger_cell| {
+            OUTPUT_VIEW.with(|output_cell| {
+                let list_opt = list_cell.borrow();
+                let debugger_opt = debugger_cell.borrow();
+                let output_opt = output_cell.borrow();
+                
+                if let (Some(list), Some(debugger), Some(output)) = 
+                    (list_opt.as_ref(), debugger_opt.as_ref(), output_opt.as_ref()) 
+                {
+                    // Clear the current list
+                    while let Some(child) = list.first_child() {
+                        list.remove(&child);
+                    }
+                    
+                    // Re-populate with current breakpoints
+                    let breakpoints = debugger.get_breakpoints();
+                    for bp in breakpoints {
+                        let row = create_breakpoint_row_with_delete(
+                            &bp, 
+                            debugger.clone(), 
+                            list.clone(), 
+                            output.clone()
+                        );
+                        list.append(&row);
+                    }
+                }
+            });
+        });
+    });
 }
 
 /// Append text to output view

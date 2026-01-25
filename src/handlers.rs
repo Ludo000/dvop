@@ -1840,6 +1840,15 @@ pub fn open_or_focus_tab(
 
             // Setup linting for the file
             crate::linter::ui::setup_linting(&source_view, Some(file_to_open));
+            
+            // Setup breakpoint support for clicking on the line number gutter
+            // We wrap the file path in Rc<RefCell> so the closure can access it
+            let file_path_for_breakpoints = Rc::new(RefCell::new(Some(file_to_open.clone())));
+            crate::syntax::setup_breakpoint_support(
+                &source_view,
+                file_path_for_breakpoints,
+                None, // Debugger will be connected later when user starts debugging
+            );
 
             // Ctrl+Click on an underlined diagnostic focuses corresponding entry in diagnostics panel
             {

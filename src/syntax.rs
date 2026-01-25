@@ -1,10 +1,14 @@
 // Syntax highlighting functionality for the text editor
 // This module manages syntax highlighting based on file types
 
+use gtk4::gdk::RGBA;
 use gtk4::ScrolledWindow;
 use gtk4::Settings;
-use sourceview5::{prelude::*, Buffer, LanguageManager, StyleSchemeManager, View};
-use std::path::Path;
+use sourceview5::{prelude::*, Buffer, LanguageManager, MarkAttributes, StyleSchemeManager, View};
+use std::cell::RefCell;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::sync::Arc;
 
 /// Determines whether the system is using a dark theme
 ///
@@ -235,6 +239,9 @@ pub fn create_source_view() -> (View, Buffer) {
     source_view.set_highlight_current_line(true);
     source_view.set_tab_width(4);
     source_view.set_auto_indent(true);
+    
+    // Enable line marks in the gutter (for breakpoints)
+    source_view.set_show_line_marks(true);
 
     // Apply user's font size setting
     let settings = crate::settings::get_settings();
@@ -251,6 +258,180 @@ pub fn create_source_view() -> (View, Buffer) {
     // See handlers.rs open_or_focus_tab() which calls setup_linting with the actual file path
 
     (source_view, buffer)
+}
+
+/// The category name used for breakpoint marks in the gutter
+pub const BREAKPOINT_CATEGORY: &str = "breakpoint";
+
+/// Thread-local callback for refreshing the debugger panel's breakpoint list
+/// This is set by the main application and called when breakpoints change from the editor
+thread_local! {
+    static BREAKPOINT_CHANGE_CALLBACK: RefCell<Option<Box<dyn Fn()>>> = const { RefCell::new(None) };
+}
+
+/// Sets the callback function that will be called when breakpoints are added or removed
+/// from the editor gutter. This should be called once during application setup.
+pub fn set_breakpoint_change_callback<F: Fn() + 'static>(callback: F) {
+    BREAKPOINT_CHANGE_CALLBACK.with(|cb| {
+        *cb.borrow_mut() = Some(Box::new(callback));
+    });
+}
+
+/// Calls the breakpoint change callback if one is registered
+fn notify_breakpoint_change() {
+    BREAKPOINT_CHANGE_CALLBACK.with(|cb| {
+        if let Some(ref callback) = *cb.borrow() {
+            callback();
+        }
+    });
+}
+
+/// Sets up breakpoint support for a source view
+/// 
+/// This configures the mark attributes for breakpoints (red circle icon)
+/// and connects the line_mark_activated signal to toggle breakpoints when clicking on the gutter.
+/// 
+/// # Arguments
+/// * `source_view` - The source view to set up breakpoint support for
+/// * `file_path` - The file path associated with this view (used for debugger integration)
+/// * `_debugger` - Deprecated parameter, kept for API compatibility. The global debugger is used instead.
+pub fn setup_breakpoint_support(
+    source_view: &View,
+    file_path: Rc<RefCell<Option<PathBuf>>>,
+    _debugger: Option<Arc<crate::debugger::RustDebugger>>,
+) {
+    // Create mark attributes for breakpoints - red circle
+    let breakpoint_attrs = MarkAttributes::new();
+    
+    // Set a red background color for the breakpoint indicator
+    let red = RGBA::new(0.9, 0.2, 0.2, 1.0);
+    breakpoint_attrs.set_background(&red);
+    
+    // Set the icon name to use the standard breakpoint icon
+    breakpoint_attrs.set_icon_name("media-record"); // Red circle icon
+    
+    // Register the mark attributes with the source view
+    // Priority 1 means breakpoints show above other marks
+    source_view.set_mark_attributes(BREAKPOINT_CATEGORY, &breakpoint_attrs, 1);
+    
+    // Get the buffer to work with marks
+    let buffer = source_view
+        .buffer()
+        .downcast::<Buffer>()
+        .expect("SourceView should have a SourceBuffer");
+    
+    // Clone what we need for the closure
+    let buffer_for_signal = buffer.clone();
+    let file_path_for_signal = file_path.clone();
+    
+    // The line_mark_activated signal fires when clicking in the mark gutter area
+    // This works once there are marks, and also fires on the line number gutter
+    source_view.connect_line_mark_activated(move |_view, iter, button, _modifiers, _n_presses| {
+        // Only respond to primary (left) mouse button
+        if button != 1 {
+            return;
+        }
+        
+        let line = iter.line() as u32 + 1; // Convert to 1-based line number
+        
+        // Get the file path
+        let file_path_opt = file_path_for_signal.borrow().clone();
+        let file = match file_path_opt {
+            Some(path) => path,
+            None => {
+                // Can't set breakpoint on unsaved file
+                return;
+            }
+        };
+        
+        // Get the global debugger instance
+        let debugger = crate::debugger::ui::get_debugger_instance();
+        
+        // Check if there's already a breakpoint on this line
+        let has_breakpoint = has_breakpoint_at_line(&buffer_for_signal, line);
+        
+        if has_breakpoint {
+            // Remove the breakpoint
+            println!("[Breakpoint] Removing breakpoint at {}:{}", file.display(), line);
+            remove_breakpoint_mark(&buffer_for_signal, line);
+            
+            // Notify debugger if available - use remove_breakpoint_at for direct file:line removal
+            if let Some(ref dbg) = debugger {
+                let _ = dbg.remove_breakpoint_at(&file, line);
+            }
+            
+            // Notify the debugger panel to refresh its list
+            notify_breakpoint_change();
+        } else {
+            // Add a new breakpoint
+            println!("[Breakpoint] Adding breakpoint at {}:{}", file.display(), line);
+            add_breakpoint_mark(&buffer_for_signal, line);
+            
+            // Notify debugger if available
+            if let Some(ref dbg) = debugger {
+                let _ = dbg.add_breakpoint(file.clone(), line);
+            }
+            
+            // Notify the debugger panel to refresh its list
+            notify_breakpoint_change();
+        }
+    });
+}
+
+/// Checks if there's a breakpoint at the given line (1-based)
+fn has_breakpoint_at_line(buffer: &Buffer, line: u32) -> bool {
+    let line_index = (line - 1) as i32;
+    
+    // Get marks at this line
+    let marks = buffer.source_marks_at_line(line_index, Some(BREAKPOINT_CATEGORY));
+    !marks.is_empty()
+}
+
+/// Adds a breakpoint mark at the given line (1-based)
+fn add_breakpoint_mark(buffer: &Buffer, line: u32) {
+    let line_index = (line - 1) as i32;
+    if let Some(iter) = buffer.iter_at_line(line_index) {
+        // Create a unique name for this mark
+        let mark_name = format!("breakpoint-{}", line);
+        buffer.create_source_mark(Some(&mark_name), BREAKPOINT_CATEGORY, &iter);
+    }
+}
+
+/// Removes a breakpoint mark at the given line (1-based)
+fn remove_breakpoint_mark(buffer: &Buffer, line: u32) {
+    let line_index = (line - 1) as i32;
+    let marks = buffer.source_marks_at_line(line_index, Some(BREAKPOINT_CATEGORY));
+    
+    for mark in marks {
+        buffer.delete_mark(&mark);
+    }
+}
+
+/// Adds a breakpoint visually at the specified line without notifying the debugger
+/// Used for syncing breakpoints from the debugger to the UI
+#[allow(dead_code)]
+pub fn add_breakpoint_visual(buffer: &Buffer, line: u32) {
+    if !has_breakpoint_at_line(buffer, line) {
+        add_breakpoint_mark(buffer, line);
+    }
+}
+
+/// Removes a breakpoint visually at the specified line without notifying the debugger
+/// Used for syncing breakpoints from the debugger to the UI
+#[allow(dead_code)]
+pub fn remove_breakpoint_visual(buffer: &Buffer, line: u32) {
+    remove_breakpoint_mark(buffer, line);
+}
+
+/// Clears all breakpoint marks from the buffer
+#[allow(dead_code)]
+pub fn clear_all_breakpoints(buffer: &Buffer) {
+    // Get all breakpoint marks
+    let start = buffer.start_iter();
+    let end = buffer.end_iter();
+    
+    // Remove all marks with the breakpoint category
+    buffer.remove_source_marks(&start, &end, Some(BREAKPOINT_CATEGORY));
 }
 
 /// Updates the style scheme of an existing buffer based on user theme preference
