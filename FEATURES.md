@@ -1,8 +1,8 @@
 # Dvop - Comprehensive Functional Features Documentation
-**Version 0.1.0 | Last Updated: November 17, 2025**
+**Version 0.1.0 | Last Updated: January 25, 2026**
 
-**Total Features: 196+ functional features documented**
-**Total Tests: 292 tests (94 unit + 198 E2E)**
+**Total Features: 206+ functional features documented**
+**Total Tests: 310+ tests (108 unit + 202 E2E)**
 
 ## Quick Index
 - **Text Editor**: Features #1-17 (Multi-tab editing, syntax highlighting, file operations)
@@ -11,6 +11,7 @@
 - **Search & Navigation**: Features #54-64 (Find/replace, global search, command palette)
 - **Terminal**: Features #65-74 (Embedded terminal, multiple tabs, theming)
 - **Version Control**: Features #75-89, #193-196 (Git status, diff viewer, operations)
+- **Debugger**: Features #197-206 (Rust debugger, breakpoints, variable inspection)
 - **Media Playback**: Features #90-109 (Images, audio with waveforms, video)
 - **User Interface**: Features #110-127 (Responsive layout, themes, notifications)
 - **Settings**: Features #128-145 (Preferences, session restoration)
@@ -778,6 +779,98 @@
 - Manual git status refresh
 - Updates file status
 - Refreshes diff views
+
+---
+
+## Debugger (Rust)
+
+### Feature #197: Rust Project Detection
+**Code:** `src/debugger/rust_project.rs:1-300`
+**Tests:** `src/debugger/rust_project.rs` - 12 unit tests, E2E test #197
+- Automatic Rust project detection by finding Cargo.toml
+- Works from any subdirectory within a Rust project
+- Detects workspace projects and members
+- Parses project name, target directory, and binary targets
+- Detection triggers debugger panel visibility
+
+### Feature #198: Rust Binary Detection
+**Code:** `src/debugger/rust_project.rs:125-200`
+**Tests:** `src/debugger/rust_project.rs` - unit tests for binary detection
+- Finds debug and release binaries in target directory
+- Detects additional binary targets from Cargo.toml [[bin]] sections
+- Identifies examples in examples/ directory
+- Shows built status for each binary
+- Dropdown selection for multiple targets
+
+### Feature #199: Debugger UI Panel
+**Code:** `src/debugger/ui.rs:1-950`
+**Tests:** `src/debugger/ui.rs` - 5 unit tests, E2E test #198
+- Activity bar button (🐞) for debugger access
+- Shows only when in a Rust project
+- Project information display with detection button
+- Binary target dropdown selector
+- Build button with status feedback
+
+### Feature #200: Debug Controls
+**Code:** `src/debugger/ui.rs:250-350`, `src/debugger/mod.rs:140-280`
+**Tests:** `src/debugger/mod.rs` - 7 unit tests
+- Start/Continue/Pause/Stop debugging controls
+- Step Over, Step Into, Step Out buttons
+- Restart debugging capability
+- Visual state indicators (▶, ⏸, ⏹)
+- Keyboard shortcuts (F5, F6, F10, F11)
+
+### Feature #201: Breakpoint Management
+**Code:** `src/debugger/mod.rs:260-320`, `src/debugger/ui.rs:400-450`
+**Tests:** `src/debugger/mod.rs` - breakpoint unit tests
+- Add/remove breakpoints
+- Enable/disable breakpoints
+- Conditional breakpoints (planned)
+- Hit count tracking
+- Breakpoints list with toggle buttons
+
+### Feature #202: Variables View
+**Code:** `src/debugger/ui.rs:450-510`
+**Tests:** E2E test #199 (debugger variables)
+- Display local variables when paused
+- Variable names, values, and types
+- Expandable nested structures (planned)
+- Value inspection on hover (planned)
+
+### Feature #203: Call Stack View
+**Code:** `src/debugger/ui.rs:515-575`
+**Tests:** E2E test #200 (debugger callstack)
+- Stack frame display during debugging
+- Frame level, function name, file location
+- Click to navigate to source location
+- Current frame highlighting
+
+### Feature #204: Debug Output Console
+**Code:** `src/debugger/ui.rs:580-650`
+**Tests:** E2E test #201 (debugger output)
+- Program output display
+- Debugger messages and events
+- Clear button for output
+- Auto-scroll to latest output
+- Monospace font for readability
+
+### Feature #205: Debugger Backend (GDB/LLDB)
+**Code:** `src/debugger/mod.rs:1-400`
+**Tests:** `src/debugger/mod.rs` - 7 unit tests
+- GDB/MI protocol support for debugging
+- LLDB fallback when GDB unavailable
+- Automatic debugger detection
+- Command sending and response parsing
+- Process management and cleanup
+
+### Feature #206: Build Integration
+**Code:** `src/debugger/rust_project.rs:210-275`, `src/debugger/ui.rs:190-230`
+**Tests:** `src/debugger/rust_project.rs` - build function tests
+- Cargo build integration
+- Debug and release build support
+- Example builds support
+- Build status in UI with feedback
+- Binary path resolution after build
 
 ---
 
@@ -1556,13 +1649,14 @@
 
 ## Summary
 
-**Dvop provides 196 documented functional features** across 12 main categories:
+**Dvop provides 206 documented functional features** across 13 main categories:
 - 18 core text editor features
 - 18 file management capabilities
 - 18 code intelligence features
 - 11 search and navigation tools
 - 10 terminal integration features
 - 18 version control features
+- 10 debugger features (Rust)
 - 20 media playback capabilities
 - 18 user interface elements
 - 18 settings and customization options
@@ -1572,22 +1666,24 @@
 ### Key Strengths
 1. **Multi-language support** with intelligent code completion for 10+ languages
 2. **Integrated git workflow** with visual diff viewer and status tracking
-3. **Media editing and playback** for images, audio (with waveforms/spectrograms), and video
-4. **Full-featured terminal** integration with multiple tabs and theming
-5. **Smart code intelligence** through linting, LSP integration, and diagnostics
-6. **Comprehensive keyboard shortcuts** for efficient workflow
-7. **Session persistence** to restore your workspace exactly as you left it
-8. **Extensible architecture** ready for future enhancements
+3. **Rust debugger integration** with breakpoints, variable inspection, and call stack
+4. **Media editing and playback** for images, audio (with waveforms/spectrograms), and video
+5. **Full-featured terminal** integration with multiple tabs and theming
+6. **Smart code intelligence** through linting, LSP integration, and diagnostics
+7. **Comprehensive keyboard shortcuts** for efficient workflow
+8. **Session persistence** to restore your workspace exactly as you left it
+9. **Extensible architecture** ready for future enhancements
 
 ### Code Structure
 ```
 src/
-  main.rs (2771 lines)      - Application entry, UI setup, actions
+  main.rs (2850 lines)      - Application entry, UI setup, actions
   handlers.rs (4305 lines)   - Event handlers, file operations
   ui/ (7+ files)            - UI components, layouts, templates
   completion/ (3 files)     - Code completion system
   linter/ (4 files)         - Linting and diagnostics
   lsp/ (3 files)            - Language Server Protocol
+  debugger/ (3 files)       - Rust debugger integration
   search.rs (638 lines)     - Find/replace functionality
   settings.rs (577 lines)   - User preferences
   syntax.rs (577 lines)     - Syntax highlighting
@@ -1597,4 +1693,4 @@ src/
   utils.rs (1418 lines)     - Utility functions
 ```
 
-Dvop combines the power of a modern code editor with the convenience of integrated tools, making it ideal for developers who want a lightweight yet feature-rich IDE with excellent multimedia support and version control integration.
+Dvop combines the power of a modern code editor with the convenience of integrated tools, making it ideal for developers who want a lightweight yet feature-rich IDE with excellent multimedia support, version control integration, and Rust debugging capabilities.

@@ -3895,6 +3895,323 @@ fn test_feature_196_git_diff_path_bar_deep_nested_files() {
             "Path box should have multiple segment buttons for nested path (found {})", button_count);
 }
 
+// ==================== DEBUGGER FEATURES ====================
+
+#[serial]
+#[test]
+fn test_feature_197_rust_project_detection() {
+    init_gtk();
+    
+    // Create a temporary Rust project
+    let dir = tempfile::TempDir::new().unwrap();
+    
+    // Create Cargo.toml
+    let cargo_toml = r#"
+[package]
+name = "test-debug-project"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "test-debug-project"
+path = "src/main.rs"
+"#;
+    fs::write(dir.path().join("Cargo.toml"), cargo_toml).unwrap();
+    
+    // Create src directory and main.rs
+    fs::create_dir(dir.path().join("src")).unwrap();
+    fs::write(dir.path().join("src/main.rs"), "fn main() { println!(\"Hello\"); }").unwrap();
+    
+    // Test project detection from root
+    use dvop::debugger::rust_project::{find_rust_project_root, is_rust_project, get_rust_project_info};
+    
+    let root = find_rust_project_root(dir.path());
+    assert!(root.is_some(), "Should find Rust project root");
+    assert_eq!(root.unwrap(), dir.path());
+    
+    assert!(is_rust_project(dir.path()), "Should detect as Rust project");
+    
+    // Test project info parsing
+    let info = get_rust_project_info(dir.path());
+    assert!(info.is_some(), "Should get project info");
+    
+    let info = info.unwrap();
+    assert_eq!(info.project_name, "test-debug-project");
+    assert_eq!(info.cargo_toml, dir.path().join("Cargo.toml"));
+    assert!(!info.is_workspace);
+}
+
+#[serial]
+#[test]
+fn test_feature_197_rust_project_detection_from_subfolder() {
+    init_gtk();
+    
+    // Create a temporary Rust project
+    let dir = tempfile::TempDir::new().unwrap();
+    
+    // Create Cargo.toml
+    fs::write(dir.path().join("Cargo.toml"), "[package]\nname = \"nested-test\"").unwrap();
+    
+    // Create nested directory structure
+    let deep_path = dir.path().join("src/modules/deep");
+    fs::create_dir_all(&deep_path).unwrap();
+    fs::write(deep_path.join("test.rs"), "// test").unwrap();
+    
+    // Test detection from deep subdirectory
+    use dvop::debugger::rust_project::find_rust_project_root;
+    
+    let root = find_rust_project_root(&deep_path);
+    assert!(root.is_some(), "Should find Rust project root from deep subfolder");
+    assert_eq!(root.unwrap(), dir.path());
+    
+    // Test detection from file path
+    let root = find_rust_project_root(&deep_path.join("test.rs"));
+    assert!(root.is_some(), "Should find Rust project root from file path");
+    assert_eq!(root.unwrap(), dir.path());
+}
+
+#[serial]
+#[test]
+fn test_feature_198_rust_binary_detection() {
+    init_gtk();
+    
+    // Create a temporary Rust project with target directory
+    let dir = tempfile::TempDir::new().unwrap();
+    
+    // Create Cargo.toml
+    let cargo_toml = r#"
+[package]
+name = "binary-test"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "binary-test"
+path = "src/main.rs"
+
+[[bin]]
+name = "secondary-bin"
+path = "src/bin/secondary.rs"
+"#;
+    fs::write(dir.path().join("Cargo.toml"), cargo_toml).unwrap();
+    
+    // Create source files
+    fs::create_dir_all(dir.path().join("src/bin")).unwrap();
+    fs::write(dir.path().join("src/main.rs"), "fn main() {}").unwrap();
+    fs::write(dir.path().join("src/bin/secondary.rs"), "fn main() {}").unwrap();
+    
+    // Create target/debug directory with "built" binary
+    let debug_dir = dir.path().join("target/debug");
+    fs::create_dir_all(&debug_dir).unwrap();
+    fs::write(debug_dir.join("binary_test"), "binary").unwrap(); // Note: underscore in binary name
+    
+    // Test binary detection
+    use dvop::debugger::rust_project::get_rust_project_info;
+    
+    let info = get_rust_project_info(dir.path()).unwrap();
+    
+    // Should find multiple binaries
+    assert!(!info.binaries.is_empty(), "Should find binaries");
+    
+    // Check main binary was detected
+    let main_binary = info.binaries.iter().find(|b| b.name == "binary-test");
+    assert!(main_binary.is_some(), "Should find main binary");
+}
+
+#[serial]
+#[test]
+fn test_feature_199_debugger_panel_creation() {
+    // Note: This test verifies the debugger module's state management
+    // without creating GTK widgets (which require the main thread).
+    // GTK widget creation is tested via the full E2E tests that run the binary.
+    
+    // Test debugger creation
+    let debugger = dvop::debugger::RustDebugger::new();
+    
+    // Verify debugger state
+    assert_eq!(debugger.state(), dvop::debugger::DebuggerState::Stopped);
+    
+    // Verify breakpoints are initially empty
+    assert!(debugger.get_breakpoints().is_empty(), "Breakpoints should initially be empty");
+    
+    // Verify config is initially None
+    assert!(debugger.get_config().is_none(), "Config should initially be None");
+}
+
+#[serial]
+#[test]
+fn test_feature_200_debug_controls() {
+    init_gtk();
+    
+    // Create debugger instance
+    let debugger = dvop::debugger::RustDebugger::new();
+    
+    // Test initial state
+    assert_eq!(debugger.state(), dvop::debugger::DebuggerState::Stopped);
+    
+    // Test that operations fail without proper setup
+    assert!(debugger.continue_execution().is_err(), "Continue should fail when stopped");
+    assert!(debugger.pause().is_err(), "Pause should fail when stopped");
+    assert!(debugger.step_over().is_err(), "Step over should fail when stopped");
+    assert!(debugger.step_into().is_err(), "Step into should fail when stopped");
+    assert!(debugger.step_out().is_err(), "Step out should fail when stopped");
+    
+    // Stop should succeed even when already stopped
+    assert!(debugger.stop().is_ok(), "Stop should succeed");
+}
+
+#[serial]
+#[test]
+fn test_feature_201_breakpoint_management() {
+    init_gtk();
+    
+    let debugger = dvop::debugger::RustDebugger::new();
+    
+    // Add a breakpoint
+    let bp1 = debugger.add_breakpoint(
+        std::path::PathBuf::from("/test/file.rs"), 
+        10
+    ).unwrap();
+    
+    assert_eq!(bp1.id, 1);
+    assert_eq!(bp1.line, 10);
+    assert!(bp1.enabled);
+    assert_eq!(bp1.hit_count, 0);
+    
+    // Add another breakpoint
+    let bp2 = debugger.add_breakpoint(
+        std::path::PathBuf::from("/test/file.rs"), 
+        20
+    ).unwrap();
+    
+    assert_eq!(bp2.id, 2);
+    
+    // Check breakpoints list
+    let breakpoints = debugger.get_breakpoints();
+    assert_eq!(breakpoints.len(), 2);
+    
+    // Toggle breakpoint
+    debugger.toggle_breakpoint(1).unwrap();
+    let breakpoints = debugger.get_breakpoints();
+    let bp1_updated = breakpoints.iter().find(|bp| bp.id == 1).unwrap();
+    assert!(!bp1_updated.enabled, "Breakpoint should be disabled after toggle");
+    
+    // Remove breakpoint
+    debugger.remove_breakpoint(1).unwrap();
+    let breakpoints = debugger.get_breakpoints();
+    assert_eq!(breakpoints.len(), 1);
+    assert_eq!(breakpoints[0].id, 2);
+}
+
+#[serial]
+#[test]
+fn test_feature_205_debugger_availability_check() {
+    init_gtk();
+    
+    // These functions should not panic regardless of system state
+    let gdb_available = dvop::debugger::RustDebugger::is_gdb_available();
+    let lldb_available = dvop::debugger::RustDebugger::is_lldb_available();
+    let preferred = dvop::debugger::RustDebugger::get_preferred_debugger();
+    
+    // If GDB is available, it should be preferred
+    if gdb_available {
+        assert_eq!(preferred, Some("gdb"));
+    } else if lldb_available {
+        assert_eq!(preferred, Some("lldb"));
+    } else {
+        // Neither available is also valid
+        assert!(preferred.is_none() || preferred == Some("gdb") || preferred == Some("lldb"));
+    }
+}
+
+#[serial]
+#[test]
+fn test_feature_206_debug_config() {
+    init_gtk();
+    
+    use std::collections::HashMap;
+    
+    // Test default config
+    let default_config = dvop::debugger::DebugConfig::default();
+    assert!(default_config.program.as_os_str().is_empty());
+    assert!(default_config.args.is_empty());
+    assert!(default_config.env_vars.is_empty());
+    assert!(default_config.stop_on_entry);
+    
+    // Test custom config
+    let config = dvop::debugger::DebugConfig {
+        program: std::path::PathBuf::from("/path/to/binary"),
+        args: vec!["--arg1".to_string(), "value".to_string()],
+        working_dir: std::path::PathBuf::from("/working/dir"),
+        env_vars: HashMap::from([("VAR".to_string(), "value".to_string())]),
+        stop_on_entry: false,
+    };
+    
+    // Set and retrieve config
+    let debugger = dvop::debugger::RustDebugger::new();
+    debugger.set_config(config.clone());
+    
+    let retrieved = debugger.get_config().unwrap();
+    assert_eq!(retrieved.program, config.program);
+    assert_eq!(retrieved.args, config.args);
+    assert_eq!(retrieved.working_dir, config.working_dir);
+    assert!(!retrieved.stop_on_entry);
+}
+
+#[serial]
+#[test]
+fn test_feature_197_debugger_visibility() {
+    init_gtk();
+    
+    // Create a Rust project
+    let rust_dir = tempfile::TempDir::new().unwrap();
+    fs::write(rust_dir.path().join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
+    
+    // Create a non-Rust project
+    let non_rust_dir = tempfile::TempDir::new().unwrap();
+    
+    // Test visibility check
+    use dvop::debugger::ui::should_show_debugger;
+    
+    assert!(should_show_debugger(rust_dir.path()), "Should show debugger for Rust project");
+    assert!(!should_show_debugger(non_rust_dir.path()), "Should not show debugger for non-Rust project");
+    
+    // Test from subdirectory
+    let sub_dir = rust_dir.path().join("src");
+    fs::create_dir(&sub_dir).unwrap();
+    assert!(should_show_debugger(&sub_dir), "Should show debugger from Rust project subdirectory");
+}
+
+#[serial]
+#[test]
+fn test_feature_198_workspace_detection() {
+    init_gtk();
+    
+    // Create a workspace project
+    let dir = tempfile::TempDir::new().unwrap();
+    
+    let cargo_toml = r#"
+[workspace]
+members = ["crate1", "crate2", "crate3"]
+
+[package]
+name = "workspace-root"
+version = "0.1.0"
+edition = "2021"
+"#;
+    fs::write(dir.path().join("Cargo.toml"), cargo_toml).unwrap();
+    
+    use dvop::debugger::rust_project::get_rust_project_info;
+    
+    let info = get_rust_project_info(dir.path()).unwrap();
+    
+    assert!(info.is_workspace, "Should detect workspace");
+    assert_eq!(info.workspace_members.len(), 3);
+    assert!(info.workspace_members.contains(&"crate1".to_string()));
+    assert!(info.workspace_members.contains(&"crate2".to_string()));
+    assert!(info.workspace_members.contains(&"crate3".to_string()));
+}
+
 #[serial]
 #[test]
 fn test_comprehensive_feature_count() {
@@ -3907,6 +4224,4 @@ fn test_comprehensive_feature_count() {
     let test_file = include_str!("e2e_tests.rs");
     let test_count = test_file.matches("#[test]").count();
     
-    assert!(test_count >= 80, "Should have at least 80 comprehensive E2E tests");
-}
-
+    assert!(test_count >= 90, "Should have at least 90 comprehensive E2E tests");}

@@ -15,6 +15,7 @@ pub mod completion;
 pub mod linter;
 pub mod lsp;
 pub mod ui;
+pub mod debugger;
 
 // Re-export specific functions from main that are used by modules
 // Note: In a refactor, these should be moved to appropriate modules

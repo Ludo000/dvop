@@ -218,6 +218,21 @@
                     </child>
                   </object>
                 </child>
+                <child>
+                  <object class="GtkToggleButton" id="debugger_button">
+                    <property name="css-classes">activity-bar-button</property>
+                    <property name="tooltip-text">Debugger (Ctrl+Shift+D)</property>
+                    <property name="visible">false</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">🐞</property>
+                        <style>
+                          <class name="debugger-icon"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
               </object>
             </child>
             
@@ -292,6 +307,19 @@
                             <property name="child">
                               <object class="GtkBox" id="git_diff_panel">
                                 <property name="css-classes">git-diff-panel</property>
+                                <property name="orientation">vertical</property>
+                                <property name="width-request">0</property>
+                                <property name="hexpand">true</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkStackPage">
+                            <property name="name">debugger</property>
+                            <property name="child">
+                              <object class="GtkBox" id="debugger_panel">
+                                <property name="css-classes">debugger-panel</property>
                                 <property name="orientation">vertical</property>
                                 <property name="width-request">0</property>
                                 <property name="hexpand">true</property>

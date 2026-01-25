@@ -43,6 +43,8 @@ tokio = { version = "1.42", features = ["full"] }  # Async runtime for LSP
 async-channel = "2.3"  # Async channels for LSP communication
 url = "2.5"  # URL parsing (used by lsp-types)
 quick-xml = "0.38"  # XML parsing for GTK UI file validation
+toml = "0.8"  # TOML parsing for Cargo.toml reading
+libc = "0.2"  # For process group management in debugger
 
 [dev-dependencies]
 # Testing dependencies
