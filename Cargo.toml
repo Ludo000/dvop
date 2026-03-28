@@ -26,8 +26,8 @@ once_cell = "1.21"  # For thread-safe lazy initialization
 regex = "1.12"  # For advanced text pattern matching in completion
 serde = { version = "1.0", features = ["derive"] }  # For JSON serialization/deserialization
 serde_json = "1.0"  # For JSON parsing
-lazy_static = "1.4"  # For global static variables
-tempfile = "3.23"  # For file operations and testing
+lazy_static = "1.5"  # For global static variables
+tempfile = "3.27"  # For file operations and testing
 chrono = "0.4"  # For proper date/time formatting
 gstreamer = "0.24"  # For audio playback
 gstreamer-app = "0.24"  # For audio data extraction
@@ -39,14 +39,14 @@ webkit6 = "0.5"  # For HTML rendering in markdown preview (GTK4 compatible)
 syn = { version = "2.0", features = ["full", "visit"] }  # For Rust code parsing and linting
 lsp-types = "0.97"  # LSP protocol types
 serde_repr = "0.1"  # Serde support for repr enums
-tokio = { version = "1.42", features = ["full"] }  # Async runtime for LSP
-async-channel = "2.3"  # Async channels for LSP communication
+tokio = { version = "1.50", features = ["full"] }  # Async runtime for LSP
+async-channel = "2.4"  # Async channels for LSP communication
 url = "2.5"  # URL parsing (used by lsp-types)
 quick-xml = "0.38"  # XML parsing for GTK UI file validation
 
 [dev-dependencies]
 # Testing dependencies
-serial_test = "3.2"  # For running tests serially (needed for GTK)
+serial_test = "3.4"  # For running tests serially (needed for GTK)
 
 [build-dependencies]
 glib-build-tools = "0.21"
