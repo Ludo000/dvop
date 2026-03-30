@@ -2507,6 +2507,36 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // After session restoration, file_path_manager is now populated.
+    // Re-run the status update for the active tab so the file size is shown.
+    {
+        let notebook_clone = editor_notebook.clone();
+        let file_path_manager_clone = file_path_manager.clone();
+        let secondary_status_clone = secondary_status_label.clone();
+        glib::idle_add_local_once(move || {
+            if let Some(page_num) = notebook_clone.current_page() {
+                if let Some(file_path) = file_path_manager_clone.borrow().get(&page_num).cloned() {
+                    if let Some((text_view, _)) =
+                        handlers::get_text_view_and_buffer_for_page(&notebook_clone, page_num)
+                    {
+                        if let Some(source_view) = text_view.downcast_ref::<sourceview5::View>() {
+                            let filename = file_path
+                                .file_name()
+                                .map(|n| n.to_string_lossy().into_owned())
+                                .unwrap_or_else(|| "Unknown".to_string());
+                            update_cursor_position_status(
+                                source_view,
+                                &secondary_status_clone,
+                                &filename,
+                                Some(&file_path),
+                            );
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     // Set up window close handler to save window size, pane positions, and check for unsaved changes
     let paned_for_close = paned.clone();
     let editor_paned_for_close = editor_paned.clone();
@@ -2746,12 +2776,25 @@ fn setup_gsettings_monitor(window: &impl IsA<gtk4::Widget>, terminal_notebook: &
     }
 }
 
+/// Formats a file size in bytes into a human-readable string (B, KB, MB, GB)
+fn format_file_size(bytes: u64) -> String {
+    if bytes < 1024 {
+        format!("{} B", bytes)
+    } else if bytes < 1024 * 1024 {
+        format!("{:.1} KB", bytes as f64 / 1024.0)
+    } else if bytes < 1024 * 1024 * 1024 {
+        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    } else {
+        format!("{:.1} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+    }
+}
+
 /// Updates the secondary status label with cursor position and file information
 fn update_cursor_position_status(
     text_view: &sourceview5::View,
     status_label: &Label,
     filename: &str,
-    _file_path: Option<&std::path::Path>,
+    file_path: Option<&std::path::Path>,
 ) {
     let buffer = text_view.buffer();
     let cursor_mark = buffer.get_insert();
@@ -2764,8 +2807,12 @@ fn update_cursor_position_status(
         // For untitled documents, just show numbers: "X:Y"
         format!("{}:{}", line, column)
     } else {
-        // For files, show: "filename | X:Y" (without path or labels)
-        format!("{} | {}:{}", filename, line, column)
+        // For files, show: "X:Y | filename | size"
+        let size_part = file_path
+            .and_then(|p| std::fs::metadata(p).ok())
+            .map(|m| format!(" | {}", format_file_size(m.len())))
+            .unwrap_or_default();
+        format!("{}:{} | {}{}", line, column, filename, size_part)
     };
 
     status_label.set_text(&status_text);

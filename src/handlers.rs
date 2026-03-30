@@ -1396,14 +1396,15 @@ pub fn open_or_focus_tab(
 
             // Add the paned widget directly to the notebook (no scrolled window wrapper)
             let new_page_num = notebook.append_page(&svg_paned, Some(&tab_widget));
-            notebook.set_current_page(Some(new_page_num));
 
-            // Update state
+            // Update state BEFORE set_current_page so switch-page sees the path
             println!("Adding SVG file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
             file_path_manager
                 .borrow_mut()
                 .insert(new_page_num, file_to_open.clone());
             *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+
+            notebook.set_current_page(Some(new_page_num));
 
             // Log successful opening
             crate::status_log::log_success(&format!("Opened {}", filename));
@@ -1477,14 +1478,15 @@ pub fn open_or_focus_tab(
 
             // Add the paned widget directly to the notebook (no scrolled window wrapper)
             let new_page_num = notebook.append_page(&markdown_paned, Some(&tab_widget));
-            notebook.set_current_page(Some(new_page_num));
 
-            // Update state
+            // Update state BEFORE set_current_page so switch-page sees the path
             println!("Adding Markdown file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
             file_path_manager
                 .borrow_mut()
                 .insert(new_page_num, file_to_open.clone());
             *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+
+            notebook.set_current_page(Some(new_page_num));
 
             // Log successful opening
             crate::status_log::log_success(&format!("Opened {}", filename));
@@ -1819,30 +1821,52 @@ pub fn open_or_focus_tab(
             }
         } else if utils::is_allowed_mime_type(&mime_type) {
             // Handle text file - use cached file reading for performance
-            // Create source view with syntax highlighting
-            let (source_view, source_buffer) = crate::syntax::create_source_view();
+            let is_large_file = content.len() >= crate::syntax::LARGE_FILE_THRESHOLD;
+
+            // Create source view – use lightweight variant for large files
+            let (source_view, source_buffer) = if is_large_file {
+                crate::syntax::create_source_view_for_large_file()
+            } else {
+                crate::syntax::create_source_view()
+            };
+
+            // Disable undo tracking while loading to avoid building a huge
+            // undo stack and emitting per-character change signals.
+            let text_buffer_for_load = source_buffer.clone().upcast::<TextBuffer>();
+            text_buffer_for_load.set_enable_undo(false);
             source_buffer.set_text(content);
+            text_buffer_for_load.set_enable_undo(true);
+            text_buffer_for_load.set_modified(false);
 
-            // Apply syntax highlighting based on file extension
-            crate::syntax::set_language_for_file(&source_buffer, file_to_open);
+            if is_large_file {
+                let size_mb = content.len() as f64 / 1_048_576.0;
+                crate::status_log::log_info(&format!(
+                    "{} is large ({:.1} MB) – syntax highlighting, completion and linting disabled for performance",
+                    file_name, size_mb
+                ));
+            } else {
+                // Apply syntax highlighting based on file extension
+                crate::syntax::set_language_for_file(&source_buffer, file_to_open);
 
-            // Apply diagnostic underlines if there are any stored for this file
-            crate::linter::apply_diagnostic_underlines(&source_buffer, &file_to_open.to_string_lossy());
+                // Apply diagnostic underlines if there are any stored for this file
+                crate::linter::apply_diagnostic_underlines(&source_buffer, &file_to_open.to_string_lossy());
 
-            // Register buffer and view for future diagnostic updates
-            crate::linter::ui::register_buffer_for_diagnostics(file_to_open, &source_buffer, &source_view);
+                // Register buffer and view for future diagnostic updates
+                crate::linter::ui::register_buffer_for_diagnostics(file_to_open, &source_buffer, &source_view);
 
-            // Setup completion for the specific file type
-            crate::completion::setup_completion_for_file(&source_view, Some(file_to_open));
+                // Setup completion for the specific file type
+                crate::completion::setup_completion_for_file(&source_view, Some(file_to_open));
 
-            // Setup keyboard shortcuts for completion
-            crate::completion::setup_completion_shortcuts(&source_view);
+                // Setup keyboard shortcuts for completion
+                crate::completion::setup_completion_shortcuts(&source_view);
 
-            // Setup linting for the file
-            crate::linter::ui::setup_linting(&source_view, Some(file_to_open));
+                // Setup linting for the file
+                crate::linter::ui::setup_linting(&source_view, Some(file_to_open));
+            }
 
             // Ctrl+Click on an underlined diagnostic focuses corresponding entry in diagnostics panel
-            {
+            // (only for normal-sized files that have diagnostics enabled)
+            if !is_large_file {
                 let source_view_for_gesture = source_view.clone();
                 let file_path_for_gesture = file_to_open.to_string_lossy().to_string();
                 let gesture = gtk4::GestureClick::new();
@@ -1917,6 +1941,14 @@ pub fn open_or_focus_tab(
 
         // Add the new tab to the notebook and make it the current page
         let new_page_num = notebook.append_page(&new_scrolled_window, Some(&tab_widget));
+
+        // Update state BEFORE set_current_page so switch-page sees the path
+        println!("Adding text file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
+        file_path_manager
+            .borrow_mut()
+            .insert(new_page_num, file_to_open.clone());
+        *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
+
         notebook.set_current_page(Some(new_page_num));
 
         // Focus the text area of the newly opened file if it's a text file
@@ -1928,13 +1960,6 @@ pub fn open_or_focus_tab(
                 // The user's intent (file manager vs text editor) should remain unchanged
             }
         }
-
-        // Update state
-        println!("Adding text file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
-        file_path_manager
-            .borrow_mut()
-            .insert(new_page_num, file_to_open.clone());
-        *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
 
         // Log successful opening
         crate::status_log::log_success(&format!("Opened {}", filename));

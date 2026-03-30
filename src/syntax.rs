@@ -6,6 +6,11 @@ use gtk4::Settings;
 use sourceview5::{prelude::*, Buffer, LanguageManager, StyleSchemeManager, View};
 use std::path::Path;
 
+/// Files larger than this threshold (in bytes) are considered "large" and will
+/// have expensive features (syntax highlighting, completion, linting) disabled
+/// to keep the editor responsive.
+pub const LARGE_FILE_THRESHOLD: usize = 10_485_760; // 10 MB
+
 /// Determines whether the system is using a dark theme
 ///
 /// Checks the GTK settings and environment to determine if the system prefers dark mode
@@ -249,6 +254,42 @@ pub fn create_source_view() -> (View, Buffer) {
 
     // Note: setup_linting is called later when the file path is known
     // See handlers.rs open_or_focus_tab() which calls setup_linting with the actual file path
+
+    (source_view, buffer)
+}
+
+/// Creates a lightweight source view optimised for large files.
+///
+/// Compared to `create_source_view` this skips completion setup and disables
+/// highlight-current-line to reduce per-frame work.  The caller is expected to
+/// also skip syntax highlighting, linting and completion registration.
+pub fn create_source_view_for_large_file() -> (View, Buffer) {
+    let buffer = Buffer::new(None);
+
+    // Apply colour scheme (cheap, and keeps the editor looking consistent)
+    let scheme_manager = StyleSchemeManager::new();
+    let preferred_scheme = get_preferred_style_scheme();
+    if let Some(scheme) = scheme_manager.scheme(&preferred_scheme) {
+        buffer.set_style_scheme(Some(&scheme));
+    }
+
+    let source_view = View::with_buffer(&buffer);
+
+    source_view.set_monospace(true);
+    source_view.set_editable(true);
+    source_view.set_cursor_visible(true);
+    source_view.set_show_line_numbers(true);
+    // Disable features that are expensive on large buffers
+    source_view.set_highlight_current_line(false);
+    source_view.set_tab_width(4);
+    source_view.set_auto_indent(false);
+
+    // Apply user font size
+    let settings = crate::settings::get_settings();
+    let font_size = settings.get_font_size();
+    apply_font_size_to_view(&source_view, font_size);
+
+    // No completion, no linting – those are too expensive for large files
 
     (source_view, buffer)
 }
