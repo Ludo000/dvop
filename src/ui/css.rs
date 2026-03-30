@@ -24,8 +24,8 @@ pub fn apply_custom_css() {
 
 /// Builds the complete CSS string by combining all component styles
 fn build_complete_css() -> String {
-    format!(
-        "{}{}{}{}{}{}{}{}{}{}",
+    let mut css = format!(
+        "{}{}{}{}{}{}{}{}{}{}{}",
         get_notebook_tab_styles(),
         get_button_styles(),
         get_status_bar_styles(),
@@ -35,8 +35,25 @@ fn build_complete_css() -> String {
         get_list_styles(),
         get_activity_bar_styles(),
         get_search_styles(),
-        get_diagnostics_styles()
-    )
+        get_diagnostics_styles(),
+        get_extension_styles()
+    );
+
+    // Append CSS from enabled extensions (loaded from their CSS files)
+    let mgr = crate::extensions::manager::get_manager();
+    for css_path in mgr.get_extension_css_paths() {
+        match std::fs::read_to_string(&css_path) {
+            Ok(ext_css) => {
+                css.push('\n');
+                css.push_str(&ext_css);
+            }
+            Err(e) => {
+                eprintln!("Failed to read extension CSS {:?}: {}", css_path, e);
+            }
+        }
+    }
+
+    css
 }
 
 /// Returns CSS styles for notebook tabs and related components
@@ -740,6 +757,155 @@ fn get_diagnostics_styles() -> &'static str {
     /* Collapsible file header in diagnostics panel - match message padding */
     .diagnostic-file-header {
         padding: 12px;
+    }
+    "
+}
+
+/// Returns CSS styles for the extensions panel
+fn get_extension_styles() -> &'static str {
+    "
+    /* === EXTENSIONS PANEL STYLES === */
+
+    .extensions-panel {
+        background-color: @theme_base_color;
+    }
+
+    .extension-panel-title {
+        font-size: 0.8em;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        color: alpha(@theme_fg_color, 0.7);
+        padding: 4px 0;
+    }
+
+    .extension-list {
+        background-color: transparent;
+    }
+
+    .extension-card {
+        padding: 10px;
+        border-bottom: 1px solid alpha(@theme_fg_color, 0.08);
+        transition: background-color 0.15s ease;
+    }
+
+    .extension-card:hover {
+        background-color: alpha(@theme_selected_bg_color, 0.06);
+    }
+
+    .extension-icon {
+        color: alpha(@theme_fg_color, 0.6);
+    }
+
+    .extension-name {
+        font-size: 0.95em;
+        font-weight: 600;
+        color: @theme_fg_color;
+    }
+
+    .extension-meta {
+        font-size: 0.75em;
+        color: alpha(@theme_fg_color, 0.5);
+    }
+
+    .extension-description {
+        font-size: 0.8em;
+        color: alpha(@theme_fg_color, 0.65);
+        margin-top: 4px;
+    }
+
+    .extension-badge {
+        font-size: 0.65em;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background-color: alpha(@theme_selected_bg_color, 0.15);
+        color: alpha(@theme_fg_color, 0.7);
+    }
+
+    /* Extension detail view */
+    .extension-detail-title {
+        font-size: 1.0em;
+        font-weight: 700;
+        color: @theme_fg_color;
+    }
+
+    .extension-detail-name {
+        font-size: 1.1em;
+        font-weight: 700;
+        color: @theme_fg_color;
+    }
+
+    .ext-detail-tab-bar {
+        background-color: alpha(@theme_base_color, 0.5);
+        padding: 4px 0;
+    }
+
+    .ext-tab-button {
+        border-radius: 0;
+        padding: 4px 6px;
+        border: none;
+        background: transparent;
+        min-height: 0;
+        min-width: 0;
+    }
+
+    .ext-tab-button:checked {
+        background-color: alpha(@theme_selected_bg_color, 0.15);
+        border-left: 2px solid @theme_selected_bg_color;
+    }
+
+    .ext-tab-button:hover:not(:checked) {
+        background-color: alpha(@theme_fg_color, 0.04);
+    }
+
+    .ext-tab-label {
+        font-size: 0.65em;
+        font-weight: 600;
+        color: alpha(@theme_fg_color, 0.7);
+    }
+
+    .ext-section-header {
+        font-size: 0.75em;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        color: alpha(@theme_fg_color, 0.6);
+        text-transform: uppercase;
+        margin-top: 4px;
+    }
+
+    .ext-info-key {
+        font-size: 0.8em;
+        font-weight: 600;
+        color: alpha(@theme_fg_color, 0.7);
+    }
+
+    .ext-info-value {
+        font-size: 0.8em;
+        color: @theme_fg_color;
+    }
+
+    .ext-info-dim {
+        font-size: 0.75em;
+        color: alpha(@theme_fg_color, 0.45);
+    }
+
+    .ext-keybinding-key {
+        font-size: 0.75em;
+        font-weight: 600;
+        font-family: monospace;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background-color: alpha(@theme_fg_color, 0.08);
+        color: alpha(@theme_fg_color, 0.8);
+    }
+
+    .ext-disabled-indicator {
+        font-size: 0.65em;
+        font-weight: 600;
+        padding: 0px 4px;
+        border-radius: 3px;
+        background-color: alpha(@theme_fg_color, 0.08);
+        color: alpha(@theme_fg_color, 0.4);
     }
     "
 }

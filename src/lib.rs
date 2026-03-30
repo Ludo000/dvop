@@ -14,6 +14,7 @@ pub mod video;
 pub mod completion;
 pub mod linter;
 pub mod lsp;
+pub mod extensions;
 pub mod ui;
 
 // Re-export specific functions from main that are used by modules

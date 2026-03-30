@@ -700,6 +700,8 @@ fn actually_close_tab(
         if crate::video::is_video_file(file_path) {
             crate::video::stop_video_for_file(file_path);
         }
+        // Fire extension on_file_close hooks
+        crate::extensions::hooks::fire_on_file_close(file_path);
     }
 
     notebook.remove_page(Some(page_num_to_close));
@@ -1305,6 +1307,9 @@ pub fn open_or_focus_tab(
     // Log opening operation
     crate::status_log::log_info(&format!("Opening {}...", filename));
 
+    // Fire extension on_file_open hooks
+    crate::extensions::hooks::fire_on_file_open(file_to_open);
+
     // Check if file is already open
     let mut page_to_focus = None;
     let num_pages = notebook.n_pages();
@@ -1904,6 +1909,9 @@ pub fn open_or_focus_tab(
                 });
                 source_view.add_controller(gesture);
             }
+
+            // Add extension editor context menu entries
+            setup_extension_editor_context_menu(&source_view, window.upcast_ref::<ApplicationWindow>());
 
             // Set up interaction tracking for the text editor
             let text_view = source_view.clone().upcast::<TextView>();
@@ -4088,6 +4096,40 @@ fn show_file_context_menu(
     menu_box.append(&paste_button);
     menu_box.append(&separator1);
     menu_box.append(&delete_button);
+
+    // Add extension file explorer context menu entries
+    {
+        let ext_entries = crate::extensions::manager::get_manager()
+            .get_file_explorer_context_menu_entries();
+        if !ext_entries.is_empty() {
+            let ext_separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
+            menu_box.append(&ext_separator);
+
+            for (ext_path, entry) in ext_entries {
+                let btn = Button::with_label(&entry.label);
+                btn.add_css_class("flat");
+                btn.set_hexpand(true);
+                if let Some(child) = btn.child() {
+                    if let Ok(label) = child.downcast::<gtk4::Label>() {
+                        label.set_xalign(0.0);
+                    }
+                }
+                let script_path = ext_path.join(&entry.script);
+                let fp_str = file_path.to_string_lossy().to_string();
+                let popover_weak = popover.downgrade();
+                btn.connect_clicked(move |_| {
+                    if let Some(p) = popover_weak.upgrade() {
+                        p.popdown();
+                    }
+                    crate::extensions::hooks::run_file_explorer_context_menu_script(
+                        &script_path, &fp_str,
+                    );
+                });
+                menu_box.append(&btn);
+            }
+        }
+    }
+
     popover.set_child(Some(&menu_box));
 
     // Set the parent to the clicked row for proper positioning
@@ -4325,4 +4367,60 @@ pub fn jump_to_line_and_column(source_view: &sourceview5::View, line: usize, col
     });
 
     println!("Jumped to line {}, column {}", line, column);
+}
+
+/// Set up extension editor context menu entries on a source view.
+/// Public so it can be called on refresh.
+pub fn setup_extension_editor_context_menu(
+    source_view: &sourceview5::View,
+    window: &ApplicationWindow,
+) {
+    // Register ALL extensions' context menu actions (enabled and disabled),
+    // and control activation via set_enabled(). For dynamic toggle support.
+    let mgr = crate::extensions::manager::get_manager();
+    let menu = gtk4::gio::Menu::new();
+    let mut has_entries = false;
+
+    for ext in mgr.get_extensions() {
+        if let Some(ref ctx) = ext.manifest.contributions.context_menus {
+            for entry in &ctx.editor {
+                let action_name = format!(
+                    "ext-editor-ctx-{}",
+                    entry.label.to_lowercase().replace(' ', "-")
+                );
+                let script_path = ext.path.join(&entry.script);
+
+                // Only create the action if it doesn't already exist
+                if window.lookup_action(&action_name).is_none() {
+                    let action = gtk4::gio::SimpleAction::new(&action_name, None);
+                    action.set_enabled(ext.manifest.enabled);
+                    let sp = script_path.clone();
+                    action.connect_activate(move |_, _| {
+                        let (file_path, selection) =
+                            crate::extensions::hooks::ACTIVE_FILE_PATH.with(|fp| {
+                                let file = fp.borrow().as_ref().map(|p| p.to_string_lossy().to_string());
+                                (file, None::<String>)
+                            });
+                        let fp = file_path.unwrap_or_default();
+                        let sel = selection.unwrap_or_default();
+                        crate::extensions::hooks::run_editor_context_menu_script(&sp, &fp, &sel, 0, 0);
+                    });
+                    window.add_action(&action);
+                }
+
+                // Only add enabled entries to the visible menu
+                if ext.manifest.enabled {
+                    menu.append(Some(&entry.label), Some(&format!("win.{}", action_name)));
+                    has_entries = true;
+                }
+            }
+        }
+    }
+    drop(mgr);
+
+    if has_entries {
+        source_view.set_extra_menu(Some(&menu.upcast::<gtk4::gio::MenuModel>()));
+    } else {
+        source_view.set_extra_menu(None::<&gtk4::gio::MenuModel>);
+    }
 }

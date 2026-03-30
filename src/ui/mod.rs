@@ -117,6 +117,8 @@ mod imp {
         pub search_button: TemplateChild<gtk4::ToggleButton>,
         #[template_child]
         pub git_diff_button: TemplateChild<gtk4::ToggleButton>,
+        #[template_child]
+        pub extensions_button: TemplateChild<gtk4::ToggleButton>,
 
         // Main layout
         #[template_child]
@@ -139,6 +141,10 @@ mod imp {
         // Git diff panel
         #[template_child]
         pub git_diff_panel: TemplateChild<GtkBox>,
+
+        // Extensions panel
+        #[template_child]
+        pub extensions_panel: TemplateChild<GtkBox>,
 
         // Editor
         #[template_child]
@@ -425,6 +431,7 @@ pub fn create_text_view(
 /// - gtk4::ToggleButton: The explorer button from activity bar
 /// - gtk4::ToggleButton: The search button from activity bar
 /// - gtk4::ToggleButton: The git diff button from activity bar
+/// - gtk4::ToggleButton: The extensions button from activity bar
 /// - gtk4::Stack: The sidebar stack for switching panels
 pub fn create_paned(
     window: &DvopWindow,
@@ -432,6 +439,7 @@ pub fn create_paned(
     GtkBox,
     gtk4::Paned,
     gtk4::Paned,
+    gtk4::ToggleButton,
     gtk4::ToggleButton,
     gtk4::ToggleButton,
     gtk4::ToggleButton,
@@ -449,6 +457,7 @@ pub fn create_paned(
         imp.explorer_button.get(),
         imp.search_button.get(),
         imp.git_diff_button.get(),
+        imp.extensions_button.get(),
         imp.sidebar_stack.get(),
     )
 }

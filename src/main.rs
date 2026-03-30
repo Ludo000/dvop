@@ -1,6 +1,7 @@
 // Module declarations for the application components
 mod audio; // Audio file playback functionality
 mod completion; // Code completion functionality
+mod extensions; // Extension system
 mod file_cache; // File content caching for performance optimization
 mod handlers; // Event handlers and business logic
 mod linter; // Code linting and diagnostics
@@ -30,6 +31,53 @@ struct MenuCommand {
     label: &'static str,
     action: &'static str,
     keywords: Vec<&'static str>,
+}
+
+/// Dynamic command from an extension (commands + text transforms)
+#[derive(Clone)]
+enum ExtCommand {
+    Command { label: String, script_path: PathBuf },
+    Transform { label: String, script_path: PathBuf },
+}
+
+impl ExtCommand {
+    fn label(&self) -> &str {
+        match self {
+            ExtCommand::Command { label, .. } | ExtCommand::Transform { label, .. } => label,
+        }
+    }
+    fn matches(&self, query: &str) -> bool {
+        self.label().to_lowercase().contains(query)
+    }
+    fn execute(&self) {
+        match self {
+            ExtCommand::Command { script_path, .. } => {
+                extensions::hooks::run_extension_command_on_active_editor(script_path);
+            }
+            ExtCommand::Transform { script_path, .. } => {
+                extensions::hooks::run_text_transform_on_active_editor(script_path);
+            }
+        }
+    }
+}
+
+/// Get extension commands + text transforms as dynamic palette entries
+fn get_extension_palette_commands() -> Vec<ExtCommand> {
+    let mgr = extensions::manager::get_manager();
+    let mut cmds = Vec::new();
+    for (path, cmd) in mgr.get_extension_commands() {
+        cmds.push(ExtCommand::Command {
+            label: cmd.title.clone(),
+            script_path: path.join(&cmd.script),
+        });
+    }
+    for (path, t) in mgr.get_extension_transforms() {
+        cmds.push(ExtCommand::Transform {
+            label: format!("Transform: {}", t.title),
+            script_path: path.join(&t.script),
+        });
+    }
+    cmds
 }
 
 /// Get the list of all menu commands
@@ -163,7 +211,21 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
         if let Some(label) = row.child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
             let text = label.text();
 
-            // Find and execute the matching command
+            // Check if this is an extension command
+            if row.has_css_class("ext-command") {
+                let ext_cmds = get_extension_palette_commands();
+                for ext_cmd in &ext_cmds {
+                    if ext_cmd.label() == text.as_str() {
+                        ext_cmd.execute();
+                        break;
+                    }
+                }
+                entry_clone_for_activate.set_text("");
+                popover_clone_for_activate.popdown();
+                return;
+            }
+
+            // Find and execute the matching built-in command
             for cmd in &commands_clone {
                 if cmd.label == text.as_str() {
                     if let Some(window) = window_weak_for_activate.upgrade() {
@@ -230,6 +292,25 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
             }
         }
 
+        // Also search extension commands and text transforms
+        let ext_cmds = get_extension_palette_commands();
+        for ext_cmd in &ext_cmds {
+            if ext_cmd.matches(&search_text) {
+                let label = gtk4::Label::new(Some(ext_cmd.label()));
+                label.set_xalign(0.0);
+                label.set_margin_start(8);
+                label.set_margin_end(8);
+                label.set_margin_top(4);
+                label.set_margin_bottom(4);
+
+                let row = gtk4::ListBoxRow::new();
+                row.add_css_class("ext-command");
+                row.set_child(Some(&label));
+                listbox_for_search.append(&row);
+                found_any = true;
+            }
+        }
+
         if found_any {
             // Force popover to close and reopen to recalculate size
             popover_for_search.popdown();
@@ -264,23 +345,34 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
             {
                 let text = label.text();
 
-                // Find and execute the matching command
-                for cmd in &commands_for_enter {
-                    if cmd.label == text.as_str() {
-                        if let Some(window) = window_weak_for_enter.upgrade() {
-                            if cmd.action.starts_with("app.") {
-                                if let Some(app) = window.application() {
-                                    app.activate_action(&cmd.action[4..], None);
-                                }
-                            } else if cmd.action.starts_with("win.") {
-                                gtk4::prelude::ActionGroupExt::activate_action(
-                                    &window,
-                                    &cmd.action[4..],
-                                    None,
-                                );
-                            }
+                // Check if this is an extension command
+                if first_row.has_css_class("ext-command") {
+                    let ext_cmds = get_extension_palette_commands();
+                    for ext_cmd in &ext_cmds {
+                        if ext_cmd.label() == text.as_str() {
+                            ext_cmd.execute();
+                            break;
                         }
-                        break;
+                    }
+                } else {
+                    // Find and execute the matching built-in command
+                    for cmd in &commands_for_enter {
+                        if cmd.label == text.as_str() {
+                            if let Some(window) = window_weak_for_enter.upgrade() {
+                                if cmd.action.starts_with("app.") {
+                                    if let Some(app) = window.application() {
+                                        app.activate_action(&cmd.action[4..], None);
+                                    }
+                                } else if cmd.action.starts_with("win.") {
+                                    gtk4::prelude::ActionGroupExt::activate_action(
+                                        &window,
+                                        &cmd.action[4..],
+                                        None,
+                                    );
+                                }
+                            }
+                            break;
+                        }
                     }
                 }
             }
@@ -643,6 +735,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         explorer_button,
         search_button,
         git_diff_button,
+        extensions_button,
         sidebar_stack,
     ) = ui::create_paned(&window);
 
@@ -785,6 +878,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     } else if saved_sidebar_tab == "git-diff" {
         git_diff_button.set_active(saved_sidebar_visible);
         sidebar_stack.set_visible_child_name("git-diff");
+    } else if saved_sidebar_tab == "extensions" {
+        extensions_button.set_active(saved_sidebar_visible);
+        sidebar_stack.set_visible_child_name("extensions");
     } else {
         explorer_button.set_active(saved_sidebar_visible);
         sidebar_stack.set_visible_child_name("explorer");
@@ -809,15 +905,23 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    // Shared list of extension sidebar panel buttons (populated later)
+    let ext_panel_buttons: std::rc::Rc<std::cell::RefCell<Vec<gtk4::ToggleButton>>> =
+        std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+
     // Setup explorer and search button toggle behavior
     let search_button_clone = search_button.clone();
     let git_diff_button_clone = git_diff_button.clone();
+    let extensions_button_clone = extensions_button.clone();
     let sidebar_stack_clone = sidebar_stack.clone();
     let paned_clone = paned.clone();
+    let ext_panel_buttons_1 = ext_panel_buttons.clone();
     explorer_button.connect_toggled(move |button| {
         if button.is_active() {
             search_button_clone.set_active(false);
             git_diff_button_clone.set_active(false);
+            extensions_button_clone.set_active(false);
+            for b in ext_panel_buttons_1.borrow().iter() { b.set_active(false); }
             sidebar_stack_clone.set_visible_child_name("explorer");
             // Show the sidebar by setting the first child visible
             if let Some(start_child) = paned_clone.start_child() {
@@ -852,12 +956,16 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     let explorer_button_clone = explorer_button.clone();
     let git_diff_button_clone2 = git_diff_button.clone();
+    let extensions_button_clone2 = extensions_button.clone();
     let sidebar_stack_clone2 = sidebar_stack.clone();
     let paned_clone2 = paned.clone();
+    let ext_panel_buttons_2 = ext_panel_buttons.clone();
     search_button.connect_toggled(move |button| {
         if button.is_active() {
             explorer_button_clone.set_active(false);
             git_diff_button_clone2.set_active(false);
+            extensions_button_clone2.set_active(false);
+            for b in ext_panel_buttons_2.borrow().iter() { b.set_active(false); }
             sidebar_stack_clone2.set_visible_child_name("search");
             // Show the sidebar by setting the first child visible
             if let Some(start_child) = paned_clone2.start_child() {
@@ -892,12 +1000,16 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     let explorer_button_clone2 = explorer_button.clone();
     let search_button_clone2 = search_button.clone();
+    let extensions_button_clone3 = extensions_button.clone();
     let sidebar_stack_clone3 = sidebar_stack.clone();
     let paned_clone3 = paned.clone();
+    let ext_panel_buttons_3 = ext_panel_buttons.clone();
     git_diff_button.connect_toggled(move |button| {
         if button.is_active() {
             explorer_button_clone2.set_active(false);
             search_button_clone2.set_active(false);
+            extensions_button_clone3.set_active(false);
+            for b in ext_panel_buttons_3.borrow().iter() { b.set_active(false); }
             sidebar_stack_clone3.set_visible_child_name("git-diff");
             // Show the sidebar by setting the first child visible
             if let Some(start_child) = paned_clone3.start_child() {
@@ -929,6 +1041,144 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             let _ = settings.save();
         }
     });
+
+    // Extensions button toggle handler
+    let explorer_button_clone3 = explorer_button.clone();
+    let search_button_clone3 = search_button.clone();
+    let git_diff_button_clone3 = git_diff_button.clone();
+    let sidebar_stack_clone4 = sidebar_stack.clone();
+    let paned_clone4 = paned.clone();
+    let ext_panel_buttons_4 = ext_panel_buttons.clone();
+    extensions_button.connect_toggled(move |button| {
+        if button.is_active() {
+            explorer_button_clone3.set_active(false);
+            search_button_clone3.set_active(false);
+            git_diff_button_clone3.set_active(false);
+            for b in ext_panel_buttons_4.borrow().iter() { b.set_active(false); }
+            sidebar_stack_clone4.set_visible_child_name("extensions");
+            // Show the sidebar by setting the first child visible
+            if let Some(start_child) = paned_clone4.start_child() {
+                start_child.set_visible(true);
+                let settings = crate::settings::get_settings();
+                let width = settings.get_file_panel_width();
+                paned_clone4.set_position(width);
+            }
+            // Save sidebar visible state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(true);
+            let _ = settings.save();
+        } else {
+            // If the button is deactivated, hide the sidebar completely
+            if let Some(start_child) = paned_clone4.start_child() {
+                // Save current width before hiding
+                let current_width = paned_clone4.position();
+                if current_width > 0 {
+                    let mut settings = crate::settings::get_settings_mut();
+                    settings.set_file_panel_width(current_width);
+                    let _ = settings.save();
+                }
+                start_child.set_visible(false);
+                paned_clone4.set_position(0);
+            }
+            // Save sidebar hidden state
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_sidebar_visible(false);
+            let _ = settings.save();
+        }
+    });
+
+    // Initialize the extension system
+    crate::extensions::sample::ensure_sample_archives();
+    crate::extensions::manager::init();
+
+    // Set up hook context and fire on_app_start
+    crate::extensions::hooks::set_active_notebook(&editor_notebook);
+    crate::extensions::hooks::set_status_label(&secondary_status_label);
+    crate::extensions::hooks::fire_on_app_start();
+
+    // Register extension keybindings on the window
+    crate::extensions::hooks::register_extension_keybindings(window.upcast_ref::<gtk4::ApplicationWindow>(), app);
+
+    // Populate the extensions panel UI
+    let extensions_panel = imp.extensions_panel.get();
+    crate::extensions::ui::populate_extensions_panel(&extensions_panel);
+
+    // Add extension sidebar panels
+    {
+        let panels = crate::extensions::manager::get_manager().get_extension_sidebar_panels();
+        for (ext_id, panel, enabled) in panels {
+            let panel_id = panel.id.clone();
+            let panel_name = format!("ext-{}-{}", ext_id, panel_id);
+
+            // Create a scrolled text view for the panel content
+            let scroll = gtk4::ScrolledWindow::new();
+            let text_view = gtk4::TextView::new();
+            text_view.set_editable(false);
+            text_view.set_wrap_mode(gtk4::WrapMode::Word);
+            text_view.set_monospace(true);
+            text_view.set_margin_start(8);
+            text_view.set_margin_end(8);
+            text_view.set_margin_top(8);
+            text_view.set_margin_bottom(8);
+            scroll.set_child(Some(&text_view));
+
+            // Populate with initial content if enabled
+            if enabled {
+                let content = crate::extensions::hooks::get_sidebar_panel_content(
+                    &ext_id, &panel_id, "init",
+                );
+                text_view.buffer().set_text(&content);
+            }
+
+            // Register for refresh on tab switch
+            crate::extensions::hooks::register_sidebar_panel_view(&ext_id, &panel_id, &text_view);
+
+            sidebar_stack.add_named(&scroll, Some(&panel_name));
+
+            // Add a toggle button to the activity bar
+            let btn = gtk4::ToggleButton::new();
+            btn.set_icon_name(&panel.icon);
+            btn.set_tooltip_text(Some(&panel.title));
+            btn.add_css_class("flat");
+            btn.add_css_class("activity-bar-button");
+            btn.set_visible(enabled); // Hidden if extension is disabled
+
+            let sidebar_stack_for_panel = sidebar_stack.clone();
+            let paned_for_panel = paned.clone();
+            let explorer_btn = explorer_button.clone();
+            let search_btn = search_button.clone();
+            let git_btn = git_diff_button.clone();
+            let ext_btn = extensions_button.clone();
+            let ext_panel_btns = ext_panel_buttons.clone();
+            let pn = panel_name.clone();
+            let btn_self = btn.clone();
+            btn.connect_toggled(move |button| {
+                if button.is_active() {
+                    explorer_btn.set_active(false);
+                    search_btn.set_active(false);
+                    git_btn.set_active(false);
+                    ext_btn.set_active(false);
+                    // Deactivate other extension panel buttons
+                    for b in ext_panel_btns.borrow().iter() {
+                        if b != &btn_self {
+                            b.set_active(false);
+                        }
+                    }
+                    sidebar_stack_for_panel.set_visible_child_name(&pn);
+                    if let Some(start_child) = paned_for_panel.start_child() {
+                        start_child.set_visible(true);
+                        let settings = crate::settings::get_settings();
+                        let width = settings.get_file_panel_width();
+                        paned_for_panel.set_position(width);
+                    }
+                }
+            });
+
+            ext_panel_buttons.borrow_mut().push(btn.clone());
+            let activity_bar_ref = imp.activity_bar.get();
+            activity_bar_ref.append(&btn);
+        }
+    }
 
     // Add drag gesture to activity bar to allow dragging sidebar open
     let activity_bar = imp.activity_bar.get();
@@ -1633,6 +1883,10 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                                         .map(|name| name.to_string_lossy().into_owned())
                                         .unwrap_or_else(|| "file".to_string());
                                     crate::status_log::log_success(&format!("Saved {}", filename));
+                                    // Refresh extension status bar (e.g. word count changed)
+                                    extensions::manager::update_status_bar_text(&path_to_save);
+                                    // Fire extension on_file_save hooks
+                                    extensions::hooks::fire_on_file_save(&path_to_save);
                                 }
                                 Err(e) => {
                                     crate::status_log::log_error(&format!(
@@ -1716,6 +1970,17 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
         // Update the active tab path reference
         *active_tab_path_clone_for_switch.borrow_mut() = new_active_path.clone();
+
+        // Update extension status bar text for the new file (synchronous — scripts are fast)
+        if let Some(file_path) = &new_active_path {
+            extensions::manager::update_status_bar_text(file_path);
+        }
+
+        // Update active file path for extension hooks
+        extensions::hooks::set_active_file_path(new_active_path.clone());
+
+        // Refresh extension sidebar panels with the new file
+        extensions::hooks::refresh_sidebar_panels();
 
         // Update the secondary status label with file information
         if let Some(file_path) = &new_active_path {
@@ -2516,6 +2781,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         glib::idle_add_local_once(move || {
             if let Some(page_num) = notebook_clone.current_page() {
                 if let Some(file_path) = file_path_manager_clone.borrow().get(&page_num).cloned() {
+                    // Update extension status bar text first
+                    extensions::manager::update_status_bar_text(&file_path);
                     if let Some((text_view, _)) =
                         handlers::get_text_view_and_buffer_for_page(&notebook_clone, page_num)
                     {
@@ -2807,12 +3074,21 @@ fn update_cursor_position_status(
         // For untitled documents, just show numbers: "X:Y"
         format!("{}:{}", line, column)
     } else {
-        // For files, show: "X:Y | filename | size"
+        // For files, show: "X:Y | filename | size | extension status"
         let size_part = file_path
             .and_then(|p| std::fs::metadata(p).ok())
             .map(|m| format!(" | {}", format_file_size(m.len())))
             .unwrap_or_default();
-        format!("{}:{} | {}{}", line, column, filename, size_part)
+
+        // Read cached extension status bar text (updated on tab switch / file save)
+        let ext_text = extensions::manager::get_status_bar_text();
+        let ext_part = if ext_text.is_empty() {
+            String::new()
+        } else {
+            format!(" | {}", ext_text)
+        };
+
+        format!("{}:{} | {}{}{}", line, column, filename, size_part, ext_part)
     };
 
     status_label.set_text(&status_text);

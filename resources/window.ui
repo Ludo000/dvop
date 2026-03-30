@@ -218,6 +218,13 @@
                     </child>
                   </object>
                 </child>
+                <child>
+                  <object class="GtkToggleButton" id="extensions_button">
+                    <property name="icon-name">application-x-addon-symbolic</property>
+                    <property name="css-classes">activity-bar-button</property>
+                    <property name="tooltip-text">Extensions (Ctrl+Shift+X)</property>
+                  </object>
+                </child>
               </object>
             </child>
             
@@ -295,6 +302,20 @@
                                 <property name="orientation">vertical</property>
                                 <property name="width-request">0</property>
                                 <property name="hexpand">true</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkStackPage">
+                            <property name="name">extensions</property>
+                            <property name="child">
+                              <object class="GtkBox" id="extensions_panel">
+                                <property name="css-classes">extensions-panel</property>
+                                <property name="orientation">vertical</property>
+                                <property name="width-request">0</property>
+                                <property name="hexpand">true</property>
+                                <property name="vexpand">true</property>
                               </object>
                             </property>
                           </object>
@@ -504,6 +525,11 @@
           <attribute name="label">Source Control</attribute>
           <attribute name="action">win.toggle-git</attribute>
           <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;g</attribute>
+        </item>
+        <item>
+          <attribute name="label">Extensions</attribute>
+          <attribute name="action">win.toggle-extensions</attribute>
+          <attribute name="accel">&lt;Primary&gt;&lt;Shift&gt;x</attribute>
         </item>
       </section>
       <section>
