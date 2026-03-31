@@ -1,3 +1,31 @@
+//! # Audio Playback — GStreamer-Based Audio Player
+//!
+//! Opens audio files (MP3, FLAC, WAV, OGG, etc.) in an embedded player tab
+//! with play/pause/stop controls, a seek slider, waveform visualization,
+//! and spectrogram display.
+//!
+//! ## Architecture
+//!
+//! - **GStreamer pipeline** — `playbin` element handles decoding and output.
+//!   Volume is controlled via the pipeline’s `volume` property.
+//! - **Waveform** — PCM samples are extracted by a secondary `decodebin`
+//!   pipeline on a background thread, stored as peak values per time segment,
+//!   and drawn on a `DrawingArea` using Cairo.
+//! - **Spectrogram** — FFT (via `rustfft`) is applied to audio chunks to
+//!   produce a time–frequency heat map, rendered as an `ImageSurface`.
+//! - **Global volume** — a `GlobalVolumeManager` syncs volume across all
+//!   active audio players and persists the setting.
+//!
+//! ## Key Types (private)
+//!
+//! - `WaveformData` — peak samples for volume visualization.
+//! - `SpectrogramData` — pre-rendered RGB pixel buffer.
+//! - `SpectrogramProgress` — enum tracking async spectrogram generation.
+//!
+//! See FEATURES.md: Feature #121 — Audio Player
+//! See FEATURES.md: Feature #122 — Waveform Visualization
+//! See FEATURES.md: Feature #123 — Spectrogram Display
+
 // Audio playback functionality for Dvop
 // This module handles audio file playback using GStreamer
 

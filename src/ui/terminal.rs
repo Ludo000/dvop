@@ -1,5 +1,29 @@
-// Terminal module for Dvop
-// Contains terminal creation and management functions
+//! # Terminal — Embedded VTE4 Terminal Emulator
+//!
+//! Provides an integrated terminal inside the editor, similar to VS Code's
+//! built-in terminal. Uses the **VTE4** library (Virtual Terminal Emulator),
+//! which renders a full PTY-backed terminal within a GTK4 widget.
+//!
+//! ## Key Concepts for Beginners
+//!
+//! - **VTE (Virtual Terminal Emulator)** — a C library (with Rust bindings)
+//!   that implements terminal emulation. It handles escape codes, colors,
+//!   scrolling, selection, and spawning a shell process.
+//! - **PTY (Pseudo-Terminal)** — the OS-level mechanism that connects the
+//!   shell process to the VTE widget. `spawn_async()` creates the PTY.
+//! - **Color Palette** — VTE uses a 256-color palette. The first 16 entries
+//!   are set from the editor's syntax theme to keep the terminal visually
+//!   consistent with the code editor.
+//!
+//! ## Terminal Tabs
+//!
+//! Multiple terminals are supported via a `Notebook` (tabbed container).
+//! `add_terminal_tab_with_toggle()` creates a new terminal and adds it as a
+//! tab. Each terminal tab can be independently themed and resized.
+//!
+//! See FEATURES.md: Feature #44 — Integrated Terminal
+//! See FEATURES.md: Feature #45 — Terminal Theming
+//! See FEATURES.md: Feature #46 — Multiple Terminal Tabs
 
 use gtk4::gdk;
 use gtk4::pango;
@@ -14,12 +38,16 @@ use vte4::Terminal as VteTerminal;
 use vte4::TerminalExt;
 use vte4::TerminalExtManual;
 
-/// Creates and initializes a terminal emulator
+/// Creates a new VTE terminal widget and spawns the user's default shell.
 ///
-/// This function creates a VTE terminal widget and spawns the user's default shell in it
+/// The shell is determined by the `$SHELL` environment variable (falling back
+/// to `/bin/bash`). The terminal starts in `working_dir` if provided, or the
+/// user's home directory otherwise.
 ///
-/// Parameters:
-/// - working_dir: Optional working directory to start the terminal in. If None, uses the user's home directory
+/// `spawn_async()` creates a PTY (pseudo-terminal) and forks the shell process.
+/// The `Cancellable` parameter is set to `None` because we never cancel the spawn.
+///
+/// See FEATURES.md: Feature #44 — Integrated Terminal
 pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
     let terminal = VteTerminal::new();
 
@@ -64,15 +92,16 @@ pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
 
 /// Sets up the terminal color theme to match the editor's syntax highlighting theme
 ///
-/// This function configures the VTE terminal colors to match the editor's color scheme
-/// based on whether the application is in dark mode or light mode. It sets:
-/// - Foreground (text) color
-/// - Background color
-/// - Cursor color
-/// - Selection colors
-/// - A 16-color palette (standard ANSI colors and bright variants)
+/// Configures VTE terminal colors to match the editor's current theme.
 ///
-/// The color scheme is designed to be readable and consistent with the editor's appearance.
+/// Reads the active syntax-highlighting color scheme and extracts its
+/// foreground, background, and cursor colors. Then sets the first 16 ANSI
+/// color palette entries to complementary values derived from the theme.
+///
+/// This keeps the terminal visually consistent with the code editor when
+/// switching between light and dark mode.
+///
+/// See FEATURES.md: Feature #45 — Terminal Theming
 pub fn setup_terminal_theme(terminal: &VteTerminal) {
     // Check if we're in dark mode to choose appropriate colors
     let is_dark_mode = crate::syntax::is_dark_mode_enabled();
@@ -170,9 +199,10 @@ pub fn setup_terminal_theme(terminal: &VteTerminal) {
     }
 }
 
-/// Creates a scrollable container for the terminal
+/// Wraps a VTE terminal widget in a `ScrolledWindow` for proper scrolling.
 ///
-/// The terminal is placed in a scrolled window with appropriate sizing constraints
+/// The scrolled window expands to fill available space and enforces a minimum
+/// height of 200px so the terminal is always usable.
 pub fn create_terminal_box(terminal: &VteTerminal) -> ScrolledWindow {
     ScrolledWindow::builder()
         .child(terminal) // Set the terminal as the child widget
@@ -184,18 +214,14 @@ pub fn create_terminal_box(terminal: &VteTerminal) -> ScrolledWindow {
 
 /// Adds a new terminal tab to the terminal notebook
 ///
-/// Creates a new terminal instance, places it in a tab, and adds it to the notebook
+/// Creates a new VTE terminal, wraps it in a scrolled window, and adds it
+/// as a new tab in the terminal notebook. Includes a close button that hides
+/// the terminal panel entirely when the last tab is closed (if `editor_paned`
+/// is provided).
 ///
-/// Parameters:
-/// - terminal_notebook: The notebook to add the terminal tab to
-/// - working_dir: Optional working directory to start the terminal in
-/// - editor_paned: Optional reference to the editor paned for toggling terminal visibility
+/// Returns the new page index.
 ///
-/// Returns the page number of the new tab
-/// Adds a new terminal tab with paned support for toggling terminal visibility
-///
-/// This version allows the terminal tab close button to hide the terminal view
-/// when the last tab is closed (auto-hide enabled).
+/// See FEATURES.md: Feature #46 — Multiple Terminal Tabs
 pub fn add_terminal_tab_with_toggle(
     terminal_notebook: &Notebook,
     working_dir: Option<PathBuf>,

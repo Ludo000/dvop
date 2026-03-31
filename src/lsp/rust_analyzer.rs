@@ -1,3 +1,20 @@
+//! # Rust-Analyzer Manager — Per-Workspace LSP Client Pool
+//!
+//! Maintains a `HashMap<PathBuf, Arc<LspClient>>` mapping each Cargo
+//! workspace root to its rust-analyzer instance. When a Rust file is opened,
+//! `get_client()` looks up (or creates) the client for that workspace.
+//!
+//! The manager is stored in a global `OnceLock` so it can be accessed from
+//! both the `RustDiagnosticsExtension` (native extension) and the linter UI.
+//!
+//! ## Workspace Detection
+//!
+//! `find_workspace_root()` walks up the directory tree looking for
+//! `Cargo.toml` to determine the workspace root, which rust-analyzer needs
+//! as its `rootUri`.
+//!
+//! See FEATURES.md: Feature #41 — Rust-Analyzer Integration
+
 // Rust-analyzer language server integration
 // Provides Rust-specific LSP functionality
 
@@ -7,7 +24,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-/// Manager for rust-analyzer instances
+/// Manages rust-analyzer client instances, one per Cargo workspace.
+///
+/// Uses `Arc<Mutex<HashMap<PathBuf, Arc<LspClient>>>>` so the manager can
+/// be shared safely between the extension system and the linter UI thread.
 pub struct RustAnalyzerManager {
     clients: Arc<Mutex<HashMap<PathBuf, Arc<LspClient>>>>,
 }

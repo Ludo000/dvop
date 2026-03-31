@@ -1,3 +1,26 @@
+//! # Diagnostics Panel — Terminal-Style Error List
+//!
+//! A scrollable panel (shown below the editor) that groups diagnostics by file.
+//! Each file section is an `Expander` containing clickable rows; clicking a row
+//! opens the file and jumps to the error line.
+//!
+//! ## Message Channel Architecture
+//!
+//! The panel is updated through a `std::sync::mpsc` channel:
+//! - `DIAGNOSTICS_SENDER` is the global send end (behind `Arc<Mutex<>>`).
+//! - The panel’s `create_diagnostics_panel()` spawns a `glib::timeout_add_local`
+//!   poller that drains the channel every 100 ms and updates the GTK widgets.
+//!
+//! This design decouples the LSP/linter thread (which produces diagnostics)
+//! from the GTK main thread (which updates the UI).
+//!
+//! ## Expansion State
+//!
+//! `EXPANSION_STATE` remembers which file sections are collapsed/expanded so
+//! refreshes don’t reset the user’s view.
+//!
+//! See FEATURES.md: Feature #49 — Diagnostics Panel
+
 // Diagnostics panel UI for displaying LSP diagnostics
 // This module creates a terminal-like view for showing linter diagnostics
 

@@ -1,3 +1,30 @@
+//! # LSP Module — Language Server Protocol Client
+//!
+//! Implements the client side of the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/)
+//! (LSP), enabling real-time diagnostics, hover info, and code intelligence
+//! from external language servers (currently only rust-analyzer).
+//!
+//! ## Architecture
+//!
+//! - **`client.rs`** — Generic `LspClient` that speaks JSON-RPC 2.0 over
+//!   stdio to any language server. Handles `initialize`, `shutdown`,
+//!   `textDocument/didOpen`, `didChange`, `didSave`, and listens for
+//!   `textDocument/publishDiagnostics` notifications.
+//! - **`rust_analyzer.rs`** — `RustAnalyzerManager` that manages one
+//!   `LspClient` per Cargo workspace root. Auto-starts rust-analyzer when
+//!   a Rust file is opened.
+//! - **`mod.rs` (this file)** — `convert_lsp_diagnostic()` translates
+//!   `lsp_types::Diagnostic` into our internal `linter::Diagnostic`.
+//!
+//! ## JSON-RPC Protocol
+//!
+//! LSP uses JSON-RPC 2.0 with HTTP-style `Content-Length` headers over
+//! stdin/stdout. The `LspClient` spawns the server process and reads
+//! responses on a background thread (`start_message_loop`).
+//!
+//! See FEATURES.md: Feature #41 — Rust-Analyzer Integration
+//! See FEATURES.md: Feature #47 — Real-Time Diagnostics
+
 // LSP (Language Server Protocol) client implementation
 // This module provides language server integration for enhanced code intelligence
 
@@ -6,7 +33,10 @@ pub mod rust_analyzer;
 
 use lsp_types::{Diagnostic as LspDiagnostic, DiagnosticSeverity as LspSeverity};
 
-/// Convert LSP diagnostic to our internal diagnostic format
+/// Converts an `lsp_types::Diagnostic` into the app’s internal `Diagnostic`.
+///
+/// LSP uses 0-based line/column numbers; our `Diagnostic` uses 1-based, so
+/// this function adds 1 to both. The `code` field is mapped to `rule`.
 pub fn convert_lsp_diagnostic(lsp_diag: &LspDiagnostic) -> crate::linter::Diagnostic {
     use crate::linter::{Diagnostic, DiagnosticSeverity};
 

@@ -1,3 +1,18 @@
+//! # Extension Manager — Loading, Caching & Lifecycle
+//!
+//! Owns the list of loaded `Extension` instances and exposes methods to
+//! install, remove, enable, disable, and query extensions. A single global
+//! instance lives in `EXTENSION_MANAGER` (`Lazy<Mutex<ExtensionManager>>`).
+//!
+//! At startup, `init()` scans `~/.config/dvop/extensions/` for directories
+//! containing a `manifest.json`, parses it, and builds an `Extension` object.
+//!
+//! Also manages `EXTENSION_STATUS_TEXT` — a cached string produced by running
+//! all extensions’ `status_bar` scripts for the current file.
+//!
+//! See FEATURES.md: Feature #87 — Extension System
+//! See FEATURES.md: Feature #88 — Extension Install from Archive
+
 use super::{Extension, ExtensionManifest};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;

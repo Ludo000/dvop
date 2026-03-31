@@ -1,4 +1,20 @@
-// Template-based git diff panel widget
+//! # Git Diff Panel — GTK4 Composite Template
+//!
+//! Loads the widget tree defined in `resources/git_diff_panel.ui` at runtime.
+//! Each `#[template_child]` field binds to a named widget in the `.ui` XML file,
+//! providing type-safe access from Rust code (see `git_diff.rs`).
+//!
+//! ## How Composite Templates Work in GTK4-rs
+//!
+//! 1. The inner `mod imp` struct derives `CompositeTemplate` and annotates
+//!    each field with `#[template_child]`.  The `#[template(resource = "...")]`
+//!    attribute points to the GResource path compiled by `build.rs`.
+//! 2. The outer `glib::wrapper!` struct wraps the inner implementation and
+//!    exposes public accessor methods (e.g., `fn branch_button() -> MenuButton`).
+//! 3. At construction time, `init_template()` inflates the XML and wires up
+//!    the template children automatically.
+//!
+//! See FEATURES.md: Feature #60 — Git Status Panel
 
 use gtk4::subclass::prelude::*;
 use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, ListBox, MenuButton, ScrolledWindow, Revealer};

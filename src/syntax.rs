@@ -1,3 +1,37 @@
+//! # Syntax Highlighting and Theme Detection
+//!
+//! This module manages syntax highlighting for the code editor using **GtkSourceView5**,
+//! a GTK widget specifically designed for source code editing. It provides:
+//!
+//! - **Language detection**: Automatically detects the programming language from file extensions
+//!   and applies appropriate syntax highlighting rules (keywords, strings, comments, etc.)
+//! - **Dark mode detection**: A multi-layered detection chain that tries:
+//!   1. GNOME GSettings `color-scheme` (Ubuntu 22.04+ / GNOME 42+)
+//!   2. GNOME GSettings `gtk-theme` name (checks for "dark" in theme name)
+//!   3. KDE `kreadconfig5` (`ColorScheme` setting)
+//!   4. GTK Settings `gtk-application-prefer-dark-theme` property
+//!   5. Environment variable fallbacks
+//! - **Style scheme selection**: Maps dark/light mode to SourceView color schemes
+//!   (e.g. "Adwaita-dark", "classic-dark" for dark mode)
+//! - **Large file optimization**: Files over 10 MB (`LARGE_FILE_THRESHOLD`) get reduced
+//!   features to keep the editor responsive
+//!
+//! ## Key Concepts for Rust Beginners
+//!
+//! - **`sourceview5::Buffer`** vs **`gtk4::TextBuffer`**: SourceView extends GTK's basic
+//!   text buffer with syntax highlighting, undo/redo, and line numbers. We often need to
+//!   "downcast" (convert) a generic `TextBuffer` to a `sourceview5::Buffer` using
+//!   `.dynamic_cast_ref::<sourceview5::Buffer>()` or `.downcast::<sourceview5::Buffer>()`.
+//!
+//! - **Thread-local storage** (`thread_local!`): Used to prevent infinite recursion when
+//!   theme detection triggers GTK settings changes, which would trigger theme detection again.
+//!
+//! See FEATURES.md: Feature #2 — Syntax Highlighting (15+ Languages)
+//! See FEATURES.md: Feature #3 — Line Numbers Display
+//! See FEATURES.md: Feature #14 — Auto-Indent and Tab Support
+//! See FEATURES.md: Feature #119 — Theme System
+//! See FEATURES.md: Feature #120 — Dark Mode Detection
+
 // Syntax highlighting functionality for the text editor
 // This module manages syntax highlighting based on file types
 
@@ -11,9 +45,17 @@ use std::path::Path;
 /// to keep the editor responsive.
 pub const LARGE_FILE_THRESHOLD: usize = 10_485_760; // 10 MB
 
-/// Determines whether the system is using a dark theme
+/// Determines whether the system is using a dark color scheme.
 ///
-/// Checks the GTK settings and environment to determine if the system prefers dark mode
+/// The detection follows a priority chain (most reliable first):
+/// 1. **GNOME/Unity** — read `org.gnome.desktop.interface` GIO setting `color-scheme`
+/// 2. **KDE Plasma** — parse `~/.config/kdeglobals` for `ColorScheme` containing "dark"
+/// 3. **GTK fallback** — check `gtk-application-prefer-dark-theme` from GTK settings
+///
+/// Uses `std::panic::catch_unwind` around GIO access because `Settings::new()` panics
+/// if the schema isn't installed (e.g., running outside GNOME).
+///
+/// See FEATURES.md: Feature #119 — Smart Dark Mode Detection
 pub fn is_dark_mode_enabled() -> bool {
     // Check for desktop environment specific settings FIRST (more reliable than GTK settings)
     let desktop_env = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
@@ -165,9 +207,16 @@ thread_local! {
     static GETTING_STYLE: Cell<bool> = const { Cell::new(false) };
 }
 
-/// Gets the appropriate style scheme name based on user preferences
+/// Returns the GtkSourceView5 style-scheme name matching the current light/dark mode.
 ///
-/// Returns user-configured theme for light or dark mode, without fallback logic
+/// Reads the user's configured themes from `EditorSettings` (keys: `light_theme`,
+/// `dark_theme`) and picks the one corresponding to `is_dark_mode_enabled()`.
+///
+/// **Recursion guard:** This function can be called re-entrantly when
+/// `refresh_settings()` triggers a re-read. The `thread_local! GETTING_STYLE`
+/// flag breaks the cycle by returning a safe fallback (`classic`/`classic-dark`).
+///
+/// See FEATURES.md: Feature #120 — Automatic Theme Switching
 pub fn get_preferred_style_scheme() -> String {
     // Prevent recursive calls when refresh_settings calls back into this function
     if GETTING_STYLE.with(|flag| flag.get()) {
@@ -201,10 +250,20 @@ pub fn get_preferred_style_scheme() -> String {
     theme
 }
 
-/// Creates a sourceview with syntax highlighting instead of a regular TextView
+/// Creates a new `sourceview5::View` + `Buffer` pair with syntax highlighting.
 ///
-/// This function replaces the standard TextView with SourceView from the sourceview5 library,
-/// which provides syntax highlighting capabilities based on file extensions.
+/// Returns a tuple `(View, Buffer)`. The `View` is a drop-in replacement for
+/// `gtk4::TextView` that adds line numbers, syntax coloring, bracket matching,
+/// and other editor features from the GtkSourceView5 library.
+///
+/// The buffer is immediately styled with the user's preferred color scheme
+/// (see `get_preferred_style_scheme()`). The view is configured with:
+/// - line numbers, tab width = 4, auto-indent
+/// - monospace font via CSS
+/// - bracket matching
+///
+/// See FEATURES.md: Feature #2 — Syntax Highlighting
+/// See FEATURES.md: Feature #14 — Line Numbers
 pub fn create_source_view() -> (View, Buffer) {
     // Create the buffer first with syntax highlighting
     let buffer = Buffer::new(None);
@@ -330,10 +389,16 @@ pub fn update_buffer_style_scheme(buffer: &Buffer) {
     // The set_style_scheme() call above is sufficient to update the visual appearance.
 }
 
-/// Sets the language for syntax highlighting based on file extension
+/// Detects the programming language from a file's extension and applies
+/// the corresponding syntax highlighting grammar to the buffer.
 ///
-/// This function identifies the programming language from a file's extension
-/// and applies appropriate syntax highlighting to the buffer.
+/// Returns `true` if a language was successfully detected and applied.
+/// Uses `LanguageManager` to look up grammars by extension (e.g., `.rs` → Rust,
+/// `.py` → Python). Also handles special cases like `Makefile`, `Dockerfile`,
+/// and `.env` files that lack standard extensions.
+///
+/// See FEATURES.md: Feature #2 — Syntax Highlighting
+/// See FEATURES.md: Feature #3 — Multi-Language Support
 pub fn set_language_for_file(buffer: &Buffer, file_path: &Path) -> bool {
     let language_manager = LanguageManager::new();
 
@@ -465,8 +530,14 @@ pub fn debug_theme_detection() {
     println!("=============================");
 }
 
-/// Forces GTK settings to sync with the detected system theme
-/// This helps ensure GTK applications properly reflect system theme changes
+/// Synchronises the GTK `prefer-dark-theme` setting with the detected OS theme.
+///
+/// Called periodically (via the GSettings monitor in `main.rs`) to handle theme
+/// changes made outside the application. If the detected dark-mode state differs
+/// from GTK's current setting, this updates GTK and triggers `refresh_settings()`
+/// which reloads style schemes for all open buffers.
+///
+/// See FEATURES.md: Feature #120 — Automatic Theme Switching
 pub fn sync_gtk_with_system_theme() {
     if let Some(settings) = Settings::default() {
         let detected_dark_mode = is_dark_mode_enabled();

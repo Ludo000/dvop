@@ -1,5 +1,21 @@
-// CSS styling module for Dvop
-// Contains all CSS styles and application logic
+//! # CSS Styling — Custom GTK4 Theme Overrides
+//!
+//! GTK4 widgets can be styled with CSS (very similar to web CSS). This module
+//! builds a single CSS string from ~12 helper functions, each responsible for
+//! one component (tabs, buttons, status bar, file list, etc.), and loads it
+//! into GTK's style provider so it applies globally.
+//!
+//! The only public entry point is `apply_custom_css()`, called once during
+//! application startup in `build_ui()`.
+//!
+//! ## How GTK4 CSS Works
+//!
+//! - `CssProvider::load_from_string()` parses the CSS.
+//! - `StyleContext::add_provider_for_display()` applies it to every widget.
+//! - Widgets are targeted by class names (e.g., `.close-button`, `.tab-label`)
+//!   which are set via `widget.add_css_class("...")` elsewhere in the code.
+//!
+//! See FEATURES.md: Feature #192 — UI Styling
 
 use gtk4;
 

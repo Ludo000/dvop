@@ -1,5 +1,25 @@
-// UI components and setup functions for completion
-// This module handles the visual aspects and setup of code completion
+//! # Completion UI — Popup & Key Handling
+//!
+//! Builds the GTK4 popover that shows completion suggestions and handles
+//! keyboard navigation (Up/Down to select, Enter to insert, Escape to close).
+//!
+//! ## Completion Pipeline
+//!
+//! 1. `setup_completion_shortcuts()` registers an `EventControllerKey` on
+//!    the `sourceview5::View` that intercepts Ctrl+Space.
+//! 2. `trigger_completion()` collects candidates from JSON data + buffer words.
+//! 3. A `Popover` containing a `ListBox` of styled rows is positioned at the
+//!    cursor and shown.
+//! 4. When the user selects an item, `insert_completion()` replaces the
+//!    current word prefix with the chosen text (or expands a snippet).
+//!
+//! ## Recursion Guard
+//!
+//! `COMPLETION_IN_PROGRESS` (`AtomicBool`) prevents re-entrant calls when
+//! inserting a completion triggers another `changed` signal on the buffer.
+//!
+//! See FEATURES.md: Feature #111 — Code Completion
+//! See FEATURES.md: Feature #113 — Snippet Expansion
 
 use glib;
 use gtk4::{
@@ -64,7 +84,12 @@ fn get_buffer_language(buffer: &Buffer) -> String {
     }
 }
 
-/// Setup completion for a source view with proper provider configuration  
+/// Registers manual completion on a `sourceview5::View` (no auto-trigger).
+///
+/// After calling this, the user can press Ctrl+Space or F1 to invoke
+/// `trigger_completion()`. No automatic popup on typing.
+///
+/// See FEATURES.md: Feature #111 — Code Completion
 pub fn setup_completion(source_view: &View) {
     println!("=== SETTING UP MANUAL COMPLETION ONLY ===");
     let buffer = source_view.buffer();
@@ -88,7 +113,10 @@ pub fn setup_completion(source_view: &View) {
     println!("=== MANUAL COMPLETION SETUP COMPLETE ===");
 }
 
-/// Enhanced completion setup with file-specific behavior
+/// Extends `setup_completion` with file-extension–specific logging.
+///
+/// Currently both paths use the same manual-only completion; this function
+/// exists to allow per-language customisation in the future.
 pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
     setup_completion(source_view);
 
@@ -128,7 +156,14 @@ pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
     }
 }
 
-/// Manual trigger for completion - creates a custom visible popup
+/// Shows the completion popup at the cursor position.
+///
+/// Gathers candidates from JSON keywords/snippets and buffer words,
+/// filters them by the word prefix under the cursor, builds a `Popover`
+/// with a `ListBox`, and displays it. Uses `COMPLETION_IN_PROGRESS` to
+/// prevent re-entrant calls.
+///
+/// See FEATURES.md: Feature #111 — Code Completion
 pub fn trigger_completion(source_view: &View) {
     // Check if completion is already in progress to prevent recursive calls
     if COMPLETION_IN_PROGRESS.swap(true, Ordering::SeqCst) {

@@ -1,3 +1,30 @@
+//! # In-File Search and Replace
+//!
+//! This module implements find/replace functionality within the active text document.
+//! It uses **GtkSourceView5's `SearchContext`** which provides regex support, case
+//! sensitivity, whole-word matching, and match highlighting out of the box.
+//!
+//! ## Architecture
+//!
+//! The search UI is a `SearchBar` widget (a collapsible toolbar) that appears at the top
+//! of the editor when activated. A single global `SearchState` instance is shared across
+//! all tabs — when the user switches tabs, the `SearchContext` is "rebound" to the new
+//! tab's buffer via `rebind_buffer()`.
+//!
+//! ## Key Rust Pattern: `Rc<RefCell<Option<T>>>`
+//!
+//! The search context and source view are stored as `Rc<RefCell<Option<T>>>` because:
+//! - `Rc`: Multiple closures (find next, find prev, replace) share the same reference
+//! - `RefCell`: The value changes at runtime (rebound when switching tabs)
+//! - `Option`: The value is `None` when no buffer is active (e.g., when viewing an image)
+//!
+//! See FEATURES.md: Feature #54 — In-File Search (Ctrl+F)
+//! See FEATURES.md: Feature #55 — Find Next (F3)
+//! See FEATURES.md: Feature #56 — Find Previous (Shift+F3)
+//! See FEATURES.md: Feature #57 — Find and Replace (Ctrl+H)
+//! See FEATURES.md: Feature #58 — Case Sensitive Search
+//! See FEATURES.md: Feature #59 — Whole Word Matching
+
 // Search functionality for the text editor
 // This module manages find/replace operations within text documents
 
@@ -9,7 +36,22 @@ use sourceview5::SearchSettings;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-/// Structure to hold search state and UI components
+/// Holds all UI widgets and state for the in-file search/replace functionality.
+///
+/// There is a **single global instance** of this struct (created lazily via `OnceLock`
+/// in `get_search_state()`). When the user switches tabs, the `search_context` and
+/// `source_view` are rebound to the new tab's buffer via `rebind_buffer()`.
+///
+/// ## Field Details
+///
+/// - `search_context: Rc<RefCell<Option<SearchContext>>>` — The SourceView5 search context
+///   that tracks matches, highlighting, and search settings. Wrapped in `Option` because
+///   it's `None` when no text buffer is active (e.g., viewing an image).
+/// - `source_view: Rc<RefCell<Option<View>>>` — The active text editor widget. Needed to
+///   scroll to matches when navigating find results.
+///
+/// See FEATURES.md: Feature #54 — In-File Search (Ctrl+F)
+/// See FEATURES.md: Feature #57 — Find and Replace (Ctrl+H)
 pub struct SearchState {
     pub search_bar: SearchBar,
     pub search_entry: SearchEntry,

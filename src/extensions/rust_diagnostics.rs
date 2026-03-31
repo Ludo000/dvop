@@ -1,3 +1,20 @@
+//! # Rust Diagnostics Extension — rust-analyzer Integration
+//!
+//! A **native extension** (compiled into the binary) that wraps the
+//! rust-analyzer language server. When enabled and a Rust project is open,
+//! it:
+//!
+//! 1. Starts rust-analyzer via the LSP client (`src/lsp/`).
+//! 2. Sends `textDocument/didOpen` notifications on file open.
+//! 3. Sends `textDocument/didSave` notifications on file save.
+//! 4. Receives `textDocument/publishDiagnostics` and converts them to
+//!    `Diagnostic` structs consumed by the diagnostics panel.
+//!
+//! The enable/disable state is persisted in `~/.config/dvop/rust_diagnostics.conf`.
+//!
+//! See FEATURES.md: Feature #41 — Rust-Analyzer Integration
+//! See FEATURES.md: Feature #47 — Real-Time Diagnostics
+
 // Rust Diagnostics Extension — native extension providing Rust language diagnostics
 // via rust-analyzer LSP. This was previously hardcoded in linter/ui.rs and is now
 // exposed as a toggleable extension through the extension system.

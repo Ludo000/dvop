@@ -1,3 +1,19 @@
+//! # Extensions Panel UI — Card-Based Extension Manager
+//!
+//! Renders the "Extensions" sidebar panel with:
+//! - A searchable list of extension cards (icon, name, description, toggle)
+//! - A detail view with tabs (Overview, Contributions, Controls)
+//! - An "Install from file" dialog accepting `.tar.gz` archives
+//! - A "Disable all" button
+//!
+//! The panel is rebuilt from scratch each time `populate_extensions_panel()`
+//! is called (after install/remove/toggle operations). Each card includes
+//! a `Switch` widget for enable/disable and badges showing the extension’s
+//! contributions (linter, keybindings, commands, etc.).
+//!
+//! See FEATURES.md: Feature #90 — Extensions Panel
+//! See FEATURES.md: Feature #88 — Extension Install from Archive
+
 use gtk4::prelude::*;
 use gtk4::{self, Label, Switch};
 use super::Extension;

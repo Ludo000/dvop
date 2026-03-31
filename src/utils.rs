@@ -1,3 +1,46 @@
+//! # Shared Utility Functions
+//!
+//! This module contains helper functions used across the entire application. It's the
+//! "grab bag" of utilities that don't fit neatly into a single feature-specific module.
+//!
+//! ## Main Responsibilities
+//!
+//! - **File browser**: Populating and updating the file list in the sidebar (`update_file_list`)
+//!   with folder-first sorting, MIME type filtering, and file selection highlighting.
+//!   See FEATURES.md: Feature #18 — File Explorer Sidebar
+//!   See FEATURES.md: Feature #33 — File Type Filtering
+//!
+//! - **Breadcrumb path navigation**: Creating clickable path segments in the status bar
+//!   that let users navigate to any parent directory.
+//!   See FEATURES.md: Feature #20 — Breadcrumb Path Navigation
+//!
+//! - **Manual path entry**: Handling Ctrl+L to switch the path bar into an editable text
+//!   field for direct path input with ~ expansion.
+//!   See FEATURES.md: Feature #21 — Manual Path Entry (Ctrl+L)
+//!
+//! - **Drag and drop**: Setting up drop targets on path buttons so files can be dragged
+//!   onto breadcrumb segments to move them to that directory.
+//!   See FEATURES.md: Feature #30 — Drag and Drop Files
+//!
+//! - **MIME type detection**: Determining whether files are text, images, audio, or video
+//!   based on their extensions, with special handling for TypeScript (.ts) files.
+//!   See FEATURES.md: Feature #183 — MIME Type Detection
+//!   See FEATURES.md: Feature #192 — TypeScript File Override
+//!
+//! - **Keyboard shortcuts**: Registering all application-wide keyboard shortcuts.
+//!   See FEATURES.md: Features #146–#175 — Keyboard Shortcuts
+//!
+//! - **Save button visibility**: Showing/hiding save buttons based on file type (e.g.,
+//!   hide save for images, show for text files).
+//!
+//! ## Key Rust Pattern: `thread_local!` Callbacks
+//!
+//! Several callback functions are stored in `thread_local!` storage (e.g.,
+//! `FILE_LIST_REFRESH_CALLBACK`, `TAB_PATH_UPDATE_CALLBACK`). This allows modules like
+//! `file_manager.rs` (drag-drop) to trigger a file list refresh without needing a direct
+//! reference to the file list widget. The callback is set once during initialization in
+//! `main.rs` and called from anywhere.
+
 // Utility functions for Dvop
 // This module contains helper functions used throughout the application
 
@@ -65,19 +108,29 @@ pub fn trigger_tab_path_update(old_path: &PathBuf, new_path: &PathBuf) {
     });
 }
 
-/// Represents the source of file selection for different visual styling
+/// Indicates how a file was selected in the file browser, affecting visual styling.
+///
+/// When a file is selected by switching tabs (`TabSwitch`), the highlighting in the
+/// file browser is subtle. When selected by directly clicking in the file manager
+/// (`DirectClick`), the highlighting is more prominent.
+///
+/// See FEATURES.md: Feature #35 — File List Auto-Scroll
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum FileSelectionSource {
-    /// File was selected by switching tabs
+    /// File was selected by switching tabs — subtle highlight
     TabSwitch,
-    /// File was selected by direct click in file manager
+    /// File was selected by direct click in file manager — prominent highlight
     DirectClick,
 }
 
-/// Checks if a MIME type is supported for editing in the text editor
+/// Checks if a MIME type is supported for text editing.
 ///
-/// This function determines whether a file with the given MIME type
-/// should be opened for text editing or treated differently (e.g., as an image)
+/// Returns `true` for text files, JSON, JavaScript, TypeScript, XML, and other
+/// code-related MIME types. Returns `false` for binary files, images, audio, video.
+/// This determines whether the file content will be loaded into a text editor tab.
+///
+/// See FEATURES.md: Feature #33 — File Type Filtering
+/// See FEATURES.md: Feature #183 — MIME Type Detection
 pub fn is_allowed_mime_type(mime_type: &Mime) -> bool {
     // Allow all text formats
     mime_type.type_() == "text" ||
@@ -181,10 +234,19 @@ fn has_audio_controls(box_widget: &gtk4::Box) -> bool {
     false
 }
 
-/// Updates the file browser list with contents of the current directory
+/// Rebuilds the file browser list for the given directory.
 ///
-/// This function refreshes the file list to show folders and files in the current directory,
-/// and highlights the currently open file if applicable with different styling based on selection source.
+/// Clears the existing `ListBox` rows and repopulates them by reading the
+/// filesystem. Directories are shown first (sorted alphabetically), then
+/// files (also sorted). The currently open file (`file_path`) is highlighted
+/// using CSS classes that differ based on `selection_source`.
+///
+/// Handles `.gitignore`-style filtering when enabled and respects the
+/// user's "show hidden files" setting.
+///
+/// See FEATURES.md: Feature #18 — File Navigation Panel
+/// See FEATURES.md: Feature #20 — Alphabetical File Sorting
+/// See FEATURES.md: Feature #21 — Folders First
 pub fn update_file_list(
     file_list_box: &ListBox,
     current_dir: &PathBuf,
@@ -885,10 +947,23 @@ fn restore_path_buttons(
     update_path_buttons(path_box, current_dir, file_list_box, active_tab_path);
 }
 
-/// Sets up common keyboard shortcuts for the application
+/// Registers all global keyboard shortcuts on the application window.
 ///
-/// This function adds keyboard shortcuts like Ctrl+S for saving, Ctrl+O for opening files,
-/// Ctrl+N for new files, Ctrl+Tab for navigating tabs, Ctrl+Shift+F for global search, Ctrl+B for toggling sidebar, Ctrl+T for toggling terminal, and other standard editor shortcuts.
+/// Shortcuts are added via GTK4’s `EventControllerKey`. The handler receives
+/// every key-press and matches `(modifier, key)` pairs to editor actions.
+///
+/// Key bindings include:
+/// - `Ctrl+S` / `Ctrl+Shift+S` — Save / Save As
+/// - `Ctrl+O` / `Ctrl+N` — Open / New
+/// - `Ctrl+Tab` / `Ctrl+Shift+Tab` — Next / Previous tab
+/// - `Ctrl+W` — Close current tab
+/// - `Ctrl+B` — Toggle sidebar
+/// - `Ctrl+T` — Toggle terminal
+/// - `Ctrl+F` / `Ctrl+H` — Find / Replace
+/// - `Ctrl+Shift+F` — Global search
+/// - `Ctrl+P` — Command palette
+///
+/// See FEATURES.md: Feature #146–#175 — Keyboard Shortcuts
 pub fn setup_keyboard_shortcuts(
     window: &(impl IsA<ApplicationWindow> + IsA<gtk4::Widget>),
     save_button: &Button,

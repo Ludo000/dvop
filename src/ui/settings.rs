@@ -1,5 +1,16 @@
-// Settings UI module for Dvop
-// Contains settings dialog and theme management functions
+//! # Settings UI — Theme Picker & Preferences Dialog
+//!
+//! Builds the settings dialog (`create_settings_dialog`) and provides a
+//! function to apply theme changes globally (`apply_theme_changes_globally`).
+//!
+//! The dialog uses the `SettingsDialog` composite template and populates
+//! its dropdowns with all available GtkSourceView5 style schemes. When the
+//! user selects a scheme, the change is persisted via `EditorSettings` and
+//! immediately applied to all open buffers and terminals.
+//!
+//! See FEATURES.md: Feature #128 — Settings Menu
+//! See FEATURES.md: Feature #131 — Theme Selection
+//! See FEATURES.md: Feature #136 — Font Size Configuration
 
 use crate::settings;
 use crate::syntax;

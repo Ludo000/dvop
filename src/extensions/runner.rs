@@ -1,3 +1,19 @@
+//! # Script Runner — Shell Script Execution with Timeout
+//!
+//! All script-based extension actions (status bar, linters, transforms, hooks)
+//! are executed through this module. Scripts receive arguments via CLI args
+//! and optionally receive text on stdin; their stdout is captured and returned.
+//!
+//! A 5-second timeout prevents runaway scripts from blocking the UI.
+//!
+//! ## Functions
+//!
+//! - `run_script()` — run synchronously, capture stdout.
+//! - `run_script_json()` — run + parse JSON output into a typed `T`.
+//! - `run_script_fire_and_forget()` — spawn asynchronously, no output capture.
+//!
+//! See FEATURES.md: Feature #96 — Extension Script Execution
+
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};

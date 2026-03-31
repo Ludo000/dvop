@@ -1,3 +1,31 @@
+//! # Extensions Module — Plugin Architecture
+//!
+//! Dvop supports two kinds of extensions:
+//!
+//! 1. **Script extensions** — folders under `~/.config/dvop/extensions/` containing
+//!    a `manifest.json` (schema: `ExtensionManifest`) plus shell scripts. Scripts
+//!    are executed via `runner::run_script()` with a 5-second timeout.
+//! 2. **Native extensions** — Rust code compiled into the binary that implements
+//!    the `NativeExtension` trait (see `native.rs`). Currently only
+//!    `RustDiagnosticsExtension` exists.
+//!
+//! Both kinds share the same `ExtensionManifest` schema and appear in the
+//! Extensions panel where they can be enabled/disabled.
+//!
+//! ## Submodules
+//!
+//! | Module | Role |
+//! |--------|------|
+//! | `manager` | Global `ExtensionManager` — loads, caches, enables/disables extensions |
+//! | `runner` | Executes shell scripts with timeout, stdin/stdout piping |
+//! | `hooks` | Lifecycle hooks (file open/save/close) + keybindings + context menus |
+//! | `native` | Trait + registry for compiled-in extensions |
+//! | `rust_diagnostics` | Native extension: rust-analyzer integration |
+//! | `ui` | Extensions panel UI (cards, install dialog, detail view) |
+//! | `sample` | Stub for bundled sample extension archives |
+//!
+//! See FEATURES.md: Feature #87–#109 — Extension System
+
 pub mod hooks;
 pub mod manager;
 pub mod native;

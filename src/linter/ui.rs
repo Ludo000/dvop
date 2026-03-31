@@ -1,3 +1,22 @@
+//! # Linter UI — Editor Integration & Status Bar
+//!
+//! Glues the linter module to the editor UI:
+//!
+//! - `setup_linting()` — called when a file is opened; runs built-in +
+//!   extension linters and applies underline tags to the buffer.
+//! - `store_diagnostics_for_uri()` — stores diagnostics from any source
+//!   (LSP, extension, built-in) in a global `HashMap<file_uri, Vec<Diagnostic>>`.
+//! - `update_diagnostics_count()` — refreshes the error/warning counts in
+//!   the status bar and triggers panel updates.
+//! - `register_buffer_for_diagnostics()` — tracks open buffers so diagnostic
+//!   underlines can be re-applied when diagnostics change.
+//!
+//! Thread-local statics hold references to GTK widgets (status bar, callback
+//! closures) to avoid threading GTK handles everywhere.
+//!
+//! See FEATURES.md: Feature #47 — Real-Time Diagnostics
+//! See FEATURES.md: Feature #48 — Inline Error Highlighting
+
 // UI integration for the linter
 // This module handles displaying lint diagnostics in the editor.
 // Language-specific linting (e.g. Rust via rust-analyzer) is handled by

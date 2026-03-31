@@ -1,5 +1,22 @@
-// Linter module for code quality checking
-// This module provides linting functionality for various programming languages
+//! # Linter Module — Code Quality Diagnostics
+//!
+//! Provides in-editor diagnostics (errors, warnings, info) from two sources:
+//!
+//! 1. **Built-in linters** — `lint_file()` dispatches on file extension to
+//!    language-specific checkers (currently `.ui` files via `gtk_ui_linter`).
+//! 2. **Extension linters** — script extensions can define `linter` contributions
+//!    that output JSON diagnostics (see `extensions/hooks.rs`).
+//! 3. **LSP diagnostics** — rust-analyzer publishes diagnostics via the LSP
+//!    protocol; they are stored here via `store_file_diagnostics()`.
+//!
+//! All diagnostics converge into the `Diagnostic` struct and are rendered as:
+//! - Wavy underlines in the editor buffer (`apply_diagnostic_underlines()`)
+//! - A clickable list in the diagnostics panel (`diagnostics_panel.rs`)
+//! - A summary count in the status bar
+//!
+//! See FEATURES.md: Feature #47 — Real-Time Diagnostics
+//! See FEATURES.md: Feature #48 — Inline Error Highlighting
+//! See FEATURES.md: Feature #49 — Diagnostics Panel
 
 pub mod diagnostics_panel;
 pub mod gtk_ui_linter;
@@ -8,7 +25,11 @@ pub mod ui;
 use std::path::Path;
 use gtk4::prelude::*; // Import GTK prelude for text buffer/tag methods
 
-/// Represents a lint diagnostic (error, warning, or info)
+/// Severity level for a diagnostic — determines the underline color and icon.
+///
+/// - `Error` → red wavy underline, ❌ icon
+/// - `Warning` → yellow wavy underline, ⚠️ icon
+/// - `Info` → blue underline, ℹ️ icon
 #[derive(Debug, Clone, PartialEq)]
 pub enum DiagnosticSeverity {
     Error,
@@ -16,7 +37,12 @@ pub enum DiagnosticSeverity {
     Info,
 }
 
-/// Represents a single diagnostic from the linter
+/// A single diagnostic message with location information.
+///
+/// This is the common currency for all diagnostic sources (built-in linters,
+/// extension linters, LSP). The `line`/`column` fields are 1-based to match
+/// editor line numbers. `end_line`/`end_column` are optional — when present,
+/// the underline spans from `(line, column)` to `(end_line, end_column)`.
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
     pub severity: DiagnosticSeverity,

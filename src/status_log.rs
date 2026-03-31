@@ -1,3 +1,34 @@
+//! # Status Bar Logging System
+//!
+//! This module provides a centralized logging system that displays messages in the
+//! application's status bar and persists them to a log file.
+//!
+//! ## Log Levels
+//!
+//! - **Info** (blue): General information ("File list refreshed", "Switched to main.rs")
+//! - **Warning** (yellow): Potential issues ("File type not supported")
+//! - **Error** (red): Failures ("Failed to save file: Permission denied")
+//! - **Success** (green): Completed operations ("Saved main.rs")
+//!
+//! ## Architecture
+//!
+//! - Messages are stored in a **circular buffer** (`VecDeque`) with a maximum of 100 entries.
+//!   When the buffer is full, the oldest message is discarded.
+//! - The status bar `Label` widget is stored via **thread-local storage** (`thread_local!`)
+//!   so any module can call `log_info()`, `log_error()`, etc. without needing a reference
+//!   to the label widget.
+//! - Messages are also written to `~/.config/dvop/log_history.txt` for persistence across
+//!   sessions. This file is loaded at startup to show the last session's log.
+//!
+//! ## Thread-Local Storage
+//!
+//! `thread_local!` creates a variable that has a separate instance per thread. Since GTK
+//! is single-threaded, there's effectively one instance. This pattern avoids global mutable
+//! state (which Rust's borrow checker forbids) by giving each thread its own copy.
+//!
+//! See FEATURES.md: Feature #117 — Notification System
+//! See FEATURES.md: Feature #118 — Log History
+
 // Status logging system for Dvop
 // Provides a way to capture and display log messages in the status bar
 
@@ -63,16 +94,33 @@ impl LogMessage {
     }
 }
 
-/// Log levels for different types of messages
+/// Severity level of a log message, used for visual styling in the status bar.
+///
+/// Each level corresponds to a different color in the UI:
+/// - `Info` → default (no special color)
+/// - `Warning` → yellow/orange
+/// - `Error` → red
+/// - `Success` → green
+///
+/// See FEATURES.md: Feature #117 — Notification System
 #[derive(Clone, PartialEq, Debug)]
 pub enum LogLevel {
+    /// General information messages (file opened, tab switched, etc.)
     Info,
+    /// Warnings about potential issues (unsupported file type, etc.)
     Warning,
+    /// Error messages (file save failed, permission denied, etc.)
     Error,
+    /// Success messages (file saved, operation completed, etc.)
     Success,
 }
 
-/// Simple status log storage (no global state, just for history)
+/// Global log history storage — a thread-safe circular buffer of recent log messages.
+///
+/// Uses `Lazy` for deferred initialization (created on first access) and
+/// `Arc<Mutex<VecDeque<...>>>` for thread-safe, bounded storage.
+/// `VecDeque` is a double-ended queue that efficiently supports both push-back
+/// and pop-front operations (needed for the circular buffer behavior).
 static STATUS_HISTORY: once_cell::sync::Lazy<Arc<Mutex<VecDeque<LogMessage>>>> =
     once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(VecDeque::new())));
 
@@ -234,7 +282,11 @@ fn add_message_to_log(message: String, level: LogLevel) {
     update_status_label(&log_message);
 }
 
-/// Register status bar labels to receive log updates
+/// Registers the GTK `Label` widgets that display log messages in the status bar.
+///
+/// Must be called once during UI setup (see `build_ui()` in `main.rs`). The labels
+/// are stored in `thread_local!` storage so `log_info()` / `log_error()` etc. can
+/// update them without needing a reference to the window.
 pub fn register_status_labels(status_label: &Label, secondary_label: &Label) {
     set_status_label(status_label);
     set_secondary_status_label(secondary_label);
@@ -243,14 +295,21 @@ pub fn register_status_labels(status_label: &Label, secondary_label: &Label) {
     log_info("Ready");
 }
 
-/// Log an info message to the status bar
+/// Logs an informational message to the status bar and console.
+///
+/// The message appears in the primary status label and is appended to the
+/// in-memory history ring buffer. Also printed to stdout for debugging.
+///
+/// See FEATURES.md: Feature #117 — Notification System
 pub fn log_info(message: &str) {
     add_message_to_log(message.to_string(), LogLevel::Info);
     // Also print to console for debugging
     println!("[INFO] {}", message);
 }
 
-/// Log an error message to the status bar
+/// Logs an error message to the status bar (displayed in red) and stderr.
+///
+/// See FEATURES.md: Feature #117 — Notification System
 pub fn log_error(message: &str) {
     add_message_to_log(message.to_string(), LogLevel::Error);
     // Also print to console for debugging

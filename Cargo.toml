@@ -1,52 +1,91 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Dvop — A modern, lightweight code editor built with GTK4 and Rust
+# ══════════════════════════════════════════════════════════════════════════════
+# This file defines the project metadata, compilation targets, and all
+# third-party dependencies (crates) used by Dvop.
+#
+# Rust uses "crates" as its package unit. Each dependency listed here is
+# downloaded from https://crates.io and compiled into the final binary.
+# The version numbers follow Semantic Versioning (semver): "MAJOR.MINOR.PATCH"
+# ══════════════════════════════════════════════════════════════════════════════
+
 [package]
 name = "dvop"
 version = "0.1.0"
-edition = "2021"
+edition = "2021"  # Rust edition — determines which language features are available
 
-# Library target for testing
+# Library target — allows integration tests to import Dvop's modules
+# (see src/lib.rs for the public API surface)
 [lib]
 name = "dvop"
 path = "src/lib.rs"
 
-# Binary target
+# Binary target — the actual executable that users run
 [[bin]]
 name = "dvop"
 path = "src/main.rs"
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Runtime Dependencies
+# ──────────────────────────────────────────────────────────────────────────────
 [dependencies]
-gtk4 = "0.10"
-glib = "0.21"
-gdk4 = "0.10"
-vte4 = "0.9"
-home = "0.5"
-mime_guess = "2.0"
-gdk-pixbuf = "0.21"
-sourceview5 = "0.10"  # For syntax highlighting and completion
-once_cell = "1.21"  # For thread-safe lazy initialization
-regex = "1.12"  # For advanced text pattern matching in completion
-serde = { version = "1.0", features = ["derive"] }  # For JSON serialization/deserialization
-serde_json = "1.0"  # For JSON parsing
-lazy_static = "1.5"  # For global static variables
-tempfile = "3.27"  # For file operations and testing
-chrono = "0.4"  # For proper date/time formatting
-gstreamer = "0.24"  # For audio playback
-gstreamer-app = "0.24"  # For audio data extraction
-rustfft = "6.4"  # For FFT analysis
-hound = "3.5"  # For reading audio files
-apodize = "1.0"  # For windowing functions
-pulldown-cmark = "0.13"  # For markdown parsing and rendering
-webkit6 = "0.5"  # For HTML rendering in markdown preview (GTK4 compatible)
+# ── GTK4 UI Framework ──
+# These crates provide Rust bindings for the GTK4, GLib, GDK, and related C libraries.
+# GTK4 is the toolkit used for the entire user interface (windows, buttons, text views, etc.)
+gtk4 = "0.10"           # Main GTK4 bindings (windows, widgets, layout, events)
+glib = "0.21"           # GLib bindings (main loop, signals, object system, type system)
+gdk4 = "0.10"           # GDK4 bindings (display, input, clipboard, key events)
+vte4 = "0.9"            # VTE4 terminal emulator widget (embedded terminal panel)
+gdk-pixbuf = "0.21"     # Image loading/manipulation (PNG, JPEG, SVG rendering)
+sourceview5 = "0.10"    # GtkSourceView5 — syntax highlighting, line numbers, code completion
 
-lsp-types = "0.97"  # LSP protocol types
-serde_repr = "0.1"  # Serde support for repr enums
-tokio = { version = "1.50", features = ["full"] }  # Async runtime for LSP
-async-channel = "2.4"  # Async channels for LSP communication
-url = "2.5"  # URL parsing (used by lsp-types)
-quick-xml = "0.38"  # XML parsing for GTK UI file validation
+# ── Media Playback (GStreamer) ──
+# GStreamer is a multimedia framework used for audio and video playback.
+# See FEATURES.md: Features #92–#109 (Audio/Video Player)
+gstreamer = "0.24"      # GStreamer core bindings (pipelines, elements, state management)
+gstreamer-app = "0.24"  # GStreamer AppSrc/AppSink for extracting audio samples (waveform/spectrogram)
+rustfft = "6.4"         # Fast Fourier Transform for audio spectrogram frequency analysis
+hound = "3.5"           # WAV file header parsing (duration, sample rate extraction)
+apodize = "1.0"         # Windowing functions (Hanning, Hamming) for FFT preprocessing
 
+# ── Data Serialization ──
+serde = { version = "1.0", features = ["derive"] }  # Serialization framework with derive macros
+serde_json = "1.0"      # JSON parsing/generation (settings, extension manifests, completion data)
+serde_repr = "0.1"      # Serde support for C-style enums with integer representation (LSP types)
+
+# ── Language Server Protocol (LSP) ──
+# LSP enables IDE features like diagnostics, autocompletion, and go-to-definition
+# by communicating with language servers (e.g. rust-analyzer) over JSON-RPC.
+# See FEATURES.md: Features #47–#49 (LSP Integration)
+lsp-types = "0.97"      # Rust types for the LSP protocol (requests, responses, diagnostics)
+tokio = { version = "1.50", features = ["full"] }  # Async runtime for non-blocking LSP communication
+async-channel = "2.4"   # Async multi-producer/multi-consumer channels for LSP message passing
+url = "2.5"             # URL parsing (LSP uses URIs like file:///path/to/file.rs)
+
+# ── Text Processing ──
+pulldown-cmark = "0.13"  # Markdown parser (used for live Markdown preview)
+quick-xml = "0.38"       # XML parser (validates .ui files for the GTK UI linter)
+regex = "1.12"           # Regular expressions (pattern matching in code completion and search)
+
+# ── Web Rendering ──
+webkit6 = "0.5"          # WebKit2GTK6 bindings (renders HTML in Markdown preview pane)
+
+# ── Utilities ──
+home = "0.5"            # Cross-platform home directory detection (~)
+mime_guess = "2.0"      # MIME type detection from file extensions (text vs image vs audio)
+once_cell = "1.21"      # Thread-safe lazy initialization (OnceLock for global singletons)
+lazy_static = "1.5"     # Macro for defining lazily-initialized static variables (global managers)
+tempfile = "3.27"       # Temporary file/directory creation (used in testing and file operations)
+chrono = "0.4"          # Date/time formatting for log timestamps
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Development/Testing Dependencies (only compiled for `cargo test`)
+# ──────────────────────────────────────────────────────────────────────────────
 [dev-dependencies]
-# Testing dependencies
-serial_test = "3.4"  # For running tests serially (needed for GTK)
+serial_test = "3.4"     # Ensures GTK tests run one at a time (GTK is not thread-safe)
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Build Script Dependencies (only used by build.rs at compile time)
+# ──────────────────────────────────────────────────────────────────────────────
 [build-dependencies]
-glib-build-tools = "0.21"
+glib-build-tools = "0.21"  # Compiles GResource XML files into binary bundles

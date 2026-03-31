@@ -1,5 +1,30 @@
-// File Manager UI components for Dvop
-// Contains all file management panel and navigation components
+//! # File Manager — Clipboard & Drag-and-Drop Operations
+//!
+//! Provides cut/copy/paste for files in the file browser panel, plus
+//! drag-and-drop reordering/moving of files between directories.
+//!
+//! ## File Clipboard
+//!
+//! The clipboard is a `thread_local!` holding an `Option<FileClipboard>` with
+//! the path and operation type (copy vs cut). When a file is cut, the source
+//! row in the file list gets a dimmed CSS class (`cut-file`) until the paste
+//! completes or the clipboard is cleared.
+//!
+//! ## Drag-and-Drop
+//!
+//! Uses GTK4's `DragSource` / `DropTarget` API. Each file row registers as both
+//! a drag source (providing its path as a string) and a drop target (accepting
+//! file paths). A confirmation dialog is shown before moving files.
+//!
+//! ## OS Clipboard Sync
+//!
+//! Copy/cut operations are also synced to the OS clipboard (GNOME format:
+//! `x-special/nautilus-clipboard`) so files can be pasted in Nautilus, and
+//! files copied in Nautilus can be pasted in Dvop.
+//!
+//! See FEATURES.md: Feature #30 — File Operations (Copy, Cut, Paste)
+//! See FEATURES.md: Feature #33 — File Type Filtering
+//! See FEATURES.md: Feature #192 — Keyboard-Driven File Management
 
 use gtk4::prelude::*;
 use gtk4::{
@@ -16,7 +41,10 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-/// File clipboard operations
+/// The type of clipboard operation — determines visual styling and behavior.
+///
+/// `Copy` duplicates the file on paste; `Cut` moves it (deleting the original).
+/// Cut files appear dimmed in the file list via the `cut-file` CSS class.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ClipboardOperation {
     Copy,

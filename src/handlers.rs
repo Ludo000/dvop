@@ -1,5 +1,44 @@
-// Event handlers and business logic for Dvop
-// This module contains all the event handlers and core functionality for the editor
+//! # Event Handlers and Core Business Logic
+//!
+//! This is the largest module in Dvop, containing all the event handling and core editor
+//! functionality. It acts as the "controller" layer between the UI (in `ui/`) and the
+//! data/state modules (`settings`, `file_cache`, `syntax`, etc.).
+//!
+//! ## Main Responsibilities
+//!
+//! - **Tab management**: Creating new tabs, closing tabs (with unsaved-changes prompts),
+//!   switching between tabs, and tracking which file is open in each tab.
+//!   See FEATURES.md: Feature #1 — Multi-Tab Editing System
+//!
+//! - **File operations**: Opening files (text, images, SVG preview, Markdown preview, audio, video),
+//!   saving files, and handling MIME type detection.
+//!   See FEATURES.md: Features #5–#9 — New/Open/Save/SaveAs/Close
+//!
+//! - **Live previews**: SVG split-view (code + rendered preview) and Markdown split-view
+//!   (source + HTML preview).
+//!   See FEATURES.md: Feature #11 — SVG Live Preview, Feature #12 — Markdown Live Preview
+//!
+//! - **Button handlers**: Connecting all header-bar buttons to their respective actions.
+//!
+//! - **Diagnostics navigation**: Jumping to specific lines/columns when clicking on errors
+//!   in the diagnostics panel.
+//!   See FEATURES.md: Feature #46 — Ctrl+Click Diagnostic Navigation
+//!   See FEATURES.md: Feature #64 — Jump to Line and Column
+//!
+//! ## Key Rust Patterns
+//!
+//! - **`NewTabDependencies` struct**: Bundles all the references needed for tab operations into
+//!   a single struct, avoiding functions with 10+ parameters. All fields are `Clone` because
+//!   `Rc` cloning is cheap (just increments a counter).
+//!
+//! - **`OPEN_FILE_CALLBACK` global**: A `Lazy<Mutex<Option<Box<dyn Fn(...)>>>>` — a thread-safe,
+//!   lazily-initialized, optionally-set callback. The diagnostics panel (which runs on a background
+//!   thread) uses this to request the main thread to open a file. This pattern is necessary because
+//!   GTK widgets can only be modified from the main thread.
+//!
+//! - **`Weak<T>` references**: Used in closures that reference GTK widgets. If the widget is
+//!   destroyed (e.g., a tab is closed), the weak reference returns `None` instead of keeping
+//!   the widget alive and causing a memory leak.
 
 // GTK imports
 use gtk4::prelude::*;
@@ -158,35 +197,60 @@ fn apply_syntax_highlighting_after_save(
     }
 }
 
-/// Structure containing all dependencies needed for tab creation and management
+/// Bundles all the UI component references and shared state needed for tab operations.
 ///
-/// This structure holds references to all the components and state that need
-/// to be modified when creating, switching, or closing tabs. It makes it easier
-/// to pass these references to various tab-related functions.
+/// Instead of passing 10+ parameters to every tab-related function, we group them
+/// into this struct. All fields implement `Clone` cheaply because:
+/// - GTK widgets use internal reference counting (cloning just bumps a counter)
+/// - `Rc<RefCell<T>>` cloning just increments the reference count
 ///
-/// Using weak references where possible to prevent circular reference memory leaks.
+/// This struct is used when:
+/// - Creating a new empty tab (`create_new_empty_tab`)
+/// - Closing a tab and potentially creating a replacement (`handle_close_tab_request`)
+/// - Setting up right-click context menus on tabs
+///
+/// See FEATURES.md: Feature #1 — Multi-Tab Editing System
+/// See FEATURES.md: Feature #5 — New File Creation (Ctrl+N)
+/// See FEATURES.md: Feature #9 — Close Tab (Ctrl+W)
 #[derive(Clone)]
 pub struct NewTabDependencies {
-    // Core UI components (using weak refs to prevent cycles)
-    pub editor_notebook: Notebook, // The tabbed container
-    pub window: ApplicationWindow, // Main window (for dialog parents)
-    pub file_list_box: ListBox,    // File browser list
+    /// The tabbed container widget — holds all open file tabs
+    pub editor_notebook: Notebook,
+    /// Main application window — used as the parent for modal dialogs (e.g. "Save changes?")
+    pub window: ApplicationWindow,
+    /// File browser list widget in the sidebar — updated when tabs change directories
+    pub file_list_box: ListBox,
 
-    // State tracking
-    pub active_tab_path: Rc<RefCell<Option<PathBuf>>>, // Currently active file path
-    pub file_path_manager: Rc<RefCell<HashMap<u32, PathBuf>>>, // Maps tab indices to file paths
-    pub current_dir: Rc<RefCell<PathBuf>>,             // Current working directory
+    /// Tracks which file is currently active. Wrapped in `Rc<RefCell<Option<PathBuf>>>`
+    /// because multiple closures need to read/write this. `Option` because untitled tabs
+    /// have no file path yet.
+    pub active_tab_path: Rc<RefCell<Option<PathBuf>>>,
+    /// Maps tab index (u32) to its file path. Used to look up which file is in which tab.
+    /// Wrapped in `Rc<RefCell<HashMap>>` for shared mutable access across closures.
+    pub file_path_manager: Rc<RefCell<HashMap<u32, PathBuf>>>,
+    /// Current working directory — changes when you open a file in a different folder
+    pub current_dir: Rc<RefCell<PathBuf>>,
 
-    // Action buttons
-    pub save_button: Button,                   // Save button
-    pub save_as_button: Button,                // Save As button
-    pub _save_menu_button: Option<MenuButton>, // Split button menu component (unused but kept for future)
+    /// Save button — used to trigger save operations programmatically
+    pub save_button: Button,
+    /// Save As button — used when saving untitled files or saving to a new location
+    pub save_as_button: Button,
+    /// Optional split-button menu component (reserved for future use)
+    pub _save_menu_button: Option<MenuButton>,
 }
 
-/// Creates a new empty tab with the title "Untitled"
+/// Creates a new empty tab with the title "Untitled".
 ///
-/// This function is used to create a new tab for a new document,
-/// setting up all the necessary UI components and state tracking.
+/// Sets up a complete editor tab with:
+/// - A `sourceview5::View` (syntax-highlighted text editor widget)
+/// - Modification tracking (adds "*" to tab title when content changes)
+/// - Cursor position tracking (updates the status bar)
+/// - A close button in the tab label
+/// - Right-click context menu on the tab
+/// - Code completion integration
+///
+/// See FEATURES.md: Feature #5 — New File Creation (Ctrl+N)
+/// See FEATURES.md: Feature #17 — Modification Tracking
 pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     // Log new file creation
     crate::status_log::log_info("Creating new file...");
@@ -4301,18 +4365,40 @@ fn show_file_manager_background_context_menu(
     popover.popup();
 }
 
+// `Lazy` provides thread-safe lazy initialization — the value is computed on first access.
+// `StdMutex` (as opposed to tokio::Mutex) provides blocking mutual exclusion for thread safety.
 use once_cell::sync::Lazy;
 use std::sync::Mutex as StdMutex;
 
-// Type alias for complex callback type
+/// Type alias for the complex callback type stored in OPEN_FILE_CALLBACK.
+/// Breaking it down:
+/// - `StdMutex<...>`: Thread-safe lock (the callback may be invoked from different threads)
+/// - `Option<...>`: The callback is initially None, set by main.rs after UI initialization
+/// - `Box<dyn Fn(PathBuf, usize, usize) + Send + Sync>`: A heap-allocated closure that:
+///   - Takes a file path, line number, and column number
+///   - `Send + Sync`: Can be safely shared across threads
+///   - `dyn Fn(...)`: Dynamic dispatch — the actual closure type is erased at compile time
 type OpenFileCallbackType = StdMutex<Option<Box<dyn Fn(PathBuf, usize, usize) + Send + Sync>>>;
 
-/// Global callback for opening files and jumping to locations
-/// This is set by main.rs and used by the diagnostics panel
+/// Global callback for opening files and jumping to specific locations.
+///
+/// This is the bridge between background threads (like the diagnostics panel) and the
+/// GTK main thread. It works like this:
+/// 1. `main.rs` creates a `std::sync::mpsc::channel` and stores the sender in this callback
+/// 2. When the diagnostics panel needs to open a file, it calls this callback
+/// 3. The callback sends a message through the channel to the main thread
+/// 4. The main thread receives the message and opens the file in the editor
+///
+/// See FEATURES.md: Feature #189 — Open File Callback System
+/// See FEATURES.md: Feature #46 — Ctrl+Click Diagnostic Navigation
 pub static OPEN_FILE_CALLBACK: Lazy<OpenFileCallbackType> = Lazy::new(|| StdMutex::new(None));
 
-/// Open a file and jump to a specific line and column
-/// This is used by the diagnostics panel to navigate to error locations
+/// Opens a file and jumps to a specific line and column.
+///
+/// Called by the diagnostics panel when the user clicks on an error/warning.
+/// Delegates to the `OPEN_FILE_CALLBACK` which sends a message to the GTK main thread.
+///
+/// See FEATURES.md: Feature #64 — Jump to Line and Column
 pub fn open_file_and_jump_to_location(file_path: PathBuf, line: usize, column: usize) {
     println!(
         "open_file_and_jump_to_location: {} at {}:{}",
@@ -4331,7 +4417,13 @@ pub fn open_file_and_jump_to_location(file_path: PathBuf, line: usize, column: u
     }
 }
 
-/// Jump to a specific line and column in a source view
+/// Moves the cursor to a specific line and column in a source view, then scrolls to it.
+///
+/// Converts from 1-based (human-friendly) line/column numbers to 0-based (GTK internal)
+/// indices. Uses `glib::timeout_add_local_once` to defer the scroll operation by 50ms,
+/// ensuring the view has finished layout before we try to scroll.
+///
+/// See FEATURES.md: Feature #64 — Jump to Line and Column
 pub fn jump_to_line_and_column(source_view: &sourceview5::View, line: usize, column: usize) {
     let buffer = source_view.buffer();
 

@@ -1,5 +1,29 @@
-// Completion module for language-specific code completion
-// This module provides intelligent code completion for various programming languages using JSON data
+//! # Code Completion — JSON-Driven Autocomplete
+//!
+//! Provides language-specific code completion powered by static JSON data files
+//! (stored in `completion_data/*.json`). Each JSON file defines keywords,
+//! snippets, and optional import hierarchies for one language.
+//!
+//! ## Architecture
+//!
+//! - **`json_provider`** — Loads and caches JSON completion data; provides
+//!   lookup functions (`get_json_keywords`, `get_json_snippets`, etc.).
+//! - **`ui`** — GTK4 popover-based completion popup; handles key events
+//!   (Ctrl+Space / F1), filtering by prefix, and snippet insertion.
+//!
+//! ## How Completion Works
+//!
+//! 1. On `Ctrl+Space`, `trigger_completion()` reads the word at the cursor.
+//! 2. It gathers matches from three sources: language keywords, snippets,
+//!    and words already present in the current buffer.
+//! 3. A `gtk4::Popover` with a `ListBox` is positioned at the cursor and
+//!    shown. Arrow keys navigate; Enter inserts the selected item.
+//!
+//! Completion is **manual only** (no auto-popup) to keep the editor fast.
+//!
+//! See FEATURES.md: Feature #111 — Code Completion
+//! See FEATURES.md: Feature #113 — Snippet Expansion
+//! See FEATURES.md: Feature #114 — Import Suggestions
 
 pub mod json_provider;
 pub mod ui;

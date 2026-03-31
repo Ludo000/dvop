@@ -1,5 +1,35 @@
-// Git Diff UI components for Dvop
-// Displays git status and diff information in the sidebar
+//! # Git Diff — Version Control Integration
+//!
+//! Implements the entire Git panel visible in the activity-bar sidebar:
+//! staging/unstaging files, inline diffs with syntax highlighting, branch
+//! switching, committing, pushing, and pulling.
+//!
+//! ## Architecture
+//!
+//! All Git operations shell out to the `git` CLI via `std::process::Command`
+//! (no `libgit2` dependency). Output is parsed line-by-line to extract status
+//! codes, diff hunks, branch names, etc.
+//!
+//! The diff viewer opens side-by-side `sourceview5::View` widgets (old vs new)
+//! in a new editor tab. Line-level changes are computed by a custom diff
+//! algorithm (`compute_diff_operations` / `compute_line_changes`) and
+//! highlighted with colored `TextTag`s (green for additions, red for deletions).
+//!
+//! ## Debounced Refresh
+//!
+//! `trigger_git_status_update()` uses `glib::timeout_add_local_once` with a
+//! 500 ms delay to coalesce rapid filesystem changes into a single refresh.
+//! The callback is stored in a `thread_local! CallbackCell`.
+//!
+//! ## Key Types (private)
+//!
+//! - `GitFileChange` — path + status enum for one changed file.
+//! - `GitStatus` — Modified, Added, Deleted, Renamed, Untracked, Staged, etc.
+//! - `BranchInfo` — name, is_current, is_remote for the branch picker.
+//!
+//! See FEATURES.md: Feature #60–#74 — Git Integration
+//! See FEATURES.md: Feature #63 — Inline Diff Viewer
+//! See FEATURES.md: Feature #65 — Branch Switching
 
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -29,15 +59,25 @@ thread_local! {
     static PENDING_UPDATE_TIMEOUT: RefCell<Option<glib::SourceId>> = const { RefCell::new(None) };
 }
 
-/// Set the git status update callback (called once during initialization)
+/// Stores a callback to invoke when the Git status changes.
+///
+/// Called once during startup from `build_ui()`. The callback refreshes the
+/// Git status list in the sidebar. It is stored in `thread_local!` storage
+/// because GTK callbacks must run on the main thread.
+///
+/// See FEATURES.md: Feature #60 — Git Status Panel
 pub fn set_git_status_update_callback(callback: Rc<dyn Fn()>) {
     GIT_STATUS_UPDATE_CALLBACK.with(|cell| {
         *cell.borrow_mut() = Some(callback);
     });
 }
 
-/// Trigger git status update with debouncing
-/// This should be called after file save operations to refresh the git panel
+/// Requests a Git status refresh with 500 ms debouncing.
+///
+/// If called multiple times within 500 ms (e.g., during rapid file saves),
+/// only the last call actually triggers a refresh. Uses
+/// `glib::timeout_add_local_once` to schedule the callback on the GTK main
+/// loop, and cancels any previously pending timeout.
 pub fn trigger_git_status_update() {
     PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
         // Cancel any pending update

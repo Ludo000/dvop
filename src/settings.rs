@@ -1,3 +1,33 @@
+//! # User Settings and Preferences
+//!
+//! This module handles persistent user configuration using a simple key-value file format.
+//! Settings are stored in `~/.config/dvop/settings.conf` on Linux, using a human-readable
+//! `KEY=VALUE` format (one setting per line).
+//!
+//! ## Architecture
+//!
+//! - **`EditorSettings`** struct: Wraps a `HashMap<String, String>` to store all settings.
+//!   Each setting has a typed getter/setter (e.g., `get_font_size()` returns `u32`,
+//!   `set_font_size(size: u32)` converts to string internally).
+//! - **Global instance**: A `Lazy<Mutex<EditorSettings>>` provides thread-safe access
+//!   from anywhere in the codebase via `get_settings()` / `get_settings_mut()`.
+//! - **Persistence**: Settings are auto-saved to disk on every change, and loaded from
+//!   disk on startup. The file cache is invalidated after each save to ensure fresh reads.
+//!
+//! ## What Gets Saved
+//!
+//! - Theme preferences (light/dark theme names)
+//! - Font sizes (editor and terminal, independently)
+//! - Window dimensions and panel sizes
+//! - Sidebar state (which tab is active, visible/hidden)
+//! - Audio/video volume levels
+//! - Search preferences (case sensitive, whole word)
+//! - Session data (last folder, list of opened files)
+//!
+//! See FEATURES.md: Features #128–#145 — Settings and Customization
+//! See FEATURES.md: Feature #131 — Settings Persistence
+//! See FEATURES.md: Feature #136 — Session Restoration
+
 // User settings and preferences for the text editor
 // Handles loading, saving, and accessing user configuration options
 
@@ -20,17 +50,32 @@ const DEFAULT_WINDOW_HEIGHT: i32 = 600;
 const DEFAULT_FILE_PANEL_WIDTH: i32 = 200; // Width of file manager sidebar
 const DEFAULT_TERMINAL_HEIGHT: i32 = 320; // Height of terminal section
 
-/// Represents user-configurable settings for the application
+/// Stores all user-configurable preferences for the application.
+///
+/// Settings are backed by a simple `key=value` text file (one per line) stored at
+/// `~/.config/dvop/settings.conf`. The `HashMap<String, String>` stores every
+/// setting as a string; typed accessors like `get_font_size()` parse on demand.
+///
+/// A single global instance is held in a `Lazy<Mutex<EditorSettings>>` (see
+/// `GLOBAL_SETTINGS` below). Access it via `get_settings()` (read) or
+/// `get_settings_mut()` (write).
+///
+/// See FEATURES.md: Feature #128–#145 — Settings & Preferences
 #[derive(Clone)]
 pub struct EditorSettings {
-    // Store settings in a simple HashMap for flexibility
+    /// Flat key–value store. Keys include `font_size`, `light_theme`,
+    /// `dark_theme`, `tab_width`, `auto_save`, `terminal_font_size`, etc.
     values: HashMap<String, String>,
-    // Path to the settings file
+    /// Absolute path to `~/.config/dvop/settings.conf`.
     config_path: PathBuf,
 }
 
 impl EditorSettings {
-    /// Creates a new settings instance, loading from file if available
+    /// Creates a new `EditorSettings`, loading persisted values from disk.
+    ///
+    /// 1. Resolves the config directory (`~/.config/dvop/`) and creates it if missing.
+    /// 2. Populates defaults via `set_defaults()` (including OS theme auto-detection).
+    /// 3. Overlays any previously saved settings from `settings.conf`.
     pub fn new() -> Self {
         let config_dir = get_config_dir();
         let config_path = config_dir.join("settings.conf");
@@ -452,7 +497,11 @@ static SETTINGS_INSTANCE: Lazy<Mutex<EditorSettings>> =
     Lazy::new(|| Mutex::new(EditorSettings::new()));
 static INIT: Once = Once::new();
 
-/// Initializes global settings
+/// Initializes the global `EditorSettings` singleton.
+///
+/// Uses `std::sync::Once` to guarantee this only runs once, even if called
+/// from multiple threads. The actual `EditorSettings::new()` is invoked lazily
+/// by the `Lazy` wrapper around `SETTINGS_INSTANCE`.
 pub fn initialize_settings() {
     // This ensures initialization happens only once
     INIT.call_once(|| {
@@ -462,10 +511,14 @@ pub fn initialize_settings() {
     });
 }
 
-/// Gets the settings or a temporary clone of the settings for read operations
+/// Returns a **clone** of the global settings for read-only access.
 ///
-/// This creates a fresh copy of the settings each time to ensure we get the latest values.
-/// Any changes made through get_settings_mut() will be reflected in subsequent get_settings() calls.
+/// Because `EditorSettings` is behind a `Mutex`, callers receive a snapshot
+/// rather than a reference. This avoids holding the lock while the caller
+/// reads individual values. Subsequent calls to `get_settings_mut()` and
+/// `save()` will *not* retroactively update previously cloned copies.
+///
+/// See FEATURES.md: Feature #128 — Settings Menu
 pub fn get_settings() -> EditorSettings {
     // Ensure settings are initialized
     initialize_settings();
@@ -474,10 +527,17 @@ pub fn get_settings() -> EditorSettings {
     SETTINGS_INSTANCE.lock().unwrap().clone()
 }
 
-/// Updates and returns the mutable settings
+/// Acquires the `Mutex` lock and returns a `MutexGuard` for writing settings.
 ///
-/// This function locks the mutex to perform changes and returns a mutable
-/// reference to the settings. Call save() afterwards to persist changes.
+/// The returned guard auto-releases the lock when dropped. After modifying
+/// values, call `.save()` on the guard to persist changes to disk.
+///
+/// ```rust
+/// let mut settings = get_settings_mut();
+/// settings.set_font_size(16);
+/// settings.save();
+/// // lock released here when `settings` goes out of scope
+/// ```
 pub fn get_settings_mut() -> std::sync::MutexGuard<'static, EditorSettings> {
     initialize_settings();
     SETTINGS_INSTANCE.lock().unwrap()

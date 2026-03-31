@@ -1,3 +1,32 @@
+//! # File Content Cache
+//!
+//! This module provides an in-memory cache for file contents to reduce disk I/O.
+//! When the same file is read multiple times within a short period (e.g., switching
+//! tabs back and forth), the cached version is returned instead of re-reading from disk.
+//!
+//! ## How It Works
+//!
+//! 1. When a file is requested via `get_file_content()`, the cache checks:
+//!    - Is the file in the cache?
+//!    - Has the cache entry expired? (default TTL: 30 seconds)
+//!    - Has the file been modified on disk since it was cached? (checks `mtime`)
+//! 2. If the cache is valid, the cached content is returned immediately.
+//! 3. If not, the file is read from disk, cached, and returned.
+//!
+//! ## Thread Safety
+//!
+//! The cache uses `Arc<Mutex<HashMap<...>>>` for thread-safe access:
+//! - **`Arc`** (Atomic Reference Counted): Like `Rc` but safe to share across threads.
+//!   Uses atomic operations for reference counting instead of non-atomic ones.
+//! - **`Mutex`**: Mutual exclusion lock — only one thread can access the cache at a time.
+//!   `lock().unwrap()` acquires the lock and panics if the lock is poisoned (a previous
+//!   holder panicked while holding it).
+//! - **`lazy_static!`**: Creates a global singleton that is initialized on first access.
+//!
+//! See FEATURES.md: Feature #176 — File Content Caching
+//! See FEATURES.md: Feature #177 — Cache Invalidation
+//! See FEATURES.md: Feature #178 — Periodic Cache Cleanup
+
 // File content caching system to optimize repeated file operations
 // This module provides caching for file contents to avoid repeated disk I/O
 
@@ -15,9 +44,21 @@ struct CachedFile {
     cached_at: SystemTime,
 }
 
-/// File content cache with automatic expiration and invalidation
+/// In-memory cache for file contents with TTL-based expiration.
+///
+/// Wraps a `HashMap<PathBuf, CachedFile>` inside `Arc<Mutex<...>>` so it can
+/// safely be shared across threads (e.g., the main GTK thread and background
+/// file-loading tasks).
+///
+/// Entries are automatically invalidated when either:
+/// - The file's `last_modified` timestamp changes on disk, or
+/// - The entry is older than `cache_duration` (default: 30 seconds).
+///
+/// See FEATURES.md: Feature #176–#178 — Caching & Performance
 pub struct FileCache {
+    /// Thread-safe map from file path → cached content + metadata
     cache: Arc<Mutex<HashMap<PathBuf, CachedFile>>>,
+    /// Maximum age before an entry is considered stale
     cache_duration: Duration,
 }
 

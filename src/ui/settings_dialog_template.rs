@@ -1,4 +1,12 @@
-// Template-based settings dialog widget
+//! # Settings Dialog — GTK4 Composite Template
+//!
+//! Loads the settings dialog from `resources/settings_dialog.ui`. Template
+//! children include theme dropdowns (light/dark), font-size spin buttons,
+//! and an info label showing the current system theme.
+//!
+//! Used by `settings.rs` to populate and connect the settings UI.
+//!
+//! See FEATURES.md: Feature #128 — Settings Menu
 
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;

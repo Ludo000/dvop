@@ -1,42 +1,110 @@
-// Module declarations for the application components
-mod audio; // Audio file playback functionality
-mod completion; // Code completion functionality
-mod extensions; // Extension system
-mod file_cache; // File content caching for performance optimization
-mod handlers; // Event handlers and business logic
-mod linter; // Code linting and diagnostics
-mod lsp;
-mod search; // Find and replace functionality
-mod settings; // User settings and preferences
-mod status_log; // Status logging system
-mod syntax; // Syntax highlighting functionality
-mod ui; // User interface components and layout
-mod utils; // Utility functions used across the application
-mod video; // Video file playback functionality // Language Server Protocol integration
+//! # Dvop — Main Application Entry Point
+//!
+//! This is the main module of the Dvop text editor, a GTK4-based code editor written in Rust.
+//! It handles:
+//! - Application startup and GTK4 lifecycle management
+//! - Building the main window UI (sidebar, editor notebook, terminal, status bar)
+//! - Setting up keyboard shortcuts and GIO actions for menu commands
+//! - Command palette (searchable list of all available commands)
+//! - Theme detection and auto-switching (GNOME, KDE, GTK fallback)
+//! - Session restoration (reopen previously opened files on startup)
+//! - Window close handling with unsaved-changes confirmation
+//!
+//! ## Architecture Overview
+//!
+//! Dvop uses the **GTK4 composite template** pattern: the window layout is defined in
+//! `resources/window.ui` (XML), and this module wires up the Rust logic to the UI widgets.
+//! Shared mutable state is managed with `Rc<RefCell<T>>` (single-threaded interior mutability),
+//! which is the standard GTK/Rust pattern since GTK callbacks need shared ownership of data.
+//!
+//! ## Key Rust Patterns Used
+//!
+//! - **`Rc<RefCell<T>>`**: Allows multiple closures (event handlers) to share and mutate the same
+//!   data. `Rc` provides shared ownership (reference counting), `RefCell` provides runtime-checked
+//!   mutable borrowing. This is needed because Rust's borrow checker doesn't allow multiple `&mut`
+//!   references at compile time, but GTK signal handlers require it.
+//! - **`widget.downgrade()` / `Weak<T>`**: Creates a weak reference to prevent reference cycles
+//!   between widgets and their closures. If the widget is destroyed, the weak reference returns
+//!   `None` instead of keeping it alive.
+//! - **`clone!` and manual cloning**: GTK closures capture variables by move. We clone `Rc` handles
+//!   before passing them into closures so each closure gets its own reference count.
+//! - **`glib::idle_add_local_once`**: Schedules a closure to run on the GTK main loop's next idle
+//!   iteration. Used to defer UI updates until the current operation completes.
+//!
+//! See FEATURES.md for the complete list of 201+ features implemented across this codebase.
 
-// GTK and standard library imports
-use gtk4::gio; // GIO for menu and action support
-use gtk4::glib; // GLib for clone macro and other utilities
-use gtk4::prelude::*; // GTK trait imports for widget functionality
-use gtk4::{Application, ApplicationWindow, Label}; // Main GTK application classes
-use std::cell::RefCell; // Interior mutability pattern
-use std::collections::HashMap; // For efficient mapping of tab indices to file paths
-use std::io::Write;
-use std::path::PathBuf; // File system path representation
-use std::rc::Rc; // Reference counting for shared ownership // File writing capabilities
+// ──────────────────────────────────────────────────────────────────────────────
+// Module declarations — each `mod` statement brings in a sub-module from its own file.
+// Rust compiles each module into the binary; they are private by default (only accessible
+// from this crate). The `pub` keyword in lib.rs re-exports them for testing.
+// ──────────────────────────────────────────────────────────────────────────────
+mod audio;      // Audio file playback with GStreamer (waveform, spectrogram)
+mod completion; // Code completion system (keywords, snippets, imports)
+mod extensions; // Plugin/extension system (script-based and native extensions)
+mod file_cache; // In-memory file content cache with TTL-based expiration
+mod handlers;   // Core event handlers: tab management, file open/save/close, previews
+mod linter;     // Code diagnostics: underlines, diagnostics panel, GTK UI linter
+mod lsp;        // Language Server Protocol client (rust-analyzer integration)
+mod search;     // In-file find and replace functionality
+mod settings;   // Persistent user preferences (theme, font size, window size, etc.)
+mod status_log; // Status bar message logging with severity levels
+mod syntax;     // Syntax highlighting via GtkSourceView5, dark mode detection
+mod ui;         // GTK4 UI components: window template, CSS, terminal, git diff, settings dialog
+mod utils;      // Shared utilities: file browser, path navigation, MIME detection, keyboard shortcuts
+mod video;      // Video file playback with GStreamer
 
-/// Menu command structure for consistent command definitions
+// ──────────────────────────────────────────────────────────────────────────────
+// Imports
+// ──────────────────────────────────────────────────────────────────────────────
+use gtk4::gio;       // GIO library: provides GIO actions (menu commands), application flags, GSettings
+use gtk4::glib;      // GLib library: main-loop utilities, clone macro, idle/timeout scheduling
+use gtk4::prelude::*; // Trait imports — Rust requires traits to be in scope to call their methods
+use gtk4::{Application, ApplicationWindow, Label}; // Core GTK4 types for the app window
+
+// Standard library imports for shared state management:
+// - `RefCell`: Provides *interior mutability* — lets you mutate data even when you only have
+//   a shared (non-mutable) reference. Panics at runtime if you borrow mutably twice.
+// - `Rc`: *Reference Counted* smart pointer — allows multiple owners of the same data on a
+//   single thread. When the last `Rc` is dropped, the data is freed.
+// - `HashMap`: Key-value map used to track which file path is open in which notebook tab.
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::io::Write;       // Trait for writing bytes to files (used in save operations)
+use std::path::PathBuf;   // Owned, heap-allocated file system path
+use std::rc::Rc;          // Single-threaded reference counting pointer
+
+/// A single entry in the command palette (the searchable menu at the top of the window).
+///
+/// Each `MenuCommand` maps a human-readable label (e.g. "Save") to a GIO action string
+/// (e.g. "win.save") that GTK will dispatch when the command is executed.
+/// The `keywords` field allows fuzzy matching so users can find commands by typing
+/// related words (e.g. typing "write" will match the "Save" command).
+///
+/// See FEATURES.md: Feature #63 — Command Palette
 #[derive(Clone)]
 struct MenuCommand {
+    /// Display text shown in the command palette list (e.g. "Save As...")
     label: &'static str,
+    /// GIO action identifier — prefixed with "win." for window actions or "app." for app-level actions
     action: &'static str,
+    /// Additional search terms for fuzzy matching in the palette
     keywords: Vec<&'static str>,
 }
 
-/// Dynamic command from an extension (commands + text transforms)
+/// A command contributed by an extension, shown alongside built-in commands in the command palette.
+///
+/// Extensions can contribute two types of actions:
+/// - **Command**: Runs a script that can modify the editor state (e.g. format code, run linter)
+/// - **Transform**: Runs a script that transforms the currently selected text (e.g. uppercase, sort lines)
+///
+/// Each variant stores the display `label` and the filesystem `script_path` to the script to execute.
+///
+/// See FEATURES.md: Feature #197 — Extension Manager, Feature #63 — Command Palette
 #[derive(Clone)]
 enum ExtCommand {
+    /// A general-purpose extension command (runs a script on the active editor)
     Command { label: String, script_path: PathBuf },
+    /// A text transform command (pipes selected text through a script and replaces it with the output)
     Transform { label: String, script_path: PathBuf },
 }
 
@@ -61,7 +129,13 @@ impl ExtCommand {
     }
 }
 
-/// Get extension commands + text transforms as dynamic palette entries
+/// Collects all extension-contributed commands and text transforms for the command palette.
+///
+/// Queries the global `ExtensionManager` for enabled extensions and their contributions,
+/// then wraps each one in an `ExtCommand` enum variant. These are merged with built-in
+/// `MenuCommand` entries when the user types in the command palette search box.
+///
+/// See FEATURES.md: Feature #197 — Extension Manager
 fn get_extension_palette_commands() -> Vec<ExtCommand> {
     let mgr = extensions::manager::get_manager();
     let mut cmds = Vec::new();
@@ -80,8 +154,14 @@ fn get_extension_palette_commands() -> Vec<ExtCommand> {
     cmds
 }
 
-/// Get the list of all menu commands
-/// This single source of truth is used by both the menu search and can be used for menu generation
+/// Returns the complete list of built-in menu commands available in the command palette.
+///
+/// This is the **single source of truth** for all built-in commands. Each command maps
+/// to a GIO action that is registered on the window or application. The command palette
+/// searches both these built-in commands and extension commands (from `get_extension_palette_commands`).
+///
+/// See FEATURES.md: Feature #63 — Command Palette
+/// See FEATURES.md: Features #146–#175 — Keyboard Shortcuts (each shortcut has a corresponding action here)
 fn get_menu_commands() -> Vec<MenuCommand> {
     vec![
         MenuCommand {
@@ -177,10 +257,19 @@ fn get_menu_commands() -> Vec<MenuCommand> {
     ]
 }
 
-/// Sets up the menu search functionality
+/// Sets up the **command palette** — a searchable popup that lets users find and execute
+/// any command by typing part of its name.
 ///
-/// This function creates a searchable command palette that allows users to quickly
-/// find and execute menu commands by typing their names
+/// How it works:
+/// 1. The user types in the `SearchEntry` widget in the header bar
+/// 2. This function filters the combined list of built-in + extension commands
+/// 3. Matching commands are shown in a `Popover` with a `ListBox`
+/// 4. The user can click a result or press Enter to execute the first match
+/// 5. Escape or clicking away dismisses the palette
+///
+/// The popover is attached to the search entry and auto-hides when the search text is cleared.
+///
+/// See FEATURES.md: Feature #63 — Command Palette
 fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindow) {
     // Get the shared list of menu commands
     let menu_commands = get_menu_commands();
@@ -388,7 +477,20 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
     });
 }
 
-/// Application entry point - initializes the GTK application and runs the main loop
+/// Application entry point — initializes the GTK application and starts the event loop.
+///
+/// This function:
+/// 1. Loads saved user settings from `~/.config/dvop/settings.conf`
+/// 2. Loads log history from previous sessions
+/// 3. Creates the GTK `Application` with the ID `com.example.Dvop`
+/// 4. Connects lifecycle signals:
+///    - `startup`: Detects system dark mode and initializes the completion system
+///    - `activate`: Builds the main UI (called when the app is launched without arguments)
+///    - `open`: Builds the UI and opens a file (called when launched with a file argument)
+/// 5. Enters the GTK main loop (`app.run()`), which processes events until the app quits
+///
+/// See FEATURES.md: Feature #120 — Dark Mode Detection
+/// See FEATURES.md: Feature #136 — Session Restoration
 fn main() {
     // Initialize user settings first
     settings::initialize_settings();
@@ -468,7 +570,19 @@ fn main() {
     app.run();
 }
 
-/// Updates the style scheme of all editor buffers when the system theme changes
+/// Updates the syntax highlighting color scheme of **all** open editor buffers.
+///
+/// Called when the system theme changes (dark ↔ light). This function:
+/// 1. Recursively searches the widget tree to find all `gtk4::Notebook` widgets
+/// 2. For each notebook page, finds all `sourceview5::View` widgets
+/// 3. Updates each view's buffer with the correct style scheme for the current theme
+/// 4. Forces a redraw of all affected widgets
+///
+/// The `impl IsA<gtk4::Widget>` parameter means this function accepts any GTK widget type
+/// (the window, or any widget that can be upcast to `gtk4::Widget`). This is Rust's way of
+/// doing polymorphism with GTK's type hierarchy.
+///
+/// See FEATURES.md: Feature #121 — Theme Auto-Switching
 pub fn update_all_buffer_themes(window: &impl IsA<gtk4::Widget>) {
     println!("Beginning comprehensive theme update for all buffers...");
 
@@ -576,7 +690,40 @@ pub fn update_all_buffer_themes(window: &impl IsA<gtk4::Widget>) {
     });
 }
 
-/// Builds the user interface and sets up event handlers
+/// Builds the entire application UI and connects all event handlers.
+///
+/// This is the **heart of the application** — it creates the main window, wires up all
+/// widgets, sets up signal handlers for user interactions, and restores the previous session.
+///
+/// # Parameters
+/// - `app`: The GTK `Application` instance (manages the application lifecycle)
+/// - `file_to_open`: Optional file path passed via command-line argument (e.g. `dvop myfile.rs`)
+///
+/// # What this function does (in order)
+/// 1. Creates the main window from the GTK composite template (`resources/window.ui`)
+/// 2. Sets up the header bar with action buttons (New, Open, Save, Settings, About)
+/// 3. Initializes the editor notebook (tabbed container for open files)
+/// 4. Sets up the sidebar (Explorer, Search, Git, Extensions panels)
+/// 5. Initializes the terminal panel with VTE4 terminal emulator
+/// 6. Registers all GIO actions for menu commands and keyboard shortcuts
+/// 7. Sets up file save, tab switching, and cursor tracking handlers
+/// 8. Opens any file passed via command line
+/// 9. Restores the previous session (reopens files, restores window size)
+/// 10. Sets up the window close handler (saves session, checks for unsaved changes)
+///
+/// # Rust Pattern: Shared State with `Rc<RefCell<T>>`
+/// Many variables in this function are wrapped in `Rc<RefCell<T>>` because multiple
+/// GTK signal handler closures need to read/write the same data. For example,
+/// `file_path_manager` (which maps tab indices to file paths) is accessed by:
+/// - The tab-switching handler (to look up the current file)
+/// - The save handler (to find the file path for the active tab)
+/// - The close handler (to clean up when a tab is closed)
+/// Each closure gets its own `Rc` clone, which shares the same underlying `RefCell<HashMap>`.
+///
+/// See FEATURES.md: Feature #1 — Multi-Tab Editing System
+/// See FEATURES.md: Feature #111 — Responsive Window Layout
+/// See FEATURES.md: Feature #136 — Session Restoration
+/// See FEATURES.md: Feature #188 — Window Close Handling
 fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Debug output
     println!("build_ui called with file_to_open: {:?}", file_to_open);
@@ -654,8 +801,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         println!("Applied initial theme to first tab buffer");
     }
 
-    // Create a mapping between notebook tab indexes and their corresponding file paths
-    // This allows tracking which file is open in each tab - optimized for efficiency
+    // Create a mapping between notebook tab indexes and their corresponding file paths.
+    // This `HashMap<u32, PathBuf>` lets us track which file is open in which tab.
+    //
+    // Wrapped in `Rc<RefCell<...>>` because multiple closures (tab switch, save, close, etc.)
+    // all need to read and modify this map. `Rc` gives shared ownership, `RefCell` gives
+    // runtime-checked mutable access. This is the standard pattern for shared state in GTK/Rust.
+    //
+    // See FEATURES.md: Feature #1 — Multi-Tab Editing System
     let file_path_manager = Rc::new(RefCell::new(HashMap::<u32, PathBuf>::new()));
 
     // Track the file path of the currently active tab
@@ -739,11 +892,13 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         sidebar_stack,
     ) = ui::create_paned(&window);
 
+    // See FEATURES.md: Feature #65 — Embedded VTE Terminal
     // Setup terminal notebook now that we have editor_paned
     let terminal_notebook_template = imp.terminal_notebook.get();
     let add_terminal_button = imp.add_terminal_button.get();
 
-    // Add diagnostics panel as the first tab
+    // See FEATURES.md: Feature #44 — Diagnostics Panel
+    // Add diagnostics panel as the first tab in the terminal area
     let diagnostics_panel = linter::diagnostics_panel::create_diagnostics_panel();
     let diagnostics_label = Label::new(Some("Diagnostics"));
     terminal_notebook_template.prepend_page(&diagnostics_panel, Some(&diagnostics_label));
@@ -833,6 +988,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         );
     });
 
+    // See FEATURES.md: Feature #119 — Theme System
+    // See FEATURES.md: Feature #121 — Theme Auto-Switching
     // Set up theme settings based on system preferences
     if let Some(settings) = gtk4::Settings::default() {
         // Don't override the system preference - let GTK handle it naturally
@@ -876,6 +1033,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         setup_gsettings_monitor(&window, &terminal_notebook_template);
     }
 
+    // See FEATURES.md: Feature #134 — Sidebar State Persistence
     // Restore active sidebar tab from settings
     let saved_sidebar_tab = settings::get_settings().get_active_sidebar_tab();
     let saved_sidebar_visible = settings::get_settings().get_sidebar_visible();
@@ -917,7 +1075,10 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let ext_panel_buttons: std::rc::Rc<std::cell::RefCell<Vec<gtk4::ToggleButton>>> =
         std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
 
-    // Setup explorer and search button toggle behavior
+    // See FEATURES.md: Feature #19 — Three-Panel Sidebar System
+    // See FEATURES.md: Feature #113 — Activity Bar (Sidebar Buttons)
+    // Setup explorer and search button toggle behavior.
+    // Each button toggles its panel; activating one deactivates the others (radio-like behavior).
     let search_button_clone = search_button.clone();
     let git_diff_button_clone = git_diff_button.clone();
     let extensions_button_clone = extensions_button.clone();
@@ -1188,6 +1349,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // See FEATURES.md: Feature #114 — Sidebar Drag to Open/Close
     // Add drag gesture to activity bar to allow dragging sidebar open
     let activity_bar = imp.activity_bar.get();
     let drag_gesture = gtk4::GestureDrag::new();
@@ -1332,6 +1494,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    // See FEATURES.md: Feature #60 — Global Search (Ctrl+Shift+F)
     // Get the search panel from the sidebar stack and populate it with global search UI
     if let Some(search_panel_widget) = sidebar_stack.child_by_name("search") {
         if let Some(search_panel_box) = search_panel_widget.downcast_ref::<gtk4::Box>() {
@@ -1355,6 +1518,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // See FEATURES.md: Feature #75–#89 — Version Control (Git)
     // Get the git diff panel from the sidebar stack and populate it
     if let Some(git_diff_panel_widget) = sidebar_stack.child_by_name("git-diff") {
         if let Some(git_diff_panel_box) = git_diff_panel_widget.downcast_ref::<gtk4::Box>() {
@@ -1377,6 +1541,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // See FEATURES.md: Features #146–#175 — Keyboard Shortcuts
     // Set up keyboard shortcuts for common operations (including Ctrl+B, Ctrl+Shift+E/F/G, and Ctrl+L for path editing)
     utils::setup_keyboard_shortcuts(
         &window,
@@ -1399,6 +1564,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         Some(&terminal_notebook_template),
     );
 
+    // See FEATURES.md: Feature #17 — Modification Tracking
     // Set up modification tracking for the initial tab
     // This adds a "*" indicator to the tab label when content has been modified
     let initial_tab_actual_label_clone = initial_tab_actual_label.clone();
@@ -1434,6 +1600,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    // See FEATURES.md: Feature #4 — Cursor Position Tracking
     // Set up cursor position tracking for the initial tab
     if let Some(text_view) = _initial_text_view.downcast_ref::<sourceview5::View>() {
         let text_view_clone = text_view.clone();
@@ -1812,6 +1979,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Set up menu search functionality
     setup_menu_search(&menu_search_entry, window_as_app_window);
 
+    // See FEATURES.md: Feature #7 — Save File (Ctrl+S)
     // Set up direct save functionality for the main save button
     // Instead of circular references between buttons, implement the save logic directly here
 
@@ -1850,7 +2018,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 // Check if this is a supported file type for saving
                 let mut mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
 
-                // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+                // See FEATURES.md: Feature #192 — TypeScript File Override
+    // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
                 // but should be treated as TypeScript files (text/plain)
                 if let Some(ext) = path_to_save.extension() {
                     if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
@@ -1943,6 +2112,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         Some(mime_guess::mime::TEXT_PLAIN_UTF_8),
     );
 
+    // See FEATURES.md: Feature #1 — Multi-Tab Editing System (tab switching)
+    // See FEATURES.md: Feature #4 — Cursor Position Tracking
     // Set up the tab switching handler to update UI state when changing tabs
     // Clone all required references for use in the closure
     let file_path_manager_clone_for_switch = file_path_manager.clone();
@@ -2530,7 +2701,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // See FEATURES.md: Feature #189 — Open File Callback System
     // Set up the callback for opening files from diagnostics panel using a channel
+    // Uses a `std::sync::mpsc::channel` to send file-open requests from background threads
+    // to the GTK main thread. This is necessary because GTK widgets can only be accessed
+    // from the main thread. The receiver runs in a `glib::idle_add_local` loop.
     {
         let (sender, receiver) = std::sync::mpsc::channel::<(PathBuf, usize, usize)>();
 
@@ -2640,6 +2815,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         ));
     }
 
+    // See FEATURES.md: Feature #178 — Periodic Cache Cleanup
     // Set up periodic cleanup of file cache to prevent memory bloat
     glib::timeout_add_seconds_local(300, || {
         // Every 5 minutes
@@ -2650,6 +2826,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Show the main window to display the application
     window.show();
 
+    // See FEATURES.md: Feature #136 — Session Restoration
     // Restore previously opened files from settings (after window is shown)
     let saved_files = settings::get_settings().get_opened_files();
     println!("=== Restoring session ===");
@@ -2812,6 +2989,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         });
     }
 
+    // See FEATURES.md: Feature #188 — Window Close Handling
+    // See FEATURES.md: Feature #132 — Window Size Memory
+    // See FEATURES.md: Feature #133 — Panel Size Memory
     // Set up window close handler to save window size, pane positions, and check for unsaved changes
     let paned_for_close = paned.clone();
     let editor_paned_for_close = editor_paned.clone();
@@ -2994,8 +3174,19 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 }
 
-/// Sets up a GSettings monitor to detect Ubuntu/GNOME theme changes
-/// This provides better integration with system theme switching on Ubuntu
+/// Sets up a GSettings monitor to detect Ubuntu/GNOME theme changes.
+///
+/// GSettings is the GNOME configuration system (similar to Windows Registry but for Linux desktops).
+/// This monitor watches for changes to:
+/// - `color-scheme`: The primary dark/light mode toggle (GNOME 42+ / Ubuntu 22.04+)
+/// - `gtk-theme`: The GTK theme name (e.g. "Adwaita", "Yaru")
+///
+/// When a change is detected, all editor buffers and terminal colors are updated to match.
+/// Uses `std::panic::catch_unwind` because the GSettings schema may not be available on
+/// non-GNOME desktops (e.g. KDE), in which case the function gracefully does nothing.
+///
+/// See FEATURES.md: Feature #120 — Dark Mode Detection
+/// See FEATURES.md: Feature #187 — GSettings Theme Monitor
 fn setup_gsettings_monitor(window: &impl IsA<gtk4::Widget>, terminal_notebook: &gtk4::Notebook) {
     use gio::prelude::*;
 
@@ -3051,7 +3242,14 @@ fn setup_gsettings_monitor(window: &impl IsA<gtk4::Widget>, terminal_notebook: &
     }
 }
 
-/// Formats a file size in bytes into a human-readable string (B, KB, MB, GB)
+/// Formats a file size in bytes into a human-readable string (B, KB, MB, GB).
+///
+/// Used by the status bar to show the size of the currently open file.
+///
+/// # Examples
+/// - `format_file_size(500)` → `"500 B"`
+/// - `format_file_size(2048)` → `"2.0 KB"`
+/// - `format_file_size(1_500_000)` → `"1.4 MB"`
 fn format_file_size(bytes: u64) -> String {
     if bytes < 1024 {
         format!("{} B", bytes)
@@ -3064,7 +3262,18 @@ fn format_file_size(bytes: u64) -> String {
     }
 }
 
-/// Updates the secondary status label with cursor position and file information
+/// Updates the secondary status bar label with cursor position, filename, file size,
+/// and extension-contributed status text.
+///
+/// The status bar shows different formats depending on whether the file is saved:
+/// - Untitled documents: `"3:12"` (line:column)
+/// - Saved files: `"3:12 | main.rs | 4.2 KB | word count: 150"` (line:column | name | size | extension info)
+///
+/// This function is called every time the cursor moves (connected to the buffer's
+/// `cursor-position` and `mark-set` signals).
+///
+/// See FEATURES.md: Feature #4 — Cursor Position Tracking
+/// See FEATURES.md: Feature #190 — Cursor Position Status Updates
 fn update_cursor_position_status(
     text_view: &sourceview5::View,
     status_label: &Label,

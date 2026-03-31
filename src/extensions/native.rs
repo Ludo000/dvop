@@ -1,3 +1,22 @@
+//! # Native Extensions — Compiled-In Plugin Trait
+//!
+//! Defines the `NativeExtension` trait and a global registry of implementations.
+//! Native extensions are Rust structs compiled into the Dvop binary that behave
+//! like script extensions (same manifest, same enable/disable toggle) but run
+//! in-process instead of spawning shell scripts.
+//!
+//! Currently the only native extension is `RustDiagnosticsExtension` (see
+//! `rust_diagnostics.rs`), which wraps rust-analyzer.
+//!
+//! ## Registration Pattern
+//!
+//! 1. Call `register(Box::new(MyExtension::new()))` at app startup.
+//! 2. The manager merges native manifests with script manifests via
+//!    `get_all_extensions()`.
+//! 3. Enable/disable state is persisted per-extension by the native impl.
+//!
+//! See FEATURES.md: Feature #87 — Extension System
+
 // Native extension support for built-in extensions compiled into the binary.
 // These extensions use the same manifest system as script extensions but their
 // implementation is in Rust code rather than shell scripts.

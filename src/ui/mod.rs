@@ -1,5 +1,35 @@
-// UI module for Dvop
-// Contains all UI component creation and layout functions
+//! # UI Module — GTK4 Widget Construction & Layout
+//!
+//! This is the top-level module for all UI code. It is split into submodules
+//! for each major panel or concern:
+//!
+//! | Submodule | Responsibility |
+//! |-----------|----------------|
+//! | `css` | Global CSS styles (tabs, status bar, file list, etc.) |
+//! | `file_manager` | Clipboard operations, drag-and-drop for the file browser |
+//! | `git_diff` | Git status panel, inline diffs, staging, committing, branching |
+//! | `git_diff_panel_template` | GTK composite template for the git panel `.ui` file |
+//! | `global_search` | Cross-file search/replace (Ctrl+Shift+F) |
+//! | `search_panel_template` | GTK composite template for the search panel `.ui` file |
+//! | `settings` | Settings dialog with theme pickers and font controls |
+//! | `settings_dialog_template` | GTK composite template for the settings dialog `.ui` file |
+//! | `terminal` | VTE4-based embedded terminal emulator |
+//!
+//! ## Composite Templates
+//!
+//! Three files (`*_template.rs`) use **GTK4 composite templates** — a pattern
+//! where widget trees are defined in XML `.ui` files (under `resources/`) and
+//! loaded at runtime via the `#[derive(CompositeTemplate)]` macro. Template
+//! children are accessed through generated accessor methods.
+//!
+//! ## Key Type: `DvopWindow`
+//!
+//! The main application window (`DvopWindow`) is defined in this module using
+//! a composite template. It owns 30+ `TemplateChild` references to all major
+//! UI widgets (header, sidebar, editor notebook, terminal, status bar, etc.).
+//!
+//! See FEATURES.md for the full feature list — nearly every feature has a
+//! corresponding piece of UI constructed in this module.
 
 pub mod css;
 pub mod file_manager;
@@ -47,7 +77,12 @@ use std::collections::HashMap;
 use std::path::PathBuf; // For file paths
 use std::rc::Rc; // For shared ownership // For file path manager
 
-// Type alias for the complex return type of create_text_view
+/// Type alias for the 12-element tuple returned by `create_text_view()`.
+///
+/// Rust doesn't allow naming tuple fields, so this alias documents what each
+/// position contains. In larger projects you'd use a struct instead, but
+/// tuple aliases like this are common in GTK-rs code where many widgets are
+/// returned from factory functions.
 type TextViewComponents = (
     gtk4::ScrolledWindow,
     gtk4::TextView,
@@ -71,6 +106,12 @@ mod imp {
     use super::*;
     use gtk4::CompositeTemplate;
 
+    /// The inner `imp` module holds the actual struct fields. In GTK4-rs,
+    /// composite-template widgets follow a two-layer pattern:
+    /// 1. **Inner (`imp::DvopWindow`)** — holds `TemplateChild<T>` fields,
+    ///    implements `ObjectSubclass` + `CompositeTemplate`.
+    /// 2. **Outer (`DvopWindow`)** — a `glib::wrapper!` newtype that inherits
+    ///    `ApplicationWindow` and delegates to `imp` via `.imp()`.
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/example/Dvop/window.ui")]
     pub struct DvopWindow {

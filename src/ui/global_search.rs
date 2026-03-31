@@ -1,4 +1,27 @@
-// Global Search UI and logic: search across current folder (like VS Code)
+//! # Global Search — Cross-File Find & Replace
+//!
+//! Implements the "Search across files" feature (Ctrl+Shift+F), including:
+//! - Recursive directory walking with `.gitignore`-aware filtering
+//! - Case-sensitive / whole-word / regex toggle options
+//! - Live result highlighting in the results list
+//! - Clicking a result opens the file and jumps to the matching line
+//! - Replace / Replace All across multiple files
+//!
+//! There are two entry points:
+//! - `show_global_search_dialog()` — opens a floating dialog (legacy)
+//! - `create_global_search_panel()` — creates the sidebar panel (current)
+//!
+//! The search runs **synchronously on the main thread** to keep the code
+//! simple; very large directories may briefly block the UI.
+//!
+//! ## Key Private Types
+//!
+//! - `SearchResult` — one matching line with path, line number, column, and
+//!   a preview snippet.
+//!
+//! See FEATURES.md: Feature #75 — Global Search (Ctrl+Shift+F)
+//! See FEATURES.md: Feature #76 — Search Results Navigation
+//! See FEATURES.md: Feature #77 — Global Search & Replace
 
 use glib::{self};
 use gtk4::prelude::*;

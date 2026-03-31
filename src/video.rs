@@ -1,3 +1,21 @@
+//! # Video Playback — GStreamer-Based Video Player
+//!
+//! Opens video files (MP4, MKV, WebM, AVI, etc.) in an embedded player tab
+//! with play/pause/stop, seek, fullscreen toggle, and volume controls.
+//!
+//! ## Architecture
+//!
+//! - **GStreamer pipeline** — `playbin` with a `gtk4paintablesink` for
+//!   rendering video frames directly into a GTK4 `Picture` widget.
+//! - **Global manager** — `GlobalVideoManager` tracks all active video
+//!   pipelines. When a new video starts, the others are paused/stopped
+//!   to avoid concurrent playback.
+//! - **Keyboard controls** — Space (play/pause), Left/Right (seek ±5s),
+//!   F (fullscreen toggle), M (mute toggle).
+//!
+//! See FEATURES.md: Feature #124 — Video Player
+//! See FEATURES.md: Feature #125 — Video Controls
+
 // Video playback functionality for Dvop
 // This module handles video file playback using GStreamer
 

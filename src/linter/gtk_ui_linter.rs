@@ -1,3 +1,18 @@
+//! # GTK UI Linter — XML `.ui` File Validator
+//!
+//! Parses GTK4 `.ui` (XML) files and reports common issues:
+//! - Duplicate widget IDs
+//! - Unknown widget class names
+//! - Invalid property names for a given widget type
+//! - Missing `<interface>` root element
+//! - Nesting violations (e.g., `<child>` inside `<property>`)
+//!
+//! Uses the `quick_xml` crate for streaming XML parsing. The list of known
+//! GTK4 widgets and their valid properties is maintained as constants in
+//! this file.
+//!
+//! See FEATURES.md: Feature #50 — GTK UI File Linting
+
 // GTK UI file linter for validating XML .ui files
 // This module checks GTK UI files for common errors and issues
 

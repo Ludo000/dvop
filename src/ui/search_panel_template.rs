@@ -1,4 +1,15 @@
-// Template-based search panel widget
+//! # Search Panel — GTK4 Composite Template
+//!
+//! Loads the search panel widget tree from `resources/search_panel.ui`.
+//! Contains template children for the search/replace text inputs, toggle
+//! buttons (case, whole-word), action buttons, status label, and results list.
+//!
+//! Used by `global_search.rs` to build the sidebar search UI.
+//!
+//! See the doc comment in `git_diff_panel_template.rs` for an explanation of
+//! how GTK4 composite templates work in Rust.
+//!
+//! See FEATURES.md: Feature #75 — Global Search Panel
 
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;

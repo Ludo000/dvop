@@ -1,3 +1,28 @@
+//! # LSP Client — JSON-RPC Communication Layer
+//!
+//! `LspClient` manages a child process (the language server) and communicates
+//! with it via JSON-RPC 2.0 over stdin/stdout.
+//!
+//! ## How It Works
+//!
+//! 1. `new()` spawns the server process with `Command::new()`.
+//! 2. `initialize()` sends the LSP `initialize` request and waits for the
+//!    response, then sends `initialized` notification.
+//! 3. `start_message_loop()` spawns a background thread that reads server
+//!    messages. When it encounters a `textDocument/publishDiagnostics`
+//!    notification, it invokes the registered `diagnostic_callback`.
+//! 4. `did_open()` / `did_change()` / `did_save()` send the corresponding
+//!    LSP notifications so the server stays synchronized with the editor.
+//! 5. `shutdown()` sends the `shutdown` request followed by `exit`.
+//!
+//! ## Thread Safety
+//!
+//! The `LspClient` uses `Arc<Mutex<>>` for the child process handle, message
+//! ID counter, and diagnostic callback so it can be safely shared between
+//! the GTK main thread and the message-reading background thread.
+//!
+//! See FEATURES.md: Feature #41 — Rust-Analyzer Integration
+
 // LSP client implementation
 // Handles communication with language servers via stdio
 
@@ -31,7 +56,12 @@ struct JsonRpcMessage {
     error: Option<serde_json::Value>,
 }
 
-/// LSP client for communicating with a language server
+/// Client for a single language server process.
+///
+/// Owns the child process and provides methods for each LSP message type.
+/// All fields are `Arc<Mutex<>>` because `start_message_loop()` reads from
+/// the process’s stdout on a background thread while the main thread writes
+/// to stdin.
 pub struct LspClient {
     process: Arc<Mutex<Option<Child>>>,
     next_id: Arc<Mutex<i32>>,
@@ -40,7 +70,11 @@ pub struct LspClient {
 }
 
 impl LspClient {
-    /// Create a new LSP client for the given command
+    /// Spawns the language server and returns a connected `LspClient`.
+    ///
+    /// `command` is the executable name (e.g., `"rust-analyzer"`), looked up
+    /// in `$PATH`. Stdin, stdout, and stderr of the child process are piped
+    /// so we can send and receive JSON-RPC messages.
     pub fn new(command: &str, args: &[String], workspace_root: PathBuf) -> Result<Self, String> {
         println!("🚀 Starting LSP process: {} with args: {:?}", command, args);
         println!("Workspace root: {:?}", workspace_root);

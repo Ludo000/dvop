@@ -1,12 +1,32 @@
-// JSON-based completion data loader
-// Allows users to define completion data in JSON files for easy customization
+//! # JSON Completion Provider — Data Loader & Cache
+//!
+//! Reads `completion_data/*.json` files at startup and caches them in memory.
+//! Each JSON file follows the `LanguageCompletionData` schema (keywords,
+//! snippets, imports). A global `CompletionDataManager` (behind a `Mutex`)
+//! holds all loaded providers.
+//!
+//! ## Adding a New Language
+//!
+//! 1. Create `completion_data/<lang>.json` following the schema (see
+//!    `completion_data/README.md` and existing files for examples).
+//! 2. Call `initialize_completion_data()` at startup — it auto-discovers
+//!    every `.json` file in the `completion_data/` directory.
+//!
+//! See FEATURES.md: Feature #111 — Code Completion
+//! See FEATURES.md: Feature #112 — Multi-Language Completion Data
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-/// Represents a keyword completion item
+/// One keyword entry from a language’s JSON file.
+///
+/// Example JSON:
+/// ```json
+/// { "keyword": "fn", "type": "keyword", "description": "Declares a function",
+///   "example": "fn main() {}", "category": "Functions" }
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeywordData {
     pub keyword: String,
@@ -279,7 +299,10 @@ impl JsonCompletionProvider {
     }
 }
 
-/// Manager for loading and caching multiple language completion providers
+/// Manages all loaded `JsonCompletionProvider` instances, keyed by language name.
+///
+/// Held behind a global `Lazy<Mutex<...>>` so any thread can look up completion
+/// data. Languages are loaded lazily on first access via `ensure_language_loaded()`.
 pub struct CompletionDataManager {
     providers: HashMap<String, JsonCompletionProvider>,
     data_directory: String,

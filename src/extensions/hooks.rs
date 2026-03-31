@@ -1,3 +1,23 @@
+//! # Extension Hooks — Lifecycle Events & UI Integration
+//!
+//! Connects the extension system to the editor’s runtime events:
+//!
+//! - **Lifecycle hooks** (`fire_on_app_start`, `fire_on_file_open`, etc.) —
+//!   run scripts from `manifest.hooks` at the appropriate moments.
+//! - **Keybindings** (`register_extension_keybindings`) — create GTK actions
+//!   for each extension’s keyboard shortcuts.
+//! - **Context menus** (`run_editor_context_menu_script`) — execute scripts
+//!   with the current file path, selection, and cursor position.
+//! - **Linters** (`run_extension_linters`) — run linter scripts that output
+//!   JSON diagnostics, merged with the built-in diagnostics panel.
+//! - **Sidebar panels** — extensions can contribute a panel whose content
+//!   is produced by a script (refreshed on file switch).
+//!
+//! Thread-local statics (`ACTIVE_NOTEBOOK`, `ACTIVE_FILE_PATH`, `STATUS_LABEL`)
+//! let hooks access GTK widgets without passing them through every call site.
+//!
+//! See FEATURES.md: Feature #91–#109 — Extension Contributions
+
 use super::runner;
 use gtk4::prelude::*;
 use std::path::Path;
