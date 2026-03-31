@@ -1619,8 +1619,8 @@ fn create_diff_tab(
                 active_tab_path,
             );
             
-            // Check for Rust files and update linter UI visibility
-            crate::linter::ui::check_and_update_rust_ui(&parent.to_path_buf());
+            // Let native extensions know directory changed
+            crate::extensions::native::fire_on_directory_open(&parent.to_path_buf());
         }
     }
 
@@ -4320,7 +4320,7 @@ pub fn create_git_diff_panel(
                                     );
                                     
                                     // Update linter UI
-                                    crate::linter::ui::check_and_update_rust_ui(&parent.to_path_buf());
+                                    crate::extensions::native::fire_on_directory_open(&parent.to_path_buf());
                                 }
                                 break;
                             }

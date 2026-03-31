@@ -203,7 +203,6 @@ dependencies = [
  "serde_repr",
  "serial_test",
  "sourceview5",
- "syn",
  "tempfile",
  "tokio",
  "url",

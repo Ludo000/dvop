@@ -40,6 +40,21 @@ pub fn populate_extensions_panel(panel: &gtk4::Box) {
     });
     header.append(&install_button);
 
+    // Disable All button
+    let disable_all_button = gtk4::Button::new();
+    disable_all_button.set_icon_name("action-unavailable-symbolic");
+    disable_all_button.set_tooltip_text(Some("Disable all extensions"));
+    disable_all_button.add_css_class("flat");
+    let panel_weak2 = glib::object::WeakRef::new();
+    panel_weak2.set(Some(panel));
+    disable_all_button.connect_clicked(move |_| {
+        disable_all_extensions();
+        if let Some(panel) = panel_weak2.upgrade() {
+            populate_extensions_panel(&panel);
+        }
+    });
+    header.append(&disable_all_button);
+
     panel.append(&header);
 
     // Search entry
@@ -59,9 +74,9 @@ pub fn populate_extensions_panel(panel: &gtk4::Box) {
     let list_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     list_box.add_css_class("extension-list");
 
-    // Get extensions from manager
+    // Get extensions from manager (includes both script and native extensions)
     let mgr = super::manager::get_manager();
-    let extensions: Vec<_> = mgr.get_extensions().to_vec();
+    let extensions: Vec<_> = mgr.get_all_extensions();
     drop(mgr);
 
     if extensions.is_empty() {
@@ -97,6 +112,21 @@ pub fn populate_extensions_panel(panel: &gtk4::Box) {
             child = widget.next_sibling();
         }
     });
+}
+
+/// Disable all extensions (both script-based and native)
+fn disable_all_extensions() {
+    let mut mgr = super::manager::get_manager();
+    let all_ids: Vec<String> = mgr.get_all_extensions().iter().map(|e| e.manifest.id.clone()).collect();
+    for id in &all_ids {
+        mgr.set_enabled(id, false);
+    }
+    drop(mgr);
+    // Fire refresh hooks so running extensions shut down
+    for id in &all_ids {
+        super::hooks::refresh_extension(id, false);
+    }
+    crate::status_log::log_info("All extensions disabled");
 }
 
 /// Opens a file chooser dialog for installing a .tar.gz extension
@@ -327,7 +357,7 @@ fn collect_badges(contribs: &super::ExtensionContributions) -> Vec<&'static str>
 /// Show the detail view for a single extension with vertical tabs
 fn show_extension_detail(panel: &gtk4::Box, ext_id: &str) {
     let mgr = super::manager::get_manager();
-    let ext = match mgr.get_extensions().iter().find(|e| e.manifest.id == ext_id) {
+    let ext = match mgr.get_all_extensions().iter().find(|e| e.manifest.id == ext_id) {
         Some(e) => e.clone(),
         None => return,
     };
@@ -584,31 +614,39 @@ fn build_overview_tab(ext: &Extension, panel: &gtk4::Box) -> gtk4::ScrolledWindo
     switch_row.append(&switch);
     vbox.append(&switch_row);
 
-    // Uninstall button
-    let uninstall_btn = gtk4::Button::with_label("Uninstall");
-    uninstall_btn.add_css_class("destructive-action");
-    uninstall_btn.set_margin_top(12);
-    uninstall_btn.set_halign(gtk4::Align::Start);
+    // Uninstall button (not available for native/built-in extensions)
+    if !ext.manifest.is_native {
+        let uninstall_btn = gtk4::Button::with_label("Uninstall");
+        uninstall_btn.add_css_class("destructive-action");
+        uninstall_btn.set_margin_top(12);
+        uninstall_btn.set_halign(gtk4::Align::Start);
 
-    let ext_id_rm = ext.manifest.id.clone();
-    let panel_weak = glib::object::WeakRef::new();
-    panel_weak.set(Some(panel));
-    uninstall_btn.connect_clicked(move |_| {
-        let mut mgr = super::manager::get_manager();
-        match mgr.remove_extension(&ext_id_rm) {
-            Ok(name) => {
-                crate::status_log::log_success(&format!("Uninstalled {}", name));
-                drop(mgr);
-                if let Some(panel) = panel_weak.upgrade() {
-                    populate_extensions_panel(&panel);
+        let ext_id_rm = ext.manifest.id.clone();
+        let panel_weak = glib::object::WeakRef::new();
+        panel_weak.set(Some(panel));
+        uninstall_btn.connect_clicked(move |_| {
+            let mut mgr = super::manager::get_manager();
+            match mgr.remove_extension(&ext_id_rm) {
+                Ok(name) => {
+                    crate::status_log::log_success(&format!("Uninstalled {}", name));
+                    drop(mgr);
+                    if let Some(panel) = panel_weak.upgrade() {
+                        populate_extensions_panel(&panel);
+                    }
+                }
+                Err(e) => {
+                    crate::status_log::log_error(&format!("Uninstall failed: {}", e));
                 }
             }
-            Err(e) => {
-                crate::status_log::log_error(&format!("Uninstall failed: {}", e));
-            }
-        }
-    });
-    vbox.append(&uninstall_btn);
+        });
+        vbox.append(&uninstall_btn);
+    } else {
+        let built_in_label = Label::new(Some("Built-in extension — cannot be uninstalled"));
+        built_in_label.add_css_class("dim-label");
+        built_in_label.set_margin_top(12);
+        built_in_label.set_halign(gtk4::Align::Start);
+        vbox.append(&built_in_label);
+    }
 
     scrolled.set_child(Some(&vbox));
     scrolled

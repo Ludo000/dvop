@@ -797,11 +797,19 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
-    // Initialize rust-analyzer at startup (it will keep running in background)
-    linter::ui::initialize_rust_analyzer();
+    // Register and start native extensions (e.g. Rust diagnostics via rust-analyzer)
+    extensions::rust_diagnostics::register();
+    extensions::native::fire_on_app_start();
 
-    // Check current directory for Rust files and update UI accordingly
-    linter::ui::check_and_update_rust_ui(&current_dir.borrow());
+    // Let native extensions check the current directory (shows linter UI for Rust projects, etc.)
+    extensions::native::fire_on_directory_open(&current_dir.borrow());
+
+    // If the rust diagnostics extension is disabled, ensure the diagnostics tab
+    // and linter status bar stay hidden on startup.
+    if !extensions::rust_diagnostics::is_enabled() {
+        diagnostics_panel.set_visible(false);
+        linter_status_label.set_visible(false);
+    }
 
     // Restore terminal visibility state from settings
     let saved_terminal_visible = settings::get_settings().get_terminal_visible();
@@ -2118,8 +2126,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                         &active_tab_path_clone_for_switch,
                     );
 
-                    // Check for Rust files and update linter UI visibility
-                    crate::linter::ui::check_and_update_rust_ui(&parent_path);
+                    // Let native extensions know directory changed
+                    crate::extensions::native::fire_on_directory_open(&parent_path);
 
                     return; // Exit early since we've already updated the file list
                 }
@@ -2814,8 +2822,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let window_clone_for_dialog = window.clone();
     
     window.connect_close_request(move |window| {
-        // Shutdown rust-analyzer before closing
-        crate::linter::ui::shutdown_rust_analyzer();
+        // Shutdown native extensions (including rust-analyzer) before closing
+        crate::extensions::native::shutdown_all();
         
         // Save the current folder
         let folder = current_dir_for_close.borrow().clone();

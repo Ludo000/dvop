@@ -3381,8 +3381,8 @@ fn setup_file_selection_handler(
                     }
                 }
 
-                // Check for Rust files and update linter UI visibility
-                crate::linter::ui::check_and_update_rust_ui(&path_from_list);
+                // Let native extensions know directory changed (e.g. Rust linter UI visibility)
+                crate::extensions::native::fire_on_directory_open(&path_from_list);
             } else if path_from_list.is_file() {
                 let mut mime_type = mime_guess::from_path(&path_from_list).first_or_octet_stream();
 
@@ -3581,8 +3581,8 @@ fn setup_up_button_handler(
                 );
             }
 
-            // Check for Rust files and update linter UI visibility
-            crate::linter::ui::check_and_update_rust_ui(&path);
+            // Let native extensions know directory changed (e.g. Rust linter UI visibility)
+            crate::extensions::native::fire_on_directory_open(&path);
         }
     });
 }

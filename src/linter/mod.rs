@@ -2,7 +2,6 @@
 // This module provides linting functionality for various programming languages
 
 pub mod diagnostics_panel;
-pub mod rust_linter;
 pub mod gtk_ui_linter;
 pub mod ui;
 
@@ -77,9 +76,9 @@ pub fn lint_file(file_path: &Path, content: &str) -> Vec<Diagnostic> {
 }
 
 /// Run linter for a specific language
-pub fn lint_by_language(language: &str, content: &str) -> Vec<Diagnostic> {
+pub fn lint_by_language(language: &str, _content: &str) -> Vec<Diagnostic> {
     match language.to_lowercase().as_str() {
-        "rust" => rust_linter::lint_rust_code(content),
+        // Rust diagnostics are handled by the rust-diagnostics extension (via rust-analyzer LSP)
         // Add more languages here
         _ => Vec::new(),
     }
@@ -328,7 +327,53 @@ mod tests {
     fn test_lint_by_language() {
         let rust_code = "fn main() { }";
         let diagnostics = lint_by_language("rust", rust_code);
-        // Should successfully lint Rust code without panicking
-        drop(diagnostics);
+        // Rust diagnostics are now handled by the extension, so this returns empty
+        assert!(diagnostics.is_empty());
+    }
+
+    #[test]
+    fn test_lint_file_rs_defers_to_extension() {
+        // Rust files return empty from the local linter —
+        // real diagnostics come from the rust-diagnostics extension via LSP
+        let path = Path::new("test.rs");
+        let diagnostics = lint_file(path, "fn main() { let x = 5 }");
+        assert!(diagnostics.is_empty(), "Local linter should return empty for .rs files");
+    }
+
+    #[test]
+    fn test_lint_file_unknown_extension() {
+        // Unknown file extensions should return empty (no linter registered)
+        let path = Path::new("file.xyz");
+        let diagnostics = lint_file(path, "some content");
+        assert!(diagnostics.is_empty());
+    }
+
+    #[test]
+    fn test_diagnostic_with_end_position() {
+        let diag = Diagnostic::new(
+            DiagnosticSeverity::Warning,
+            "unused variable".to_string(),
+            5, 10,
+            "W001".to_string(),
+        ).with_end_position(5, 15);
+
+        assert_eq!(diag.end_line, Some(5));
+        assert_eq!(diag.end_column, Some(15));
+        assert_eq!(diag.severity, DiagnosticSeverity::Warning);
+    }
+
+    #[test]
+    fn test_diagnostic_new_constructor() {
+        let diag = Diagnostic::new(
+            DiagnosticSeverity::Info,
+            "hint message".to_string(),
+            1, 1,
+            "I001".to_string(),
+        );
+        assert_eq!(diag.line, 1);
+        assert_eq!(diag.column, 1);
+        assert_eq!(diag.end_line, None);
+        assert_eq!(diag.end_column, None);
+        assert_eq!(diag.rule, "I001");
     }
 }

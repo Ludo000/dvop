@@ -1,6 +1,8 @@
 pub mod hooks;
 pub mod manager;
+pub mod native;
 pub mod runner;
+pub mod rust_diagnostics;
 pub mod sample;
 pub mod ui;
 
@@ -18,6 +20,9 @@ pub struct ExtensionManifest {
     pub enabled: bool,
     #[serde(default)]
     pub icon: Option<String>,
+    /// If true, this extension is a built-in native extension (code compiled in, no scripts).
+    #[serde(default)]
+    pub is_native: bool,
     #[serde(default)]
     pub contributions: ExtensionContributions,
 }

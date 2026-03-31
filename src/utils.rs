@@ -584,8 +584,8 @@ pub fn update_path_buttons(
                 }
             }
 
-            // Check for Rust files and update linter UI visibility
-            crate::linter::ui::check_and_update_rust_ui(&path_clone);
+            // Let native extensions know directory changed (e.g. Rust linter UI visibility)
+            crate::extensions::native::fire_on_directory_open(&path_clone);
         });
 
         // Add a separator after all but the last component

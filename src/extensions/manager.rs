@@ -76,13 +76,34 @@ impl ExtensionManager {
         );
     }
 
-    /// Get all loaded extensions
+    /// Get all loaded extensions (script-based only)
     pub fn get_extensions(&self) -> &[Extension] {
         &self.extensions
     }
 
+    /// Get all extensions including native built-in extensions.
+    /// Native extensions are appended as virtual Extension objects.
+    pub fn get_all_extensions(&self) -> Vec<Extension> {
+        let mut all: Vec<Extension> = self.extensions.clone();
+        for manifest in super::native::get_native_manifests() {
+            all.push(Extension::new(manifest, std::path::PathBuf::new()));
+        }
+        all
+    }
+
     /// Enable or disable an extension by ID
     pub fn set_enabled(&mut self, id: &str, enabled: bool) {
+        // Check if this is a native extension first
+        if super::native::is_native_extension(id) {
+            super::native::set_native_enabled(id, enabled);
+            println!(
+                "Native extension '{}' {}",
+                id,
+                if enabled { "enabled" } else { "disabled" }
+            );
+            return;
+        }
+
         for ext in &mut self.extensions {
             if ext.manifest.id == id {
                 ext.manifest.enabled = enabled;

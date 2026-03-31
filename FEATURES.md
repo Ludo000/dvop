@@ -1,7 +1,7 @@
 # Dvop - Comprehensive Functional Features Documentation
 **Version 0.1.0 | Last Updated: November 17, 2025**
 
-**Total Features: 196+ functional features documented**
+**Total Features: 201+ functional features documented**
 **Total Tests: 292 tests (94 unit + 198 E2E)**
 
 ## Quick Index
@@ -16,6 +16,7 @@
 - **Settings**: Features #128-145 (Preferences, session restoration)
 - **Keyboard Shortcuts**: Features #146-175 (30+ shortcuts)
 - **Advanced**: Features #176-192 (File caching, diagnostics, breadcrumbs, tab context menus)
+- **Extension System**: Features #197-201 (Extension manager, native extensions, UI, hooks)
 
 ---
 
@@ -376,14 +377,16 @@
 - Escape to dismiss
 - Real-time filtering
 
-### Feature #41: Rust Linter
-**Code:** `src/linter/rust_linter.rs:1-487`
-**Tests:** `src/linter/rust_linter.rs` - 4 unit tests, E2E test #040
-- Real-time syntax checking
-- Uses `syn` crate for parsing
-- Detects syntax errors, unsafe code, infinite loops
-- Unused imports detection
-- Malformed function signatures
+### Feature #41: Rust Diagnostics Extension
+**Code:** `src/extensions/rust_diagnostics.rs`, `src/lsp/client.rs`, `src/lsp/rust_analyzer.rs`
+**Tests:** `src/extensions/rust_diagnostics.rs` - persistence test, E2E test #040
+- Native extension providing real-time Rust diagnostics via rust-analyzer LSP
+- Toggleable through extension panel (enable/disable at runtime)
+- Persists enabled state in `~/.config/dvop/native_extensions.json`
+- Diagnostics panel and linter status auto-hide when disabled
+- Diagnostics panel auto-shows when diagnostics arrive after enabling
+- Error and warning underlines, diagnostics panel counts
+- Replaces the old built-in `syn`-based Rust linter
 
 ### Feature #42: GTK UI Linter
 **Code:** `src/linter/gtk_ui_linter.rs:1-199`
@@ -1554,9 +1557,64 @@
 
 ---
 
+## Extension System
+
+### Feature #197: Extension Manager
+**Code:** `src/extensions/manager.rs`, `src/extensions/mod.rs`
+**Tests:** E2E test #197 (`test_feature_197_extension_manager`)
+- Loads script extensions from `~/.config/dvop/extensions/` via `manifest.json`
+- Unified registry for both script-based and native extensions
+- Enable/disable individual extensions at runtime
+- Persists extension state across sessions
+- Install extensions from `.tar.gz` archives
+- Extension search/filtering in the UI
+
+### Feature #198: Native Extension System
+**Code:** `src/extensions/native.rs`, `src/extensions/rust_diagnostics.rs`
+**Tests:** E2E test #198 (`test_feature_198_native_extension_trait`)
+- `NativeExtension` trait for compiled-in extensions
+- Lifecycle hooks: `on_app_start`, `on_directory_open`, `on_file_open`, `on_file_save`, `on_file_close`, `shutdown`
+- Global registry with thread-safe enable/disable
+- Extensions skip all hooks when disabled (guard checks in `fire_on_*` and per-method)
+- Manifest system shared with script extensions for unified UI
+
+### Feature #199: Extension Panel UI
+**Code:** `src/extensions/ui.rs`
+**Tests:** E2E test #199 (`test_feature_199_extension_panel_ui`)
+- Dedicated sidebar tab for managing extensions
+- Extension cards with name, description, version, author
+- Toggle switch to enable/disable each extension
+- Install button for `.tar.gz` extension archives
+- "Disable All" button to disable all extensions at once
+- Search/filter extensions by name
+- Native extensions displayed alongside script extensions
+
+### Feature #200: Rust Diagnostics Extension Toggle
+**Code:** `src/extensions/rust_diagnostics.rs`, `src/linter/ui.rs`, `src/main.rs`
+**Tests:** E2E test #200 (`test_feature_200_rust_diagnostics_toggle`)
+- Diagnostics panel hides immediately when extension is disabled
+- Linter status bar hides when extension is disabled
+- rust-analyzer LSP shuts down on disable, reinitializes on enable
+- Diagnostics panel re-appears when extension is re-enabled and diagnostics arrive
+- Panel stays hidden on app startup if extension was previously disabled
+- Enabled state persisted in `~/.config/dvop/native_extensions.json`
+
+### Feature #201: Extension Hooks System
+**Code:** `src/extensions/hooks.rs`
+**Tests:** E2E test #201 (`test_feature_201_extension_hooks`)
+- Script extension lifecycle hooks (`on_file_open`, `on_file_save`, `on_file_close`)
+- Extension linter integration — script extensions can provide linters for specific languages
+- Extension keybinding registration and hot-reload on enable/disable
+- Command palette integration for extension commands
+- Context menu contributions (editor and file explorer)
+- Status bar text contributions from extension scripts
+- Sidebar panel contributions
+
+---
+
 ## Summary
 
-**Dvop provides 196 documented functional features** across 12 main categories:
+**Dvop provides 201 documented functional features** across 13 main categories:
 - 18 core text editor features
 - 18 file management capabilities
 - 18 code intelligence features
@@ -1568,6 +1626,7 @@
 - 18 settings and customization options
 - 30 keyboard shortcuts
 - 17 advanced technical features
+- 5 extension system features
 
 ### Key Strengths
 1. **Multi-language support** with intelligent code completion for 10+ languages
@@ -1577,7 +1636,7 @@
 5. **Smart code intelligence** through linting, LSP integration, and diagnostics
 6. **Comprehensive keyboard shortcuts** for efficient workflow
 7. **Session persistence** to restore your workspace exactly as you left it
-8. **Extensible architecture** ready for future enhancements
+8. **Extension system** with native and script-based extensions, enable/disable at runtime
 
 ### Code Structure
 ```
@@ -1586,6 +1645,7 @@ src/
   handlers.rs (4305 lines)   - Event handlers, file operations
   ui/ (7+ files)            - UI components, layouts, templates
   completion/ (3 files)     - Code completion system
+  extensions/ (8 files)     - Extension system (manager, native, hooks, UI)
   linter/ (4 files)         - Linting and diagnostics
   lsp/ (3 files)            - Language Server Protocol
   search.rs (638 lines)     - Find/replace functionality

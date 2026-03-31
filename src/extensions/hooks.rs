@@ -77,12 +77,18 @@ pub fn fire_on_file_close(file_path: &Path) {
 /// This only updates what the extension actually contributes.
 pub fn refresh_extension(ext_id: &str, enabled: bool) {
     let mgr = super::manager::get_manager();
+    // Handle native extensions separately
+    if super::native::is_native_extension(ext_id) {
+        super::native::set_native_enabled(ext_id, enabled);
+        return;
+    }
+
     let ext = match mgr.get_extensions().iter().find(|e| e.manifest.id == ext_id) {
         Some(e) => e.clone(),
         None => return,
     };
-    let contribs = &ext.manifest.contributions;
     drop(mgr);
+    let contribs = &ext.manifest.contributions;
 
     // CSS: re-apply all CSS if this extension has a CSS contribution
     if contribs.css.is_some() {
@@ -190,7 +196,7 @@ pub fn run_extension_linters(file_path: &Path) -> Vec<crate::linter::Diagnostic>
 
     let mgr = super::manager::get_manager();
     for ext in mgr.get_extensions() {
-        if !ext.manifest.enabled {
+        if !ext.manifest.enabled || ext.manifest.is_native {
             continue;
         }
         for linter in &ext.manifest.contributions.linters {
