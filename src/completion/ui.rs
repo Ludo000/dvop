@@ -71,6 +71,228 @@ enum CompletionItem {
     ImportModule(String), // Module path
 }
 
+/// A scored completion candidate for intelligent ranking.
+#[derive(Clone, Debug)]
+struct ScoredItem {
+    item: CompletionItem,
+    score: i32,
+}
+
+// ── Cursor context analysis ──────────────────────────────────────
+
+/// What kind of code position the cursor is at.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum CursorContext {
+    /// After `:`, `->`, `<`, generic/type annotation position
+    TypePosition,
+    /// Start of a line or after `{`, `;` — expecting a statement keyword
+    StatementStart,
+    /// After `=`, `(`, `,`, `return`, `=>` — expecting an expression/value
+    ExpressionPosition,
+    /// After `.` — method/field access (not yet supported by JSON data)
+    DotAccess,
+    /// Default / unknown
+    General,
+}
+
+/// Analyse the text immediately before the cursor to determine context.
+fn analyse_cursor_context(context_before_word: &str) -> CursorContext {
+    // Get the text before the current word, trimmed
+    let trimmed = context_before_word.trim_end();
+
+    if trimmed.is_empty() {
+        return CursorContext::StatementStart;
+    }
+
+    let last_char = trimmed.chars().last().unwrap_or(' ');
+
+    // Dot access: `foo.`
+    if last_char == '.' {
+        return CursorContext::DotAccess;
+    }
+
+    // Type position: after `:`, `->`, `<` (generics)
+    if last_char == ':' || last_char == '<' {
+        return CursorContext::TypePosition;
+    }
+    if trimmed.ends_with("->") {
+        return CursorContext::TypePosition;
+    }
+
+    // Expression position: after `=`, `(`, `,`, `=>`, `return`, `!`
+    if matches!(last_char, '=' | '(' | ',' | '!' ) {
+        return CursorContext::ExpressionPosition;
+    }
+    if trimmed.ends_with("=>") || trimmed.ends_with("return") {
+        return CursorContext::ExpressionPosition;
+    }
+
+    // Statement start: beginning of line, after `{`, `}` , `;`
+    if matches!(last_char, '{' | '}' | ';') {
+        return CursorContext::StatementStart;
+    }
+
+    // Check if we're at the start of a logical line by looking for the last
+    // newline and checking if everything after it is whitespace
+    if let Some(nl) = trimmed.rfind('\n') {
+        let after_nl = &trimmed[nl + 1..];
+        if after_nl.trim().is_empty() {
+            return CursorContext::StatementStart;
+        }
+    }
+
+    CursorContext::General
+}
+
+// ── Fuzzy matching & scoring ─────────────────────────────────────
+
+/// Compute a match score for `candidate` given the user-typed `query`.
+/// Returns `None` if there is no reasonable match at all.
+///
+/// Scoring heuristics (higher = better):
+///   +100  exact (case-insensitive) full match
+///   +80   exact prefix match
+///   +60   subsequence match with consecutive-char bonus
+///   +20   case-sensitive prefix bonus
+///   -1    per gap between matched characters (fuzzy penalty)
+fn fuzzy_match_score(query: &str, candidate: &str) -> Option<i32> {
+    if query.is_empty() {
+        return Some(0);
+    }
+
+    let q_lower = query.to_lowercase();
+    let c_lower = candidate.to_lowercase();
+
+    // Exact full match
+    if q_lower == c_lower {
+        return Some(100);
+    }
+
+    // Prefix match
+    if c_lower.starts_with(&q_lower) {
+        let bonus = if candidate.starts_with(query) { 20 } else { 0 }; // case-sensitive bonus
+        return Some(80 + bonus);
+    }
+
+    // Subsequence / fuzzy match  — every query char must appear in order
+    let mut score: i32 = 60;
+    let mut c_iter = c_lower.chars().enumerate().peekable();
+    let mut prev_match_idx: Option<usize> = None;
+    let mut consecutive = 0;
+
+    for qch in q_lower.chars() {
+        let mut found = false;
+        for (ci, cch) in c_iter.by_ref() {
+            if cch == qch {
+                // Bonus for consecutive matched characters
+                if let Some(prev) = prev_match_idx {
+                    if ci == prev + 1 {
+                        consecutive += 1;
+                        score += 5 * consecutive; // accelerating bonus for runs
+                    } else {
+                        consecutive = 0;
+                        score -= (ci - prev - 1).min(5) as i32; // gap penalty
+                    }
+                }
+                // Bonus for matching at word boundaries (after `_` or uppercase transition)
+                if ci == 0
+                    || candidate.as_bytes().get(ci.wrapping_sub(1)).map_or(false, |&b| b == b'_')
+                    || (candidate.as_bytes()[ci].is_ascii_uppercase()
+                        && ci > 0
+                        && candidate.as_bytes()[ci - 1].is_ascii_lowercase())
+                {
+                    score += 10;
+                }
+                prev_match_idx = Some(ci);
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            return None; // query char not found — no match
+        }
+    }
+
+    Some(score)
+}
+
+/// Context-aware bonus applied after the base fuzzy score.
+fn context_bonus(item: &CompletionItem, ctx: CursorContext, keyword_type: Option<&str>, keyword_category: Option<&str>) -> i32 {
+    match ctx {
+        CursorContext::TypePosition => {
+            match item {
+                CompletionItem::Keyword(_) => {
+                    // Boost type-related keywords in type position
+                    match keyword_type {
+                        Some("type") | Some("primitive") | Some("trait") => 30,
+                        _ => match keyword_category {
+                            Some("type_declaration") | Some("primitive_types") => 25,
+                            _ => -10, // demote non-type keywords
+                        },
+                    }
+                }
+                CompletionItem::ImportItem(i) => {
+                    match i.item_type.as_str() {
+                        "struct" | "enum" | "trait" => 25,
+                        _ => 0,
+                    }
+                }
+                CompletionItem::BufferWord(_) => 5, // buffer words might be type names
+                _ => 0,
+            }
+        }
+        CursorContext::StatementStart => {
+            match item {
+                CompletionItem::Keyword(_) => {
+                    match keyword_category {
+                        Some("control_flow") | Some("function_declaration") | Some("variable_declaration") | Some("visibility") => 20,
+                        Some("implementation") | Some("type_declaration") | Some("trait_declaration") => 15,
+                        _ => 0,
+                    }
+                }
+                CompletionItem::Snippet(_, _) => 15, // snippets are great at statement start
+                _ => 0,
+            }
+        }
+        CursorContext::ExpressionPosition => {
+            match item {
+                CompletionItem::Keyword(_) => {
+                    match keyword_type {
+                        Some("primitive") | Some("type") => 10, // constructors
+                        _ => match keyword_category {
+                            Some("literal_values") | Some("control_flow") => 10,
+                            _ => -5,
+                        },
+                    }
+                }
+                CompletionItem::BufferWord(_) => 15, // likely a variable or function
+                CompletionItem::Snippet(_, _) => 5,
+                CompletionItem::ImportItem(i) => {
+                    match i.item_type.as_str() {
+                        "function" | "const" => 20,
+                        "struct" | "enum" => 10,
+                        _ => 0,
+                    }
+                }
+                _ => 0,
+            }
+        }
+        CursorContext::DotAccess => 0, // we have no method data from JSON
+        CursorContext::General => 0,
+    }
+}
+
+/// Get the primary name from a CompletionItem for display/sorting.
+fn completion_item_name(item: &CompletionItem) -> String {
+    match item {
+        CompletionItem::Keyword(k) => k.clone(),
+        CompletionItem::Snippet(t, _) => t.clone(),
+        CompletionItem::BufferWord(w) => w.clone(),
+        CompletionItem::ImportItem(i) => i.name.clone(),
+        CompletionItem::ImportModule(m) => m.clone(),
+    }
+}
+
 /// Extract the programming language from buffer language setting
 fn get_buffer_language(buffer: &Buffer) -> String {
     let supported_languages = crate::completion::get_supported_languages();
@@ -253,6 +475,23 @@ pub fn trigger_completion(source_view: &View) {
     // Get the actual word being typed
     let prefix = buffer.text(&word_start, &cursor_iter, false);
 
+    // Get the text *before* the current word for context analysis
+    let line_start = {
+        let mut ls = word_start;
+        while !ls.is_start() {
+            let mut tmp = ls;
+            tmp.backward_char();
+            if tmp.char() == '\n' {
+                break;
+            }
+            ls = tmp;
+        }
+        ls
+    };
+    let text_before_word = buffer.text(&line_start, &word_start, false);
+    let cursor_ctx = analyse_cursor_context(&text_before_word);
+    completion_debug!("Cursor context: {:?}", cursor_ctx);
+
     // Get language-specific keywords
     let language = if let Some(source_buffer) = buffer.downcast_ref::<sourceview5::Buffer>() {
         get_buffer_language(source_buffer)
@@ -265,11 +504,9 @@ pub fn trigger_completion(source_view: &View) {
     // Maximum number of suggestions to display
     const MAX_SUGGESTIONS: usize = 20;
 
-    // Collect completion suggestions with their types.
-    // All JSON lookups go through a single mutex acquisition to avoid repeated
-    // lock/unlock overhead on the global CompletionDataManager.
-    let mut completion_items: Vec<CompletionItem> = Vec::new();
-    let prefix_lower = prefix.to_lowercase();
+    // ── Gather & score candidates ────────────────────────────────
+    let mut scored: Vec<ScoredItem> = Vec::new();
+    let prefix_str: String = prefix.to_string();
 
     {
         let mut manager = super::json_provider::get_completion_manager();
@@ -277,33 +514,58 @@ pub fn trigger_completion(source_view: &View) {
 
         if is_import_context {
             completion_debug!("Processing import completions...");
-
+            // Import context: use prefix matching (fuzzy is confusing for paths)
             if let Some(module_path) = import_path {
                 if let Some(prov) = provider {
                     for item in prov.get_import_suggestions(&module_path) {
-                        if prefix.is_empty()
-                            || item.name.to_lowercase().starts_with(&prefix_lower)
-                        {
-                            completion_items.push(CompletionItem::ImportItem(item));
+                        if let Some(base) = fuzzy_match_score(&prefix_str, &item.name) {
+                            let ctx_bonus = context_bonus(
+                                &CompletionItem::ImportItem(item.clone()),
+                                cursor_ctx, None, None,
+                            );
+                            scored.push(ScoredItem {
+                                item: CompletionItem::ImportItem(item),
+                                score: base + ctx_bonus,
+                            });
+                        } else if prefix_str.is_empty() {
+                            scored.push(ScoredItem {
+                                item: CompletionItem::ImportItem(item),
+                                score: 0,
+                            });
                         }
                     }
                     for submodule in prov.get_submodules(&module_path) {
-                        if prefix.is_empty()
-                            || submodule.to_lowercase().starts_with(&prefix_lower)
-                        {
-                            let full_path = if module_path.is_empty() {
-                                submodule
-                            } else {
-                                format!("{}::{}", module_path, submodule)
-                            };
-                            completion_items.push(CompletionItem::ImportModule(full_path));
+                        let full_path = if module_path.is_empty() {
+                            submodule.clone()
+                        } else {
+                            format!("{}::{}", module_path, &submodule)
+                        };
+                        if let Some(base) = fuzzy_match_score(&prefix_str, &submodule) {
+                            scored.push(ScoredItem {
+                                item: CompletionItem::ImportModule(full_path),
+                                score: base,
+                            });
+                        } else if prefix_str.is_empty() {
+                            scored.push(ScoredItem {
+                                item: CompletionItem::ImportModule(full_path),
+                                score: 0,
+                            });
                         }
                     }
                 }
             } else if let Some(prov) = provider {
                 for module in prov.find_matching_modules("") {
-                    if prefix.is_empty() || module.to_lowercase().starts_with(&prefix_lower) {
-                        completion_items.push(CompletionItem::ImportModule(module));
+                    let last_seg = module.split("::").last().unwrap_or(&module);
+                    if let Some(base) = fuzzy_match_score(&prefix_str, last_seg) {
+                        scored.push(ScoredItem {
+                            item: CompletionItem::ImportModule(module),
+                            score: base,
+                        });
+                    } else if prefix_str.is_empty() {
+                        scored.push(ScoredItem {
+                            item: CompletionItem::ImportModule(module),
+                            score: 0,
+                        });
                     }
                 }
             }
@@ -311,31 +573,66 @@ pub fn trigger_completion(source_view: &View) {
             completion_debug!("Processing regular completions...");
 
             if let Some(prov) = provider {
-                // Filter keywords directly from the provider — no intermediate Vec<String>
-                for kw in prov.keywords() {
-                    if prefix.is_empty() || kw.to_lowercase().starts_with(&prefix_lower) {
-                        completion_items.push(CompletionItem::Keyword(kw.to_string()));
+                // Score keywords using fuzzy match + context
+                for kw_data in prov.get_keyword_data() {
+                    if let Some(base) = fuzzy_match_score(&prefix_str, &kw_data.keyword) {
+                        let item = CompletionItem::Keyword(kw_data.keyword.clone());
+                        let ctx_bonus = context_bonus(
+                            &item,
+                            cursor_ctx,
+                            Some(&kw_data.r#type),
+                            Some(&kw_data.category),
+                        );
+                        scored.push(ScoredItem { item, score: base + ctx_bonus });
+                    } else if prefix_str.is_empty() {
+                        let item = CompletionItem::Keyword(kw_data.keyword.clone());
+                        let ctx_bonus = context_bonus(
+                            &item,
+                            cursor_ctx,
+                            Some(&kw_data.r#type),
+                            Some(&kw_data.category),
+                        );
+                        scored.push(ScoredItem { item, score: ctx_bonus });
                     }
                 }
-                // Filter snippets directly
-                for (trigger, content) in prov.snippets() {
-                    if prefix.is_empty() || trigger.to_lowercase().starts_with(&prefix_lower) {
-                        completion_items
-                            .push(CompletionItem::Snippet(trigger.to_string(), content.to_string()));
+
+                // Score snippets
+                for snippet in prov.get_snippet_data() {
+                    if let Some(base) = fuzzy_match_score(&prefix_str, &snippet.trigger) {
+                        let item = CompletionItem::Snippet(
+                            snippet.trigger.clone(),
+                            snippet.content.clone(),
+                        );
+                        let ctx_bonus = context_bonus(
+                            &item,
+                            cursor_ctx,
+                            None,
+                            Some(&snippet.category),
+                        );
+                        scored.push(ScoredItem { item, score: base + ctx_bonus });
+                    } else if prefix_str.is_empty() {
+                        let item = CompletionItem::Snippet(
+                            snippet.trigger.clone(),
+                            snippet.content.clone(),
+                        );
+                        let ctx_bonus = context_bonus(&item, cursor_ctx, None, Some(&snippet.category));
+                        scored.push(ScoredItem { item, score: ctx_bonus });
                     }
                 }
             }
         }
     } // mutex released here
 
-    // Add buffer words only for non-import, non-empty prefix completions
-    if !is_import_context && !prefix.is_empty() {
+    // ── Buffer words with proximity scoring ──────────────────────
+    if !is_import_context && !prefix_str.is_empty() {
         let buffer_text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+        let cursor_offset = cursor_iter.offset() as usize;
+        let total_len = buffer_text.len();
 
-        // Build a set of names already in completion_items for O(1) dedup
-        let mut seen: HashSet<String> = completion_items
+        // Build a set of names already scored to avoid duplicates
+        let mut seen: HashSet<String> = scored
             .iter()
-            .map(|item| match item {
+            .map(|si| match &si.item {
                 CompletionItem::Keyword(k) => k.clone(),
                 CompletionItem::Snippet(s, _) => s.clone(),
                 CompletionItem::BufferWord(w) => w.clone(),
@@ -344,44 +641,72 @@ pub fn trigger_completion(source_view: &View) {
             })
             .collect();
 
+        // Track byte offset as we scan so we can compute proximity
+        let mut byte_offset: usize = 0;
         for word in buffer_text.split_whitespace() {
-            // Stop early once we have enough candidates
-            if completion_items.len() >= MAX_SUGGESTIONS {
-                break;
+            if scored.len() >= MAX_SUGGESTIONS * 3 {
+                break; // gather a generous pool, we'll trim after sorting
+            }
+            // Advance byte_offset to find word position
+            if let Some(pos) = buffer_text[byte_offset..].find(word) {
+                byte_offset += pos;
             }
             let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
-            if clean_word.len() > 2
-                && clean_word != prefix
-                && clean_word.to_lowercase().starts_with(&prefix_lower)
-                && seen.insert(clean_word.to_string())
-            {
-                completion_items.push(CompletionItem::BufferWord(clean_word.to_string()));
+            if clean_word.len() > 2 && clean_word != prefix_str {
+                if let Some(base) = fuzzy_match_score(&prefix_str, clean_word) {
+                    if seen.insert(clean_word.to_string()) {
+                        // Proximity bonus: closer to cursor → higher score
+                        let distance = if byte_offset < cursor_offset {
+                            cursor_offset - byte_offset
+                        } else {
+                            byte_offset - cursor_offset
+                        };
+                        let proximity = if total_len > 0 {
+                            // 0..20 bonus, max when distance==0
+                            20 - ((distance * 20) / total_len.max(1)).min(20) as usize
+                        } else {
+                            0
+                        };
+                        scored.push(ScoredItem {
+                            item: CompletionItem::BufferWord(clean_word.to_string()),
+                            score: base + proximity as i32,
+                        });
+                    }
+                }
             }
+            byte_offset += word.len();
         }
     }
 
-    // Convert completion items to display strings and prepare for insertion
-    let mut suggestions_with_content: Vec<(String, CompletionItem)> = Vec::new();
+    // ── Sort by score (descending), then alphabetically for ties ─
+    scored.sort_by(|a, b| {
+        b.score.cmp(&a.score).then_with(|| {
+            let name_a = completion_item_name(&a.item);
+            let name_b = completion_item_name(&b.item);
+            name_a.cmp(&name_b)
+        })
+    });
+    scored.truncate(MAX_SUGGESTIONS);
 
-    for item in completion_items {
-        let display_text = match &item {
-            CompletionItem::Keyword(k) => format!("{} (keyword)", k),
-            CompletionItem::Snippet(trigger, _) => format!("{} (snippet)", trigger),
-            CompletionItem::BufferWord(w) => w.clone(),
-            CompletionItem::ImportItem(import_item) => {
-                format!("{} ({})", import_item.name, import_item.item_type)
-            }
-            CompletionItem::ImportModule(module) => {
-                let module_name = module.split("::").last().unwrap_or(module);
-                format!("{} (module)", module_name)
-            }
-        };
-        suggestions_with_content.push((display_text, item));
-    }
-
-    // Sort suggestions by display text
-    suggestions_with_content.sort_by(|a, b| a.0.cmp(&b.0));
-    suggestions_with_content.truncate(MAX_SUGGESTIONS);
+    // Convert to display format
+    let suggestions_with_content: Vec<(String, CompletionItem)> = scored
+        .into_iter()
+        .map(|si| {
+            let display_text = match &si.item {
+                CompletionItem::Keyword(k) => format!("{} (keyword)", k),
+                CompletionItem::Snippet(trigger, _) => format!("{} (snippet)", trigger),
+                CompletionItem::BufferWord(w) => w.clone(),
+                CompletionItem::ImportItem(import_item) => {
+                    format!("{} ({})", import_item.name, import_item.item_type)
+                }
+                CompletionItem::ImportModule(module) => {
+                    let module_name = module.split("::").last().unwrap_or(module);
+                    format!("{} (module)", module_name)
+                }
+            };
+            (display_text, si.item)
+        })
+        .collect();
 
     completion_debug!(
         "Found {} completion suggestions: {:?}",
@@ -1039,4 +1364,200 @@ fn extract_import_path(context: &str) -> Option<String> {
     }
 
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── fuzzy_match_score tests ──────────────────────────────────
+
+    #[test]
+    fn test_exact_match_scores_highest() {
+        let score = fuzzy_match_score("let", "let").unwrap();
+        assert_eq!(score, 100);
+    }
+
+    #[test]
+    fn test_exact_match_case_insensitive() {
+        let score = fuzzy_match_score("Let", "let").unwrap();
+        assert_eq!(score, 100);
+    }
+
+    #[test]
+    fn test_prefix_match() {
+        let score = fuzzy_match_score("pr", "println").unwrap();
+        assert!(score >= 80, "prefix match should score >=80, got {}", score);
+    }
+
+    #[test]
+    fn test_prefix_case_sensitive_bonus() {
+        let exact_case = fuzzy_match_score("Hash", "HashMap").unwrap();
+        let diff_case = fuzzy_match_score("hash", "HashMap").unwrap();
+        assert!(
+            exact_case > diff_case,
+            "case-sensitive prefix ({}) should beat case-insensitive ({})",
+            exact_case, diff_case
+        );
+    }
+
+    #[test]
+    fn test_fuzzy_subsequence() {
+        // "hmap" should match "HashMap" (h, m, a, p all appear in order)
+        let score = fuzzy_match_score("hmap", "HashMap");
+        assert!(score.is_some(), "hmap should fuzzy-match HashMap");
+    }
+
+    #[test]
+    fn test_fuzzy_camelcase_bonus() {
+        // Matching word boundaries (capital H, M) should get bonuses
+        let score = fuzzy_match_score("HM", "HashMap").unwrap();
+        assert!(score > 60, "CamelCase boundary match should score well, got {}", score);
+    }
+
+    #[test]
+    fn test_no_match_returns_none() {
+        assert!(fuzzy_match_score("xyz", "let").is_none());
+        assert!(fuzzy_match_score("abc", "HashMap").is_none());
+    }
+
+    #[test]
+    fn test_empty_query_matches_everything() {
+        assert_eq!(fuzzy_match_score("", "anything").unwrap(), 0);
+    }
+
+    #[test]
+    fn test_prefix_beats_fuzzy() {
+        let prefix = fuzzy_match_score("pr", "println").unwrap();
+        let fuzzy = fuzzy_match_score("pl", "println").unwrap();
+        assert!(
+            prefix >= fuzzy,
+            "prefix match ({}) should beat or equal fuzzy ({})",
+            prefix, fuzzy
+        );
+    }
+
+    #[test]
+    fn test_longer_prefix_scores_same_base() {
+        let short = fuzzy_match_score("p", "println").unwrap();
+        let long = fuzzy_match_score("print", "println").unwrap();
+        // Both are prefix matches, should both be >= 80
+        assert!(short >= 80);
+        assert!(long >= 80);
+    }
+
+    // ── analyse_cursor_context tests ─────────────────────────────
+
+    #[test]
+    fn test_context_type_position_colon() {
+        assert_eq!(analyse_cursor_context("let x: "), CursorContext::TypePosition);
+    }
+
+    #[test]
+    fn test_context_type_position_arrow() {
+        assert_eq!(analyse_cursor_context("fn foo() -> "), CursorContext::TypePosition);
+    }
+
+    #[test]
+    fn test_context_type_position_generic() {
+        assert_eq!(analyse_cursor_context("Vec<"), CursorContext::TypePosition);
+    }
+
+    #[test]
+    fn test_context_statement_start_empty() {
+        assert_eq!(analyse_cursor_context(""), CursorContext::StatementStart);
+    }
+
+    #[test]
+    fn test_context_statement_start_brace() {
+        assert_eq!(analyse_cursor_context("fn main() {"), CursorContext::StatementStart);
+    }
+
+    #[test]
+    fn test_context_statement_start_semicolon() {
+        assert_eq!(analyse_cursor_context("let x = 5;"), CursorContext::StatementStart);
+    }
+
+    #[test]
+    fn test_context_expression_equals() {
+        assert_eq!(analyse_cursor_context("let x = "), CursorContext::ExpressionPosition);
+    }
+
+    #[test]
+    fn test_context_expression_paren() {
+        assert_eq!(analyse_cursor_context("foo("), CursorContext::ExpressionPosition);
+    }
+
+    #[test]
+    fn test_context_expression_comma() {
+        assert_eq!(analyse_cursor_context("foo(a, "), CursorContext::ExpressionPosition);
+    }
+
+    #[test]
+    fn test_context_dot_access() {
+        assert_eq!(analyse_cursor_context("my_var."), CursorContext::DotAccess);
+    }
+
+    #[test]
+    fn test_context_newline_is_statement_start() {
+        assert_eq!(analyse_cursor_context("let x = 5;\n    "), CursorContext::StatementStart);
+    }
+
+    // ── context_bonus tests ──────────────────────────────────────
+
+    #[test]
+    fn test_type_keyword_boosted_in_type_position() {
+        let item = CompletionItem::Keyword("String".to_string());
+        let bonus = context_bonus(&item, CursorContext::TypePosition, Some("type"), None);
+        assert!(bonus > 0, "type keyword should get positive bonus in type position");
+    }
+
+    #[test]
+    fn test_control_flow_demoted_in_type_position() {
+        let item = CompletionItem::Keyword("for".to_string());
+        let bonus = context_bonus(
+            &item,
+            CursorContext::TypePosition,
+            Some("keyword"),
+            Some("control_flow"),
+        );
+        assert!(bonus < 0, "control_flow keyword should be demoted in type position");
+    }
+
+    #[test]
+    fn test_snippet_boosted_at_statement_start() {
+        let item = CompletionItem::Snippet("fn".to_string(), "fn ${1:name}()".to_string());
+        let bonus = context_bonus(&item, CursorContext::StatementStart, None, None);
+        assert!(bonus > 0, "snippets should be boosted at statement start");
+    }
+
+    #[test]
+    fn test_buffer_word_boosted_in_expression() {
+        let item = CompletionItem::BufferWord("my_var".to_string());
+        let bonus = context_bonus(&item, CursorContext::ExpressionPosition, None, None);
+        assert!(bonus > 0, "buffer words should be boosted in expression position");
+    }
+
+    // ── completion_item_name tests ───────────────────────────────
+
+    #[test]
+    fn test_completion_item_name_keyword() {
+        assert_eq!(completion_item_name(&CompletionItem::Keyword("let".to_string())), "let");
+    }
+
+    #[test]
+    fn test_completion_item_name_snippet() {
+        assert_eq!(
+            completion_item_name(&CompletionItem::Snippet("fn".to_string(), "content".to_string())),
+            "fn"
+        );
+    }
+
+    #[test]
+    fn test_completion_item_name_buffer_word() {
+        assert_eq!(
+            completion_item_name(&CompletionItem::BufferWord("my_var".to_string())),
+            "my_var"
+        );
+    }
 }

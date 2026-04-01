@@ -174,13 +174,11 @@ impl JsonCompletionProvider {
     }
 
     /// Get all keyword data for advanced functionality
-    #[allow(dead_code)]
     pub fn get_keyword_data(&self) -> &[KeywordData] {
         &self.language_data.keywords
     }
 
     /// Get all snippet data for advanced functionality
-    #[allow(dead_code)]
     pub fn get_snippet_data(&self) -> &[SnippetData] {
         &self.language_data.snippets
     }
