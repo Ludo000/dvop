@@ -433,7 +433,7 @@
       "keyword": "char",
       "type": "primitive",
       "description": "char - Stores a single Unicode character (4 bytes). Use for individual characters, emojis.",
-      "example": "let letter: char = 'A'; let emoji: char = '\ud83e\udd80';",
+      "example": "let letter: char = 'A'; let emoji: char = '🦀';",
       "category": "primitive"
     },
     {
@@ -1058,6 +1058,139 @@
       "description": "MaybeUninit - Wrapper for potentially uninitialized data.",
       "example": "let mut uninit: MaybeUninit<i32> = MaybeUninit::uninit(); unsafe { uninit.write(42); }",
       "category": "memory"
+    },
+    {
+      "keyword": "true",
+      "type": "primitive",
+      "description": "true - Boolean literal representing a true value.",
+      "example": "let is_ready = true;",
+      "category": "literal_values"
+    },
+    {
+      "keyword": "false",
+      "type": "primitive",
+      "description": "false - Boolean literal representing a false value.",
+      "example": "let is_done = false;",
+      "category": "literal_values"
+    },
+    {
+      "keyword": "FromStr",
+      "type": "trait",
+      "description": "FromStr - Trait for types that can be parsed from a string. Powers the .parse() method.",
+      "example": "let n: i32 = \"42\".parse().unwrap();",
+      "category": "traits"
+    },
+    {
+      "keyword": "Error",
+      "type": "trait",
+      "description": "Error - Base trait for all error types. Implement for custom error types along with Display and Debug.",
+      "example": "impl std::error::Error for MyError {}",
+      "category": "traits"
+    },
+    {
+      "keyword": "Read",
+      "type": "trait",
+      "description": "Read - Trait for reading bytes from a source. Implemented by File, TcpStream, stdin, etc.",
+      "example": "use std::io::Read; let mut buf = String::new(); file.read_to_string(&mut buf)?;",
+      "category": "traits"
+    },
+    {
+      "keyword": "Write",
+      "type": "trait",
+      "description": "Write - Trait for writing bytes to a destination. Implemented by File, TcpStream, stdout, etc.",
+      "example": "use std::io::Write; file.write_all(b\"hello\")?;",
+      "category": "traits"
+    },
+    {
+      "keyword": "dbg",
+      "type": "macro",
+      "description": "dbg! - Debug-prints an expression's value along with file/line info. Returns the value for inline use.",
+      "example": "let x = dbg!(2 + 3); // prints [src/main.rs:1] 2 + 3 = 5",
+      "category": "macros"
+    },
+    {
+      "keyword": "concat",
+      "type": "macro",
+      "description": "concat! - Concatenates literals into a static string at compile time.",
+      "example": "const GREETING: &str = concat!(\"Hello\", \", \", \"world!\");",
+      "category": "macros"
+    },
+    {
+      "keyword": "stringify",
+      "type": "macro",
+      "description": "stringify! - Converts a token tree to a string literal at compile time.",
+      "example": "println!(\"Calling: {}\", stringify!(my_function()));",
+      "category": "macros"
+    },
+    {
+      "keyword": "matches",
+      "type": "macro",
+      "description": "matches! - Returns true if an expression matches a pattern. Concise alternative to match.",
+      "example": "if matches!(value, Some(x) if x > 5) { handle(); }",
+      "category": "macros"
+    },
+    {
+      "keyword": "Stderr",
+      "type": "type",
+      "description": "Stderr - A handle to the standard error stream.",
+      "example": "use std::io; let mut stderr = io::stderr();",
+      "category": "std_types"
+    },
+    {
+      "keyword": "Stdin",
+      "type": "type",
+      "description": "Stdin - A handle to the standard input stream.",
+      "example": "use std::io; let stdin = io::stdin(); let mut line = String::new(); stdin.read_line(&mut line)?;",
+      "category": "std_types"
+    },
+    {
+      "keyword": "Stdout",
+      "type": "type",
+      "description": "Stdout - A handle to the standard output stream.",
+      "example": "use std::io::{self, Write}; let mut stdout = io::stdout(); writeln!(stdout, \"hello\")?;",
+      "category": "std_types"
+    },
+    {
+      "keyword": "Sender",
+      "type": "type",
+      "description": "Sender - Sending half of a multi-producer, single-consumer channel.",
+      "example": "use std::sync::mpsc; let (tx, rx) = mpsc::channel(); tx.send(42)?;",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "Receiver",
+      "type": "type",
+      "description": "Receiver - Receiving half of a multi-producer, single-consumer channel.",
+      "example": "use std::sync::mpsc; let (tx, rx) = mpsc::channel(); let val = rx.recv()?;",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "TcpListener",
+      "type": "type",
+      "description": "TcpListener - A TCP socket server, listening for connections.",
+      "example": "use std::net::TcpListener; let listener = TcpListener::bind(\"127.0.0.1:8080\")?;",
+      "category": "std_types"
+    },
+    {
+      "keyword": "TcpStream",
+      "type": "type",
+      "description": "TcpStream - A TCP connection between a local and remote socket.",
+      "example": "use std::net::TcpStream; let stream = TcpStream::connect(\"127.0.0.1:8080\")?;",
+      "category": "std_types"
+    },
+    {
+      "keyword": "Command",
+      "type": "type",
+      "description": "Command - A process builder for spawning external commands.",
+      "example": "use std::process::Command; let output = Command::new(\"ls\").arg(\"-la\").output()?;",
+      "category": "std_types"
+    },
+    {
+      "keyword": "Child",
+      "type": "type",
+      "description": "Child - Representation of a running or exited child process.",
+      "example": "let mut child = Command::new(\"sleep\").arg(\"5\").spawn()?; child.wait()?;",
+      "category": "std_types"
     }
   ],
   "snippets": [
@@ -1414,6 +1547,216 @@
       "description": "Parallel processing template - CPU-intensive tasks with Rayon",
       "content": "use rayon::prelude::*;\nuse std::time::Instant;\n\nfn ${1:parallel_computation}() {\n    let data: Vec<i32> = (0..1_000_000).collect();\n    \n    let start = Instant::now();\n    \n    // Sequential processing\n    let sequential_result: i32 = data.iter().map(|&x| x * x).sum();\n    let sequential_time = start.elapsed();\n    \n    let start = Instant::now();\n    \n    // Parallel processing\n    let parallel_result: i32 = data.par_iter().map(|&x| x * x).sum();\n    let parallel_time = start.elapsed();\n    \n    println!(\"Sequential result: {}, time: {:?}\", sequential_result, sequential_time);\n    println!(\"Parallel result: {}, time: {:?}\", parallel_result, parallel_time);\n    \n    assert_eq!(sequential_result, parallel_result);\n}\n\nfn ${2:parallel_sort}() {\n    let mut data: Vec<i32> = (0..100_000).rev().collect();\n    \n    let start = Instant::now();\n    data.par_sort();\n    let sort_time = start.elapsed();\n    \n    println!(\"Parallel sort completed in {:?}\", sort_time);\n    println!(\"First 10 elements: {:?}\", &data[..10]);\n}\n\nfn ${3:parallel_search}() {\n    let data: Vec<i32> = (0..1_000_000).collect();\n    let target = 999_999;\n    \n    let result = data.par_iter().position_any(|&x| x == target);\n    \n    match result {\n        Some(pos) => println!(\"Found {} at position {}\", target, pos),\n        None => println!(\"Target not found\"),\n    }\n}\n\nfn main() {\n    ${1:parallel_computation}();\n    ${2:parallel_sort}();\n    ${3:parallel_search}();\n}",
       "category": "concurrency"
+    },
+    {
+      "trigger": "impl_display",
+      "description": "Implement Display trait for a type to enable format! and println! usage",
+      "content": "impl std::fmt::Display for ${1:TypeName} {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        write!(f, \"${2:{}}\", ${3:self.0})\n    }\n}",
+      "category": "trait"
+    },
+    {
+      "trigger": "impl_from",
+      "description": "Implement From trait for type conversion",
+      "content": "impl From<${1:SourceType}> for ${2:TargetType} {\n    fn from(${3:value}: ${1:SourceType}) -> Self {\n        ${4:Self(value)}\n    }\n}",
+      "category": "trait"
+    },
+    {
+      "trigger": "impl_error",
+      "description": "Implement Error trait for a custom error type",
+      "content": "#[derive(Debug)]\nenum ${1:MyError} {\n    ${2:Io}(std::io::Error),\n    ${3:Parse}(String),\n}\n\nimpl std::fmt::Display for ${1:MyError} {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        match self {\n            Self::${2:Io}(e) => write!(f, \"IO error: {}\", e),\n            Self::${3:Parse}(s) => write!(f, \"Parse error: {}\", s),\n        }\n    }\n}\n\nimpl std::error::Error for ${1:MyError} {}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "impl_iterator",
+      "description": "Implement Iterator trait for a custom type",
+      "content": "impl Iterator for ${1:MyIterator} {\n    type Item = ${2:i32};\n\n    fn next(&mut self) -> Option<Self::Item> {\n        ${3:todo!()}\n    }\n}",
+      "category": "trait"
+    },
+    {
+      "trigger": "impl_default",
+      "description": "Implement Default trait with custom defaults",
+      "content": "impl Default for ${1:TypeName} {\n    fn default() -> Self {\n        Self {\n            ${2:field: default_value,}\n        }\n    }\n}",
+      "category": "trait"
+    },
+    {
+      "trigger": "impl_drop",
+      "description": "Implement Drop trait for custom cleanup logic",
+      "content": "impl Drop for ${1:TypeName} {\n    fn drop(&mut self) {\n        ${2:// cleanup code}\n    }\n}",
+      "category": "trait"
+    },
+    {
+      "trigger": "new",
+      "description": "Constructor method (associated function) following Rust convention",
+      "content": "pub fn new(${1:params}) -> Self {\n    Self {\n        ${2:fields}\n    }\n}",
+      "category": "function"
+    },
+    {
+      "trigger": "test_mod",
+      "description": "Test module with setup — idiomatic Rust test structure",
+      "content": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn ${1:test_name}() {\n        ${2:// arrange}\n        ${3:// act}\n        ${4:// assert}\n    }\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "assert_eq",
+      "description": "Assert two values are equal with optional message",
+      "content": "assert_eq!(${1:left}, ${2:right}, \"${3:values should be equal}\");",
+      "category": "testing"
+    },
+    {
+      "trigger": "assert_ne",
+      "description": "Assert two values are not equal",
+      "content": "assert_ne!(${1:left}, ${2:right}, \"${3:values should differ}\");",
+      "category": "testing"
+    },
+    {
+      "trigger": "letmut",
+      "description": "Declare a mutable variable",
+      "content": "let mut ${1:name} = ${2:value};",
+      "category": "variable"
+    },
+    {
+      "trigger": "letsome",
+      "description": "if-let pattern matching on Option",
+      "content": "if let Some(${1:value}) = ${2:option} {\n    ${3:// use value}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "letok",
+      "description": "if-let pattern matching on Result",
+      "content": "if let Ok(${1:value}) = ${2:result} {\n    ${3:// use value}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "whilelet",
+      "description": "while-let loop for consuming Options/Results",
+      "content": "while let Some(${1:item}) = ${2:iter.next()} {\n    ${3:// process item}\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "map_err",
+      "description": "Map Result error to a different type",
+      "content": ".map_err(|e| ${1:MyError}::from(e))?",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "read_file",
+      "description": "Read a file to string using std::fs",
+      "content": "let ${1:content} = std::fs::read_to_string(${2:path})?;",
+      "category": "io"
+    },
+    {
+      "trigger": "write_file",
+      "description": "Write string to file using std::fs",
+      "content": "std::fs::write(${1:path}, ${2:content})?;",
+      "category": "io"
+    },
+    {
+      "trigger": "hashmap_new",
+      "description": "Create and populate a HashMap",
+      "content": "let mut ${1:map} = std::collections::HashMap::new();\n${1:map}.insert(${2:key}, ${3:value});",
+      "category": "collection"
+    },
+    {
+      "trigger": "vec_init",
+      "description": "Create a Vec with initial values using vec! macro",
+      "content": "let ${1:items} = vec![${2:1, 2, 3}];",
+      "category": "collection"
+    },
+    {
+      "trigger": "arc_mutex",
+      "description": "Create an Arc<Mutex<T>> for thread-safe shared state",
+      "content": "let ${1:shared} = std::sync::Arc::new(std::sync::Mutex::new(${2:initial_value}));",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "spawn_thread",
+      "description": "Spawn a thread with a cloned Arc for shared state",
+      "content": "let ${1:handle} = {\n    let ${2:data} = ${2:data}.clone();\n    std::thread::spawn(move || {\n        ${3:// thread body}\n    })\n};",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "channel_new",
+      "description": "Create an mpsc channel",
+      "content": "let (${1:tx}, ${2:rx}) = std::sync::mpsc::channel();",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "derive_common",
+      "description": "Common derive macros for structs",
+      "content": "#[derive(Debug, Clone, PartialEq)]",
+      "category": "type"
+    },
+    {
+      "trigger": "derive_serde",
+      "description": "Serde derive macros for serialization",
+      "content": "#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]",
+      "category": "type"
+    },
+    {
+      "trigger": "struct_pub",
+      "description": "Public struct with fields and common derives",
+      "content": "#[derive(Debug, Clone)]\npub struct ${1:Name} {\n    pub ${2:field}: ${3:Type},\n}",
+      "category": "type"
+    },
+    {
+      "trigger": "enum_pub",
+      "description": "Public enum with variants and common derives",
+      "content": "#[derive(Debug, Clone, PartialEq)]\npub enum ${1:Name} {\n    ${2:Variant1},\n    ${3:Variant2}(${4:Type}),\n}",
+      "category": "type"
+    },
+    {
+      "trigger": "from_str",
+      "description": "Parse a value from a string",
+      "content": "let ${1:value}: ${2:i32} = ${3:input}.parse()?;",
+      "category": "string"
+    },
+    {
+      "trigger": "string_format",
+      "description": "Create a formatted String",
+      "content": "let ${1:s} = format!(\"${2:{}}\", ${3:value});",
+      "category": "string"
+    },
+    {
+      "trigger": "collect_vec",
+      "description": "Collect an iterator into a Vec",
+      "content": ".collect::<Vec<_>>()",
+      "category": "iterator"
+    },
+    {
+      "trigger": "collect_hashmap",
+      "description": "Collect an iterator of pairs into a HashMap",
+      "content": ".collect::<std::collections::HashMap<_, _>>()",
+      "category": "iterator"
+    },
+    {
+      "trigger": "iter_filter_map",
+      "description": "Chain filter and map on an iterator",
+      "content": ".iter()\n    .filter(|${1:x}| ${2:condition})\n    .map(|${1:x}| ${3:transform})\n    .collect::<Vec<_>>()",
+      "category": "iterator"
+    },
+    {
+      "trigger": "main_result",
+      "description": "Main function returning Result for the ? operator",
+      "content": "fn main() -> Result<(), Box<dyn std::error::Error>> {\n    ${1:// body}\n    Ok(())\n}",
+      "category": "function"
+    },
+    {
+      "trigger": "type_alias",
+      "description": "Type alias for a complex type",
+      "content": "type ${1:Name} = ${2:Type};",
+      "category": "type"
+    },
+    {
+      "trigger": "const_decl",
+      "description": "Constant declaration",
+      "content": "const ${1:NAME}: ${2:Type} = ${3:value};",
+      "category": "variable"
+    },
+    {
+      "trigger": "static_decl",
+      "description": "Static variable declaration",
+      "content": "static ${1:NAME}: ${2:Type} = ${3:value};",
+      "category": "variable"
     }
   ],
   "imports": {
@@ -1432,7 +1775,10 @@
           "process",
           "time",
           "net",
-          "fmt"
+          "fmt",
+          "num",
+          "f32",
+          "f64"
         ]
       },
       {
@@ -1474,7 +1820,10 @@
             "description": "Priority queue implemented as binary heap"
           }
         ],
-        "submodules": []
+        "submodules": [
+          "hash_map",
+          "btree_map"
+        ]
       },
       {
         "path": "std::fs",
@@ -1482,47 +1831,107 @@
           {
             "name": "File",
             "item_type": "struct",
-            "description": "Represents a file handle for reading and writing"
+            "description": "A reference to an open file on the filesystem"
           },
           {
             "name": "OpenOptions",
             "item_type": "struct",
-            "description": "Builder for configuring how to open a file"
+            "description": "Options for opening a file: read, write, append, create, truncate"
+          },
+          {
+            "name": "DirEntry",
+            "item_type": "struct",
+            "description": "An entry inside a directory, returned by read_dir iterator"
+          },
+          {
+            "name": "FileType",
+            "item_type": "struct",
+            "description": "Represents the type of a file (file, directory, or symlink)"
+          },
+          {
+            "name": "Metadata",
+            "item_type": "struct",
+            "description": "Metadata about a file: size, permissions, timestamps"
+          },
+          {
+            "name": "Permissions",
+            "item_type": "struct",
+            "description": "Representation of file permissions"
+          },
+          {
+            "name": "ReadDir",
+            "item_type": "struct",
+            "description": "Iterator over the entries in a directory"
           },
           {
             "name": "read_to_string",
             "item_type": "function",
-            "description": "Read entire file contents into a string"
+            "description": "Reads the entire contents of a file into a String"
+          },
+          {
+            "name": "read",
+            "item_type": "function",
+            "description": "Reads the entire contents of a file into a Vec<u8>"
           },
           {
             "name": "write",
             "item_type": "function",
-            "description": "Write data to a file, creating it if necessary"
+            "description": "Writes a slice of bytes to a file, creating or overwriting it"
           },
           {
             "name": "create_dir",
             "item_type": "function",
-            "description": "Create a new directory"
+            "description": "Creates a new directory"
           },
           {
             "name": "create_dir_all",
             "item_type": "function",
-            "description": "Create directory and all parent directories"
+            "description": "Creates a directory and all its parent directories recursively"
           },
           {
             "name": "remove_file",
             "item_type": "function",
-            "description": "Remove a file from the filesystem"
+            "description": "Removes a file from the filesystem"
           },
           {
             "name": "remove_dir",
             "item_type": "function",
-            "description": "Remove an empty directory"
+            "description": "Removes an empty directory"
           },
           {
             "name": "remove_dir_all",
             "item_type": "function",
-            "description": "Remove directory and all its contents recursively"
+            "description": "Removes a directory and all its contents recursively"
+          },
+          {
+            "name": "rename",
+            "item_type": "function",
+            "description": "Renames/moves a file or directory"
+          },
+          {
+            "name": "copy",
+            "item_type": "function",
+            "description": "Copies the contents and permissions of one file to another"
+          },
+          {
+            "name": "read_dir",
+            "item_type": "function",
+            "description": "Returns an iterator over the entries in a directory"
+          },
+          {
+            "name": "metadata",
+            "item_type": "function",
+            "description": "Returns the metadata for a file or directory"
+          },
+          {
+            "name": "canonicalize",
+            "item_type": "function",
+            "description": "Returns the canonical, absolute form of a path"
+          },
+          {
+            "name": "exists",
+            "item_type": "function",
+            "description": "Returns true if the path points to an existing entity"
           }
         ],
         "submodules": []
@@ -1533,42 +1942,107 @@
           {
             "name": "Read",
             "item_type": "trait",
-            "description": "Trait for types that can read bytes from a source"
+            "description": "Trait for reading bytes from a source"
           },
           {
             "name": "Write",
             "item_type": "trait",
-            "description": "Trait for types that can write bytes to a destination"
+            "description": "Trait for writing bytes to a destination"
+          },
+          {
+            "name": "BufRead",
+            "item_type": "trait",
+            "description": "Trait for reading from a buffered source, enabling read_line and lines()"
+          },
+          {
+            "name": "Seek",
+            "item_type": "trait",
+            "description": "Trait providing cursor-like random access to a byte stream"
           },
           {
             "name": "BufReader",
             "item_type": "struct",
-            "description": "Buffered reader for efficient reading operations"
+            "description": "Wraps a reader with a buffer for more efficient reads"
           },
           {
             "name": "BufWriter",
             "item_type": "struct",
-            "description": "Buffered writer for efficient writing operations"
+            "description": "Wraps a writer with a buffer for more efficient writes"
           },
           {
             "name": "Cursor",
             "item_type": "struct",
-            "description": "In-memory buffer that implements Read and Write"
+            "description": "Wraps an in-memory buffer providing Seek + Read/Write"
+          },
+          {
+            "name": "Error",
+            "item_type": "struct",
+            "description": "The I/O error type returned by std::io operations"
+          },
+          {
+            "name": "ErrorKind",
+            "item_type": "enum",
+            "description": "Categorizes I/O errors: NotFound, PermissionDenied, etc."
+          },
+          {
+            "name": "Result",
+            "item_type": "type",
+            "description": "Type alias: io::Result<T> = Result<T, io::Error>"
           },
           {
             "name": "stdin",
             "item_type": "function",
-            "description": "Get a handle to standard input"
+            "description": "Returns a handle to the standard input stream"
           },
           {
             "name": "stdout",
             "item_type": "function",
-            "description": "Get a handle to standard output"
+            "description": "Returns a handle to the standard output stream"
           },
           {
             "name": "stderr",
             "item_type": "function",
-            "description": "Get a handle to standard error"
+            "description": "Returns a handle to the standard error stream"
+          },
+          {
+            "name": "copy",
+            "item_type": "function",
+            "description": "Copies all bytes from a reader to a writer"
+          },
+          {
+            "name": "empty",
+            "item_type": "function",
+            "description": "Creates a reader that reads zero bytes (always returns EOF)"
+          },
+          {
+            "name": "repeat",
+            "item_type": "function",
+            "description": "Creates a reader that infinitely yields a single byte"
+          },
+          {
+            "name": "sink",
+            "item_type": "function",
+            "description": "Creates a writer that discards all data written to it"
+          },
+          {
+            "name": "SeekFrom",
+            "item_type": "enum",
+            "description": "Seek position: Start(u64), End(i64), or Current(i64)"
+          },
+          {
+            "name": "Stdin",
+            "item_type": "struct",
+            "description": "Handle to the standard input stream"
+          },
+          {
+            "name": "Stdout",
+            "item_type": "struct",
+            "description": "Handle to the standard output stream"
+          },
+          {
+            "name": "Stderr",
+            "item_type": "struct",
+            "description": "Handle to the standard error stream"
           }
         ],
         "submodules": []
@@ -1579,27 +2053,57 @@
           {
             "name": "spawn",
             "item_type": "function",
-            "description": "Spawn a new thread and return a handle to it"
+            "description": "Spawns a new thread, returning a JoinHandle for waiting on completion"
           },
           {
             "name": "sleep",
             "item_type": "function",
-            "description": "Put the current thread to sleep for a duration"
-          },
-          {
-            "name": "yield_now",
-            "item_type": "function",
-            "description": "Yield execution to other threads"
+            "description": "Puts the current thread to sleep for the specified duration"
           },
           {
             "name": "current",
             "item_type": "function",
-            "description": "Get a handle to the current thread"
+            "description": "Gets a handle to the current thread"
+          },
+          {
+            "name": "park",
+            "item_type": "function",
+            "description": "Blocks the current thread until unparked by another thread"
+          },
+          {
+            "name": "yield_now",
+            "item_type": "function",
+            "description": "Cooperatively gives up the CPU to the OS scheduler"
+          },
+          {
+            "name": "available_parallelism",
+            "item_type": "function",
+            "description": "Returns the number of hardware threads available"
           },
           {
             "name": "JoinHandle",
             "item_type": "struct",
-            "description": "Handle to a spawned thread for joining"
+            "description": "Handle for waiting on a spawned thread to finish"
+          },
+          {
+            "name": "Thread",
+            "item_type": "struct",
+            "description": "A handle to a thread, used for identification and unparking"
+          },
+          {
+            "name": "Builder",
+            "item_type": "struct",
+            "description": "Thread builder for configuring thread name and stack size"
+          },
+          {
+            "name": "ThreadId",
+            "item_type": "struct",
+            "description": "A unique identifier for a thread"
+          },
+          {
+            "name": "LocalKey",
+            "item_type": "struct",
+            "description": "Thread-local storage key created by thread_local! macro"
           }
         ],
         "submodules": []
@@ -1610,7 +2114,7 @@
           {
             "name": "Mutex",
             "item_type": "struct",
-            "description": "Mutual exclusion primitive for thread-safe data access"
+            "description": "Mutual exclusion lock protecting shared data across threads"
           },
           {
             "name": "RwLock",
@@ -1620,22 +2124,57 @@
           {
             "name": "Arc",
             "item_type": "struct",
-            "description": "Atomically reference-counted shared pointer for thread-safe sharing"
-          },
-          {
-            "name": "Condvar",
-            "item_type": "struct",
-            "description": "Condition variable for thread synchronization"
-          },
-          {
-            "name": "Once",
-            "item_type": "struct",
-            "description": "Synchronization primitive for one-time initialization"
+            "description": "Atomically reference-counted pointer for shared ownership across threads"
           },
           {
             "name": "Barrier",
             "item_type": "struct",
-            "description": "Synchronization primitive to coordinate multiple threads"
+            "description": "Synchronization point that blocks until all threads arrive"
+          },
+          {
+            "name": "Condvar",
+            "item_type": "struct",
+            "description": "Condition variable for blocking/waking threads on a condition"
+          },
+          {
+            "name": "Once",
+            "item_type": "struct",
+            "description": "One-time initialization primitive, guaranteeing code runs at most once"
+          },
+          {
+            "name": "OnceLock",
+            "item_type": "struct",
+            "description": "A cell that can be written to only once and then read safely"
+          },
+          {
+            "name": "MutexGuard",
+            "item_type": "struct",
+            "description": "RAII guard returned by Mutex::lock(), releases lock on drop"
+          },
+          {
+            "name": "RwLockReadGuard",
+            "item_type": "struct",
+            "description": "RAII guard for a read lock on an RwLock"
+          },
+          {
+            "name": "RwLockWriteGuard",
+            "item_type": "struct",
+            "description": "RAII guard for a write lock on an RwLock"
+          },
+          {
+            "name": "PoisonError",
+            "item_type": "struct",
+            "description": "Error returned when a lock is poisoned (panicked while held)"
+          },
+          {
+            "name": "WaitTimeoutResult",
+            "item_type": "struct",
+            "description": "Result from Condvar::wait_timeout, indicates if timeout expired"
+          },
+          {
+            "name": "mpsc",
+            "item_type": "module",
+            "description": "Multi-producer, single-consumer channel communication"
           }
         ],
         "submodules": [
@@ -2430,17 +2969,22 @@
           {
             "name": "Vec",
             "item_type": "struct",
-            "description": "Growable array type"
+            "description": "A growable, heap-allocated array. The most commonly used collection in Rust."
           },
           {
             "name": "IntoIter",
             "item_type": "struct",
-            "description": "Iterator that moves out of vector"
+            "description": "An iterator that moves elements out of a Vec"
           },
           {
             "name": "Drain",
             "item_type": "struct",
-            "description": "Draining iterator for vector"
+            "description": "A draining iterator that removes and yields elements from a Vec range"
+          },
+          {
+            "name": "Splice",
+            "item_type": "struct",
+            "description": "A splicing iterator that replaces a range with another iterator"
           }
         ],
         "submodules": []
@@ -2462,12 +3006,27 @@
           {
             "name": "String",
             "item_type": "struct",
-            "description": "Growable UTF-8 string"
+            "description": "A growable, heap-allocated UTF-8 string. The owned counterpart of &str."
           },
           {
             "name": "FromUtf8Error",
             "item_type": "struct",
-            "description": "Error from invalid UTF-8"
+            "description": "Error when converting bytes to String fails due to invalid UTF-8"
+          },
+          {
+            "name": "FromUtf16Error",
+            "item_type": "struct",
+            "description": "Error when converting UTF-16 to String fails"
+          },
+          {
+            "name": "ToString",
+            "item_type": "trait",
+            "description": "Trait for converting a value to a String. Auto-implemented for Display types."
+          },
+          {
+            "name": "Drain",
+            "item_type": "struct",
+            "description": "A draining iterator over the characters of a String"
           }
         ],
         "submodules": []
@@ -2478,7 +3037,17 @@
           {
             "name": "Option",
             "item_type": "enum",
-            "description": "Optional value type"
+            "description": "Represents an optional value: Some(T) or None. Rust's null-safe alternative."
+          },
+          {
+            "name": "IntoIter",
+            "item_type": "struct",
+            "description": "An iterator over the value in Some, yielding 0 or 1 elements"
+          },
+          {
+            "name": "Iter",
+            "item_type": "struct",
+            "description": "An iterator over a reference to the contained value"
           }
         ],
         "submodules": []
@@ -2489,7 +3058,12 @@
           {
             "name": "Result",
             "item_type": "enum",
-            "description": "Result type for error handling"
+            "description": "Result of an operation that may fail: Ok(T) or Err(E). Core error handling type."
+          },
+          {
+            "name": "IntoIter",
+            "item_type": "struct",
+            "description": "An iterator over the value in Ok, yielding 0 or 1 elements"
           }
         ],
         "submodules": []
@@ -2500,42 +3074,127 @@
           {
             "name": "Iterator",
             "item_type": "trait",
-            "description": "Iterator trait"
+            "description": "The core iteration trait. Provides map, filter, fold, collect, and 70+ other combinators."
           },
           {
             "name": "IntoIterator",
             "item_type": "trait",
-            "description": "Convert to iterator trait"
+            "description": "Conversion into an Iterator. Required for use in for loops."
           },
           {
             "name": "FromIterator",
             "item_type": "trait",
-            "description": "Build collection from iterator"
+            "description": "Creates a value from an iterator. Powers the .collect() method."
           },
           {
             "name": "Extend",
             "item_type": "trait",
-            "description": "Extend collection with iterator"
+            "description": "Extends a collection with the contents of an iterator."
           },
           {
             "name": "once",
             "item_type": "function",
-            "description": "Create single-element iterator"
+            "description": "Creates an iterator yielding exactly one element"
           },
           {
             "name": "empty",
             "item_type": "function",
-            "description": "Create empty iterator"
+            "description": "Creates an iterator yielding zero elements"
           },
           {
             "name": "repeat",
             "item_type": "function",
-            "description": "Create repeating iterator"
+            "description": "Creates an infinite iterator repeating a value"
+          },
+          {
+            "name": "repeat_with",
+            "item_type": "function",
+            "description": "Creates an infinite iterator from a closure called on each iteration"
+          },
+          {
+            "name": "from_fn",
+            "item_type": "function",
+            "description": "Creates an iterator from a closure returning Option<T>"
+          },
+          {
+            "name": "successors",
+            "item_type": "function",
+            "description": "Creates an iterator from a seed and a successor function"
           },
           {
             "name": "zip",
             "item_type": "function",
-            "description": "Zip two iterators together"
+            "description": "Zips two iterators into a single iterator of pairs"
+          },
+          {
+            "name": "Chain",
+            "item_type": "struct",
+            "description": "Iterator adapter that chains two iterators sequentially"
+          },
+          {
+            "name": "Enumerate",
+            "item_type": "struct",
+            "description": "Iterator adapter that yields (index, value) pairs"
+          },
+          {
+            "name": "Filter",
+            "item_type": "struct",
+            "description": "Iterator adapter that filters elements by a predicate"
+          },
+          {
+            "name": "Map",
+            "item_type": "struct",
+            "description": "Iterator adapter that transforms each element with a closure"
+          },
+          {
+            "name": "Peekable",
+            "item_type": "struct",
+            "description": "Iterator wrapper that supports peeking at the next element without consuming"
+          },
+          {
+            "name": "Rev",
+            "item_type": "struct",
+            "description": "Iterator adapter that reverses the iteration order"
+          },
+          {
+            "name": "Flatten",
+            "item_type": "struct",
+            "description": "Iterator adapter that flattens nested iterators"
+          },
+          {
+            "name": "FlatMap",
+            "item_type": "struct",
+            "description": "Iterator adapter combining map and flatten"
+          },
+          {
+            "name": "Take",
+            "item_type": "struct",
+            "description": "Iterator adapter that yields at most n elements"
+          },
+          {
+            "name": "Skip",
+            "item_type": "struct",
+            "description": "Iterator adapter that skips the first n elements"
+          },
+          {
+            "name": "Sum",
+            "item_type": "trait",
+            "description": "Trait for types that can be summed from an iterator"
+          },
+          {
+            "name": "Product",
+            "item_type": "trait",
+            "description": "Trait for types that can be multiplied together from an iterator"
+          },
+          {
+            "name": "DoubleEndedIterator",
+            "item_type": "trait",
+            "description": "Iterator that can yield elements from both ends"
+          },
+          {
+            "name": "ExactSizeIterator",
+            "item_type": "trait",
+            "description": "Iterator that knows its exact length"
           }
         ],
         "submodules": []
@@ -2568,32 +3227,57 @@
           {
             "name": "Debug",
             "item_type": "trait",
-            "description": "Debug formatting trait"
+            "description": "Format using {:?}. Can typically be derived with #[derive(Debug)]."
           },
           {
             "name": "Display",
             "item_type": "trait",
-            "description": "User-facing display trait"
+            "description": "Format using {}. Must be implemented manually for user-facing output."
           },
           {
             "name": "Formatter",
             "item_type": "struct",
-            "description": "Formatting context"
+            "description": "Configuration for formatting, passed to fmt methods"
           },
           {
             "name": "Arguments",
             "item_type": "struct",
-            "description": "Format arguments"
+            "description": "Precompiled format string arguments, created by format_args!"
           },
           {
             "name": "Result",
             "item_type": "type",
-            "description": "Formatting result type"
+            "description": "Type alias for fmt::Result = Result<(), fmt::Error>"
+          },
+          {
+            "name": "Error",
+            "item_type": "struct",
+            "description": "The error type returned by formatting functions"
           },
           {
             "name": "Write",
             "item_type": "trait",
-            "description": "Write formatted text trait"
+            "description": "Trait for writing formatted output. Implemented by String, Formatter, etc."
+          },
+          {
+            "name": "Binary",
+            "item_type": "trait",
+            "description": "Format integers in binary using {:b}"
+          },
+          {
+            "name": "Octal",
+            "item_type": "trait",
+            "description": "Format integers in octal using {:o}"
+          },
+          {
+            "name": "LowerHex",
+            "item_type": "trait",
+            "description": "Format integers in lowercase hexadecimal using {:x}"
+          },
+          {
+            "name": "UpperHex",
+            "item_type": "trait",
+            "description": "Format integers in uppercase hexadecimal using {:X}"
           }
         ],
         "submodules": []
@@ -2613,24 +3297,44 @@
         "path": "std::path",
         "items": [
           {
-            "name": "Path",
-            "item_type": "struct",
-            "description": "Slice of a path for cross-platform path manipulation"
-          },
-          {
             "name": "PathBuf",
             "item_type": "struct",
-            "description": "Owned, mutable path for building and manipulating paths"
+            "description": "Owned, mutable path. The String equivalent for file system paths."
           },
           {
-            "name": "Component",
-            "item_type": "enum",
-            "description": "Component of a file path"
-          },
-          {
-            "name": "Components",
+            "name": "Path",
             "item_type": "struct",
-            "description": "Iterator over path components"
+            "description": "A slice of a path. The str equivalent for file system paths."
+          },
+          {
+            "name": "Prefix",
+            "item_type": "enum",
+            "description": "Windows path prefix (drive, UNC, etc.)"
+          },
+          {
+            "name": "StripPrefixError",
+            "item_type": "struct",
+            "description": "Error from Path::strip_prefix when the prefix doesn't match"
+          },
+          {
+            "name": "Display",
+            "item_type": "struct",
+            "description": "Helper for safely printing paths with lossy Unicode conversion"
+          },
+          {
+            "name": "Ancestors",
+            "item_type": "struct",
+            "description": "Iterator over the ancestors of a path (parent, grandparent, ...)"
+          },
+          {
+            "name": "Iter",
+            "item_type": "struct",
+            "description": "Iterator over the components of a path as OsStr slices"
+          },
+          {
+            "name": "MAIN_SEPARATOR",
+            "item_type": "const",
+            "description": "The primary path separator for the current platform (/ on Unix, \\\\ on Windows)"
           }
         ],
         "submodules": []
@@ -7097,6 +7801,505 @@
           }
         ],
         "submodules": []
+      },
+      {
+        "path": "std::env",
+        "items": [
+          {
+            "name": "args",
+            "item_type": "function",
+            "description": "Returns an iterator over command line arguments"
+          },
+          {
+            "name": "args_os",
+            "item_type": "function",
+            "description": "Returns an iterator over command line arguments as OsString"
+          },
+          {
+            "name": "current_dir",
+            "item_type": "function",
+            "description": "Returns the current working directory as a PathBuf"
+          },
+          {
+            "name": "set_current_dir",
+            "item_type": "function",
+            "description": "Changes the current working directory"
+          },
+          {
+            "name": "var",
+            "item_type": "function",
+            "description": "Fetches an environment variable, returning Result<String, VarError>"
+          },
+          {
+            "name": "var_os",
+            "item_type": "function",
+            "description": "Fetches an environment variable as OsString"
+          },
+          {
+            "name": "set_var",
+            "item_type": "function",
+            "description": "Sets an environment variable for the current process"
+          },
+          {
+            "name": "remove_var",
+            "item_type": "function",
+            "description": "Removes an environment variable"
+          },
+          {
+            "name": "vars",
+            "item_type": "function",
+            "description": "Returns an iterator over all environment variables"
+          },
+          {
+            "name": "temp_dir",
+            "item_type": "function",
+            "description": "Returns the path to a temporary directory"
+          },
+          {
+            "name": "home_dir",
+            "item_type": "function",
+            "description": "Returns the home directory of the current user (deprecated, use dirs crate)"
+          },
+          {
+            "name": "current_exe",
+            "item_type": "function",
+            "description": "Returns the path of the current running executable"
+          },
+          {
+            "name": "VarError",
+            "item_type": "enum",
+            "description": "Error type for environment variable operations"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::process",
+        "items": [
+          {
+            "name": "Command",
+            "item_type": "struct",
+            "description": "Builder for spawning external commands and processes"
+          },
+          {
+            "name": "Child",
+            "item_type": "struct",
+            "description": "Representation of a running or exited child process"
+          },
+          {
+            "name": "Output",
+            "item_type": "struct",
+            "description": "Output of a finished process (status, stdout, stderr)"
+          },
+          {
+            "name": "ExitStatus",
+            "item_type": "struct",
+            "description": "Exit status of a completed child process"
+          },
+          {
+            "name": "ExitCode",
+            "item_type": "struct",
+            "description": "Return type for the main function to set process exit code"
+          },
+          {
+            "name": "Stdio",
+            "item_type": "struct",
+            "description": "Configuration for child process stdin/stdout/stderr"
+          },
+          {
+            "name": "exit",
+            "item_type": "function",
+            "description": "Terminates the process with the given exit code"
+          },
+          {
+            "name": "abort",
+            "item_type": "function",
+            "description": "Terminates the process abnormally (SIGABRT)"
+          },
+          {
+            "name": "id",
+            "item_type": "function",
+            "description": "Returns the current process ID"
+          },
+          {
+            "name": "ChildStdin",
+            "item_type": "struct",
+            "description": "Handle to a child process's standard input"
+          },
+          {
+            "name": "ChildStdout",
+            "item_type": "struct",
+            "description": "Handle to a child process's standard output"
+          },
+          {
+            "name": "ChildStderr",
+            "item_type": "struct",
+            "description": "Handle to a child process's standard error"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::time",
+        "items": [
+          {
+            "name": "Duration",
+            "item_type": "struct",
+            "description": "Represents a span of time (seconds + nanoseconds)"
+          },
+          {
+            "name": "Instant",
+            "item_type": "struct",
+            "description": "Monotonic clock measurement for benchmarking and timeouts"
+          },
+          {
+            "name": "SystemTime",
+            "item_type": "struct",
+            "description": "Wall-clock time that can be compared across systems"
+          },
+          {
+            "name": "UNIX_EPOCH",
+            "item_type": "const",
+            "description": "Anchor point for SystemTime (January 1, 1970 00:00:00 UTC)"
+          },
+          {
+            "name": "SystemTimeError",
+            "item_type": "struct",
+            "description": "Error returned from SystemTime duration_since when times are out of order"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::net",
+        "items": [
+          {
+            "name": "TcpListener",
+            "item_type": "struct",
+            "description": "TCP socket server, listening for connections"
+          },
+          {
+            "name": "TcpStream",
+            "item_type": "struct",
+            "description": "TCP stream between a local and a remote socket"
+          },
+          {
+            "name": "UdpSocket",
+            "item_type": "struct",
+            "description": "UDP socket for sending and receiving datagrams"
+          },
+          {
+            "name": "IpAddr",
+            "item_type": "enum",
+            "description": "IP address, either IPv4 or IPv6"
+          },
+          {
+            "name": "Ipv4Addr",
+            "item_type": "struct",
+            "description": "IPv4 address representation"
+          },
+          {
+            "name": "Ipv6Addr",
+            "item_type": "struct",
+            "description": "IPv6 address representation"
+          },
+          {
+            "name": "SocketAddr",
+            "item_type": "enum",
+            "description": "Socket address (IP address + port number)"
+          },
+          {
+            "name": "SocketAddrV4",
+            "item_type": "struct",
+            "description": "IPv4 socket address"
+          },
+          {
+            "name": "SocketAddrV6",
+            "item_type": "struct",
+            "description": "IPv6 socket address"
+          },
+          {
+            "name": "ToSocketAddrs",
+            "item_type": "trait",
+            "description": "Trait for objects that can be converted to socket addresses"
+          },
+          {
+            "name": "Shutdown",
+            "item_type": "enum",
+            "description": "Possible values for shutting down a TcpStream"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::num",
+        "items": [
+          {
+            "name": "NonZeroU8",
+            "item_type": "struct",
+            "description": "A u8 that is known to not be zero, enabling niche optimization"
+          },
+          {
+            "name": "NonZeroU16",
+            "item_type": "struct",
+            "description": "A u16 that is known to not be zero"
+          },
+          {
+            "name": "NonZeroU32",
+            "item_type": "struct",
+            "description": "A u32 that is known to not be zero"
+          },
+          {
+            "name": "NonZeroU64",
+            "item_type": "struct",
+            "description": "A u64 that is known to not be zero"
+          },
+          {
+            "name": "NonZeroUsize",
+            "item_type": "struct",
+            "description": "A usize that is known to not be zero"
+          },
+          {
+            "name": "NonZeroI32",
+            "item_type": "struct",
+            "description": "An i32 that is known to not be zero"
+          },
+          {
+            "name": "ParseIntError",
+            "item_type": "struct",
+            "description": "Error returned when parsing an integer from a string fails"
+          },
+          {
+            "name": "ParseFloatError",
+            "item_type": "struct",
+            "description": "Error returned when parsing a float from a string fails"
+          },
+          {
+            "name": "Wrapping",
+            "item_type": "struct",
+            "description": "Wrapper providing wrapping arithmetic operations"
+          },
+          {
+            "name": "Saturating",
+            "item_type": "struct",
+            "description": "Wrapper providing saturating arithmetic operations"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::sync::mpsc",
+        "items": [
+          {
+            "name": "channel",
+            "item_type": "function",
+            "description": "Creates an asynchronous unbounded channel returning (Sender, Receiver)"
+          },
+          {
+            "name": "sync_channel",
+            "item_type": "function",
+            "description": "Creates a synchronous bounded channel with a fixed buffer size"
+          },
+          {
+            "name": "Sender",
+            "item_type": "struct",
+            "description": "Sending half of an asynchronous channel"
+          },
+          {
+            "name": "SyncSender",
+            "item_type": "struct",
+            "description": "Sending half of a synchronous bounded channel"
+          },
+          {
+            "name": "Receiver",
+            "item_type": "struct",
+            "description": "Receiving half of a channel"
+          },
+          {
+            "name": "RecvError",
+            "item_type": "struct",
+            "description": "Error returned when the sending half has been deallocated"
+          },
+          {
+            "name": "SendError",
+            "item_type": "struct",
+            "description": "Error returned when the receiving half has been deallocated"
+          },
+          {
+            "name": "TryRecvError",
+            "item_type": "enum",
+            "description": "Error for non-blocking receive: Empty or Disconnected"
+          },
+          {
+            "name": "RecvTimeoutError",
+            "item_type": "enum",
+            "description": "Error for timed receive: Timeout or Disconnected"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::collections::hash_map",
+        "items": [
+          {
+            "name": "HashMap",
+            "item_type": "struct",
+            "description": "Hash map implementation providing O(1) average-case lookups"
+          },
+          {
+            "name": "Entry",
+            "item_type": "enum",
+            "description": "A view into a single entry in a map, which may be vacant or occupied"
+          },
+          {
+            "name": "OccupiedEntry",
+            "item_type": "struct",
+            "description": "A view into an occupied entry in a HashMap"
+          },
+          {
+            "name": "VacantEntry",
+            "item_type": "struct",
+            "description": "A view into a vacant entry in a HashMap"
+          },
+          {
+            "name": "Iter",
+            "item_type": "struct",
+            "description": "An iterator over the entries of a HashMap"
+          },
+          {
+            "name": "Keys",
+            "item_type": "struct",
+            "description": "An iterator over the keys of a HashMap"
+          },
+          {
+            "name": "Values",
+            "item_type": "struct",
+            "description": "An iterator over the values of a HashMap"
+          },
+          {
+            "name": "RandomState",
+            "item_type": "struct",
+            "description": "Default hasher state used by HashMap"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::collections::btree_map",
+        "items": [
+          {
+            "name": "BTreeMap",
+            "item_type": "struct",
+            "description": "An ordered map based on a B-Tree"
+          },
+          {
+            "name": "Entry",
+            "item_type": "enum",
+            "description": "A view into a single entry in a BTreeMap"
+          },
+          {
+            "name": "OccupiedEntry",
+            "item_type": "struct",
+            "description": "A view into an occupied entry in a BTreeMap"
+          },
+          {
+            "name": "VacantEntry",
+            "item_type": "struct",
+            "description": "A view into a vacant entry in a BTreeMap"
+          },
+          {
+            "name": "Iter",
+            "item_type": "struct",
+            "description": "An iterator over the entries of a BTreeMap"
+          },
+          {
+            "name": "Range",
+            "item_type": "struct",
+            "description": "An iterator over a range of entries in a BTreeMap"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "std::f64",
+        "items": [
+          {
+            "name": "INFINITY",
+            "item_type": "const",
+            "description": "Positive infinity (f64::INFINITY)"
+          },
+          {
+            "name": "NEG_INFINITY",
+            "item_type": "const",
+            "description": "Negative infinity"
+          },
+          {
+            "name": "NAN",
+            "item_type": "const",
+            "description": "Not a Number (NaN) value"
+          },
+          {
+            "name": "EPSILON",
+            "item_type": "const",
+            "description": "Machine epsilon for f64 comparisons"
+          },
+          {
+            "name": "MIN",
+            "item_type": "const",
+            "description": "Smallest finite f64 value"
+          },
+          {
+            "name": "MAX",
+            "item_type": "const",
+            "description": "Largest finite f64 value"
+          },
+          {
+            "name": "consts",
+            "item_type": "module",
+            "description": "Mathematical constants: PI, E, SQRT_2, LN_2, etc."
+          }
+        ],
+        "submodules": [
+          "consts"
+        ]
+      },
+      {
+        "path": "std::f32",
+        "items": [
+          {
+            "name": "INFINITY",
+            "item_type": "const",
+            "description": "Positive infinity (f32::INFINITY)"
+          },
+          {
+            "name": "NEG_INFINITY",
+            "item_type": "const",
+            "description": "Negative infinity"
+          },
+          {
+            "name": "NAN",
+            "item_type": "const",
+            "description": "Not a Number (NaN) value"
+          },
+          {
+            "name": "EPSILON",
+            "item_type": "const",
+            "description": "Machine epsilon for f32 comparisons"
+          },
+          {
+            "name": "MIN",
+            "item_type": "const",
+            "description": "Smallest finite f32 value"
+          },
+          {
+            "name": "MAX",
+            "item_type": "const",
+            "description": "Largest finite f32 value"
+          }
+        ],
+        "submodules": [
+          "consts"
+        ]
       }
     ]
   }

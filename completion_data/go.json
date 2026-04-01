@@ -407,6 +407,174 @@
       "description": "goto - Jumps to a labeled statement. Generally discouraged except for specific cases.",
       "example": "goto Error; Error: return err",
       "category": "control_flow"
+    },
+    {
+      "keyword": "print",
+      "type": "builtin",
+      "description": "print - Formats and writes to standard error. Useful for bootstrapping and debugging.",
+      "example": "print(\"debug: \", x)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "println",
+      "type": "builtin",
+      "description": "println - Like print but appends a newline. Writes to standard error.",
+      "example": "println(\"value:\", v)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "complex",
+      "type": "builtin",
+      "description": "complex - Constructs a complex number from two floats: complex(realPart, imagPart).",
+      "example": "c := complex(3.0, 4.0)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "real",
+      "type": "builtin",
+      "description": "real - Returns the real part of a complex number.",
+      "example": "r := real(c) // 3.0",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "imag",
+      "type": "builtin",
+      "description": "imag - Returns the imaginary part of a complex number.",
+      "example": "i := imag(c) // 4.0",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "clear",
+      "type": "builtin",
+      "description": "clear - Deletes all entries from a map, or zeroes all elements of a slice. Added in Go 1.21.",
+      "example": "clear(myMap)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "min",
+      "type": "builtin",
+      "description": "min - Returns the smallest of its arguments. Works with ordered types. Added in Go 1.21.",
+      "example": "smallest := min(a, b, c)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "max",
+      "type": "builtin",
+      "description": "max - Returns the largest of its arguments. Works with ordered types. Added in Go 1.21.",
+      "example": "largest := max(a, b, c)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "uintptr",
+      "type": "type",
+      "description": "uintptr - Integer type large enough to hold a pointer value. Used with unsafe package.",
+      "example": "var p uintptr = uintptr(unsafe.Pointer(&x))",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "any",
+      "type": "type",
+      "description": "any - Alias for interface{}. Accepts any value. Added in Go 1.18.",
+      "example": "func printVal(v any) { fmt.Println(v) }",
+      "category": "basic_types"
+    },
+    {
+      "keyword": "comparable",
+      "type": "type",
+      "description": "comparable - Type constraint for types supporting == and !=. Used in generics.",
+      "example": "func Index[T comparable](s []T, v T) int { ... }",
+      "category": "generics"
+    },
+    {
+      "keyword": "~",
+      "type": "keyword",
+      "description": "~ (tilde) - Underlying type constraint. ~int matches all types whose underlying type is int.",
+      "example": "type Signed interface { ~int | ~int8 | ~int16 | ~int32 | ~int64 }",
+      "category": "generics"
+    },
+    {
+      "keyword": "//go:embed",
+      "type": "directive",
+      "description": "//go:embed - Embeds files/directories into the binary at compile time. Used with embed.FS.",
+      "example": "//go:embed templates/*\nvar content embed.FS",
+      "category": "directives"
+    },
+    {
+      "keyword": "//go:generate",
+      "type": "directive",
+      "description": "//go:generate - Specifies a command to run with 'go generate'. For code generation.",
+      "example": "//go:generate stringer -type=Color",
+      "category": "directives"
+    },
+    {
+      "keyword": "//go:build",
+      "type": "directive",
+      "description": "//go:build - Build constraint tag. Controls when a file is included in the build.",
+      "example": "//go:build linux && amd64",
+      "category": "directives"
+    },
+    {
+      "keyword": "//go:noinline",
+      "type": "directive",
+      "description": "//go:noinline - Prevents the compiler from inlining a function.",
+      "example": "//go:noinline\nfunc expensiveOp() { ... }",
+      "category": "directives"
+    },
+    {
+      "keyword": "//go:nosplit",
+      "type": "directive",
+      "description": "//go:nosplit - Prevents stack-split check on function entry. For low-level runtime code.",
+      "example": "//go:nosplit\nfunc fastPath() { ... }",
+      "category": "directives"
+    },
+    {
+      "keyword": "//go:linkname",
+      "type": "directive",
+      "description": "//go:linkname - Links a local symbol to a symbol in another package. For accessing unexported symbols.",
+      "example": "//go:linkname nanotime runtime.nanotime",
+      "category": "directives"
+    },
+    {
+      "keyword": "GOMAXPROCS",
+      "type": "keyword",
+      "description": "runtime.GOMAXPROCS - Sets the max number of OS threads executing goroutines simultaneously.",
+      "example": "runtime.GOMAXPROCS(runtime.NumCPU())",
+      "category": "concurrency"
+    },
+    {
+      "keyword": "Benchmark",
+      "type": "keyword",
+      "description": "Benchmark function prefix - Functions starting with Benchmark are run by 'go test -bench'.",
+      "example": "func BenchmarkSort(b *testing.B) { for i := 0; i < b.N; i++ { sort(data) } }",
+      "category": "testing"
+    },
+    {
+      "keyword": "Example",
+      "type": "keyword",
+      "description": "Example function prefix - Testable examples that appear in godoc and are verified by 'go test'.",
+      "example": "func ExampleReverse() {\n\tfmt.Println(Reverse(\"hello\"))\n\t// Output: olleh\n}",
+      "category": "testing"
+    },
+    {
+      "keyword": "Fuzz",
+      "type": "keyword",
+      "description": "Fuzz function prefix - Fuzz test entry point. Run with 'go test -fuzz'. Added in Go 1.18.",
+      "example": "func FuzzReverse(f *testing.F) {\n\tf.Add(\"hello\")\n\tf.Fuzz(func(t *testing.T, s string) { ... })\n}",
+      "category": "testing"
+    },
+    {
+      "keyword": "init",
+      "type": "keyword",
+      "description": "init - Special function called automatically at package initialization. Runs before main.",
+      "example": "func init() {\n\t// register, setup globals\n}",
+      "category": "function_declaration"
+    },
+    {
+      "keyword": "_",
+      "type": "keyword",
+      "description": "_ (blank identifier) - Discards a value. Used to ignore return values or enforce interface compliance.",
+      "example": "_, err := io.Copy(dst, src)\nvar _ Interface = (*Impl)(nil)",
+      "category": "variable_declaration"
     }
   ],
   "snippets": [
@@ -589,6 +757,270 @@
       "description": "Type switch for interfaces",
       "content": "switch v := ${1:interface}.(type) {\ncase ${2:string}:\n\t${3:// handle string}\ncase ${4:int}:\n\t${5:// handle int}\ndefault:\n\t${6:// handle unknown type}\n}",
       "category": "type_conversion"
+    },
+    {
+      "trigger": "if_err_wrap",
+      "description": "Error check with fmt.Errorf wrapping using %w",
+      "content": "if err != nil {\n\treturn fmt.Errorf(\"${1:operation}: %w\", err)\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "errors_is",
+      "description": "Check if error matches a target using errors.Is",
+      "content": "if errors.Is(err, ${1:os.ErrNotExist}) {\n\t${2:// handle}\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "errors_as",
+      "description": "Extract typed error using errors.As",
+      "content": "var ${1:target} *${2:PathError}\nif errors.As(err, &${1:target}) {\n\t${3:// use target}\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "custom_error",
+      "description": "Custom error type implementing the error interface",
+      "content": "type ${1:AppError} struct {\n\tCode    int\n\tMessage string\n\tErr     error\n}\n\nfunc (e *${1:AppError}) Error() string {\n\treturn fmt.Sprintf(\"%s (code %d)\", e.Message, e.Code)\n}\n\nfunc (e *${1:AppError}) Unwrap() error {\n\treturn e.Err\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "errgroup",
+      "description": "errgroup pattern for concurrent tasks with error propagation",
+      "content": "g, ctx := errgroup.WithContext(${1:ctx})\n\nfor _, ${2:item} := range ${3:items} {\n\tg.Go(func() error {\n\t\t${4:// process item}\n\t\treturn nil\n\t})\n}\n\nif err := g.Wait(); err != nil {\n\treturn err\n}",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "worker_pool",
+      "description": "Fan-out worker pool with buffered channels",
+      "content": "jobs := make(chan ${1:int}, ${2:100})\nresults := make(chan ${3:int}, ${2:100})\n\n// Start workers\nfor w := 0; w < ${4:numWorkers}; w++ {\n\tgo func() {\n\t\tfor j := range jobs {\n\t\t\tresults <- ${5:process(j)}\n\t\t}\n\t}()\n}\n\n// Send jobs\nfor _, j := range ${6:data} {\n\tjobs <- j\n}\nclose(jobs)\n\n// Collect results\nfor i := 0; i < len(${6:data}); i++ {\n\t<-results\n}",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "channel_done",
+      "description": "Done channel for goroutine cancellation",
+      "content": "done := make(chan struct{})\ngo func() {\n\tdefer close(done)\n\t${1:// work}\n}()\n\nselect {\ncase <-done:\n\t// completed\ncase <-${2:ctx.Done()}:\n\t// cancelled\n}",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "ticker",
+      "description": "Periodic ticker with cleanup",
+      "content": "ticker := time.NewTicker(${1:1 * time.Second})\ndefer ticker.Stop()\n\nfor {\n\tselect {\n\tcase <-ticker.C:\n\t\t${2:// periodic work}\n\tcase <-${3:ctx.Done()}:\n\t\treturn\n\t}\n}",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "once",
+      "description": "sync.Once for one-time initialization",
+      "content": "var (\n\t${1:instance} *${2:Config}\n\t${1:instance}Once sync.Once\n)\n\nfunc Get${2:Config}() *${2:Config} {\n\t${1:instance}Once.Do(func() {\n\t\t${1:instance} = &${2:Config}{\n\t\t\t${3:// initialize}\n\t\t}\n\t})\n\treturn ${1:instance}\n}",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "rwmutex",
+      "description": "Read-write mutex for concurrent reads, exclusive writes",
+      "content": "type ${1:SafeMap} struct {\n\tmu   sync.RWMutex\n\tdata map[${2:string}]${3:int}\n}\n\nfunc (m *${1:SafeMap}) Get(key ${2:string}) (${3:int}, bool) {\n\tm.mu.RLock()\n\tdefer m.mu.RUnlock()\n\tv, ok := m.data[key]\n\treturn v, ok\n}\n\nfunc (m *${1:SafeMap}) Set(key ${2:string}, val ${3:int}) {\n\tm.mu.Lock()\n\tdefer m.mu.Unlock()\n\tm.data[key] = val\n}",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "semaphore",
+      "description": "Channel-based semaphore to limit concurrency",
+      "content": "sem := make(chan struct{}, ${1:10})\n\nfor _, ${2:item} := range ${3:items} {\n\tsem <- struct{}{}\n\tgo func() {\n\t\tdefer func() { <-sem }()\n\t\t${4:// process item}\n\t}()\n}",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "http_middleware",
+      "description": "HTTP middleware function pattern",
+      "content": "func ${1:logging}Middleware(next http.Handler) http.Handler {\n\treturn http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {\n\t\t${2:// before}\n\t\tnext.ServeHTTP(w, r)\n\t\t${3:// after}\n\t})\n}",
+      "category": "http"
+    },
+    {
+      "trigger": "http_client",
+      "description": "HTTP client with timeout and request",
+      "content": "client := &http.Client{\n\tTimeout: ${1:10 * time.Second},\n}\n\nreq, err := http.NewRequestWithContext(${2:ctx}, http.Method${3:Get}, ${4:url}, ${5:nil})\nif err != nil {\n\treturn err\n}\nreq.Header.Set(\"Content-Type\", \"${6:application/json}\")\n\nresp, err := client.Do(req)\nif err != nil {\n\treturn err\n}\ndefer resp.Body.Close()",
+      "category": "http"
+    },
+    {
+      "trigger": "http_json_response",
+      "description": "Write JSON response with status code and content-type",
+      "content": "w.Header().Set(\"Content-Type\", \"application/json\")\nw.WriteHeader(${1:http.StatusOK})\nif err := json.NewEncoder(w).Encode(${2:data}); err != nil {\n\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n}",
+      "category": "http"
+    },
+    {
+      "trigger": "http_mux",
+      "description": "HTTP mux with routes (Go 1.22+ enhanced patterns)",
+      "content": "mux := http.NewServeMux()\n\nmux.HandleFunc(\"GET /api/${1:items}\", ${2:listHandler})\nmux.HandleFunc(\"POST /api/${1:items}\", ${3:createHandler})\nmux.HandleFunc(\"GET /api/${1:items}/{id}\", ${4:getHandler})\nmux.HandleFunc(\"DELETE /api/${1:items}/{id}\", ${5:deleteHandler})\n\nhttp.ListenAndServe(\":${6:8080}\", mux)",
+      "category": "http"
+    },
+    {
+      "trigger": "generic_func",
+      "description": "Generic function with type parameter",
+      "content": "func ${1:Map}[${2:T any}, ${3:U any}](s []${2:T}, f func(${2:T}) ${3:U}) []${3:U} {\n\tresult := make([]${3:U}, len(s))\n\tfor i, v := range s {\n\t\tresult[i] = f(v)\n\t}\n\treturn result\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "generic_type",
+      "description": "Generic struct with type parameter",
+      "content": "type ${1:Stack}[${2:T any}] struct {\n\titems []${2:T}\n}\n\nfunc (s *${1:Stack}[${2:T}]) Push(item ${2:T}) {\n\ts.items = append(s.items, item)\n}\n\nfunc (s *${1:Stack}[${2:T}]) Pop() (${2:T}, bool) {\n\tif len(s.items) == 0 {\n\t\tvar zero ${2:T}\n\t\treturn zero, false\n\t}\n\titem := s.items[len(s.items)-1]\n\ts.items = s.items[:len(s.items)-1]\n\treturn item, true\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "type_constraint",
+      "description": "Type constraint interface for generics",
+      "content": "type ${1:Number} interface {\n\t${2:~int | ~int8 | ~int16 | ~int32 | ~int64 |\n\t~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |\n\t~float32 | ~float64}\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "test_benchmark",
+      "description": "Benchmark function with timer reset",
+      "content": "func Benchmark${1:Name}(b *testing.B) {\n\t${2:// setup}\n\tb.ResetTimer()\n\tfor i := 0; i < b.N; i++ {\n\t\t${3:// code to benchmark}\n\t}\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "test_fuzz",
+      "description": "Fuzz test with seed corpus",
+      "content": "func Fuzz${1:Name}(f *testing.F) {\n\tf.Add(${2:\"seed input\"})\n\tf.Fuzz(func(t *testing.T, ${3:input string}) {\n\t\t${4:// test with random input}\n\t})\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "test_helper",
+      "description": "Test helper function with t.Helper()",
+      "content": "func ${1:assertEqual}(t *testing.T, ${2:got, want string}) {\n\tt.Helper()\n\tif ${2:got} != ${3:want} {\n\t\tt.Errorf(\"got %v, want %v\", ${2:got}, ${3:want})\n\t}\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "test_tempdir",
+      "description": "Test with temporary directory",
+      "content": "func Test${1:Name}(t *testing.T) {\n\tdir := t.TempDir()\n\t${2:// dir is automatically cleaned up}\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "test_parallel",
+      "description": "Parallel subtest using t.Run and t.Parallel",
+      "content": "func Test${1:Name}(t *testing.T) {\n\ttests := []struct {\n\t\tname string\n\t\t${2:input string}\n\t\t${3:want  string}\n\t}{\n\t\t{\"${4:case1}\", ${5:\"in\"}, ${6:\"out\"}},\n\t}\n\n\tfor _, tt := range tests {\n\t\tt.Run(tt.name, func(t *testing.T) {\n\t\t\tt.Parallel()\n\t\t\t${7:got := process(tt.input)}\n\t\t\tif got != tt.want {\n\t\t\t\tt.Errorf(\"got %v, want %v\", got, tt.want)\n\t\t\t}\n\t\t})\n\t}\n}",
+      "category": "testing"
+    },
+    {
+      "trigger": "context_cancel",
+      "description": "Context with cancel for manual cancellation",
+      "content": "ctx, cancel := context.WithCancel(${1:context.Background()})\ndefer cancel()\n${2:}",
+      "category": "context"
+    },
+    {
+      "trigger": "context_deadline",
+      "description": "Context with deadline for absolute timeout",
+      "content": "deadline := time.Now().Add(${1:5 * time.Second})\nctx, cancel := context.WithDeadline(${2:context.Background()}, deadline)\ndefer cancel()\n${3:}",
+      "category": "context"
+    },
+    {
+      "trigger": "context_value",
+      "description": "Context with key-value for request-scoped data",
+      "content": "type ${1:contextKey} string\n\nconst ${2:userIDKey} ${1:contextKey} = \"${3:userID}\"\n\nfunc With${4:UserID}(ctx context.Context, ${5:id} string) context.Context {\n\treturn context.WithValue(ctx, ${2:userIDKey}, ${5:id})\n}\n\nfunc ${4:UserID}From(ctx context.Context) (string, bool) {\n\t${5:id}, ok := ctx.Value(${2:userIDKey}).(string)\n\treturn ${5:id}, ok\n}",
+      "category": "context"
+    },
+    {
+      "trigger": "file_scanner",
+      "description": "Read file line by line with bufio.Scanner",
+      "content": "file, err := os.Open(${1:\"path\"})\nif err != nil {\n\treturn err\n}\ndefer file.Close()\n\nscanner := bufio.NewScanner(file)\nfor scanner.Scan() {\n\tline := scanner.Text()\n\t${2:// process line}\n}\n\nif err := scanner.Err(); err != nil {\n\treturn err\n}",
+      "category": "io"
+    },
+    {
+      "trigger": "embed_fs",
+      "description": "Embed files using go:embed directive",
+      "content": "//go:embed ${1:static/*}\nvar ${2:content} embed.FS\n\n${3:// Access: data, err := content.ReadFile(\"static/index.html\")}",
+      "category": "io"
+    },
+    {
+      "trigger": "temp_file",
+      "description": "Create and use a temporary file",
+      "content": "f, err := os.CreateTemp(${1:\"\"}, ${2:\"prefix-*.txt\"})\nif err != nil {\n\treturn err\n}\ndefer os.Remove(f.Name())\ndefer f.Close()\n${3:}",
+      "category": "io"
+    },
+    {
+      "trigger": "json_struct",
+      "description": "Struct with JSON tags and common options",
+      "content": "type ${1:Response} struct {\n\t${2:ID}        ${3:int}    `json:\"${4:id}\"`\n\t${5:Name}      ${6:string} `json:\"${7:name}\"`\n\t${8:CreatedAt} time.Time  `json:\"${9:created_at}\"`\n\t${10:Items}    []${11:Item} `json:\"${12:items},omitempty\"`\n}",
+      "category": "json"
+    },
+    {
+      "trigger": "json_decode_reader",
+      "description": "Decode JSON from an io.Reader (HTTP body, file)",
+      "content": "var ${1:result} ${2:Response}\nif err := json.NewDecoder(${3:r.Body}).Decode(&${1:result}); err != nil {\n\treturn err\n}",
+      "category": "json"
+    },
+    {
+      "trigger": "constructor",
+      "description": "Constructor function with options pattern (functional options)",
+      "content": "type ${1:Server} struct {\n\taddr    string\n\ttimeout time.Duration\n}\n\ntype ${1:Server}Option func(*${1:Server})\n\nfunc WithAddr(addr string) ${1:Server}Option {\n\treturn func(s *${1:Server}) { s.addr = addr }\n}\n\nfunc WithTimeout(d time.Duration) ${1:Server}Option {\n\treturn func(s *${1:Server}) { s.timeout = d }\n}\n\nfunc New${1:Server}(opts ...${1:Server}Option) *${1:Server} {\n\ts := &${1:Server}{\n\t\taddr:    \":8080\",\n\t\ttimeout: 30 * time.Second,\n\t}\n\tfor _, opt := range opts {\n\t\topt(s)\n\t}\n\treturn s\n}",
+      "category": "patterns"
+    },
+    {
+      "trigger": "enum_iota",
+      "description": "Enum using iota with String() method",
+      "content": "type ${1:Color} int\n\nconst (\n\t${2:Red} ${1:Color} = iota\n\t${3:Green}\n\t${4:Blue}\n)\n\nfunc (c ${1:Color}) String() string {\n\treturn [...]string{\"${2:Red}\", \"${3:Green}\", \"${4:Blue}\"}[c]\n}",
+      "category": "patterns"
+    },
+    {
+      "trigger": "interface_check",
+      "description": "Compile-time interface compliance check",
+      "content": "var _ ${1:io.Reader} = (*${2:MyType})(nil)",
+      "category": "patterns"
+    },
+    {
+      "trigger": "stringer",
+      "description": "Implement the fmt.Stringer interface",
+      "content": "func (${1:t} ${2:*MyType}) String() string {\n\treturn fmt.Sprintf(\"${3:%s}\", ${4:t.Name})\n}",
+      "category": "patterns"
+    },
+    {
+      "trigger": "slog_logger",
+      "description": "Structured logger setup with slog (Go 1.21+)",
+      "content": "logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{\n\tLevel: ${1:slog.LevelInfo},\n}))\nslog.SetDefault(logger)\n\nslog.Info(\"${2:server started}\",\n\t\"${3:addr}\", ${4:addr},\n)",
+      "category": "logging"
+    },
+    {
+      "trigger": "sql_query",
+      "description": "Database query with row scanning",
+      "content": "rows, err := ${1:db}.QueryContext(${2:ctx}, ${3:\"SELECT id, name FROM users WHERE active = $1\"}, ${4:true})\nif err != nil {\n\treturn err\n}\ndefer rows.Close()\n\nfor rows.Next() {\n\tvar ${5:id} int\n\tvar ${6:name} string\n\tif err := rows.Scan(&${5:id}, &${6:name}); err != nil {\n\t\treturn err\n\t}\n\t${7:// process row}\n}\nreturn rows.Err()",
+      "category": "database"
+    },
+    {
+      "trigger": "sql_exec",
+      "description": "Database exec for INSERT/UPDATE/DELETE",
+      "content": "result, err := ${1:db}.ExecContext(${2:ctx}, ${3:\"INSERT INTO users (name, email) VALUES ($1, $2)\"}, ${4:name}, ${5:email})\nif err != nil {\n\treturn err\n}\n\n${6:rowsAffected}, err := result.RowsAffected()\nif err != nil {\n\treturn err\n}",
+      "category": "database"
+    },
+    {
+      "trigger": "sql_transaction",
+      "description": "Database transaction with commit/rollback",
+      "content": "tx, err := ${1:db}.BeginTx(${2:ctx}, nil)\nif err != nil {\n\treturn err\n}\ndefer tx.Rollback()\n\n${3:// execute queries with tx}\n\nreturn tx.Commit()",
+      "category": "database"
+    },
+    {
+      "trigger": "main_signal",
+      "description": "Main with graceful shutdown on OS signal",
+      "content": "func main() {\n\tctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)\n\tdefer stop()\n\n\t${1:// start server}\n\n\t<-ctx.Done()\n\tlog.Println(\"shutting down...\")\n\t${2:// cleanup}\n}",
+      "category": "patterns"
+    },
+    {
+      "trigger": "string_builder",
+      "description": "Efficient string concatenation with strings.Builder",
+      "content": "var b strings.Builder\nfor _, ${1:s} := range ${2:parts} {\n\tb.WriteString(${1:s})\n}\nresult := b.String()",
+      "category": "strings"
+    },
+    {
+      "trigger": "regexp_find",
+      "description": "Compile and use a regular expression",
+      "content": "re := regexp.MustCompile(`${1:pattern}`)\nmatches := re.FindStringSubmatch(${2:input})\nif matches != nil {\n\t${3:// matches[0] is full match, matches[1..] are groups}\n}",
+      "category": "strings"
+    },
+    {
+      "trigger": "sort_slice",
+      "description": "Sort a slice with custom less function",
+      "content": "sort.Slice(${1:items}, func(i, j int) bool {\n\treturn ${1:items}[i].${2:Name} < ${1:items}[j].${2:Name}\n})",
+      "category": "collections"
+    },
+    {
+      "trigger": "map_iteration",
+      "description": "Iterate over a map with sorted keys",
+      "content": "keys := make([]${1:string}, 0, len(${2:m}))\nfor k := range ${2:m} {\n\tkeys = append(keys, k)\n}\nsort.Strings(keys)\n\nfor _, k := range keys {\n\tv := ${2:m}[k]\n\t${3:// process k, v}\n}",
+      "category": "collections"
     }
   ],
   "imports": {
@@ -615,6 +1047,21 @@
             "name": "Errorf",
             "item_type": "function",
             "description": "Format error message"
+          },
+          {
+            "name": "Fprintf",
+            "item_type": "function",
+            "description": "Formats and writes to an io.Writer"
+          },
+          {
+            "name": "Fscan",
+            "item_type": "function",
+            "description": "Reads from an io.Reader, scanning space-delimited values"
+          },
+          {
+            "name": "Stringer",
+            "item_type": "interface",
+            "description": "Interface with String() string method for custom formatting"
           }
         ],
         "submodules": []
@@ -641,6 +1088,46 @@
             "name": "Post",
             "item_type": "function",
             "description": "HTTP POST request"
+          },
+          {
+            "name": "ServeMux",
+            "item_type": "struct",
+            "description": "HTTP request multiplexer (router). Enhanced patterns in Go 1.22+"
+          },
+          {
+            "name": "Client",
+            "item_type": "struct",
+            "description": "HTTP client with configurable timeout, transport, and redirect policy"
+          },
+          {
+            "name": "StatusOK",
+            "item_type": "constant",
+            "description": "HTTP 200 status code"
+          },
+          {
+            "name": "StatusNotFound",
+            "item_type": "constant",
+            "description": "HTTP 404 status code"
+          },
+          {
+            "name": "StatusInternalServerError",
+            "item_type": "constant",
+            "description": "HTTP 500 status code"
+          },
+          {
+            "name": "MethodGet",
+            "item_type": "constant",
+            "description": "HTTP GET method string"
+          },
+          {
+            "name": "MethodPost",
+            "item_type": "constant",
+            "description": "HTTP POST method string"
+          },
+          {
+            "name": "NewRequestWithContext",
+            "item_type": "function",
+            "description": "Creates an HTTP request with context for cancellation and timeouts"
           }
         ],
         "submodules": []
@@ -667,6 +1154,26 @@
             "name": "Decoder",
             "item_type": "struct",
             "description": "JSON decoder"
+          },
+          {
+            "name": "NewEncoder",
+            "item_type": "function",
+            "description": "Creates a JSON encoder writing to an io.Writer"
+          },
+          {
+            "name": "NewDecoder",
+            "item_type": "function",
+            "description": "Creates a JSON decoder reading from an io.Reader"
+          },
+          {
+            "name": "RawMessage",
+            "item_type": "type",
+            "description": "Raw encoded JSON value. Delays decoding or pre-encodes."
+          },
+          {
+            "name": "Valid",
+            "item_type": "function",
+            "description": "Reports whether data is valid JSON encoding"
           }
         ],
         "submodules": []
@@ -693,6 +1200,21 @@
             "name": "WithDeadline",
             "item_type": "function",
             "description": "Context with deadline"
+          },
+          {
+            "name": "WithValue",
+            "item_type": "function",
+            "description": "Returns a context carrying a key-value pair for request-scoped data"
+          },
+          {
+            "name": "Cause",
+            "item_type": "function",
+            "description": "Returns the cause of a context cancellation (Go 1.20+)"
+          },
+          {
+            "name": "AfterFunc",
+            "item_type": "function",
+            "description": "Registers a function to be called when context is done (Go 1.21+)"
           }
         ],
         "submodules": []
@@ -719,6 +1241,21 @@
             "name": "Once",
             "item_type": "struct",
             "description": "One-time execution"
+          },
+          {
+            "name": "Map",
+            "item_type": "struct",
+            "description": "Concurrent map safe for use by multiple goroutines without locking"
+          },
+          {
+            "name": "Pool",
+            "item_type": "struct",
+            "description": "Pool of temporary objects to reduce GC pressure"
+          },
+          {
+            "name": "Cond",
+            "item_type": "struct",
+            "description": "Condition variable for goroutine coordination (Wait/Signal/Broadcast)"
           }
         ],
         "submodules": []
@@ -745,6 +1282,31 @@
             "name": "WriteFile",
             "item_type": "function",
             "description": "Write to file"
+          },
+          {
+            "name": "MkdirAll",
+            "item_type": "function",
+            "description": "Creates a directory and all parents. Like mkdir -p."
+          },
+          {
+            "name": "UserHomeDir",
+            "item_type": "function",
+            "description": "Returns the current user's home directory"
+          },
+          {
+            "name": "Executable",
+            "item_type": "function",
+            "description": "Returns the path of the running executable"
+          },
+          {
+            "name": "ErrNotExist",
+            "item_type": "variable",
+            "description": "Sentinel error for file/directory not found"
+          },
+          {
+            "name": "ErrPermission",
+            "item_type": "variable",
+            "description": "Sentinel error for permission denied"
           }
         ],
         "submodules": []
@@ -766,6 +1328,36 @@
             "name": "Copy",
             "item_type": "function",
             "description": "Copy from reader to writer"
+          },
+          {
+            "name": "ReadAll",
+            "item_type": "function",
+            "description": "Reads all bytes from a Reader until EOF"
+          },
+          {
+            "name": "NopCloser",
+            "item_type": "function",
+            "description": "Wraps a Reader with a no-op Close method to satisfy ReadCloser"
+          },
+          {
+            "name": "TeeReader",
+            "item_type": "function",
+            "description": "Returns a Reader that writes to w what it reads from r"
+          },
+          {
+            "name": "Pipe",
+            "item_type": "function",
+            "description": "Creates a synchronous in-memory pipe (PipeReader, PipeWriter)"
+          },
+          {
+            "name": "MultiReader",
+            "item_type": "function",
+            "description": "Concatenates multiple Readers into one sequential Reader"
+          },
+          {
+            "name": "EOF",
+            "item_type": "variable",
+            "description": "Sentinel error returned when no more input is available"
           }
         ],
         "submodules": []
@@ -792,6 +1384,36 @@
             "name": "Time",
             "item_type": "struct",
             "description": "Point in time"
+          },
+          {
+            "name": "NewTicker",
+            "item_type": "function",
+            "description": "Creates a ticker sending the current time on a channel at intervals"
+          },
+          {
+            "name": "NewTimer",
+            "item_type": "function",
+            "description": "Creates a timer that fires once after the given duration"
+          },
+          {
+            "name": "Parse",
+            "item_type": "function",
+            "description": "Parses a time string using Go's reference time layout"
+          },
+          {
+            "name": "Since",
+            "item_type": "function",
+            "description": "Returns duration elapsed since t. Shorthand for time.Now().Sub(t)."
+          },
+          {
+            "name": "Until",
+            "item_type": "function",
+            "description": "Returns duration until t. Shorthand for t.Sub(time.Now())."
+          },
+          {
+            "name": "RFC3339",
+            "item_type": "constant",
+            "description": "RFC 3339 time format layout: \"2006-01-02T15:04:05Z07:00\""
           }
         ],
         "submodules": []
@@ -808,6 +1430,31 @@
             "name": "B",
             "item_type": "struct",
             "description": "Benchmarking context"
+          },
+          {
+            "name": "Run",
+            "item_type": "method",
+            "description": "t.Run runs a subtest with a given name and function"
+          },
+          {
+            "name": "Parallel",
+            "item_type": "method",
+            "description": "t.Parallel marks a test to run in parallel with other parallel tests"
+          },
+          {
+            "name": "Cleanup",
+            "item_type": "method",
+            "description": "t.Cleanup registers a function to be called when the test finishes"
+          },
+          {
+            "name": "TempDir",
+            "item_type": "method",
+            "description": "t.TempDir returns a temporary directory that is cleaned up after test"
+          },
+          {
+            "name": "Helper",
+            "item_type": "method",
+            "description": "t.Helper marks the calling function as a test helper for better error output"
           }
         ],
         "submodules": []
@@ -829,6 +1476,554 @@
             "name": "As",
             "item_type": "function",
             "description": "Type assertion for errors"
+          },
+          {
+            "name": "Join",
+            "item_type": "function",
+            "description": "Wraps multiple errors into one. Returns nil if all errors are nil. (Go 1.20+)"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "strings",
+        "items": [
+          {
+            "name": "Contains",
+            "item_type": "function",
+            "description": "Reports whether substr is within s"
+          },
+          {
+            "name": "HasPrefix",
+            "item_type": "function",
+            "description": "Tests whether s begins with prefix"
+          },
+          {
+            "name": "HasSuffix",
+            "item_type": "function",
+            "description": "Tests whether s ends with suffix"
+          },
+          {
+            "name": "Join",
+            "item_type": "function",
+            "description": "Concatenates slice elements with separator"
+          },
+          {
+            "name": "Split",
+            "item_type": "function",
+            "description": "Splits s around each instance of sep"
+          },
+          {
+            "name": "TrimSpace",
+            "item_type": "function",
+            "description": "Returns s with leading and trailing whitespace removed"
+          },
+          {
+            "name": "Replace",
+            "item_type": "function",
+            "description": "Returns s with first n replacements of old with new (-1 for all)"
+          },
+          {
+            "name": "Builder",
+            "item_type": "struct",
+            "description": "Efficient string builder. Minimizes memory copying."
+          },
+          {
+            "name": "NewReader",
+            "item_type": "function",
+            "description": "Returns a Reader reading from the given string"
+          },
+          {
+            "name": "Map",
+            "item_type": "function",
+            "description": "Returns a copy of s with all characters modified by the mapping function"
+          },
+          {
+            "name": "Cut",
+            "item_type": "function",
+            "description": "Slices s around the first sep. Returns before, after, found. (Go 1.18+)"
+          },
+          {
+            "name": "CutPrefix",
+            "item_type": "function",
+            "description": "Returns s without the prefix and whether it had it (Go 1.20+)"
+          },
+          {
+            "name": "CutSuffix",
+            "item_type": "function",
+            "description": "Returns s without the suffix and whether it had it (Go 1.20+)"
+          },
+          {
+            "name": "Clone",
+            "item_type": "function",
+            "description": "Returns a fresh copy of s, freeing the underlying memory (Go 1.20+)"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "strconv",
+        "items": [
+          {
+            "name": "Atoi",
+            "item_type": "function",
+            "description": "Converts string to int. Shorthand for ParseInt(s, 10, 0)."
+          },
+          {
+            "name": "Itoa",
+            "item_type": "function",
+            "description": "Converts int to string. Shorthand for FormatInt(int64(i), 10)."
+          },
+          {
+            "name": "ParseFloat",
+            "item_type": "function",
+            "description": "Converts string to float64 with given bit size"
+          },
+          {
+            "name": "ParseBool",
+            "item_type": "function",
+            "description": "Converts string to bool. Accepts 1/0/t/f/true/false/etc."
+          },
+          {
+            "name": "FormatFloat",
+            "item_type": "function",
+            "description": "Converts float64 to string with format, precision, and bit size"
+          },
+          {
+            "name": "FormatInt",
+            "item_type": "function",
+            "description": "Returns the string representation of i in the given base"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "log/slog",
+        "items": [
+          {
+            "name": "Info",
+            "item_type": "function",
+            "description": "Log at INFO level with structured key-value pairs"
+          },
+          {
+            "name": "Warn",
+            "item_type": "function",
+            "description": "Log at WARN level with structured key-value pairs"
+          },
+          {
+            "name": "Error",
+            "item_type": "function",
+            "description": "Log at ERROR level with structured key-value pairs"
+          },
+          {
+            "name": "Debug",
+            "item_type": "function",
+            "description": "Log at DEBUG level with structured key-value pairs"
+          },
+          {
+            "name": "With",
+            "item_type": "function",
+            "description": "Returns a Logger with additional default attributes"
+          },
+          {
+            "name": "NewJSONHandler",
+            "item_type": "function",
+            "description": "Creates a handler that writes JSON-formatted log records"
+          },
+          {
+            "name": "NewTextHandler",
+            "item_type": "function",
+            "description": "Creates a handler that writes human-readable log records"
+          },
+          {
+            "name": "SetDefault",
+            "item_type": "function",
+            "description": "Sets the default logger for the slog package functions"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "slices",
+        "items": [
+          {
+            "name": "Sort",
+            "item_type": "function",
+            "description": "Sorts a slice of ordered types in ascending order"
+          },
+          {
+            "name": "SortFunc",
+            "item_type": "function",
+            "description": "Sorts a slice using a custom comparison function"
+          },
+          {
+            "name": "BinarySearch",
+            "item_type": "function",
+            "description": "Searches a sorted slice for a target value"
+          },
+          {
+            "name": "Contains",
+            "item_type": "function",
+            "description": "Reports whether v is present in s"
+          },
+          {
+            "name": "Index",
+            "item_type": "function",
+            "description": "Returns the index of the first occurrence of v, or -1"
+          },
+          {
+            "name": "Compact",
+            "item_type": "function",
+            "description": "Removes consecutive duplicate elements (like Unix uniq)"
+          },
+          {
+            "name": "Clip",
+            "item_type": "function",
+            "description": "Removes unused capacity, returning s[:len(s):len(s)]"
+          },
+          {
+            "name": "Grow",
+            "item_type": "function",
+            "description": "Increases the capacity by at least n elements"
+          },
+          {
+            "name": "Delete",
+            "item_type": "function",
+            "description": "Removes elements s[i:j] and returns the modified slice"
+          },
+          {
+            "name": "Replace",
+            "item_type": "function",
+            "description": "Replaces elements s[i:j] with the given values"
+          },
+          {
+            "name": "Reverse",
+            "item_type": "function",
+            "description": "Reverses the elements of the slice in place"
+          },
+          {
+            "name": "Equal",
+            "item_type": "function",
+            "description": "Reports whether two slices are equal element by element"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "maps",
+        "items": [
+          {
+            "name": "Keys",
+            "item_type": "function",
+            "description": "Returns the keys of the map in an indeterminate order"
+          },
+          {
+            "name": "Values",
+            "item_type": "function",
+            "description": "Returns the values of the map in an indeterminate order"
+          },
+          {
+            "name": "Clone",
+            "item_type": "function",
+            "description": "Returns a shallow copy of the map"
+          },
+          {
+            "name": "Copy",
+            "item_type": "function",
+            "description": "Copies all key-value pairs from src to dst"
+          },
+          {
+            "name": "DeleteFunc",
+            "item_type": "function",
+            "description": "Deletes entries for which the function returns true"
+          },
+          {
+            "name": "Equal",
+            "item_type": "function",
+            "description": "Reports whether two maps contain the same key-value pairs"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "regexp",
+        "items": [
+          {
+            "name": "MustCompile",
+            "item_type": "function",
+            "description": "Compiles a regex and panics on error. For package-level vars."
+          },
+          {
+            "name": "Compile",
+            "item_type": "function",
+            "description": "Compiles a regex and returns an error if invalid"
+          },
+          {
+            "name": "MatchString",
+            "item_type": "function",
+            "description": "Reports whether the string contains any match of the pattern"
+          },
+          {
+            "name": "FindString",
+            "item_type": "method",
+            "description": "Returns the leftmost match of the regex in the string"
+          },
+          {
+            "name": "FindStringSubmatch",
+            "item_type": "method",
+            "description": "Returns a slice of the match and captured groups"
+          },
+          {
+            "name": "ReplaceAllString",
+            "item_type": "method",
+            "description": "Returns string with all matches replaced by repl"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "sort",
+        "items": [
+          {
+            "name": "Slice",
+            "item_type": "function",
+            "description": "Sorts a slice given a less function. Not stable."
+          },
+          {
+            "name": "SliceStable",
+            "item_type": "function",
+            "description": "Sorts a slice preserving original order of equal elements"
+          },
+          {
+            "name": "Search",
+            "item_type": "function",
+            "description": "Binary search returning the smallest index i where f(i) is true"
+          },
+          {
+            "name": "Strings",
+            "item_type": "function",
+            "description": "Sorts a slice of strings in ascending order"
+          },
+          {
+            "name": "Ints",
+            "item_type": "function",
+            "description": "Sorts a slice of ints in ascending order"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "path/filepath",
+        "items": [
+          {
+            "name": "Join",
+            "item_type": "function",
+            "description": "Joins path elements with the OS separator, cleaning the result"
+          },
+          {
+            "name": "Dir",
+            "item_type": "function",
+            "description": "Returns all but the last element of path (parent directory)"
+          },
+          {
+            "name": "Base",
+            "item_type": "function",
+            "description": "Returns the last element of path (filename)"
+          },
+          {
+            "name": "Ext",
+            "item_type": "function",
+            "description": "Returns the file extension including the dot"
+          },
+          {
+            "name": "Abs",
+            "item_type": "function",
+            "description": "Returns an absolute path representation"
+          },
+          {
+            "name": "Walk",
+            "item_type": "function",
+            "description": "Walks the file tree rooted at root, calling fn for each file"
+          },
+          {
+            "name": "WalkDir",
+            "item_type": "function",
+            "description": "Like Walk but uses fs.DirEntry for efficiency (Go 1.16+)"
+          },
+          {
+            "name": "Glob",
+            "item_type": "function",
+            "description": "Returns names of files matching the shell pattern"
+          },
+          {
+            "name": "Rel",
+            "item_type": "function",
+            "description": "Returns a relative path from basepath to targpath"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "bufio",
+        "items": [
+          {
+            "name": "NewScanner",
+            "item_type": "function",
+            "description": "Returns a Scanner reading from r. Splits on lines by default."
+          },
+          {
+            "name": "NewReader",
+            "item_type": "function",
+            "description": "Returns a buffered Reader with default buffer size"
+          },
+          {
+            "name": "NewWriter",
+            "item_type": "function",
+            "description": "Returns a buffered Writer with default buffer size"
+          },
+          {
+            "name": "Scanner",
+            "item_type": "struct",
+            "description": "Reads input and splits into tokens (lines, words, bytes, runes)"
+          },
+          {
+            "name": "ScanLines",
+            "item_type": "function",
+            "description": "Split function for Scanner that returns each line of text"
+          },
+          {
+            "name": "ScanWords",
+            "item_type": "function",
+            "description": "Split function for Scanner that returns each space-delimited word"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "embed",
+        "items": [
+          {
+            "name": "FS",
+            "item_type": "type",
+            "description": "Read-only collection of files embedded at compile time"
+          },
+          {
+            "name": "ReadFile",
+            "item_type": "method",
+            "description": "Reads and returns the content of the named file from the FS"
+          },
+          {
+            "name": "ReadDir",
+            "item_type": "method",
+            "description": "Reads and returns the directory entries of the named directory"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "database/sql",
+        "items": [
+          {
+            "name": "Open",
+            "item_type": "function",
+            "description": "Opens a database with the given driver name and DSN"
+          },
+          {
+            "name": "DB",
+            "item_type": "struct",
+            "description": "Database handle. Safe for concurrent use. Manages connection pool."
+          },
+          {
+            "name": "Tx",
+            "item_type": "struct",
+            "description": "Database transaction. Must be committed or rolled back."
+          },
+          {
+            "name": "Row",
+            "item_type": "struct",
+            "description": "Result of QueryRow. Call Scan to read the selected row."
+          },
+          {
+            "name": "Rows",
+            "item_type": "struct",
+            "description": "Result of Query. Iterate with Next() and scan each row."
+          },
+          {
+            "name": "NullString",
+            "item_type": "struct",
+            "description": "Represents a string that may be NULL in the database"
+          },
+          {
+            "name": "NullInt64",
+            "item_type": "struct",
+            "description": "Represents an int64 that may be NULL in the database"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "net/url",
+        "items": [
+          {
+            "name": "Parse",
+            "item_type": "function",
+            "description": "Parses a raw URL string into a URL structure"
+          },
+          {
+            "name": "URL",
+            "item_type": "struct",
+            "description": "Represents a parsed URL with scheme, host, path, query, etc."
+          },
+          {
+            "name": "Values",
+            "item_type": "type",
+            "description": "URL query parameters (map[string][]string) with Get/Set/Add/Encode"
+          },
+          {
+            "name": "QueryEscape",
+            "item_type": "function",
+            "description": "Escapes a string for safe URL query parameter inclusion"
+          },
+          {
+            "name": "PathEscape",
+            "item_type": "function",
+            "description": "Escapes a string for safe URL path segment inclusion"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "bytes",
+        "items": [
+          {
+            "name": "Buffer",
+            "item_type": "struct",
+            "description": "Variable-size byte buffer with Read and Write methods"
+          },
+          {
+            "name": "NewBuffer",
+            "item_type": "function",
+            "description": "Creates a Buffer initialized with the given byte slice"
+          },
+          {
+            "name": "Contains",
+            "item_type": "function",
+            "description": "Reports whether subslice is within b"
+          },
+          {
+            "name": "Join",
+            "item_type": "function",
+            "description": "Concatenates byte slices with separator"
+          },
+          {
+            "name": "Split",
+            "item_type": "function",
+            "description": "Splits byte slice around each instance of sep"
+          },
+          {
+            "name": "TrimSpace",
+            "item_type": "function",
+            "description": "Returns byte slice with leading and trailing whitespace removed"
           }
         ],
         "submodules": []

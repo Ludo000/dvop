@@ -526,6 +526,734 @@
       "description": "DECIMAL - Fixed-point number with precision and scale.",
       "example": "CREATE TABLE products (price DECIMAL(10, 2));",
       "category": "datatype"
+    },
+    {
+      "keyword": "BIGINT",
+      "type": "datatype",
+      "description": "BIGINT - Large integer type. Range: -9223372036854775808 to 9223372036854775807.",
+      "example": "CREATE TABLE events (id BIGINT PRIMARY KEY);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "SMALLINT",
+      "type": "datatype",
+      "description": "SMALLINT - Small integer type. Range: -32768 to 32767.",
+      "example": "CREATE TABLE settings (priority SMALLINT DEFAULT 0);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "FLOAT",
+      "type": "datatype",
+      "description": "FLOAT - Approximate floating-point number.",
+      "example": "CREATE TABLE measurements (value FLOAT);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "REAL",
+      "type": "datatype",
+      "description": "REAL - Single-precision floating-point number.",
+      "example": "CREATE TABLE sensors (reading REAL);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "NUMERIC",
+      "type": "datatype",
+      "description": "NUMERIC - Exact numeric type with user-specified precision. Alias for DECIMAL.",
+      "example": "CREATE TABLE invoices (amount NUMERIC(12, 2));",
+      "category": "datatype"
+    },
+    {
+      "keyword": "CHAR",
+      "type": "datatype",
+      "description": "CHAR - Fixed-length character string, padded with spaces.",
+      "example": "CREATE TABLE countries (code CHAR(2) NOT NULL);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "BLOB",
+      "type": "datatype",
+      "description": "BLOB - Binary Large Object for storing binary data.",
+      "example": "CREATE TABLE files (data BLOB);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "JSON",
+      "type": "datatype",
+      "description": "JSON - Store and query JSON data natively.",
+      "example": "CREATE TABLE configs (settings JSON); SELECT settings->>'name' FROM configs;",
+      "category": "datatype"
+    },
+    {
+      "keyword": "JSONB",
+      "type": "datatype",
+      "description": "JSONB - Binary JSON format (PostgreSQL). Faster queries, supports indexing.",
+      "example": "CREATE TABLE docs (data JSONB); SELECT data @> '{\"key\": \"value\"}' FROM docs;",
+      "category": "datatype"
+    },
+    {
+      "keyword": "UUID",
+      "type": "datatype",
+      "description": "UUID - Universally Unique Identifier type.",
+      "example": "CREATE TABLE users (id UUID DEFAULT gen_random_uuid() PRIMARY KEY);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "SERIAL",
+      "type": "datatype",
+      "description": "SERIAL - Auto-incrementing integer (PostgreSQL). Equivalent to INT + sequence.",
+      "example": "CREATE TABLE users (id SERIAL PRIMARY KEY);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "INTERVAL",
+      "type": "datatype",
+      "description": "INTERVAL - Represents a time span or duration.",
+      "example": "SELECT NOW() - INTERVAL '30 days'; WHERE created_at > NOW() - INTERVAL '1 hour';",
+      "category": "datatype"
+    },
+    {
+      "keyword": "XML",
+      "type": "datatype",
+      "description": "XML - Store and query XML data.",
+      "example": "CREATE TABLE docs (content XML);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "ARRAY",
+      "type": "datatype",
+      "description": "ARRAY - Store arrays of values (PostgreSQL). Supports indexing and functions.",
+      "example": "CREATE TABLE users (tags TEXT[]); SELECT * FROM users WHERE 'admin' = ANY(tags);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "BYTEA",
+      "type": "datatype",
+      "description": "BYTEA - Binary data type (PostgreSQL). For raw byte strings.",
+      "example": "CREATE TABLE files (content BYTEA);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "MONEY",
+      "type": "datatype",
+      "description": "MONEY - Currency type with locale-aware formatting.",
+      "example": "CREATE TABLE products (price MONEY);",
+      "category": "datatype"
+    },
+    {
+      "keyword": "ENUM",
+      "type": "datatype",
+      "description": "ENUM - Enumerated type with a fixed set of allowed values.",
+      "example": "CREATE TYPE status AS ENUM ('active', 'inactive', 'pending');",
+      "category": "datatype"
+    },
+    {
+      "keyword": "ROW_NUMBER",
+      "type": "function",
+      "description": "ROW_NUMBER - Assigns sequential integer to rows within a partition.",
+      "example": "SELECT ROW_NUMBER() OVER (ORDER BY created_at) AS rn FROM users;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "RANK",
+      "type": "function",
+      "description": "RANK - Assigns rank with gaps for ties within a partition.",
+      "example": "SELECT RANK() OVER (ORDER BY score DESC) AS rank FROM students;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "DENSE_RANK",
+      "type": "function",
+      "description": "DENSE_RANK - Assigns rank without gaps for ties within a partition.",
+      "example": "SELECT DENSE_RANK() OVER (ORDER BY score DESC) AS rank FROM students;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "NTILE",
+      "type": "function",
+      "description": "NTILE - Distributes rows into a specified number of roughly equal groups.",
+      "example": "SELECT NTILE(4) OVER (ORDER BY salary) AS quartile FROM employees;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "LAG",
+      "type": "function",
+      "description": "LAG - Access value from a previous row without self-join.",
+      "example": "SELECT amount, LAG(amount) OVER (ORDER BY date) AS prev_amount FROM sales;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "LEAD",
+      "type": "function",
+      "description": "LEAD - Access value from a subsequent row without self-join.",
+      "example": "SELECT amount, LEAD(amount) OVER (ORDER BY date) AS next_amount FROM sales;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "FIRST_VALUE",
+      "type": "function",
+      "description": "FIRST_VALUE - Returns the first value in a window frame.",
+      "example": "SELECT FIRST_VALUE(name) OVER (PARTITION BY dept ORDER BY salary DESC) FROM employees;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "LAST_VALUE",
+      "type": "function",
+      "description": "LAST_VALUE - Returns the last value in a window frame.",
+      "example": "SELECT LAST_VALUE(name) OVER (PARTITION BY dept ORDER BY salary ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM employees;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "NTH_VALUE",
+      "type": "function",
+      "description": "NTH_VALUE - Returns the value at the nth row of the window frame.",
+      "example": "SELECT NTH_VALUE(salary, 2) OVER (PARTITION BY dept ORDER BY salary DESC) FROM employees;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "OVER",
+      "type": "keyword",
+      "description": "OVER - Defines a window for window functions. Specifies partitioning and ordering.",
+      "example": "SELECT SUM(amount) OVER (PARTITION BY user_id ORDER BY date) FROM orders;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "PARTITION BY",
+      "type": "keyword",
+      "description": "PARTITION BY - Divides rows into groups for window functions.",
+      "example": "SELECT ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) FROM employees;",
+      "category": "window_function"
+    },
+    {
+      "keyword": "ROWS BETWEEN",
+      "type": "keyword",
+      "description": "ROWS BETWEEN - Defines window frame boundaries by physical row position.",
+      "example": "SUM(amount) OVER (ORDER BY date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)",
+      "category": "window_function"
+    },
+    {
+      "keyword": "RANGE BETWEEN",
+      "type": "keyword",
+      "description": "RANGE BETWEEN - Defines window frame boundaries by logical value range.",
+      "example": "SUM(amount) OVER (ORDER BY date RANGE BETWEEN INTERVAL '7' DAY PRECEDING AND CURRENT ROW)",
+      "category": "window_function"
+    },
+    {
+      "keyword": "UNBOUNDED PRECEDING",
+      "type": "keyword",
+      "description": "UNBOUNDED PRECEDING - Window frame boundary: from the first row of the partition.",
+      "example": "SUM(amount) OVER (ORDER BY date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)",
+      "category": "window_function"
+    },
+    {
+      "keyword": "CURRENT ROW",
+      "type": "keyword",
+      "description": "CURRENT ROW - Window frame boundary: the current row.",
+      "example": "SUM(amount) OVER (ORDER BY date ROWS BETWEEN 3 PRECEDING AND CURRENT ROW)",
+      "category": "window_function"
+    },
+    {
+      "keyword": "NOW",
+      "type": "function",
+      "description": "NOW - Returns current date and time.",
+      "example": "SELECT NOW(); WHERE created_at > NOW() - INTERVAL '24 hours';",
+      "category": "date_function"
+    },
+    {
+      "keyword": "CURRENT_TIMESTAMP",
+      "type": "function",
+      "description": "CURRENT_TIMESTAMP - Returns current date and time (SQL standard).",
+      "example": "SELECT CURRENT_TIMESTAMP; DEFAULT CURRENT_TIMESTAMP;",
+      "category": "date_function"
+    },
+    {
+      "keyword": "CURRENT_DATE",
+      "type": "function",
+      "description": "CURRENT_DATE - Returns current date without time.",
+      "example": "SELECT CURRENT_DATE; WHERE event_date = CURRENT_DATE;",
+      "category": "date_function"
+    },
+    {
+      "keyword": "CURRENT_TIME",
+      "type": "function",
+      "description": "CURRENT_TIME - Returns current time without date.",
+      "example": "SELECT CURRENT_TIME;",
+      "category": "date_function"
+    },
+    {
+      "keyword": "EXTRACT",
+      "type": "function",
+      "description": "EXTRACT - Extract part (year, month, day, hour, etc.) from date/timestamp.",
+      "example": "SELECT EXTRACT(YEAR FROM created_at) FROM orders; EXTRACT(MONTH FROM date);",
+      "category": "date_function"
+    },
+    {
+      "keyword": "DATE_TRUNC",
+      "type": "function",
+      "description": "DATE_TRUNC - Truncate timestamp to specified precision (PostgreSQL).",
+      "example": "SELECT DATE_TRUNC('month', created_at) FROM orders; GROUP BY DATE_TRUNC('day', ts);",
+      "category": "date_function"
+    },
+    {
+      "keyword": "DATE_ADD",
+      "type": "function",
+      "description": "DATE_ADD - Add interval to date/timestamp (MySQL).",
+      "example": "SELECT DATE_ADD(created_at, INTERVAL 30 DAY) FROM users;",
+      "category": "date_function"
+    },
+    {
+      "keyword": "DATEDIFF",
+      "type": "function",
+      "description": "DATEDIFF - Calculate difference between two dates.",
+      "example": "SELECT DATEDIFF(end_date, start_date) AS days_diff FROM projects;",
+      "category": "date_function"
+    },
+    {
+      "keyword": "DATE_FORMAT",
+      "type": "function",
+      "description": "DATE_FORMAT - Format date/timestamp as string (MySQL).",
+      "example": "SELECT DATE_FORMAT(created_at, '%Y-%m-%d') FROM orders;",
+      "category": "date_function"
+    },
+    {
+      "keyword": "TO_CHAR",
+      "type": "function",
+      "description": "TO_CHAR - Convert date/number to formatted string (PostgreSQL/Oracle).",
+      "example": "SELECT TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') FROM orders;",
+      "category": "date_function"
+    },
+    {
+      "keyword": "TO_DATE",
+      "type": "function",
+      "description": "TO_DATE - Parse string into date (PostgreSQL/Oracle).",
+      "example": "SELECT TO_DATE('2024-01-15', 'YYYY-MM-DD');",
+      "category": "date_function"
+    },
+    {
+      "keyword": "ROUND",
+      "type": "function",
+      "description": "ROUND - Round number to specified decimal places.",
+      "example": "SELECT ROUND(price, 2) FROM products; SELECT ROUND(AVG(rating), 1) FROM reviews;",
+      "category": "math_function"
+    },
+    {
+      "keyword": "CEIL",
+      "type": "function",
+      "description": "CEIL / CEILING - Round up to nearest integer.",
+      "example": "SELECT CEIL(4.2); -- returns 5",
+      "category": "math_function"
+    },
+    {
+      "keyword": "FLOOR",
+      "type": "function",
+      "description": "FLOOR - Round down to nearest integer.",
+      "example": "SELECT FLOOR(4.8); -- returns 4",
+      "category": "math_function"
+    },
+    {
+      "keyword": "ABS",
+      "type": "function",
+      "description": "ABS - Return absolute value of a number.",
+      "example": "SELECT ABS(-5); -- returns 5; SELECT ABS(balance) FROM accounts;",
+      "category": "math_function"
+    },
+    {
+      "keyword": "MOD",
+      "type": "function",
+      "description": "MOD - Return remainder of division.",
+      "example": "SELECT MOD(10, 3); -- returns 1; WHERE MOD(id, 2) = 0;",
+      "category": "math_function"
+    },
+    {
+      "keyword": "POWER",
+      "type": "function",
+      "description": "POWER - Raise number to a power.",
+      "example": "SELECT POWER(2, 10); -- returns 1024",
+      "category": "math_function"
+    },
+    {
+      "keyword": "SQRT",
+      "type": "function",
+      "description": "SQRT - Return square root of a number.",
+      "example": "SELECT SQRT(144); -- returns 12",
+      "category": "math_function"
+    },
+    {
+      "keyword": "REPLACE",
+      "type": "function",
+      "description": "REPLACE - Replace occurrences of a substring.",
+      "example": "SELECT REPLACE(email, '@old.com', '@new.com') FROM users;",
+      "category": "string_function"
+    },
+    {
+      "keyword": "LEFT",
+      "type": "function",
+      "description": "LEFT - Extract leftmost characters from string.",
+      "example": "SELECT LEFT(name, 3) FROM users; -- first 3 characters",
+      "category": "string_function"
+    },
+    {
+      "keyword": "RIGHT",
+      "type": "function",
+      "description": "RIGHT - Extract rightmost characters from string.",
+      "example": "SELECT RIGHT(phone, 4) FROM users; -- last 4 digits",
+      "category": "string_function"
+    },
+    {
+      "keyword": "LPAD",
+      "type": "function",
+      "description": "LPAD - Pad string on the left to a specified length.",
+      "example": "SELECT LPAD(id::text, 5, '0') FROM orders; -- '00042'",
+      "category": "string_function"
+    },
+    {
+      "keyword": "RPAD",
+      "type": "function",
+      "description": "RPAD - Pad string on the right to a specified length.",
+      "example": "SELECT RPAD(name, 20, '.') FROM users;",
+      "category": "string_function"
+    },
+    {
+      "keyword": "POSITION",
+      "type": "function",
+      "description": "POSITION - Find position of substring within string (1-indexed).",
+      "example": "SELECT POSITION('@' IN email) FROM users;",
+      "category": "string_function"
+    },
+    {
+      "keyword": "REVERSE",
+      "type": "function",
+      "description": "REVERSE - Reverse characters in a string.",
+      "example": "SELECT REVERSE('hello'); -- 'olleh'",
+      "category": "string_function"
+    },
+    {
+      "keyword": "SPLIT_PART",
+      "type": "function",
+      "description": "SPLIT_PART - Split string by delimiter and return nth part (PostgreSQL).",
+      "example": "SELECT SPLIT_PART(email, '@', 2) AS domain FROM users;",
+      "category": "string_function"
+    },
+    {
+      "keyword": "CAST",
+      "type": "function",
+      "description": "CAST - Convert value from one data type to another.",
+      "example": "SELECT CAST(price AS INT) FROM products; CAST('2024-01-01' AS DATE);",
+      "category": "function"
+    },
+    {
+      "keyword": "NULLIF",
+      "type": "function",
+      "description": "NULLIF - Returns NULL if two expressions are equal, otherwise the first.",
+      "example": "SELECT NULLIF(discount, 0) FROM products; -- avoid division by zero",
+      "category": "function"
+    },
+    {
+      "keyword": "GREATEST",
+      "type": "function",
+      "description": "GREATEST - Return the largest value from a list of expressions.",
+      "example": "SELECT GREATEST(score1, score2, score3) AS best_score FROM results;",
+      "category": "function"
+    },
+    {
+      "keyword": "LEAST",
+      "type": "function",
+      "description": "LEAST - Return the smallest value from a list of expressions.",
+      "example": "SELECT LEAST(price, max_budget) AS effective_price FROM products;",
+      "category": "function"
+    },
+    {
+      "keyword": "STRING_AGG",
+      "type": "function",
+      "description": "STRING_AGG - Concatenate strings with delimiter (PostgreSQL). Like GROUP_CONCAT.",
+      "example": "SELECT STRING_AGG(name, ', ' ORDER BY name) FROM users GROUP BY department;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "GROUP_CONCAT",
+      "type": "function",
+      "description": "GROUP_CONCAT - Concatenate strings within a group (MySQL).",
+      "example": "SELECT GROUP_CONCAT(name SEPARATOR ', ') FROM users GROUP BY department;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "ARRAY_AGG",
+      "type": "function",
+      "description": "ARRAY_AGG - Aggregate values into an array (PostgreSQL).",
+      "example": "SELECT department, ARRAY_AGG(name) FROM employees GROUP BY department;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "JSON_AGG",
+      "type": "function",
+      "description": "JSON_AGG - Aggregate values into a JSON array (PostgreSQL).",
+      "example": "SELECT department, JSON_AGG(name) FROM employees GROUP BY department;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "FILTER",
+      "type": "keyword",
+      "description": "FILTER - Apply condition to aggregate function (PostgreSQL).",
+      "example": "SELECT COUNT(*) FILTER (WHERE active = true) AS active_count FROM users;",
+      "category": "aggregate_function"
+    },
+    {
+      "keyword": "WITH",
+      "type": "keyword",
+      "description": "WITH - Define Common Table Expressions (CTEs) for readable subqueries.",
+      "example": "WITH active AS (SELECT * FROM users WHERE active = true) SELECT * FROM active;",
+      "category": "query"
+    },
+    {
+      "keyword": "RECURSIVE",
+      "type": "keyword",
+      "description": "RECURSIVE - Create recursive CTE for hierarchical or iterative queries.",
+      "example": "WITH RECURSIVE tree AS (SELECT * FROM categories WHERE parent_id IS NULL UNION ALL SELECT c.* FROM categories c JOIN tree ON c.parent_id = tree.id) SELECT * FROM tree;",
+      "category": "query"
+    },
+    {
+      "keyword": "LATERAL",
+      "type": "keyword",
+      "description": "LATERAL - Subquery that can reference columns from preceding FROM items.",
+      "example": "SELECT u.*, l.* FROM users u, LATERAL (SELECT * FROM orders WHERE user_id = u.id LIMIT 3) l;",
+      "category": "query"
+    },
+    {
+      "keyword": "ASC",
+      "type": "keyword",
+      "description": "ASC - Sort in ascending order (default for ORDER BY).",
+      "example": "SELECT * FROM users ORDER BY name ASC;",
+      "category": "query"
+    },
+    {
+      "keyword": "DESC",
+      "type": "keyword",
+      "description": "DESC - Sort in descending order.",
+      "example": "SELECT * FROM users ORDER BY created_at DESC;",
+      "category": "query"
+    },
+    {
+      "keyword": "FETCH",
+      "type": "keyword",
+      "description": "FETCH - SQL standard alternative to LIMIT. Used with OFFSET.",
+      "example": "SELECT * FROM users ORDER BY id OFFSET 10 ROWS FETCH NEXT 5 ROWS ONLY;",
+      "category": "query"
+    },
+    {
+      "keyword": "ALL",
+      "type": "operator",
+      "description": "ALL - Compare a value to every value in a subquery result.",
+      "example": "WHERE price > ALL (SELECT price FROM products WHERE category = 'basic');",
+      "category": "operator"
+    },
+    {
+      "keyword": "ANY",
+      "type": "operator",
+      "description": "ANY / SOME - Compare a value to any value in a subquery result.",
+      "example": "WHERE price > ANY (SELECT price FROM products WHERE category = 'basic');",
+      "category": "operator"
+    },
+    {
+      "keyword": "ILIKE",
+      "type": "operator",
+      "description": "ILIKE - Case-insensitive pattern matching (PostgreSQL).",
+      "example": "WHERE name ILIKE '%john%'; WHERE email ILIKE '%@gmail.com';",
+      "category": "operator"
+    },
+    {
+      "keyword": "SIMILAR TO",
+      "type": "operator",
+      "description": "SIMILAR TO - Pattern matching using SQL regular expressions.",
+      "example": "WHERE name SIMILAR TO '(John|Jane)%';",
+      "category": "operator"
+    },
+    {
+      "keyword": "TRUNCATE",
+      "type": "keyword",
+      "description": "TRUNCATE - Remove all rows from a table quickly. Faster than DELETE, cannot be rolled back in some databases.",
+      "example": "TRUNCATE TABLE logs; TRUNCATE TABLE sessions CASCADE;",
+      "category": "data_manipulation"
+    },
+    {
+      "keyword": "MERGE",
+      "type": "keyword",
+      "description": "MERGE - Perform INSERT, UPDATE, or DELETE in a single statement based on conditions.",
+      "example": "MERGE INTO target USING source ON target.id = source.id WHEN MATCHED THEN UPDATE SET ... WHEN NOT MATCHED THEN INSERT ...;",
+      "category": "data_manipulation"
+    },
+    {
+      "keyword": "RETURNING",
+      "type": "keyword",
+      "description": "RETURNING - Return data from modified rows (PostgreSQL). Available with INSERT, UPDATE, DELETE.",
+      "example": "INSERT INTO users (name) VALUES ('Alice') RETURNING id; DELETE FROM users WHERE id = 1 RETURNING *;",
+      "category": "data_manipulation"
+    },
+    {
+      "keyword": "ON CONFLICT",
+      "type": "keyword",
+      "description": "ON CONFLICT - Handle insert conflicts / upsert (PostgreSQL).",
+      "example": "INSERT INTO users (email, name) VALUES ('a@b.com', 'Alice') ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name;",
+      "category": "data_manipulation"
+    },
+    {
+      "keyword": "EXPLAIN",
+      "type": "keyword",
+      "description": "EXPLAIN - Show query execution plan for performance analysis.",
+      "example": "EXPLAIN SELECT * FROM users WHERE email = 'test@example.com'; EXPLAIN ANALYZE SELECT ...;",
+      "category": "optimization"
+    },
+    {
+      "keyword": "ANALYZE",
+      "type": "keyword",
+      "description": "ANALYZE - Collect statistics for query optimizer / execute and show actual plan.",
+      "example": "ANALYZE users; EXPLAIN ANALYZE SELECT * FROM users;",
+      "category": "optimization"
+    },
+    {
+      "keyword": "VACUUM",
+      "type": "keyword",
+      "description": "VACUUM - Reclaim storage and update planner statistics (PostgreSQL).",
+      "example": "VACUUM; VACUUM FULL users; VACUUM ANALYZE;",
+      "category": "optimization"
+    },
+    {
+      "keyword": "CASCADE",
+      "type": "keyword",
+      "description": "CASCADE - Automatically apply operation to dependent objects.",
+      "example": "DROP TABLE users CASCADE; ALTER TABLE users DROP COLUMN id CASCADE;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "RESTRICT",
+      "type": "keyword",
+      "description": "RESTRICT - Prevent operation if dependent objects exist.",
+      "example": "DROP TABLE users RESTRICT;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "TEMPORARY",
+      "type": "keyword",
+      "description": "TEMPORARY / TEMP - Create temporary table that exists only for the session.",
+      "example": "CREATE TEMPORARY TABLE temp_results AS SELECT * FROM results WHERE score > 90;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "IF EXISTS",
+      "type": "keyword",
+      "description": "IF EXISTS - Only execute DDL if object exists. Prevents errors.",
+      "example": "DROP TABLE IF EXISTS old_users; DROP INDEX IF EXISTS idx_email;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "IF NOT EXISTS",
+      "type": "keyword",
+      "description": "IF NOT EXISTS - Only create object if it doesn't already exist.",
+      "example": "CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY); CREATE INDEX IF NOT EXISTS idx_email ON users(email);",
+      "category": "ddl"
+    },
+    {
+      "keyword": "SCHEMA",
+      "type": "keyword",
+      "description": "SCHEMA - Namespace for database objects. Groups tables, views, etc.",
+      "example": "CREATE SCHEMA analytics; SELECT * FROM analytics.events;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "DATABASE",
+      "type": "keyword",
+      "description": "DATABASE - Container for schemas, tables, and other objects.",
+      "example": "CREATE DATABASE myapp; DROP DATABASE IF EXISTS testdb;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "SEQUENCE",
+      "type": "keyword",
+      "description": "SEQUENCE - Auto-incrementing number generator.",
+      "example": "CREATE SEQUENCE user_id_seq START 1 INCREMENT 1; SELECT nextval('user_id_seq');",
+      "category": "ddl"
+    },
+    {
+      "keyword": "MATERIALIZED VIEW",
+      "type": "keyword",
+      "description": "MATERIALIZED VIEW - View that stores query results physically. Must be refreshed.",
+      "example": "CREATE MATERIALIZED VIEW monthly_sales AS SELECT ...; REFRESH MATERIALIZED VIEW monthly_sales;",
+      "category": "ddl"
+    },
+    {
+      "keyword": "GRANT",
+      "type": "keyword",
+      "description": "GRANT - Give privileges on database objects to users or roles.",
+      "example": "GRANT SELECT, INSERT ON users TO app_user; GRANT ALL ON DATABASE mydb TO admin;",
+      "category": "dcl"
+    },
+    {
+      "keyword": "REVOKE",
+      "type": "keyword",
+      "description": "REVOKE - Remove privileges from users or roles.",
+      "example": "REVOKE INSERT ON users FROM app_user; REVOKE ALL ON DATABASE mydb FROM guest;",
+      "category": "dcl"
+    },
+    {
+      "keyword": "SAVEPOINT",
+      "type": "keyword",
+      "description": "SAVEPOINT - Create a point within a transaction to partially roll back to.",
+      "example": "SAVEPOINT sp1; -- ... operations ... ROLLBACK TO sp1;",
+      "category": "transaction"
+    },
+    {
+      "keyword": "BEGIN",
+      "type": "keyword",
+      "description": "BEGIN - Start a transaction block.",
+      "example": "BEGIN; UPDATE accounts SET balance = balance - 100 WHERE id = 1; COMMIT;",
+      "category": "transaction"
+    },
+    {
+      "keyword": "PROCEDURE",
+      "type": "keyword",
+      "description": "PROCEDURE - Stored procedure for reusable SQL logic.",
+      "example": "CREATE PROCEDURE transfer(sender INT, receiver INT, amount DECIMAL) ...",
+      "category": "procedural"
+    },
+    {
+      "keyword": "FUNCTION",
+      "type": "keyword",
+      "description": "FUNCTION - User-defined function that returns a value.",
+      "example": "CREATE FUNCTION full_name(first TEXT, last TEXT) RETURNS TEXT AS $$ ... $$;",
+      "category": "procedural"
+    },
+    {
+      "keyword": "TRIGGER",
+      "type": "keyword",
+      "description": "TRIGGER - Automatically execute code in response to table events.",
+      "example": "CREATE TRIGGER update_timestamp BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_modified();",
+      "category": "procedural"
+    },
+    {
+      "keyword": "DECLARE",
+      "type": "keyword",
+      "description": "DECLARE - Declare variables or cursors in procedural blocks.",
+      "example": "DECLARE @count INT; DECLARE cur CURSOR FOR SELECT id FROM users;",
+      "category": "procedural"
+    },
+    {
+      "keyword": "CURSOR",
+      "type": "keyword",
+      "description": "CURSOR - Database object for traversing result sets row by row.",
+      "example": "DECLARE cur CURSOR FOR SELECT id, name FROM users; OPEN cur; FETCH NEXT FROM cur;",
+      "category": "procedural"
+    },
+    {
+      "keyword": "EXECUTE",
+      "type": "keyword",
+      "description": "EXECUTE - Execute a prepared statement or dynamic SQL.",
+      "example": "PREPARE stmt AS SELECT * FROM users WHERE id = $1; EXECUTE stmt(42);",
+      "category": "procedural"
+    },
+    {
+      "keyword": "RETURNS",
+      "type": "keyword",
+      "description": "RETURNS - Specify return type of a function.",
+      "example": "CREATE FUNCTION get_count() RETURNS INTEGER AS $$ SELECT COUNT(*) FROM users; $$;",
+      "category": "procedural"
     }
   ],
   "snippets": [
@@ -720,6 +1448,258 @@
       "description": "Multiple aggregation functions",
       "content": "SELECT \n\tCOUNT(*) as ${1:count},\n\tSUM(${2:column}) as ${3:total},\n\tAVG(${2:column}) as ${4:average},\n\tMIN(${2:column}) as ${5:minimum},\n\tMAX(${2:column}) as ${6:maximum}\nFROM ${7:table_name};",
       "category": "aggregation"
+    },
+    {
+      "trigger": "window_row_number",
+      "description": "ROW_NUMBER window function",
+      "content": "SELECT ${1:*},\n\tROW_NUMBER() OVER (\n\t\tPARTITION BY ${2:partition_column}\n\t\tORDER BY ${3:order_column}\n\t) AS ${4:row_num}\nFROM ${5:table_name};",
+      "category": "window_function"
+    },
+    {
+      "trigger": "window_rank",
+      "description": "RANK window function",
+      "content": "SELECT ${1:*},\n\tRANK() OVER (\n\t\tPARTITION BY ${2:partition_column}\n\t\tORDER BY ${3:order_column} DESC\n\t) AS ${4:rank}\nFROM ${5:table_name};",
+      "category": "window_function"
+    },
+    {
+      "trigger": "window_running_total",
+      "description": "Running total with window function",
+      "content": "SELECT ${1:*},\n\tSUM(${2:amount}) OVER (\n\t\tPARTITION BY ${3:partition_column}\n\t\tORDER BY ${4:order_column}\n\t\tROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW\n\t) AS ${5:running_total}\nFROM ${6:table_name};",
+      "category": "window_function"
+    },
+    {
+      "trigger": "window_lag_lead",
+      "description": "Compare with previous/next row using LAG and LEAD",
+      "content": "SELECT ${1:*},\n\tLAG(${2:column}) OVER (ORDER BY ${3:order_column}) AS ${4:prev_value},\n\tLEAD(${2:column}) OVER (ORDER BY ${3:order_column}) AS ${5:next_value}\nFROM ${6:table_name};",
+      "category": "window_function"
+    },
+    {
+      "trigger": "window_moving_avg",
+      "description": "Moving average with window function",
+      "content": "SELECT ${1:*},\n\tAVG(${2:column}) OVER (\n\t\tORDER BY ${3:order_column}\n\t\tROWS BETWEEN ${4:2} PRECEDING AND CURRENT ROW\n\t) AS ${5:moving_avg}\nFROM ${6:table_name};",
+      "category": "window_function"
+    },
+    {
+      "trigger": "recursive_cte",
+      "description": "Recursive CTE for hierarchical data",
+      "content": "WITH RECURSIVE ${1:cte_name} AS (\n\t-- Base case\n\tSELECT ${2:id}, ${3:parent_id}, ${4:name}, 1 AS ${5:level}\n\tFROM ${6:table_name}\n\tWHERE ${3:parent_id} IS NULL\n\n\tUNION ALL\n\n\t-- Recursive case\n\tSELECT t.${2:id}, t.${3:parent_id}, t.${4:name}, c.${5:level} + 1\n\tFROM ${6:table_name} t\n\tJOIN ${1:cte_name} c ON t.${3:parent_id} = c.${2:id}\n)\nSELECT * FROM ${1:cte_name};",
+      "category": "query"
+    },
+    {
+      "trigger": "multiple_ctes",
+      "description": "Multiple CTEs in one query",
+      "content": "WITH\n${1:cte1} AS (\n\tSELECT ${2:columns}\n\tFROM ${3:table1}\n\tWHERE ${4:condition1}\n),\n${5:cte2} AS (\n\tSELECT ${6:columns}\n\tFROM ${7:table2}\n\tWHERE ${8:condition2}\n)\nSELECT ${9:*}\nFROM ${1:cte1}\nJOIN ${5:cte2} ON ${10:join_condition};",
+      "category": "query"
+    },
+    {
+      "trigger": "full_query",
+      "description": "Complete SELECT with WHERE, GROUP BY, HAVING, ORDER BY, LIMIT",
+      "content": "SELECT ${1:columns}\nFROM ${2:table_name}\nWHERE ${3:condition}\nGROUP BY ${4:group_column}\nHAVING ${5:aggregate_condition}\nORDER BY ${6:sort_column} ${7:DESC}\nLIMIT ${8:10};",
+      "category": "query"
+    },
+    {
+      "trigger": "select_exists",
+      "description": "Select with EXISTS subquery",
+      "content": "SELECT ${1:*}\nFROM ${2:table1} ${3:t1}\nWHERE EXISTS (\n\tSELECT 1\n\tFROM ${4:table2} ${5:t2}\n\tWHERE ${5:t2}.${6:foreign_key} = ${3:t1}.${7:id}\n);",
+      "category": "subquery"
+    },
+    {
+      "trigger": "correlated_subquery",
+      "description": "Correlated subquery in SELECT",
+      "content": "SELECT ${1:t1.*},\n\t(SELECT ${2:COUNT(*)}\n\t FROM ${3:table2} ${4:t2}\n\t WHERE ${4:t2}.${5:foreign_key} = ${6:t1}.${7:id}\n\t) AS ${8:sub_count}\nFROM ${9:table1} ${6:t1};",
+      "category": "subquery"
+    },
+    {
+      "trigger": "multiple_joins",
+      "description": "Select with multiple JOINs",
+      "content": "SELECT ${1:t1.*}, ${2:t2.column}, ${3:t3.column}\nFROM ${4:table1} ${5:t1}\nINNER JOIN ${6:table2} ${7:t2} ON ${5:t1}.${8:id} = ${7:t2}.${9:foreign_key}\nLEFT JOIN ${10:table3} ${11:t3} ON ${7:t2}.${12:id} = ${11:t3}.${13:foreign_key}\nWHERE ${14:condition};",
+      "category": "join"
+    },
+    {
+      "trigger": "self_join",
+      "description": "Self join (table joined with itself)",
+      "content": "SELECT ${1:a.column}, ${2:b.column}\nFROM ${3:table_name} ${4:a}\nINNER JOIN ${3:table_name} ${5:b} ON ${4:a}.${6:parent_id} = ${5:b}.${7:id};",
+      "category": "join"
+    },
+    {
+      "trigger": "insert_select",
+      "description": "Insert from SELECT query",
+      "content": "INSERT INTO ${1:target_table} (${2:column1}, ${3:column2})\nSELECT ${4:col1}, ${5:col2}\nFROM ${6:source_table}\nWHERE ${7:condition};",
+      "category": "insert"
+    },
+    {
+      "trigger": "upsert_postgres",
+      "description": "INSERT ON CONFLICT (PostgreSQL upsert)",
+      "content": "INSERT INTO ${1:table_name} (${2:column1}, ${3:column2})\nVALUES (${4:value1}, ${5:value2})\nON CONFLICT (${6:conflict_column})\nDO UPDATE SET\n\t${3:column2} = EXCLUDED.${3:column2};",
+      "category": "insert"
+    },
+    {
+      "trigger": "upsert_mysql",
+      "description": "INSERT ON DUPLICATE KEY UPDATE (MySQL upsert)",
+      "content": "INSERT INTO ${1:table_name} (${2:column1}, ${3:column2})\nVALUES (${4:value1}, ${5:value2})\nON DUPLICATE KEY UPDATE\n\t${3:column2} = VALUES(${3:column2});",
+      "category": "insert"
+    },
+    {
+      "trigger": "merge",
+      "description": "MERGE / upsert statement",
+      "content": "MERGE INTO ${1:target_table} ${2:t}\nUSING ${3:source_table} ${4:s}\nON ${2:t}.${5:id} = ${4:s}.${5:id}\nWHEN MATCHED THEN\n\tUPDATE SET ${6:column1} = ${4:s}.${6:column1}\nWHEN NOT MATCHED THEN\n\tINSERT (${5:id}, ${6:column1})\n\tVALUES (${4:s}.${5:id}, ${4:s}.${6:column1});",
+      "category": "data_manipulation"
+    },
+    {
+      "trigger": "create_table_postgres",
+      "description": "Create table with PostgreSQL conventions",
+      "content": "CREATE TABLE IF NOT EXISTS ${1:table_name} (\n\t${2:id} SERIAL PRIMARY KEY,\n\t${3:column1} ${4:VARCHAR(255)} NOT NULL,\n\t${5:column2} ${6:TEXT},\n\t${7:created_at} TIMESTAMP DEFAULT NOW(),\n\t${8:updated_at} TIMESTAMP DEFAULT NOW()\n);",
+      "category": "ddl"
+    },
+    {
+      "trigger": "create_temp_table",
+      "description": "Create temporary table",
+      "content": "CREATE TEMPORARY TABLE ${1:temp_table} AS\nSELECT ${2:columns}\nFROM ${3:source_table}\nWHERE ${4:condition};",
+      "category": "ddl"
+    },
+    {
+      "trigger": "alter_add_constraint",
+      "description": "Add constraint to table",
+      "content": "ALTER TABLE ${1:table_name}\nADD CONSTRAINT ${2:constraint_name}\n${3:FOREIGN KEY} (${4:column}) ${5:REFERENCES other_table(id)};",
+      "category": "ddl"
+    },
+    {
+      "trigger": "alter_rename_column",
+      "description": "Rename a column",
+      "content": "ALTER TABLE ${1:table_name}\nRENAME COLUMN ${2:old_name} TO ${3:new_name};",
+      "category": "ddl"
+    },
+    {
+      "trigger": "alter_rename_table",
+      "description": "Rename a table",
+      "content": "ALTER TABLE ${1:old_table_name}\nRENAME TO ${2:new_table_name};",
+      "category": "ddl"
+    },
+    {
+      "trigger": "create_composite_index",
+      "description": "Create index on multiple columns",
+      "content": "CREATE INDEX ${1:idx_name}\nON ${2:table_name}(${3:column1}, ${4:column2});",
+      "category": "optimization"
+    },
+    {
+      "trigger": "create_partial_index",
+      "description": "Create partial/filtered index (PostgreSQL)",
+      "content": "CREATE INDEX ${1:idx_name}\nON ${2:table_name}(${3:column})\nWHERE ${4:condition};",
+      "category": "optimization"
+    },
+    {
+      "trigger": "create_materialized_view",
+      "description": "Create materialized view",
+      "content": "CREATE MATERIALIZED VIEW ${1:view_name} AS\nSELECT ${2:columns}\nFROM ${3:table_name}\nWHERE ${4:condition};\n\n-- REFRESH MATERIALIZED VIEW ${1:view_name};",
+      "category": "view"
+    },
+    {
+      "trigger": "create_function",
+      "description": "Create function (PostgreSQL)",
+      "content": "CREATE OR REPLACE FUNCTION ${1:function_name}(${2:param1 INT})\nRETURNS ${3:VOID} AS $$\nBEGIN\n\t${4:-- function body}\nEND;\n$$ LANGUAGE plpgsql;",
+      "category": "procedural"
+    },
+    {
+      "trigger": "create_procedure",
+      "description": "Create stored procedure",
+      "content": "CREATE OR REPLACE PROCEDURE ${1:procedure_name}(${2:param1 INT})\nLANGUAGE plpgsql AS $$\nBEGIN\n\t${3:-- procedure body}\nEND;\n$$;",
+      "category": "procedural"
+    },
+    {
+      "trigger": "create_trigger",
+      "description": "Create trigger",
+      "content": "CREATE TRIGGER ${1:trigger_name}\n${2:BEFORE} ${3:INSERT OR UPDATE} ON ${4:table_name}\nFOR EACH ROW\nEXECUTE FUNCTION ${5:trigger_function}();",
+      "category": "procedural"
+    },
+    {
+      "trigger": "grant_permissions",
+      "description": "Grant permissions to user/role",
+      "content": "GRANT ${1:SELECT, INSERT, UPDATE} ON ${2:table_name}\nTO ${3:role_name};",
+      "category": "dcl"
+    },
+    {
+      "trigger": "revoke_permissions",
+      "description": "Revoke permissions from user/role",
+      "content": "REVOKE ${1:INSERT, UPDATE} ON ${2:table_name}\nFROM ${3:role_name};",
+      "category": "dcl"
+    },
+    {
+      "trigger": "explain_query",
+      "description": "Explain query execution plan",
+      "content": "EXPLAIN ANALYZE\n${1:SELECT * FROM table_name WHERE condition};",
+      "category": "optimization"
+    },
+    {
+      "trigger": "truncate_table",
+      "description": "Truncate table (remove all rows)",
+      "content": "TRUNCATE TABLE ${1:table_name} ${2:CASCADE};",
+      "category": "data_manipulation"
+    },
+    {
+      "trigger": "select_paginate",
+      "description": "Pagination with OFFSET and FETCH (SQL standard)",
+      "content": "SELECT ${1:*}\nFROM ${2:table_name}\nORDER BY ${3:id}\nOFFSET ${4:0} ROWS\nFETCH NEXT ${5:10} ROWS ONLY;",
+      "category": "query"
+    },
+    {
+      "trigger": "select_distinct_on",
+      "description": "Select first row per group (PostgreSQL DISTINCT ON)",
+      "content": "SELECT DISTINCT ON (${1:group_column})\n\t${2:*}\nFROM ${3:table_name}\nORDER BY ${1:group_column}, ${4:order_column} DESC;",
+      "category": "query"
+    },
+    {
+      "trigger": "pivot_case",
+      "description": "Pivot table using CASE expressions",
+      "content": "SELECT ${1:group_column},\n\tSUM(CASE WHEN ${2:pivot_column} = '${3:value1}' THEN ${4:measure} ELSE 0 END) AS ${3:value1},\n\tSUM(CASE WHEN ${2:pivot_column} = '${5:value2}' THEN ${4:measure} ELSE 0 END) AS ${5:value2}\nFROM ${6:table_name}\nGROUP BY ${1:group_column};",
+      "category": "query"
+    },
+    {
+      "trigger": "cast_expression",
+      "description": "CAST type conversion",
+      "content": "CAST(${1:expression} AS ${2:datatype})",
+      "category": "function"
+    },
+    {
+      "trigger": "coalesce_default",
+      "description": "COALESCE with default value",
+      "content": "COALESCE(${1:column}, ${2:default_value})",
+      "category": "function"
+    },
+    {
+      "trigger": "string_agg",
+      "description": "Aggregate strings with delimiter",
+      "content": "SELECT ${1:group_column},\n\tSTRING_AGG(${2:column}, '${3:, }' ORDER BY ${4:column})\nFROM ${5:table_name}\nGROUP BY ${1:group_column};",
+      "category": "aggregation"
+    },
+    {
+      "trigger": "date_range",
+      "description": "Filter by date range",
+      "content": "SELECT ${1:*}\nFROM ${2:table_name}\nWHERE ${3:created_at} >= '${4:2024-01-01}'\n\tAND ${3:created_at} < '${5:2024-02-01}';",
+      "category": "query"
+    },
+    {
+      "trigger": "transaction_savepoint",
+      "description": "Transaction with savepoint for partial rollback",
+      "content": "BEGIN;\n\n${1:-- first operation}\n\nSAVEPOINT ${2:sp1};\n\n${3:-- second operation (can be rolled back independently)}\n\n-- ROLLBACK TO ${2:sp1};  -- undo second operation only\n\nCOMMIT;",
+      "category": "transaction"
+    },
+    {
+      "trigger": "insert_returning",
+      "description": "Insert with RETURNING clause (PostgreSQL)",
+      "content": "INSERT INTO ${1:table_name} (${2:column1}, ${3:column2})\nVALUES (${4:value1}, ${5:value2})\nRETURNING ${6:*};",
+      "category": "insert"
+    },
+    {
+      "trigger": "update_returning",
+      "description": "Update with RETURNING clause (PostgreSQL)",
+      "content": "UPDATE ${1:table_name}\nSET ${2:column} = ${3:value}\nWHERE ${4:condition}\nRETURNING ${5:*};",
+      "category": "update"
+    },
+    {
+      "trigger": "delete_returning",
+      "description": "Delete with RETURNING clause (PostgreSQL)",
+      "content": "DELETE FROM ${1:table_name}\nWHERE ${2:condition}\nRETURNING ${3:*};",
+      "category": "delete"
     }
   ],
   "imports": {

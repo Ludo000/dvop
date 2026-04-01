@@ -11,7 +11,7 @@
     },
     {
       "keyword": "background-color",
-      "type": "keyword", 
+      "type": "keyword",
       "description": "background-color - Sets the background color of an element. Part of the background shorthand property.",
       "example": "background-color: #f0f0f0; background-color: rgba(255, 255, 255, 0.8);",
       "category": "background_properties"
@@ -24,7 +24,7 @@
       "category": "box_model"
     },
     {
-      "keyword": "padding", 
+      "keyword": "padding",
       "type": "keyword",
       "description": "padding - Sets the inner spacing within an element between the content and border. Follows same syntax as margin.",
       "example": "padding: 15px; padding: 10px 5px; padding-left: 20px;",
@@ -74,7 +74,7 @@
     },
     {
       "keyword": "grid",
-      "type": "keyword", 
+      "type": "keyword",
       "description": "grid - Shorthand for grid-template properties. Defines grid template areas, rows, and columns.",
       "example": "grid: 1fr 1fr / auto 1fr; grid-template-columns: repeat(3, 1fr);",
       "category": "grid"
@@ -939,6 +939,902 @@
       "description": "aspect-ratio - Sets a preferred aspect ratio for the box.",
       "example": "aspect-ratio: 16/9; aspect-ratio: 1; aspect-ratio: auto;",
       "category": "sizing"
+    },
+    {
+      "keyword": "container",
+      "type": "keyword",
+      "description": "container - Shorthand for container-type and container-name. Defines a containment context for container queries.",
+      "example": ".card { container: card / inline-size; }",
+      "category": "layout"
+    },
+    {
+      "keyword": "container-type",
+      "type": "keyword",
+      "description": "container-type - Declares which axes of the element establish a containment context (normal, size, inline-size).",
+      "example": ".sidebar { container-type: inline-size; }",
+      "category": "layout"
+    },
+    {
+      "keyword": "container-name",
+      "type": "keyword",
+      "description": "container-name - Names a containment context for targeted container queries.",
+      "example": ".sidebar { container-name: sidebar; }",
+      "category": "layout"
+    },
+    {
+      "keyword": "inset",
+      "type": "keyword",
+      "description": "inset - Shorthand for top, right, bottom, left. Sets all four offsets at once.",
+      "example": ".overlay { position: absolute; inset: 0; }",
+      "category": "positioning"
+    },
+    {
+      "keyword": "inset-block",
+      "type": "keyword",
+      "description": "inset-block - Logical shorthand for block-start and block-end offsets (top/bottom in horizontal writing mode).",
+      "example": ".element { inset-block: 10px 20px; }",
+      "category": "positioning"
+    },
+    {
+      "keyword": "inset-inline",
+      "type": "keyword",
+      "description": "inset-inline - Logical shorthand for inline-start and inline-end offsets (left/right in horizontal LTR).",
+      "example": ".element { inset-inline: 1rem; }",
+      "category": "positioning"
+    },
+    {
+      "keyword": "margin-block",
+      "type": "keyword",
+      "description": "margin-block - Logical shorthand setting block-start and block-end margins. Respects writing mode.",
+      "example": "p { margin-block: 0 1em; }",
+      "category": "box_model"
+    },
+    {
+      "keyword": "margin-inline",
+      "type": "keyword",
+      "description": "margin-inline - Logical shorthand setting inline-start and inline-end margins. Replaces margin-left/right in flow-relative layouts.",
+      "example": ".container { margin-inline: auto; }",
+      "category": "box_model"
+    },
+    {
+      "keyword": "padding-block",
+      "type": "keyword",
+      "description": "padding-block - Logical shorthand for block-start and block-end padding.",
+      "example": "section { padding-block: 2rem; }",
+      "category": "box_model"
+    },
+    {
+      "keyword": "padding-inline",
+      "type": "keyword",
+      "description": "padding-inline - Logical shorthand for inline-start and inline-end padding.",
+      "example": ".btn { padding-inline: 1.5em; }",
+      "category": "box_model"
+    },
+    {
+      "keyword": "border-block",
+      "type": "keyword",
+      "description": "border-block - Logical shorthand for block-start and block-end borders.",
+      "example": "tr { border-block: 1px solid #ccc; }",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "border-inline",
+      "type": "keyword",
+      "description": "border-inline - Logical shorthand for inline-start and inline-end borders.",
+      "example": "td { border-inline: 1px solid #eee; }",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "block-size",
+      "type": "keyword",
+      "description": "block-size - Logical equivalent of height (in horizontal writing mode). Respects writing direction.",
+      "example": ".box { block-size: 100vh; }",
+      "category": "sizing"
+    },
+    {
+      "keyword": "inline-size",
+      "type": "keyword",
+      "description": "inline-size - Logical equivalent of width (in horizontal writing mode). Respects writing direction.",
+      "example": ".box { inline-size: 50%; }",
+      "category": "sizing"
+    },
+    {
+      "keyword": "min-block-size",
+      "type": "keyword",
+      "description": "min-block-size - Logical equivalent of min-height.",
+      "example": ".section { min-block-size: 100dvh; }",
+      "category": "sizing"
+    },
+    {
+      "keyword": "min-inline-size",
+      "type": "keyword",
+      "description": "min-inline-size - Logical equivalent of min-width.",
+      "example": ".input { min-inline-size: 200px; }",
+      "category": "sizing"
+    },
+    {
+      "keyword": "max-block-size",
+      "type": "keyword",
+      "description": "max-block-size - Logical equivalent of max-height.",
+      "example": ".modal { max-block-size: 80vh; }",
+      "category": "sizing"
+    },
+    {
+      "keyword": "max-inline-size",
+      "type": "keyword",
+      "description": "max-inline-size - Logical equivalent of max-width. Ideal for readable line lengths.",
+      "example": ".prose { max-inline-size: 65ch; }",
+      "category": "sizing"
+    },
+    {
+      "keyword": "scroll-behavior",
+      "type": "keyword",
+      "description": "scroll-behavior - Controls whether scrolling snaps instantly or animates smoothly (auto | smooth).",
+      "example": "html { scroll-behavior: smooth; }",
+      "category": "interaction"
+    },
+    {
+      "keyword": "scroll-snap-type",
+      "type": "keyword",
+      "description": "scroll-snap-type - Defines snap strictness and axis for a scroll container (x/y/both mandatory/proximity).",
+      "example": ".carousel { scroll-snap-type: x mandatory; overflow-x: auto; }",
+      "category": "interaction"
+    },
+    {
+      "keyword": "scroll-snap-align",
+      "type": "keyword",
+      "description": "scroll-snap-align - Sets the snap alignment of a child within a scroll snap container (start, center, end).",
+      "example": ".slide { scroll-snap-align: start; }",
+      "category": "interaction"
+    },
+    {
+      "keyword": "scroll-margin",
+      "type": "keyword",
+      "description": "scroll-margin - Outset from the element used for snap targeting. Prevents content hiding behind sticky headers.",
+      "example": "section[id] { scroll-margin-top: 5rem; }",
+      "category": "interaction"
+    },
+    {
+      "keyword": "scroll-padding",
+      "type": "keyword",
+      "description": "scroll-padding - Inset on the scroll container for snap targeting. Offsets the snap viewport.",
+      "example": ".container { scroll-padding-top: 80px; }",
+      "category": "interaction"
+    },
+    {
+      "keyword": "overscroll-behavior",
+      "type": "keyword",
+      "description": "overscroll-behavior - Controls what happens when scroll reaches boundary (auto, contain, none). Prevents scroll chaining.",
+      "example": ".modal { overscroll-behavior: contain; }",
+      "category": "interaction"
+    },
+    {
+      "keyword": "text-wrap",
+      "type": "keyword",
+      "description": "text-wrap - Controls how text wraps. Values: wrap, nowrap, balance (for headings), pretty (for paragraphs).",
+      "example": "h1 { text-wrap: balance; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-underline-offset",
+      "type": "keyword",
+      "description": "text-underline-offset - Sets the distance of the underline from the text baseline.",
+      "example": "a { text-decoration: underline; text-underline-offset: 3px; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "writing-mode",
+      "type": "keyword",
+      "description": "writing-mode - Sets whether text flows horizontally or vertically (horizontal-tb, vertical-rl, vertical-lr).",
+      "example": ".vertical-text { writing-mode: vertical-rl; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "direction",
+      "type": "keyword",
+      "description": "direction - Sets the text direction: ltr (left-to-right) or rtl (right-to-left).",
+      "example": "[dir='rtl'] { direction: rtl; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "hyphens",
+      "type": "keyword",
+      "description": "hyphens - Controls automatic hyphenation. Values: none, manual, auto. Requires lang attribute.",
+      "example": "p { hyphens: auto; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "overflow-wrap",
+      "type": "keyword",
+      "description": "overflow-wrap - Allows long words to be broken to prevent overflow (normal, break-word, anywhere).",
+      "example": ".comment { overflow-wrap: break-word; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "tab-size",
+      "type": "keyword",
+      "description": "tab-size - Sets the width of tab characters in elements like <pre> and <code>.",
+      "example": "pre { tab-size: 4; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-rendering",
+      "type": "keyword",
+      "description": "text-rendering - Hints to the rendering engine about what to optimize (speed, legibility, geometricPrecision).",
+      "example": "body { text-rendering: optimizeLegibility; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "font-display",
+      "type": "keyword",
+      "description": "font-display - Controls how a web font is displayed during loading (auto, block, swap, fallback, optional).",
+      "example": "@font-face { font-display: swap; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "font-feature-settings",
+      "type": "keyword",
+      "description": "font-feature-settings - Controls advanced OpenType font features like ligatures, small caps, and old-style numerals.",
+      "example": ".fancy { font-feature-settings: 'liga' 1, 'smcp' 1; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "font-variant-numeric",
+      "type": "keyword",
+      "description": "font-variant-numeric - Controls numeric glyph alternates like tabular/proportional, lining/oldstyle.",
+      "example": ".data-table { font-variant-numeric: tabular-nums; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "line-clamp",
+      "type": "keyword",
+      "description": "line-clamp - Truncates text to N lines with ellipsis. Standard property (previously -webkit-line-clamp).",
+      "example": ".excerpt { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-decoration-color",
+      "type": "keyword",
+      "description": "text-decoration-color - Sets the color of text decorations (underline, overline, etc.).",
+      "example": "a { text-decoration-color: oklch(60% 0.2 250); }",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-decoration-style",
+      "type": "keyword",
+      "description": "text-decoration-style - Sets the style of text decorations (solid, double, dotted, dashed, wavy).",
+      "example": ".error { text-decoration: underline wavy red; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "text-decoration-thickness",
+      "type": "keyword",
+      "description": "text-decoration-thickness - Sets the stroke thickness of text decorations.",
+      "example": "a:hover { text-decoration-thickness: 2px; }",
+      "category": "typography"
+    },
+    {
+      "keyword": "accent-color",
+      "type": "keyword",
+      "description": "accent-color - Sets the accent color for form controls (checkboxes, radio buttons, range, progress).",
+      "example": "input[type='checkbox'] { accent-color: hsl(250, 80%, 60%); }",
+      "category": "color_properties"
+    },
+    {
+      "keyword": "color-scheme",
+      "type": "keyword",
+      "description": "color-scheme - Indicates which color schemes the element supports (light, dark, or both).",
+      "example": ":root { color-scheme: light dark; }",
+      "category": "color_properties"
+    },
+    {
+      "keyword": "caret-color",
+      "type": "keyword",
+      "description": "caret-color - Sets the color of the text insertion cursor in editable elements.",
+      "example": "input { caret-color: dodgerblue; }",
+      "category": "color_properties"
+    },
+    {
+      "keyword": "forced-color-adjust",
+      "type": "keyword",
+      "description": "forced-color-adjust - Controls whether the element's colors adapt in forced-colors mode (auto, none).",
+      "example": ".custom-toggle { forced-color-adjust: none; }",
+      "category": "color_properties"
+    },
+    {
+      "keyword": "mix-blend-mode",
+      "type": "keyword",
+      "description": "mix-blend-mode - Sets how an element blends with its backdrop (multiply, screen, overlay, darken, etc.).",
+      "example": ".overlay { mix-blend-mode: multiply; }",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "background-blend-mode",
+      "type": "keyword",
+      "description": "background-blend-mode - Sets how background layers (images, colors) blend with each other.",
+      "example": ".hero { background-blend-mode: overlay; }",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "isolation",
+      "type": "keyword",
+      "description": "isolation - Creates a new stacking context, isolating blend modes from affecting parent elements.",
+      "example": ".card { isolation: isolate; }",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "mask",
+      "type": "keyword",
+      "description": "mask - Shorthand for mask-image, mask-mode, mask-repeat, etc. Clips visible area using an image or gradient.",
+      "example": ".icon { mask: url('shape.svg') no-repeat center / contain; }",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "mask-image",
+      "type": "keyword",
+      "description": "mask-image - Sets the image used as a mask layer (SVG, gradient, or image URL).",
+      "example": ".text-gradient { mask-image: linear-gradient(to bottom, black 50%, transparent); }",
+      "category": "visual_effects"
+    },
+    {
+      "keyword": "contain",
+      "type": "keyword",
+      "description": "contain - Limits layout, style, and paint scope for performance (none, strict, content, size, layout, style, paint).",
+      "example": ".widget { contain: content; }",
+      "category": "performance"
+    },
+    {
+      "keyword": "content-visibility",
+      "type": "keyword",
+      "description": "content-visibility - Skips rendering of off-screen content for performance (visible, hidden, auto).",
+      "example": ".section { content-visibility: auto; contain-intrinsic-size: 0 500px; }",
+      "category": "performance"
+    },
+    {
+      "keyword": "contain-intrinsic-size",
+      "type": "keyword",
+      "description": "contain-intrinsic-size - Provides estimated dimensions when content-visibility hides rendering.",
+      "example": ".card { content-visibility: auto; contain-intrinsic-size: auto 300px; }",
+      "category": "performance"
+    },
+    {
+      "keyword": "appearance",
+      "type": "keyword",
+      "description": "appearance - Controls whether an element uses the OS-native styling (none removes it, auto uses platform defaults).",
+      "example": "button { appearance: none; }",
+      "category": "interaction"
+    },
+    {
+      "keyword": "touch-action",
+      "type": "keyword",
+      "description": "touch-action - Controls how touch gestures are handled (auto, none, pan-x, pan-y, manipulation).",
+      "example": ".canvas { touch-action: none; }",
+      "category": "interaction"
+    },
+    {
+      "keyword": "scroll-snap-stop",
+      "type": "keyword",
+      "description": "scroll-snap-stop - Controls if snapping skips past snap points (normal) or stops at each (always).",
+      "example": ".slide { scroll-snap-stop: always; }",
+      "category": "interaction"
+    },
+    {
+      "keyword": "border-collapse",
+      "type": "keyword",
+      "description": "border-collapse - Sets whether table borders are collapsed into a single border or separated (collapse | separate).",
+      "example": "table { border-collapse: collapse; }",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "border-spacing",
+      "type": "keyword",
+      "description": "border-spacing - Sets the spacing between adjacent table cell borders (when border-collapse is separate).",
+      "example": "table { border-collapse: separate; border-spacing: 4px; }",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "table-layout",
+      "type": "keyword",
+      "description": "table-layout - Controls the table layout algorithm. 'fixed' is faster and more predictable.",
+      "example": "table { table-layout: fixed; width: 100%; }",
+      "category": "layout"
+    },
+    {
+      "keyword": "caption-side",
+      "type": "keyword",
+      "description": "caption-side - Sets the position of a table caption (top or bottom).",
+      "example": "caption { caption-side: bottom; }",
+      "category": "layout"
+    },
+    {
+      "keyword": "empty-cells",
+      "type": "keyword",
+      "description": "empty-cells - Controls whether borders/backgrounds are shown on empty table cells.",
+      "example": "table { empty-cells: hide; }",
+      "category": "layout"
+    },
+    {
+      "keyword": "outline-color",
+      "type": "keyword",
+      "description": "outline-color - Sets the color of the outline. Useful for custom focus indicators.",
+      "example": ":focus-visible { outline-color: dodgerblue; }",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "outline-style",
+      "type": "keyword",
+      "description": "outline-style - Sets the style of the outline (solid, dashed, dotted, double, etc.).",
+      "example": ".focused { outline-style: solid; }",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "outline-width",
+      "type": "keyword",
+      "description": "outline-width - Sets the thickness of the outline.",
+      "example": ":focus { outline-width: 3px; }",
+      "category": "border_properties"
+    },
+    {
+      "keyword": "@media",
+      "type": "at-rule",
+      "description": "@media - Apply styles conditionally based on device/viewport characteristics (width, prefers-color-scheme, etc.).",
+      "example": "@media (max-width: 768px) { .sidebar { display: none; } }",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "@keyframes",
+      "type": "at-rule",
+      "description": "@keyframes - Define the stages of a CSS animation by specifying styles at percentage waypoints.",
+      "example": "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "@import",
+      "type": "at-rule",
+      "description": "@import - Import another stylesheet. Must appear before all other rules except @charset and @layer.",
+      "example": "@import url('reset.css');",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "@font-face",
+      "type": "at-rule",
+      "description": "@font-face - Declare a custom font, specifying its name, source files, weight, style, and display behavior.",
+      "example": "@font-face { font-family: 'MyFont'; src: url('font.woff2') format('woff2'); font-display: swap; }",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "@supports",
+      "type": "at-rule",
+      "description": "@supports - Apply styles only if the browser supports a given CSS feature. Progressive enhancement.",
+      "example": "@supports (container-type: inline-size) { .card { container-type: inline-size; } }",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "@container",
+      "type": "at-rule",
+      "description": "@container - Apply styles based on a container's size (not the viewport). Modern component-level responsive design.",
+      "example": "@container (min-width: 400px) { .card { flex-direction: row; } }",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "@layer",
+      "type": "at-rule",
+      "description": "@layer - Declare cascade layers to control specificity order. Foundational for CSS architecture.",
+      "example": "@layer base, components, utilities;",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "@property",
+      "type": "at-rule",
+      "description": "@property - Register a custom property with a type, inheritance, and initial value. Enables animating CSS variables.",
+      "example": "@property --hue { syntax: '<angle>'; inherits: false; initial-value: 0deg; }",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "@scope",
+      "type": "at-rule",
+      "description": "@scope - Scope styles to a subtree of the DOM with optional lower boundary.",
+      "example": "@scope (.card) to (.card-footer) { p { margin: 0; } }",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "@starting-style",
+      "type": "at-rule",
+      "description": "@starting-style - Define styles for the first frame of an element's appearance, enabling entry transitions.",
+      "example": "@starting-style { dialog[open] { opacity: 0; } }",
+      "category": "at_rules"
+    },
+    {
+      "keyword": "var()",
+      "type": "function",
+      "description": "var() - References a CSS custom property. Accepts an optional fallback value.",
+      "example": "color: var(--primary, #3b82f6);",
+      "category": "functions"
+    },
+    {
+      "keyword": "calc()",
+      "type": "function",
+      "description": "calc() - Performs math at render time. Can mix units (px, %, em, vw, etc.).",
+      "example": "width: calc(100% - 2rem);",
+      "category": "functions"
+    },
+    {
+      "keyword": "min()",
+      "type": "function",
+      "description": "min() - Returns the smallest of the comma-separated values. Great for fluid sizing with a cap.",
+      "example": "width: min(90vw, 1200px);",
+      "category": "functions"
+    },
+    {
+      "keyword": "max()",
+      "type": "function",
+      "description": "max() - Returns the largest of the comma-separated values. Sets a minimum effective size.",
+      "example": "font-size: max(1rem, 2.5vw);",
+      "category": "functions"
+    },
+    {
+      "keyword": "clamp()",
+      "type": "function",
+      "description": "clamp(min, preferred, max) - Clamps a value between bounds. Fluid typography and spacing in one line.",
+      "example": "font-size: clamp(1rem, 2.5vw, 2rem);",
+      "category": "functions"
+    },
+    {
+      "keyword": "env()",
+      "type": "function",
+      "description": "env() - Accesses environment variables (e.g., safe-area-inset for notched devices).",
+      "example": "padding-bottom: env(safe-area-inset-bottom);",
+      "category": "functions"
+    },
+    {
+      "keyword": "rgb()",
+      "type": "function",
+      "description": "rgb() - Defines a color using red, green, blue channels. Modern syntax supports alpha as 4th value.",
+      "example": "color: rgb(59 130 246 / 0.8);",
+      "category": "functions"
+    },
+    {
+      "keyword": "hsl()",
+      "type": "function",
+      "description": "hsl() - Defines a color using hue, saturation, lightness. Intuitive for creating color palettes.",
+      "example": "color: hsl(220 80% 60% / 0.9);",
+      "category": "functions"
+    },
+    {
+      "keyword": "oklch()",
+      "type": "function",
+      "description": "oklch() - Perceptually uniform color space (lightness, chroma, hue). Best for consistent palettes.",
+      "example": "color: oklch(60% 0.15 250);",
+      "category": "functions"
+    },
+    {
+      "keyword": "color-mix()",
+      "type": "function",
+      "description": "color-mix() - Mixes two colors in a specified color space. Native color manipulation.",
+      "example": "background: color-mix(in oklch, var(--primary), white 30%);",
+      "category": "functions"
+    },
+    {
+      "keyword": "linear-gradient()",
+      "type": "function",
+      "description": "linear-gradient() - Creates a gradient image transitioning between colors along a straight line.",
+      "example": "background: linear-gradient(135deg, #667eea, #764ba2);",
+      "category": "functions"
+    },
+    {
+      "keyword": "radial-gradient()",
+      "type": "function",
+      "description": "radial-gradient() - Creates a gradient radiating from a center point.",
+      "example": "background: radial-gradient(circle at top, #ffd200, #f7971e);",
+      "category": "functions"
+    },
+    {
+      "keyword": "conic-gradient()",
+      "type": "function",
+      "description": "conic-gradient() - Creates a gradient rotating around a center point. Useful for pie charts.",
+      "example": "background: conic-gradient(#f06, #9f6, #06f);",
+      "category": "functions"
+    },
+    {
+      "keyword": "url()",
+      "type": "function",
+      "description": "url() - References an external resource (image, font, etc.) by URL.",
+      "example": "background-image: url('hero.webp');",
+      "category": "functions"
+    },
+    {
+      "keyword": "fit-content()",
+      "type": "function",
+      "description": "fit-content() - Clamps a track size between its min-content and a max value. Used in grid.",
+      "example": "grid-template-columns: fit-content(300px) 1fr;",
+      "category": "functions"
+    },
+    {
+      "keyword": "minmax()",
+      "type": "function",
+      "description": "minmax() - Defines a size range for grid tracks (minimum, maximum).",
+      "example": "grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));",
+      "category": "functions"
+    },
+    {
+      "keyword": "repeat()",
+      "type": "function",
+      "description": "repeat() - Repeats a track pattern in grid layout. Works with auto-fill and auto-fit.",
+      "example": "grid-template-columns: repeat(3, 1fr);",
+      "category": "functions"
+    },
+    {
+      "keyword": ":hover",
+      "type": "pseudo-class",
+      "description": ":hover - Matches when the user hovers over an element with a pointing device.",
+      "example": "a:hover { color: var(--link-hover); }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":focus",
+      "type": "pseudo-class",
+      "description": ":focus - Matches when an element has received focus (click or tab).",
+      "example": "input:focus { border-color: blue; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":focus-visible",
+      "type": "pseudo-class",
+      "description": ":focus-visible - Matches when focus is visible (keyboard navigation). Preferred over :focus for outlines.",
+      "example": "button:focus-visible { outline: 2px solid dodgerblue; outline-offset: 2px; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":focus-within",
+      "type": "pseudo-class",
+      "description": ":focus-within - Matches when the element or any descendant has focus. Great for form highlighting.",
+      "example": ".form-group:focus-within { border-color: blue; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":active",
+      "type": "pseudo-class",
+      "description": ":active - Matches while an element is being activated (mouse down, key press).",
+      "example": "button:active { transform: scale(0.98); }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":visited",
+      "type": "pseudo-class",
+      "description": ":visited - Matches links that the user has already visited.",
+      "example": "a:visited { color: purple; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":first-child",
+      "type": "pseudo-class",
+      "description": ":first-child - Matches the first child element within its parent.",
+      "example": "li:first-child { margin-top: 0; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":last-child",
+      "type": "pseudo-class",
+      "description": ":last-child - Matches the last child element within its parent.",
+      "example": "li:last-child { border-bottom: none; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":nth-child()",
+      "type": "pseudo-class",
+      "description": ":nth-child() - Matches elements by position (An+B formula). Supports 'odd', 'even', or formulas.",
+      "example": "tr:nth-child(odd) { background: #f5f5f5; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":nth-of-type()",
+      "type": "pseudo-class",
+      "description": ":nth-of-type() - Like :nth-child but counts only siblings of the same type.",
+      "example": "p:nth-of-type(2) { font-weight: bold; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":not()",
+      "type": "pseudo-class",
+      "description": ":not() - Matches elements that do NOT match the given selector(s).",
+      "example": "input:not([type='hidden']) { border: 1px solid #ccc; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":is()",
+      "type": "pseudo-class",
+      "description": ":is() - Matches any element matching one of the selectors. Reduces repetition. Takes highest specificity.",
+      "example": ":is(h1, h2, h3) { line-height: 1.2; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":where()",
+      "type": "pseudo-class",
+      "description": ":where() - Same as :is() but with zero specificity. Ideal for defaults that are easy to override.",
+      "example": ":where(h1, h2, h3) { margin-top: 0; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":has()",
+      "type": "pseudo-class",
+      "description": ":has() - Parent/relational selector. Matches if the element's descendants match the argument selector.",
+      "example": ".card:has(img) { grid-template-rows: auto 1fr; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":checked",
+      "type": "pseudo-class",
+      "description": ":checked - Matches checked/selected form controls (checkboxes, radios, select options).",
+      "example": "input:checked + label { font-weight: bold; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":disabled",
+      "type": "pseudo-class",
+      "description": ":disabled - Matches form elements that are disabled.",
+      "example": "button:disabled { opacity: 0.5; cursor: not-allowed; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":enabled",
+      "type": "pseudo-class",
+      "description": ":enabled - Matches form elements that are enabled (not disabled).",
+      "example": "input:enabled { background: white; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":required",
+      "type": "pseudo-class",
+      "description": ":required - Matches form elements that have the required attribute.",
+      "example": "input:required { border-left: 3px solid red; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":valid",
+      "type": "pseudo-class",
+      "description": ":valid - Matches form elements whose content validates successfully.",
+      "example": "input:valid { border-color: green; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":invalid",
+      "type": "pseudo-class",
+      "description": ":invalid - Matches form elements whose content fails validation.",
+      "example": "input:invalid { border-color: red; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":placeholder-shown",
+      "type": "pseudo-class",
+      "description": ":placeholder-shown - Matches an input when its placeholder text is visible (i.e., the input is empty).",
+      "example": "input:placeholder-shown + label { opacity: 0; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":empty",
+      "type": "pseudo-class",
+      "description": ":empty - Matches elements with no children (no elements, text, or whitespace).",
+      "example": ".message:empty { display: none; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": ":root",
+      "type": "pseudo-class",
+      "description": ":root - Matches the document root element (<html>). Commonly used to define CSS custom properties.",
+      "example": ":root { --primary: #3b82f6; --gap: 1rem; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": "::before",
+      "type": "pseudo-element",
+      "description": "::before - Inserts generated content before the element's actual content. Requires content property.",
+      "example": ".quote::before { content: '\\201C'; font-size: 2em; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": "::after",
+      "type": "pseudo-element",
+      "description": "::after - Inserts generated content after the element's actual content. Requires content property.",
+      "example": ".required::after { content: '*'; color: red; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": "::placeholder",
+      "type": "pseudo-element",
+      "description": "::placeholder - Styles the placeholder text of form inputs.",
+      "example": "input::placeholder { color: #999; font-style: italic; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": "::selection",
+      "type": "pseudo-element",
+      "description": "::selection - Styles the portion of text selected/highlighted by the user.",
+      "example": "::selection { background: #3b82f6; color: white; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": "::first-line",
+      "type": "pseudo-element",
+      "description": "::first-line - Styles the first line of a block-level element.",
+      "example": "p::first-line { font-weight: bold; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": "::first-letter",
+      "type": "pseudo-element",
+      "description": "::first-letter - Styles the first letter of a block-level element. Used for drop caps.",
+      "example": "p::first-letter { font-size: 3em; float: left; line-height: 1; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": "::marker",
+      "type": "pseudo-element",
+      "description": "::marker - Styles the bullet or number of list items.",
+      "example": "li::marker { color: #3b82f6; font-weight: bold; }",
+      "category": "selectors"
+    },
+    {
+      "keyword": "::backdrop",
+      "type": "pseudo-element",
+      "description": "::backdrop - Styles the backdrop behind a fullscreen element or <dialog>.",
+      "example": "dialog::backdrop { background: rgba(0 0 0 / 0.5); backdrop-filter: blur(4px); }",
+      "category": "selectors"
+    },
+    {
+      "keyword": "grid-column-start",
+      "type": "keyword",
+      "description": "grid-column-start - Sets where a grid item starts in the column axis.",
+      "example": ".hero { grid-column-start: 1; }",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-column-end",
+      "type": "keyword",
+      "description": "grid-column-end - Sets where a grid item ends in the column axis.",
+      "example": ".hero { grid-column-end: -1; }",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-row-start",
+      "type": "keyword",
+      "description": "grid-row-start - Sets where a grid item starts in the row axis.",
+      "example": ".sidebar { grid-row-start: 1; }",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-row-end",
+      "type": "keyword",
+      "description": "grid-row-end - Sets where a grid item ends in the row axis.",
+      "example": ".sidebar { grid-row-end: span 3; }",
+      "category": "grid"
+    },
+    {
+      "keyword": "grid-template",
+      "type": "keyword",
+      "description": "grid-template - Shorthand for grid-template-rows, grid-template-columns, and grid-template-areas.",
+      "example": ".layout { grid-template: 'header header' auto 'sidebar main' 1fr / 250px 1fr; }",
+      "category": "grid"
+    },
+    {
+      "keyword": "justify-items",
+      "type": "keyword",
+      "description": "justify-items - Aligns all grid items along the inline axis within their cells.",
+      "example": ".grid { justify-items: center; }",
+      "category": "grid"
+    },
+    {
+      "keyword": "justify-self",
+      "type": "keyword",
+      "description": "justify-self - Aligns a single grid item along the inline axis within its cell.",
+      "example": ".logo { justify-self: start; }",
+      "category": "grid"
+    },
+    {
+      "keyword": "subgrid",
+      "type": "keyword",
+      "description": "subgrid - A grid-template-columns/rows value. Inherits the parent grid's tracks for alignment.",
+      "example": ".card { display: grid; grid-template-rows: subgrid; grid-row: span 3; }",
+      "category": "grid"
     }
   ],
   "snippets": [
@@ -1109,6 +2005,668 @@
       "description": "Dark mode implementation with system preference",
       "content": "/* Light theme (default) */\n:root {\n    --color-bg: ${1:#ffffff};\n    --color-bg-alt: ${2:#f8fafc};\n    --color-text: ${3:#0f172a};\n    --color-text-muted: ${4:#64748b};\n    --color-border: ${5:#e2e8f0};\n    --color-surface: ${6:#ffffff};\n    --color-primary: ${7:#3b82f6};\n    --color-shadow: ${8:rgba(0, 0, 0, 0.1)};\n}\n\n/* Dark theme */\n@media (prefers-color-scheme: dark) {\n    :root {\n        --color-bg: ${9:#0f172a};\n        --color-bg-alt: ${10:#1e293b};\n        --color-text: ${11:#f8fafc};\n        --color-text-muted: ${12:#94a3b8};\n        --color-border: ${13:#475569};\n        --color-surface: ${14:#1e293b};\n        --color-primary: ${15:#60a5fa};\n        --color-shadow: ${16:rgba(0, 0, 0, 0.3)};\n    }\n}\n\n/* Manual dark mode toggle */\n[data-theme=\"dark\"] {\n    --color-bg: ${9:#0f172a};\n    --color-bg-alt: ${10:#1e293b};\n    --color-text: ${11:#f8fafc};\n    --color-text-muted: ${12:#94a3b8};\n    --color-border: ${13:#475569};\n    --color-surface: ${14:#1e293b};\n    --color-primary: ${15:#60a5fa};\n    --color-shadow: ${16:rgba(0, 0, 0, 0.3)};\n}\n\n[data-theme=\"light\"] {\n    --color-bg: ${1:#ffffff};\n    --color-bg-alt: ${2:#f8fafc};\n    --color-text: ${3:#0f172a};\n    --color-text-muted: ${4:#64748b};\n    --color-border: ${5:#e2e8f0};\n    --color-surface: ${6:#ffffff};\n    --color-primary: ${7:#3b82f6};\n    --color-shadow: ${8:rgba(0, 0, 0, 0.1)};\n}\n\n/* Base styles using CSS variables */\nbody {\n    background-color: var(--color-bg);\n    color: var(--color-text);\n    transition: ${17:background-color 0.3s ease, color 0.3s ease};\n}\n\n/* Dark mode toggle button */\n.${18:theme-toggle} {\n    background: var(--color-surface);\n    border: ${19:1px} solid var(--color-border);\n    color: var(--color-text);\n    padding: ${20:0.5rem};\n    border-radius: ${21:50%};\n    cursor: pointer;\n    transition: ${22:all 0.3s ease};\n    width: ${23:2.5rem};\n    height: ${23:2.5rem};\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.${18:theme-toggle}:hover {\n    background: var(--color-bg-alt);\n    transform: ${24:scale(1.1)};\n}\n\n/* Sun/Moon icons */\n.${18:theme-toggle}__icon {\n    width: ${25:1.25rem};\n    height: ${25:1.25rem};\n    transition: ${26:transform 0.3s ease};\n}\n\n.${18:theme-toggle}__sun {\n    display: block;\n}\n\n.${18:theme-toggle}__moon {\n    display: none;\n}\n\n[data-theme=\"dark\"] .${18:theme-toggle}__sun {\n    display: none;\n}\n\n[data-theme=\"dark\"] .${18:theme-toggle}__moon {\n    display: block;\n}\n\n/* System preference override */\n@media (prefers-color-scheme: dark) {\n    [data-theme=\"auto\"] .${18:theme-toggle}__sun {\n        display: none;\n    }\n    \n    [data-theme=\"auto\"] .${18:theme-toggle}__moon {\n        display: block;\n    }\n}",
       "category": "theming"
+    },
+    {
+      "trigger": "container_query",
+      "description": "Container query with container-type and @container rule",
+      "content": ".${1:component} {\n  container-type: inline-size;\n}\n\n@container (min-width: ${2:400px}) {\n  .${1:component} {\n    ${3:flex-direction: row;}\n  }\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "holy_grail",
+      "description": "Holy grail layout with CSS Grid (header, sidebar, main, footer)",
+      "content": ".layout {\n  display: grid;\n  grid-template:\n    'header  header'  auto\n    'sidebar main'    1fr\n    'footer  footer'  auto\n    / ${1:250px} 1fr;\n  min-height: 100dvh;\n}\n\n.header  { grid-area: header; }\n.sidebar { grid-area: sidebar; }\n.main    { grid-area: main; }\n.footer  { grid-area: footer; }",
+      "category": "layout"
+    },
+    {
+      "trigger": "stack",
+      "description": "Vertical stack layout with consistent gap spacing (Every Layout pattern)",
+      "content": ".stack > * + * {\n  margin-block-start: ${1:var(--space, 1.5rem)};\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "sidebar_layout",
+      "description": "Sidebar + main content layout with CSS Grid and minmax",
+      "content": ".with-sidebar {\n  display: grid;\n  grid-template-columns: fit-content(${1:300px}) minmax(50%, 1fr);\n  gap: ${2:var(--gap, 1rem)};\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "pancake_stack",
+      "description": "Header/main/footer layout where main fills remaining space",
+      "content": ".page {\n  display: grid;\n  grid-template-rows: auto 1fr auto;\n  min-height: 100dvh;\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "aspect_ratio_box",
+      "description": "Element with a fixed aspect ratio using the modern property",
+      "content": ".${1:video-container} {\n  aspect-ratio: ${2:16 / 9};\n  width: 100%;\n  object-fit: cover;\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "fluid_type",
+      "description": "Fluid typography using clamp() — scales between viewport sizes",
+      "content": ".${1:prose} {\n  font-size: clamp(${2:1rem}, ${3:0.5rem + 1.5vw}, ${4:1.5rem});\n  line-height: ${5:1.6};\n}",
+      "category": "typography"
+    },
+    {
+      "trigger": "truncate",
+      "description": "Single-line text truncation with ellipsis",
+      "content": ".truncate {\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}",
+      "category": "typography"
+    },
+    {
+      "trigger": "line_clamp",
+      "description": "Multi-line text truncation with ellipsis",
+      "content": ".line-clamp {\n  display: -webkit-box;\n  -webkit-line-clamp: ${1:3};\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}",
+      "category": "typography"
+    },
+    {
+      "trigger": "font_face",
+      "description": "@font-face declaration with modern format and display swap",
+      "content": "@font-face {\n  font-family: '${1:MyFont}';\n  src: url('${2:fonts/myfont.woff2}') format('woff2');\n  font-weight: ${3:400};\n  font-style: ${4:normal};\n  font-display: swap;\n}",
+      "category": "typography"
+    },
+    {
+      "trigger": "system_font_stack",
+      "description": "System font stack for native-looking UI without web font loading",
+      "content": "font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Arial, sans-serif;",
+      "category": "typography"
+    },
+    {
+      "trigger": "oklch_palette",
+      "description": "Color palette using oklch for perceptually uniform colors",
+      "content": ":root {\n  --hue: ${1:250};\n  --primary-50:  oklch(97% 0.02 var(--hue));\n  --primary-100: oklch(93% 0.04 var(--hue));\n  --primary-200: oklch(85% 0.08 var(--hue));\n  --primary-300: oklch(75% 0.12 var(--hue));\n  --primary-400: oklch(65% 0.16 var(--hue));\n  --primary-500: oklch(55% 0.19 var(--hue));\n  --primary-600: oklch(48% 0.18 var(--hue));\n  --primary-700: oklch(40% 0.16 var(--hue));\n  --primary-800: oklch(33% 0.13 var(--hue));\n  --primary-900: oklch(25% 0.10 var(--hue));\n}",
+      "category": "theming"
+    },
+    {
+      "trigger": "dark_mode_toggle",
+      "description": "Dark mode with prefers-color-scheme and a manual toggle via data attribute",
+      "content": ":root {\n  --bg: ${1:#ffffff};\n  --text: ${2:#1a1a1a};\n  --surface: ${3:#f5f5f5};\n}\n\n@media (prefers-color-scheme: dark) {\n  :root:not([data-theme='light']) {\n    --bg: ${4:#0a0a0a};\n    --text: ${5:#e5e5e5};\n    --surface: ${6:#1a1a1a};\n  }\n}\n\n[data-theme='dark'] {\n  --bg: ${4:#0a0a0a};\n  --text: ${5:#e5e5e5};\n  --surface: ${6:#1a1a1a};\n}",
+      "category": "theming"
+    },
+    {
+      "trigger": "color_scheme",
+      "description": "Enable native dark mode for form controls and scrollbars",
+      "content": ":root {\n  color-scheme: light dark;\n}",
+      "category": "theming"
+    },
+    {
+      "trigger": "scroll_snap_carousel",
+      "description": "Horizontal scroll snap carousel",
+      "content": ".carousel {\n  display: flex;\n  overflow-x: auto;\n  scroll-snap-type: x mandatory;\n  gap: ${1:1rem};\n  scroll-padding-inline: ${2:1rem};\n  -webkit-overflow-scrolling: touch;\n}\n\n.carousel > * {\n  scroll-snap-align: start;\n  flex: 0 0 ${3:min(80vw, 400px)};\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "scroll_snap_pages",
+      "description": "Vertical full-page scroll snapping",
+      "content": ".pages {\n  height: 100dvh;\n  overflow-y: auto;\n  scroll-snap-type: y mandatory;\n}\n\n.page {\n  height: 100dvh;\n  scroll-snap-align: start;\n  scroll-snap-stop: always;\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "dialog",
+      "description": "Native dialog styling with backdrop and entry animation",
+      "content": "dialog {\n  border: none;\n  border-radius: ${1:0.5rem};\n  padding: ${2:2rem};\n  max-width: min(90vw, ${3:500px});\n  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);\n}\n\ndialog::backdrop {\n  background: rgb(0 0 0 / 0.5);\n  backdrop-filter: blur(4px);\n}\n\ndialog[open] {\n  animation: dialog-in 200ms ease-out;\n}\n\n@keyframes dialog-in {\n  from { opacity: 0; transform: scale(0.95); }\n  to   { opacity: 1; transform: scale(1); }\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "tooltip",
+      "description": "Pure CSS tooltip using data attribute and ::after",
+      "content": "[data-tooltip] {\n  position: relative;\n}\n\n[data-tooltip]::after {\n  content: attr(data-tooltip);\n  position: absolute;\n  bottom: calc(100% + ${1:8px});\n  left: 50%;\n  transform: translateX(-50%);\n  padding: 0.25em 0.75em;\n  background: ${2:var(--tooltip-bg, #333)};\n  color: ${3:var(--tooltip-text, white)};\n  border-radius: 4px;\n  font-size: 0.875rem;\n  white-space: nowrap;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 150ms ease;\n}\n\n[data-tooltip]:hover::after {\n  opacity: 1;\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "badge",
+      "description": "Small badge/tag component",
+      "content": ".badge {\n  display: inline-flex;\n  align-items: center;\n  padding: ${1:0.125em 0.5em};\n  font-size: ${2:0.75rem};\n  font-weight: 600;\n  line-height: 1;\n  border-radius: ${3:9999px};\n  background: ${4:var(--badge-bg, #e5e7eb)};\n  color: ${5:var(--badge-text, #374151)};\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "avatar",
+      "description": "Circular avatar image with fallback",
+      "content": ".avatar {\n  width: ${1:3rem};\n  height: ${1:3rem};\n  border-radius: 50%;\n  object-fit: cover;\n  background: ${2:var(--avatar-bg, #d1d5db)};\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "switch_toggle",
+      "description": "Custom checkbox styled as a toggle switch",
+      "content": ".switch {\n  --switch-w: ${1:3rem};\n  --switch-h: ${2:1.5rem};\n  position: relative;\n  display: inline-block;\n  width: var(--switch-w);\n  height: var(--switch-h);\n}\n\n.switch input {\n  opacity: 0;\n  width: 0;\n  height: 0;\n}\n\n.switch .slider {\n  position: absolute;\n  inset: 0;\n  background: #ccc;\n  border-radius: var(--switch-h);\n  transition: background 200ms;\n  cursor: pointer;\n}\n\n.switch .slider::before {\n  content: '';\n  position: absolute;\n  left: 2px;\n  top: 50%;\n  transform: translateY(-50%);\n  width: calc(var(--switch-h) - 4px);\n  height: calc(var(--switch-h) - 4px);\n  border-radius: 50%;\n  background: white;\n  transition: left 200ms;\n}\n\n.switch input:checked + .slider {\n  background: ${3:var(--primary, #3b82f6)};\n}\n\n.switch input:checked + .slider::before {\n  left: calc(var(--switch-w) - var(--switch-h) + 2px);\n}",
+      "category": "components"
+    },
+    {
+      "trigger": "input_styles",
+      "description": "Modern input styling with focus-visible indicator",
+      "content": "input, textarea, select {\n  font: inherit;\n  padding: ${1:0.5em 0.75em};\n  border: 1px solid ${2:var(--border, #d1d5db)};\n  border-radius: ${3:0.375rem};\n  background: ${4:var(--input-bg, white)};\n  color: inherit;\n  transition: border-color 150ms, box-shadow 150ms;\n}\n\ninput:focus-visible,\ntextarea:focus-visible,\nselect:focus-visible {\n  outline: none;\n  border-color: ${5:var(--primary, #3b82f6)};\n  box-shadow: 0 0 0 3px ${6:rgb(59 130 246 / 0.25)};\n}\n\ninput::placeholder {\n  color: ${7:var(--muted, #9ca3af)};\n}",
+      "category": "forms"
+    },
+    {
+      "trigger": "checkbox_custom",
+      "description": "Custom checkbox using accent-color for easy theming",
+      "content": "input[type='checkbox'] {\n  width: ${1:1.25em};\n  height: ${1:1.25em};\n  accent-color: ${2:var(--primary, #3b82f6)};\n  cursor: pointer;\n}",
+      "category": "forms"
+    },
+    {
+      "trigger": "view_transition",
+      "description": "View transition names for page-level transitions",
+      "content": ".${1:element} {\n  view-transition-name: ${2:hero};\n}\n\n::view-transition-old(${2:hero}) {\n  animation: fade-out 200ms ease-out;\n}\n\n::view-transition-new(${2:hero}) {\n  animation: fade-in 200ms ease-in;\n}",
+      "category": "animations"
+    },
+    {
+      "trigger": "transition_all",
+      "description": "Smooth transition for common interactive properties",
+      "content": "transition: ${1:color, background-color, border-color, box-shadow, transform, opacity} ${2:150ms} ${3:ease};",
+      "category": "animations"
+    },
+    {
+      "trigger": "animation_slide_in",
+      "description": "Slide-in animation from a direction",
+      "content": "@keyframes slide-in-${1:right} {\n  from {\n    transform: translateX(${2:100%});\n    opacity: 0;\n  }\n  to {\n    transform: translateX(0);\n    opacity: 1;\n  }\n}\n\n.slide-in {\n  animation: slide-in-${1:right} ${3:300ms} ease-out;\n}",
+      "category": "animations"
+    },
+    {
+      "trigger": "animation_pulse",
+      "description": "Pulsing/breathing animation for drawing attention",
+      "content": "@keyframes pulse {\n  0%, 100% { opacity: 1; }\n  50%      { opacity: ${1:0.5}; }\n}\n\n.pulse {\n  animation: pulse ${2:2s} ease-in-out infinite;\n}",
+      "category": "animations"
+    },
+    {
+      "trigger": "animation_spin",
+      "description": "Continuous rotation animation for loading spinners",
+      "content": "@keyframes spin {\n  to { transform: rotate(360deg); }\n}\n\n.spinner {\n  width: ${1:1.5rem};\n  height: ${1:1.5rem};\n  border: 2px solid ${2:var(--border, #e5e7eb)};\n  border-top-color: ${3:var(--primary, #3b82f6)};\n  border-radius: 50%;\n  animation: spin 600ms linear infinite;\n}",
+      "category": "animations"
+    },
+    {
+      "trigger": "reduced_motion",
+      "description": "Respect prefers-reduced-motion preference for accessibility",
+      "content": "@media (prefers-reduced-motion: reduce) {\n  *,\n  *::before,\n  *::after {\n    animation-duration: 0.01ms !important;\n    animation-iteration-count: 1 !important;\n    transition-duration: 0.01ms !important;\n    scroll-behavior: auto !important;\n  }\n}",
+      "category": "accessibility"
+    },
+    {
+      "trigger": "media_breakpoints",
+      "description": "Standard responsive breakpoints as media queries",
+      "content": "/* Mobile first - default styles for smallest screens */\n\n@media (min-width: ${1:640px}) {\n  /* sm: Tablets */\n  ${2:}\n}\n\n@media (min-width: ${3:768px}) {\n  /* md: Small laptops */\n  ${4:}\n}\n\n@media (min-width: ${5:1024px}) {\n  /* lg: Desktops */\n  ${6:}\n}\n\n@media (min-width: ${7:1280px}) {\n  /* xl: Large screens */\n  ${8:}\n}",
+      "category": "responsive"
+    },
+    {
+      "trigger": "media_dark",
+      "description": "Dark mode media query with color-scheme support",
+      "content": "@media (prefers-color-scheme: dark) {\n  ${1:body {\n    background: #0a0a0a;\n    color: #e5e5e5;\n  }}\n}",
+      "category": "responsive"
+    },
+    {
+      "trigger": "media_hover",
+      "description": "Target devices that support hover (excludes touch-only devices)",
+      "content": "@media (hover: hover) {\n  ${1:.card:hover {\n    transform: translateY(-2px);\n    box-shadow: 0 10px 25px rgb(0 0 0 / 0.1);\n  }}\n}",
+      "category": "responsive"
+    },
+    {
+      "trigger": "media_print",
+      "description": "Print stylesheet with common adjustments",
+      "content": "@media print {\n  body {\n    font-size: 12pt;\n    color: black;\n    background: white;\n  }\n\n  nav, footer, .no-print {\n    display: none !important;\n  }\n\n  a[href]::after {\n    content: ' (' attr(href) ')';\n  }\n}",
+      "category": "responsive"
+    },
+    {
+      "trigger": "sr_only",
+      "description": "Screen-reader only — visually hidden but accessible to assistive technology",
+      "content": ".sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border-width: 0;\n}",
+      "category": "accessibility"
+    },
+    {
+      "trigger": "focus_ring",
+      "description": "Accessible focus indicator using focus-visible",
+      "content": ":focus-visible {\n  outline: ${1:2px} solid ${2:var(--focus-ring, #3b82f6)};\n  outline-offset: ${3:2px};\n}",
+      "category": "accessibility"
+    },
+    {
+      "trigger": "skip_link",
+      "description": "Skip-to-content link for keyboard navigation",
+      "content": ".skip-link {\n  position: absolute;\n  top: -100%;\n  left: 0;\n  padding: 0.5em 1em;\n  background: var(--primary, #3b82f6);\n  color: white;\n  z-index: 9999;\n}\n\n.skip-link:focus {\n  top: 0;\n}",
+      "category": "accessibility"
+    },
+    {
+      "trigger": "css_layer",
+      "description": "Cascade layer ordering for CSS architecture",
+      "content": "@layer ${1:reset}, ${2:base}, ${3:components}, ${4:utilities};\n\n@layer ${1:reset} {\n  ${5:}\n}",
+      "category": "architecture"
+    },
+    {
+      "trigger": "custom_property",
+      "description": "Registered custom property with @property for animation support",
+      "content": "@property --${1:hue} {\n  syntax: '${2:<angle>}';\n  inherits: ${3:false};\n  initial-value: ${4:0deg};\n}",
+      "category": "variables"
+    },
+    {
+      "trigger": "supports_check",
+      "description": "@supports feature detection with fallback",
+      "content": "/* Fallback */\n.${1:element} {\n  ${2:display: flex;}\n}\n\n@supports (${3:container-type: inline-size}) {\n  .${1:element} {\n    ${4:container-type: inline-size;}\n  }\n}",
+      "category": "architecture"
+    },
+    {
+      "trigger": "logical_spacing",
+      "description": "Logical properties for internationalization-ready spacing",
+      "content": ".${1:element} {\n  margin-block: ${2:1rem};\n  margin-inline: ${3:auto};\n  padding-block: ${4:0.5rem};\n  padding-inline: ${5:1rem};\n}",
+      "category": "layout"
+    },
+    {
+      "trigger": "size_container",
+      "description": "Width-constrained centered container with fluid padding",
+      "content": ".container {\n  width: min(${1:var(--max-width, 1200px)}, 100% - ${2:var(--gutter, 2rem)} * 2);\n  margin-inline: auto;\n}",
+      "category": "layout"
     }
-  ]
+  ],
+  "imports": {
+    "modules": [
+      {
+        "path": "css_values",
+        "items": [
+          {
+            "name": "inherit",
+            "item_type": "value",
+            "description": "Inherits the property value from the parent element"
+          },
+          {
+            "name": "initial",
+            "item_type": "value",
+            "description": "Resets the property to its default/specification value"
+          },
+          {
+            "name": "unset",
+            "item_type": "value",
+            "description": "Resets to inherit if the property inherits, otherwise to initial"
+          },
+          {
+            "name": "revert",
+            "item_type": "value",
+            "description": "Reverts to the value from the previous cascade layer (user-agent/user stylesheet)"
+          },
+          {
+            "name": "revert-layer",
+            "item_type": "value",
+            "description": "Reverts to the value from the previous @layer"
+          },
+          {
+            "name": "currentcolor",
+            "item_type": "value",
+            "description": "Refers to the element's computed color property. Default for borders and outlines."
+          },
+          {
+            "name": "transparent",
+            "item_type": "value",
+            "description": "Fully transparent color (rgba(0,0,0,0))"
+          },
+          {
+            "name": "none",
+            "item_type": "value",
+            "description": "No value / disable. Used in display, background, border, text-decoration, etc."
+          },
+          {
+            "name": "auto",
+            "item_type": "value",
+            "description": "Browser-calculated value. Meaning varies by property."
+          },
+          {
+            "name": "normal",
+            "item_type": "value",
+            "description": "Default/standard behavior. Used in line-height, font-style, white-space, etc."
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "css_units",
+        "items": [
+          {
+            "name": "px",
+            "item_type": "unit",
+            "description": "Pixels — absolute, 1/96th inch. Good for borders and shadows."
+          },
+          {
+            "name": "rem",
+            "item_type": "unit",
+            "description": "Relative to root font-size. Ideal for spacing and font-size."
+          },
+          {
+            "name": "em",
+            "item_type": "unit",
+            "description": "Relative to parent font-size. Good for component-relative sizing."
+          },
+          {
+            "name": "ch",
+            "item_type": "unit",
+            "description": "Width of '0' character. Perfect for text container max-width (65ch)."
+          },
+          {
+            "name": "%",
+            "item_type": "unit",
+            "description": "Percentage of parent dimension."
+          },
+          {
+            "name": "vw",
+            "item_type": "unit",
+            "description": "1% of viewport width."
+          },
+          {
+            "name": "vh",
+            "item_type": "unit",
+            "description": "1% of viewport height. Caution: ignores mobile URL bar."
+          },
+          {
+            "name": "dvh",
+            "item_type": "unit",
+            "description": "1% of dynamic viewport height. Accounts for mobile browser UI."
+          },
+          {
+            "name": "svh",
+            "item_type": "unit",
+            "description": "1% of small viewport height (browser UI visible)."
+          },
+          {
+            "name": "lvh",
+            "item_type": "unit",
+            "description": "1% of large viewport height (browser UI hidden)."
+          },
+          {
+            "name": "cqw",
+            "item_type": "unit",
+            "description": "1% of container query width. Used inside @container."
+          },
+          {
+            "name": "cqh",
+            "item_type": "unit",
+            "description": "1% of container query height."
+          },
+          {
+            "name": "fr",
+            "item_type": "unit",
+            "description": "Grid fractional unit. 1fr = one share of remaining space."
+          },
+          {
+            "name": "lh",
+            "item_type": "unit",
+            "description": "Relative to element's line-height."
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "display_values",
+        "items": [
+          {
+            "name": "block",
+            "item_type": "value",
+            "description": "Block-level box. Full width, new line."
+          },
+          {
+            "name": "inline",
+            "item_type": "value",
+            "description": "Inline box. Flows with text."
+          },
+          {
+            "name": "inline-block",
+            "item_type": "value",
+            "description": "Inline box accepting width/height."
+          },
+          {
+            "name": "flex",
+            "item_type": "value",
+            "description": "Flex container. 1D layout (row/column)."
+          },
+          {
+            "name": "inline-flex",
+            "item_type": "value",
+            "description": "Inline-level flex container."
+          },
+          {
+            "name": "grid",
+            "item_type": "value",
+            "description": "Grid container. 2D layout (rows + columns)."
+          },
+          {
+            "name": "inline-grid",
+            "item_type": "value",
+            "description": "Inline-level grid container."
+          },
+          {
+            "name": "none",
+            "item_type": "value",
+            "description": "Removed from layout and accessibility tree."
+          },
+          {
+            "name": "contents",
+            "item_type": "value",
+            "description": "Box disappears; children promoted to parent layout."
+          },
+          {
+            "name": "flow-root",
+            "item_type": "value",
+            "description": "Block box with new block formatting context (clears floats)."
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "position_values",
+        "items": [
+          {
+            "name": "static",
+            "item_type": "value",
+            "description": "Default. Normal document flow."
+          },
+          {
+            "name": "relative",
+            "item_type": "value",
+            "description": "Offset from normal position. Creates positioning context."
+          },
+          {
+            "name": "absolute",
+            "item_type": "value",
+            "description": "Removed from flow. Relative to nearest positioned ancestor."
+          },
+          {
+            "name": "fixed",
+            "item_type": "value",
+            "description": "Removed from flow. Relative to viewport."
+          },
+          {
+            "name": "sticky",
+            "item_type": "value",
+            "description": "Scrolls then sticks. Hybrid relative + fixed."
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "named_colors",
+        "items": [
+          {
+            "name": "black",
+            "item_type": "color",
+            "description": "#000000"
+          },
+          {
+            "name": "white",
+            "item_type": "color",
+            "description": "#ffffff"
+          },
+          {
+            "name": "red",
+            "item_type": "color",
+            "description": "#ff0000"
+          },
+          {
+            "name": "green",
+            "item_type": "color",
+            "description": "#008000"
+          },
+          {
+            "name": "blue",
+            "item_type": "color",
+            "description": "#0000ff"
+          },
+          {
+            "name": "gray",
+            "item_type": "color",
+            "description": "#808080"
+          },
+          {
+            "name": "orange",
+            "item_type": "color",
+            "description": "#ffa500"
+          },
+          {
+            "name": "purple",
+            "item_type": "color",
+            "description": "#800080"
+          },
+          {
+            "name": "tomato",
+            "item_type": "color",
+            "description": "#ff6347"
+          },
+          {
+            "name": "dodgerblue",
+            "item_type": "color",
+            "description": "#1e90ff"
+          },
+          {
+            "name": "coral",
+            "item_type": "color",
+            "description": "#ff7f50"
+          },
+          {
+            "name": "slategray",
+            "item_type": "color",
+            "description": "#708090"
+          },
+          {
+            "name": "rebeccapurple",
+            "item_type": "color",
+            "description": "#663399"
+          },
+          {
+            "name": "hotpink",
+            "item_type": "color",
+            "description": "#ff69b4"
+          },
+          {
+            "name": "cornflowerblue",
+            "item_type": "color",
+            "description": "#6495ed"
+          },
+          {
+            "name": "darkslategray",
+            "item_type": "color",
+            "description": "#2f4f4f"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "media_features",
+        "items": [
+          {
+            "name": "prefers-color-scheme",
+            "item_type": "feature",
+            "description": "OS light/dark mode. Values: light, dark"
+          },
+          {
+            "name": "prefers-reduced-motion",
+            "item_type": "feature",
+            "description": "Reduced motion preference. Values: no-preference, reduce"
+          },
+          {
+            "name": "prefers-contrast",
+            "item_type": "feature",
+            "description": "High contrast preference. Values: no-preference, more, less, custom"
+          },
+          {
+            "name": "prefers-reduced-transparency",
+            "item_type": "feature",
+            "description": "Less transparency preference. Values: no-preference, reduce"
+          },
+          {
+            "name": "min-width",
+            "item_type": "feature",
+            "description": "Minimum viewport width for mobile-first breakpoints"
+          },
+          {
+            "name": "max-width",
+            "item_type": "feature",
+            "description": "Maximum viewport width for desktop-first breakpoints"
+          },
+          {
+            "name": "hover",
+            "item_type": "feature",
+            "description": "Hover capability. hover: hover (mouse), hover: none (touch)"
+          },
+          {
+            "name": "pointer",
+            "item_type": "feature",
+            "description": "Pointing precision. Values: none, coarse (touch), fine (mouse)"
+          },
+          {
+            "name": "orientation",
+            "item_type": "feature",
+            "description": "Viewport orientation. Values: portrait, landscape"
+          },
+          {
+            "name": "display-mode",
+            "item_type": "feature",
+            "description": "App display mode. Values: fullscreen, standalone, minimal-ui, browser"
+          },
+          {
+            "name": "forced-colors",
+            "item_type": "feature",
+            "description": "Windows high contrast mode. Values: none, active"
+          },
+          {
+            "name": "color-gamut",
+            "item_type": "feature",
+            "description": "Color range support. Values: srgb, p3, rec2020"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "timing_functions",
+        "items": [
+          {
+            "name": "ease",
+            "item_type": "value",
+            "description": "Default: slow start, fast, slow end"
+          },
+          {
+            "name": "ease-in",
+            "item_type": "value",
+            "description": "Slow start, accelerates. For exit animations."
+          },
+          {
+            "name": "ease-out",
+            "item_type": "value",
+            "description": "Fast start, decelerates. For entry animations."
+          },
+          {
+            "name": "ease-in-out",
+            "item_type": "value",
+            "description": "Slow both ends. For looping animations."
+          },
+          {
+            "name": "linear",
+            "item_type": "value",
+            "description": "Constant speed. For progress bars and rotations."
+          },
+          {
+            "name": "cubic-bezier()",
+            "item_type": "function",
+            "description": "Custom curve: cubic-bezier(x1, y1, x2, y2)"
+          },
+          {
+            "name": "steps()",
+            "item_type": "function",
+            "description": "Step timing for frame-by-frame animation"
+          }
+        ],
+        "submodules": []
+      }
+    ]
+  }
 }

@@ -449,6 +449,258 @@
       "description": "asserts - Used in assertion function signatures to narrow types.",
       "example": "function assert(condition: any): asserts condition { if (!condition) throw new Error(); }",
       "category": "type_guards"
+    },
+    {
+      "keyword": "override",
+      "type": "keyword",
+      "description": "override - Explicitly marks a method as overriding a parent class method. Enables compile-time checks.",
+      "example": "override toString(): string { return this.name; }",
+      "category": "class_modifiers"
+    },
+    {
+      "keyword": "accessor",
+      "type": "keyword",
+      "description": "accessor - Auto-accessor keyword (TS 4.9+). Creates private backing field with auto getter/setter.",
+      "example": "class User { accessor name: string = ''; }",
+      "category": "class_modifiers"
+    },
+    {
+      "keyword": "using",
+      "type": "keyword",
+      "description": "using - Explicit resource management (TS 5.2+). Auto-disposes when leaving scope via Symbol.dispose.",
+      "example": "using file = openFile('data.txt'); // auto-disposed at end of scope",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "await using",
+      "type": "keyword",
+      "description": "await using - Async resource management (TS 5.2+). Auto-disposes via Symbol.asyncDispose.",
+      "example": "await using conn = await getConnection(); // auto-disposed at end of scope",
+      "category": "variable_declaration"
+    },
+    {
+      "keyword": "import type",
+      "type": "keyword",
+      "description": "import type - Import only type information, erased at runtime. Prevents accidental side effects.",
+      "example": "import type { User } from './types';",
+      "category": "module_system"
+    },
+    {
+      "keyword": "export type",
+      "type": "keyword",
+      "description": "export type - Export only type information. Explicit type-only export.",
+      "example": "export type { User, Config } from './types';",
+      "category": "module_system"
+    },
+    {
+      "keyword": "in",
+      "type": "keyword",
+      "description": "in - Used in mapped types to iterate over keys, or as type narrowing operator.",
+      "example": "type Flags = { [K in keyof T]: boolean }; if ('name' in obj) { }",
+      "category": "type_operators"
+    },
+    {
+      "keyword": "out",
+      "type": "keyword",
+      "description": "out - Covariant type parameter variance annotation (TS 4.7+). Type can only appear in output positions.",
+      "example": "interface Producer<out T> { get(): T; }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "in (variance)",
+      "type": "keyword",
+      "description": "in - Contravariant type parameter variance annotation (TS 4.7+). Type can only appear in input positions.",
+      "example": "interface Consumer<in T> { accept(value: T): void; }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "instanceof",
+      "type": "keyword",
+      "description": "instanceof - Runtime type check that narrows types. Works with class instances.",
+      "example": "if (error instanceof TypeError) { console.log(error.message); }",
+      "category": "type_guards"
+    },
+    {
+      "keyword": "ConstructorParameters",
+      "type": "utility_type",
+      "description": "ConstructorParameters - Extracts parameter types of a constructor function as a tuple.",
+      "example": "type Params = ConstructorParameters<typeof MyClass>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "ThisParameterType",
+      "type": "utility_type",
+      "description": "ThisParameterType - Extracts the type of the 'this' parameter from a function type.",
+      "example": "type T = ThisParameterType<typeof myMethod>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "OmitThisParameter",
+      "type": "utility_type",
+      "description": "OmitThisParameter - Removes the 'this' parameter from a function type.",
+      "example": "type Fn = OmitThisParameter<typeof myMethod>;",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "ThisType",
+      "type": "utility_type",
+      "description": "ThisType - Sets the type of 'this' in an object literal. Used with --noImplicitThis.",
+      "example": "type ObjectDescriptor<D, M> = { data?: D; methods?: M & ThisType<D & M>; };",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Uppercase",
+      "type": "utility_type",
+      "description": "Uppercase - Intrinsic string manipulation type. Converts string literal type to uppercase.",
+      "example": "type Upper = Uppercase<'hello'>; // 'HELLO'",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Lowercase",
+      "type": "utility_type",
+      "description": "Lowercase - Intrinsic string manipulation type. Converts string literal type to lowercase.",
+      "example": "type Lower = Lowercase<'HELLO'>; // 'hello'",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Capitalize",
+      "type": "utility_type",
+      "description": "Capitalize - Intrinsic string manipulation type. Capitalizes first character.",
+      "example": "type Cap = Capitalize<'hello'>; // 'Hello'",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Uncapitalize",
+      "type": "utility_type",
+      "description": "Uncapitalize - Intrinsic string manipulation type. Lowercases first character.",
+      "example": "type Uncap = Uncapitalize<'Hello'>; // 'hello'",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "NoInfer",
+      "type": "utility_type",
+      "description": "NoInfer - Prevents type inference from a specific position (TS 5.4+).",
+      "example": "function fn<T>(value: T, defaultVal: NoInfer<T>): T { return value ?? defaultVal; }",
+      "category": "utility_types"
+    },
+    {
+      "keyword": "Map",
+      "type": "type",
+      "description": "Map - Generic key-value collection with any type as key. Maintains insertion order.",
+      "example": "const map = new Map<string, User>(); map.set('alice', user);",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "Set",
+      "type": "type",
+      "description": "Set - Generic collection of unique values.",
+      "example": "const ids = new Set<number>([1, 2, 3]);",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "WeakMap",
+      "type": "type",
+      "description": "WeakMap - Map with weak references to keys (must be objects). Allows garbage collection.",
+      "example": "const cache = new WeakMap<object, string>();",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "WeakSet",
+      "type": "type",
+      "description": "WeakSet - Set with weak references to values (must be objects). Allows garbage collection.",
+      "example": "const seen = new WeakSet<object>();",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "ReadonlyArray",
+      "type": "type",
+      "description": "ReadonlyArray - Array type that prevents mutations. No push, pop, splice, etc.",
+      "example": "function process(items: ReadonlyArray<string>) { /* can't mutate */ }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "ReadonlyMap",
+      "type": "type",
+      "description": "ReadonlyMap - Map type that prevents mutations. No set, delete, clear.",
+      "example": "const config: ReadonlyMap<string, number> = new Map([['port', 3000]]);",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "ReadonlySet",
+      "type": "type",
+      "description": "ReadonlySet - Set type that prevents mutations. No add, delete, clear.",
+      "example": "const roles: ReadonlySet<string> = new Set(['admin', 'user']);",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "Iterable",
+      "type": "type",
+      "description": "Iterable - Type for objects implementing the iteration protocol (Symbol.iterator).",
+      "example": "function process<T>(items: Iterable<T>): void { for (const item of items) { } }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "AsyncIterable",
+      "type": "type",
+      "description": "AsyncIterable - Type for async iteration protocol (Symbol.asyncIterator).",
+      "example": "async function* generate(): AsyncIterable<number> { yield 1; yield 2; }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "Iterator",
+      "type": "type",
+      "description": "Iterator - Type with next() method returning { value, done }.",
+      "example": "function createIterator(): Iterator<number> { /* ... */ }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "Generator",
+      "type": "type",
+      "description": "Generator - Type for generator functions. Generator<Yield, Return, Next>.",
+      "example": "function* range(start: number, end: number): Generator<number> { /* ... */ }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "AsyncGenerator",
+      "type": "type",
+      "description": "AsyncGenerator - Type for async generator functions.",
+      "example": "async function* stream(): AsyncGenerator<Chunk> { /* ... */ }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "PromiseLike",
+      "type": "type",
+      "description": "PromiseLike - Type for thenable objects. More general than Promise.",
+      "example": "function wrap<T>(value: T | PromiseLike<T>): Promise<T> { return Promise.resolve(value); }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "PropertyKey",
+      "type": "type",
+      "description": "PropertyKey - Union type of valid property key types: string | number | symbol.",
+      "example": "function getProperty(obj: object, key: PropertyKey): unknown { }",
+      "category": "primitive_types"
+    },
+    {
+      "keyword": "Disposable",
+      "type": "type",
+      "description": "Disposable - Interface for explicit resource management (TS 5.2+). Implements Symbol.dispose.",
+      "example": "class FileHandle implements Disposable { [Symbol.dispose]() { this.close(); } }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "AsyncDisposable",
+      "type": "type",
+      "description": "AsyncDisposable - Async version of Disposable (TS 5.2+). Implements Symbol.asyncDispose.",
+      "example": "class Connection implements AsyncDisposable { async [Symbol.asyncDispose]() { await this.close(); } }",
+      "category": "generic_types"
+    },
+    {
+      "keyword": "const (type parameter)",
+      "type": "keyword",
+      "description": "const type parameter - Infer literal/readonly types from generic arguments (TS 5.0+).",
+      "example": "function createTuple<const T extends readonly unknown[]>(...args: T): T { return args; }",
+      "category": "generic_types"
     }
   ],
   "snippets": [
@@ -709,6 +961,306 @@
       "description": "Override method in derived class",
       "content": "override ${1:methodName}(${2:params}): ${3:returnType} {\n    ${4:// implementation}\n}",
       "category": "class_methods"
+    },
+    {
+      "trigger": "discriminated_union",
+      "description": "Discriminated union with type narrowing",
+      "content": "type ${1:Shape} =\n    | { kind: '${2:circle}'; ${3:radius}: number }\n    | { kind: '${4:square}'; ${5:side}: number };\n\nfunction ${6:area}(shape: ${1:Shape}): number {\n    switch (shape.kind) {\n        case '${2:circle}':\n            return Math.PI * shape.${3:radius} ** 2;\n        case '${4:square}':\n            return shape.${5:side} ** 2;\n    }\n}",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "exhaustive_check",
+      "description": "Exhaustive check with never type",
+      "content": "function assertNever(value: never): never {\n    throw new Error(`Unexpected value: ${value}`);\n}\n\n// In switch:\n// default: return assertNever(${1:value});",
+      "category": "type_guards"
+    },
+    {
+      "trigger": "branded_type",
+      "description": "Branded / nominal type for type-safe IDs",
+      "content": "type ${1:Brand}<T, B> = T & { readonly __brand: B };\n\ntype ${2:UserId} = ${1:Brand}<string, '${2:UserId}'>;\ntype ${3:OrderId} = ${1:Brand}<string, '${3:OrderId}'>;\n\nfunction create${2:UserId}(id: string): ${2:UserId} {\n    return id as ${2:UserId};\n}",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "template_literal_type",
+      "description": "Template literal type",
+      "content": "type ${1:EventName} = `${2:on}${Capitalize<string>}`;\n\n// Or with union:\ntype ${3:Action} = '${4:get}' | '${5:set}' | '${6:delete}';\ntype ${7:Method} = `${${3:Action}}${Capitalize<string>}`;",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "recursive_type",
+      "description": "Recursive type definition",
+      "content": "type ${1:JSONValue} =\n    | string\n    | number\n    | boolean\n    | null\n    | ${1:JSONValue}[]\n    | { [key: string]: ${1:JSONValue} };",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "function_overload",
+      "description": "Function overloads with implementation",
+      "content": "function ${1:process}(value: string): string;\nfunction ${1:process}(value: number): number;\nfunction ${1:process}(value: string | number): string | number {\n    if (typeof value === 'string') {\n        return ${2:value.toUpperCase()};\n    }\n    return ${3:value * 2};\n}",
+      "category": "function_types"
+    },
+    {
+      "trigger": "arrow_function_typed",
+      "description": "Typed arrow function",
+      "content": "const ${1:fn} = (${2:param}: ${3:type}): ${4:returnType} => {\n    ${5:// implementation}\n};",
+      "category": "function_types"
+    },
+    {
+      "trigger": "callback_type",
+      "description": "Callback function type",
+      "content": "type ${1:Callback}<${2:T}> = (${3:error}: Error | null, ${4:result}: ${2:T}) => void;",
+      "category": "function_types"
+    },
+    {
+      "trigger": "async_arrow_typed",
+      "description": "Typed async arrow function",
+      "content": "const ${1:fn} = async (${2:param}: ${3:type}): Promise<${4:returnType}> => {\n    ${5:// implementation}\n};",
+      "category": "async"
+    },
+    {
+      "trigger": "result_type",
+      "description": "Result type for error handling (Either pattern)",
+      "content": "type ${1:Result}<T, E = Error> =\n    | { success: true; data: T }\n    | { success: false; error: E };\n\nfunction ${2:ok}<T>(data: T): ${1:Result}<T> {\n    return { success: true, data };\n}\n\nfunction ${3:err}<E = Error>(error: E): ${1:Result}<never, E> {\n    return { success: false, error };\n}",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "assertion_function",
+      "description": "Assertion function that narrows types",
+      "content": "function ${1:assertDefined}<T>(value: T | null | undefined, message?: string): asserts value is T {\n    if (value === null || value === undefined) {\n        throw new Error(message ?? '${2:Value is not defined}');\n    }\n}",
+      "category": "type_guards"
+    },
+    {
+      "trigger": "type_guard_in",
+      "description": "Type guard using 'in' operator",
+      "content": "function is${1:Type}(value: ${2:unknown}): value is ${1:Type} {\n    return (\n        typeof value === 'object' &&\n        value !== null &&\n        '${3:property}' in value\n    );\n}",
+      "category": "type_guards"
+    },
+    {
+      "trigger": "type_guard_instanceof",
+      "description": "Type guard using instanceof",
+      "content": "function is${1:Type}(value: unknown): value is ${1:Type} {\n    return value instanceof ${1:Type};\n}",
+      "category": "type_guards"
+    },
+    {
+      "trigger": "satisfies_usage",
+      "description": "Satisfies operator for type validation",
+      "content": "const ${1:config} = {\n    ${2:port}: ${3:3000},\n    ${4:host}: '${5:localhost}'\n} satisfies ${6:Config};",
+      "category": "type_assertions"
+    },
+    {
+      "trigger": "mapped_type_modifiers",
+      "description": "Mapped type with modifier changes",
+      "content": "type ${1:Mutable}<T> = {\n    -readonly [K in keyof T]: T[K];\n};\n\ntype ${2:Optional}<T> = {\n    [K in keyof T]+?: T[K];\n};",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "template_mapped_type",
+      "description": "Mapped type with template literal key remapping",
+      "content": "type ${1:Getters}<T> = {\n    [K in keyof T as `get${Capitalize<string & K>}`]: () => T[K];\n};",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "infer_conditional",
+      "description": "Conditional type with infer",
+      "content": "type ${1:UnpackPromise}<T> = T extends Promise<infer U> ? U : T;\ntype ${2:UnpackArray}<T> = T extends (infer U)[] ? U : T;",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "string_enum",
+      "description": "String enum with values",
+      "content": "enum ${1:Status} {\n    ${2:Active} = '${3:active}',\n    ${4:Inactive} = '${5:inactive}',\n    ${6:Pending} = '${7:pending}'\n}",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "const_enum",
+      "description": "Const enum (inlined at compile time)",
+      "content": "const enum ${1:Direction} {\n    ${2:Up} = '${3:UP}',\n    ${4:Down} = '${5:DOWN}',\n    ${6:Left} = '${7:LEFT}',\n    ${8:Right} = '${9:RIGHT}'\n}",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "enum_to_union",
+      "description": "Convert enum values to union type",
+      "content": "const ${1:Status} = {\n    ${2:Active}: '${3:active}',\n    ${4:Inactive}: '${5:inactive}'\n} as const;\n\ntype ${1:Status} = typeof ${1:Status}[keyof typeof ${1:Status}];",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "interface_extends",
+      "description": "Interface extending multiple interfaces",
+      "content": "interface ${1:InterfaceName} extends ${2:Base1}, ${3:Base2} {\n    ${4:property}: ${5:type};\n}",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "interface_methods",
+      "description": "Interface with methods and optional properties",
+      "content": "interface ${1:InterfaceName} {\n    readonly ${2:id}: string;\n    ${3:name}: string;\n    ${4:email}?: string;\n    ${5:greet}(${6:message}: string): ${7:void};\n}",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "class_implements",
+      "description": "Class implementing interface",
+      "content": "class ${1:ClassName} implements ${2:InterfaceName} {\n    constructor(\n        public readonly ${3:id}: string,\n        public ${4:name}: string\n    ) {}\n\n    ${5:method}(${6:param}: ${7:type}): ${8:returnType} {\n        ${9:// implementation}\n    }\n}",
+      "category": "class"
+    },
+    {
+      "trigger": "class_singleton",
+      "description": "Singleton pattern with TypeScript",
+      "content": "class ${1:Singleton} {\n    private static instance: ${1:Singleton};\n    private constructor() {}\n\n    static getInstance(): ${1:Singleton} {\n        if (!${1:Singleton}.instance) {\n            ${1:Singleton}.instance = new ${1:Singleton}();\n        }\n        return ${1:Singleton}.instance;\n    }\n}",
+      "category": "class"
+    },
+    {
+      "trigger": "class_builder",
+      "description": "Builder pattern with TypeScript",
+      "content": "class ${1:Builder} {\n    private ${2:config}: Partial<${3:Config}> = {};\n\n    ${4:setName}(${5:name}: string): this {\n        this.${2:config}.${5:name} = ${5:name};\n        return this;\n    }\n\n    ${6:setPort}(${7:port}: number): this {\n        this.${2:config}.${7:port} = ${7:port};\n        return this;\n    }\n\n    build(): ${3:Config} {\n        return this.${2:config} as ${3:Config};\n    }\n}",
+      "category": "class"
+    },
+    {
+      "trigger": "generic_constraint_multiple",
+      "description": "Generic with multiple constraints",
+      "content": "function ${1:merge}<T extends ${2:object}, U extends ${3:object}>(target: T, source: U): T & U {\n    return { ...target, ...source };\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "generic_default",
+      "description": "Generic with default type parameter",
+      "content": "interface ${1:Container}<T = ${2:string}> {\n    value: T;\n    transform: (input: T) => T;\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "generic_keyof",
+      "description": "Type-safe property access with keyof",
+      "content": "function ${1:getProperty}<T, K extends keyof T>(obj: T, key: K): T[K] {\n    return obj[key];\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "generic_record_constraint",
+      "description": "Generic constrained to Record-like objects",
+      "content": "function ${1:mapValues}<T extends Record<string, unknown>, U>(\n    obj: T,\n    fn: (value: T[keyof T]) => U\n): Record<keyof T, U> {\n    const result = {} as Record<keyof T, U>;\n    for (const key in obj) {\n        result[key] = fn(obj[key]);\n    }\n    return result;\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "const_type_param",
+      "description": "Const type parameter for literal inference (TS 5.0+)",
+      "content": "function ${1:createRoutes}<const T extends readonly ${2:Route}[]>(routes: T): T {\n    return routes;\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "deep_readonly",
+      "description": "Deep readonly recursive type",
+      "content": "type DeepReadonly<T> = T extends (infer U)[]\n    ? ReadonlyArray<DeepReadonly<U>>\n    : T extends object\n    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }\n    : T;",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "deep_partial",
+      "description": "Deep partial recursive type",
+      "content": "type DeepPartial<T> = T extends object\n    ? { [K in keyof T]?: DeepPartial<T[K]> }\n    : T;",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "strict_omit",
+      "description": "Strict Omit that only allows existing keys",
+      "content": "type StrictOmit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;",
+      "category": "utility_types"
+    },
+    {
+      "trigger": "paths_type",
+      "description": "Type-safe dot-notation paths of an object",
+      "content": "type ${1:Paths}<T> = T extends object\n    ? { [K in keyof T]: K extends string\n        ? T[K] extends object\n            ? K | `${K}.${${1:Paths}<T[K]>}`\n            : K\n        : never\n    }[keyof T]\n    : never;",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "event_emitter_typed",
+      "description": "Type-safe event emitter",
+      "content": "type ${1:EventMap} = {\n    ${2:message}: { text: string };\n    ${3:error}: { code: number; message: string };\n};\n\nclass TypedEmitter<T extends Record<string, unknown>> {\n    private listeners = new Map<keyof T, Set<Function>>();\n\n    on<K extends keyof T>(event: K, listener: (data: T[K]) => void): void {\n        if (!this.listeners.has(event)) this.listeners.set(event, new Set());\n        this.listeners.get(event)!.add(listener);\n    }\n\n    emit<K extends keyof T>(event: K, data: T[K]): void {\n        this.listeners.get(event)?.forEach(fn => fn(data));\n    }\n}",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "declare_module_augment",
+      "description": "Module augmentation / declaration merging",
+      "content": "declare module '${1:module-name}' {\n    interface ${2:ExistingInterface} {\n        ${3:newProperty}: ${4:type};\n    }\n}",
+      "category": "ambient_declarations"
+    },
+    {
+      "trigger": "declare_env",
+      "description": "Declare environment variable types",
+      "content": "declare namespace NodeJS {\n    interface ProcessEnv {\n        ${1:NODE_ENV}: '${2:development}' | '${3:production}' | '${4:test}';\n        ${5:PORT}: string;\n        ${6:DATABASE_URL}: string;\n    }\n}",
+      "category": "ambient_declarations"
+    },
+    {
+      "trigger": "using_disposable",
+      "description": "Using declaration with Disposable (TS 5.2+)",
+      "content": "class ${1:Resource} implements Disposable {\n    constructor(private ${2:name}: string) {\n        console.log(`Acquired ${this.${2:name}}`);\n    }\n\n    [Symbol.dispose](): void {\n        console.log(`Disposed ${this.${2:name}}`);\n    }\n}\n\n// Usage:\n// using ${3:resource} = new ${1:Resource}('${4:file}');",
+      "category": "class"
+    },
+    {
+      "trigger": "type_from_const",
+      "description": "Derive type from const object (as const pattern)",
+      "content": "const ${1:values} = ['${2:a}', '${3:b}', '${4:c}'] as const;\ntype ${5:Value} = typeof ${1:values}[number]; // '${2:a}' | '${3:b}' | '${4:c}'",
+      "category": "type_declaration"
+    },
+    {
+      "trigger": "import_type",
+      "description": "Type-only import",
+      "content": "import type { ${1:TypeName} } from '${2:./module}';",
+      "category": "module_system"
+    },
+    {
+      "trigger": "export_type",
+      "description": "Type-only export",
+      "content": "export type { ${1:TypeName} } from '${2:./module}';",
+      "category": "module_system"
+    },
+    {
+      "trigger": "import_dynamic_type",
+      "description": "Dynamic import type (import())",
+      "content": "type ${1:Module} = typeof import('${2:./module}');",
+      "category": "module_system"
+    },
+    {
+      "trigger": "type_safe_fetch",
+      "description": "Type-safe fetch wrapper",
+      "content": "async function ${1:fetchJSON}<T>(url: string, init?: RequestInit): Promise<T> {\n    const response = await fetch(url, init);\n    if (!response.ok) {\n        throw new Error(`HTTP ${response.status}: ${response.statusText}`);\n    }\n    return response.json() as Promise<T>;\n}",
+      "category": "async"
+    },
+    {
+      "trigger": "generic_async_handler",
+      "description": "Generic async error handling wrapper",
+      "content": "async function ${1:tryCatch}<T>(fn: () => Promise<T>): Promise<[T, null] | [null, Error]> {\n    try {\n        const result = await fn();\n        return [result, null];\n    } catch (error) {\n        return [null, error instanceof Error ? error : new Error(String(error))];\n    }\n}",
+      "category": "async"
+    },
+    {
+      "trigger": "parameter_decorator",
+      "description": "Parameter decorator",
+      "content": "function ${1:Inject}(${2:token}: string) {\n    return function (target: any, propertyKey: string | undefined, parameterIndex: number) {\n        ${3:// decorator logic}\n    };\n}",
+      "category": "decorators"
+    },
+    {
+      "trigger": "class_generic_repository",
+      "description": "Generic repository pattern",
+      "content": "interface ${1:Repository}<T extends { id: ${2:string} }> {\n    findById(id: ${2:string}): Promise<T | null>;\n    findAll(): Promise<T[]>;\n    create(data: Omit<T, 'id'>): Promise<T>;\n    update(id: ${2:string}, data: Partial<T>): Promise<T>;\n    delete(id: ${2:string}): Promise<void>;\n}",
+      "category": "generics"
+    },
+    {
+      "trigger": "class_with_accessors",
+      "description": "Class with getter/setter and private field",
+      "content": "class ${1:ClassName} {\n    #${2:value}: ${3:type};\n\n    constructor(${2:value}: ${3:type}) {\n        this.#${2:value} = ${2:value};\n    }\n\n    get ${2:value}(): ${3:type} {\n        return this.#${2:value};\n    }\n\n    set ${2:value}(newValue: ${3:type}) {\n        ${4:// validation}\n        this.#${2:value} = newValue;\n    }\n}",
+      "category": "class"
+    },
+    {
+      "trigger": "type_safe_object_entries",
+      "description": "Type-safe Object.entries / Object.keys",
+      "content": "function typedEntries<T extends object>(obj: T): [keyof T, T[keyof T]][] {\n    return Object.entries(obj) as [keyof T, T[keyof T]][];\n}\n\nfunction typedKeys<T extends object>(obj: T): (keyof T)[] {\n    return Object.keys(obj) as (keyof T)[];\n}",
+      "category": "utility_types"
+    },
+    {
+      "trigger": "pick_by_value",
+      "description": "Pick properties by value type",
+      "content": "type ${1:PickByValue}<T, V> = {\n    [K in keyof T as T[K] extends V ? K : never]: T[K];\n};",
+      "category": "advanced_types"
+    },
+    {
+      "trigger": "class_abstract_factory",
+      "description": "Abstract factory with generic constructor",
+      "content": "abstract class ${1:BaseFactory}<T> {\n    abstract create(${2:data}: Partial<T>): T;\n\n    createMany(items: Partial<T>[]): T[] {\n        return items.map(item => this.create(item));\n    }\n}",
+      "category": "class"
     }
   ],
   "imports": {
@@ -719,15 +1271,96 @@
           {
             "name": "Buffer",
             "item_type": "type",
-            "description": "Node.js Buffer type"
+            "description": "Node.js Buffer type for binary data"
           },
           {
             "name": "NodeJS",
             "item_type": "namespace",
             "description": "Node.js global namespace"
+          },
+          {
+            "name": "EventEmitter",
+            "item_type": "class",
+            "description": "Node.js event emitter base class"
+          },
+          {
+            "name": "Readable",
+            "item_type": "class",
+            "description": "Node.js readable stream"
+          },
+          {
+            "name": "Writable",
+            "item_type": "class",
+            "description": "Node.js writable stream"
           }
         ],
-        "submodules": []
+        "submodules": [
+          {
+            "path": "node:fs/promises",
+            "items": [
+              {
+                "name": "readFile",
+                "item_type": "function",
+                "description": "Read file contents asynchronously"
+              },
+              {
+                "name": "writeFile",
+                "item_type": "function",
+                "description": "Write data to a file asynchronously"
+              },
+              {
+                "name": "mkdir",
+                "item_type": "function",
+                "description": "Create directory asynchronously"
+              }
+            ]
+          },
+          {
+            "path": "node:path",
+            "items": [
+              {
+                "name": "join",
+                "item_type": "function",
+                "description": "Join path segments"
+              },
+              {
+                "name": "resolve",
+                "item_type": "function",
+                "description": "Resolve path to absolute"
+              },
+              {
+                "name": "basename",
+                "item_type": "function",
+                "description": "Get filename from path"
+              },
+              {
+                "name": "dirname",
+                "item_type": "function",
+                "description": "Get directory from path"
+              },
+              {
+                "name": "extname",
+                "item_type": "function",
+                "description": "Get file extension"
+              }
+            ]
+          },
+          {
+            "path": "node:url",
+            "items": [
+              {
+                "name": "URL",
+                "item_type": "class",
+                "description": "WHATWG URL implementation"
+              },
+              {
+                "name": "fileURLToPath",
+                "item_type": "function",
+                "description": "Convert file URL to path"
+              }
+            ]
+          }
+        ]
       },
       {
         "path": "@types/react",
@@ -740,7 +1373,62 @@
           {
             "name": "ReactNode",
             "item_type": "type",
-            "description": "React node type"
+            "description": "React node type (anything renderable)"
+          },
+          {
+            "name": "ReactElement",
+            "item_type": "type",
+            "description": "React element type (JSX result)"
+          },
+          {
+            "name": "PropsWithChildren",
+            "item_type": "type",
+            "description": "Props type helper including children"
+          },
+          {
+            "name": "ComponentProps",
+            "item_type": "type",
+            "description": "Extract props type from a component"
+          },
+          {
+            "name": "HTMLAttributes",
+            "item_type": "type",
+            "description": "HTML element attribute types"
+          },
+          {
+            "name": "ChangeEvent",
+            "item_type": "type",
+            "description": "Change event type for form elements"
+          },
+          {
+            "name": "MouseEvent",
+            "item_type": "type",
+            "description": "Mouse event type"
+          },
+          {
+            "name": "FormEvent",
+            "item_type": "type",
+            "description": "Form event type for submit handlers"
+          },
+          {
+            "name": "KeyboardEvent",
+            "item_type": "type",
+            "description": "Keyboard event type"
+          },
+          {
+            "name": "RefObject",
+            "item_type": "type",
+            "description": "Ref object type from useRef"
+          },
+          {
+            "name": "Dispatch",
+            "item_type": "type",
+            "description": "Dispatch type from useReducer"
+          },
+          {
+            "name": "SetStateAction",
+            "item_type": "type",
+            "description": "Type for setState actions"
           },
           {
             "name": "useState",
@@ -751,6 +1439,31 @@
             "name": "useEffect",
             "item_type": "function",
             "description": "React useEffect hook"
+          },
+          {
+            "name": "useRef",
+            "item_type": "function",
+            "description": "React useRef hook"
+          },
+          {
+            "name": "useMemo",
+            "item_type": "function",
+            "description": "React useMemo hook"
+          },
+          {
+            "name": "useCallback",
+            "item_type": "function",
+            "description": "React useCallback hook"
+          },
+          {
+            "name": "useContext",
+            "item_type": "function",
+            "description": "React useContext hook"
+          },
+          {
+            "name": "useReducer",
+            "item_type": "function",
+            "description": "React useReducer hook"
           }
         ],
         "submodules": []
@@ -767,6 +1480,21 @@
             "name": "TransformationContext",
             "item_type": "interface",
             "description": "Transformation context for custom transformers"
+          },
+          {
+            "name": "SourceFile",
+            "item_type": "interface",
+            "description": "Represents a parsed TypeScript source file"
+          },
+          {
+            "name": "Program",
+            "item_type": "interface",
+            "description": "Represents a TypeScript compilation program"
+          },
+          {
+            "name": "TypeChecker",
+            "item_type": "interface",
+            "description": "Type checker for semantic analysis"
           }
         ],
         "submodules": []
@@ -783,6 +1511,21 @@
             "name": "ZodType",
             "item_type": "type",
             "description": "Base Zod type"
+          },
+          {
+            "name": "ZodSchema",
+            "item_type": "type",
+            "description": "Zod schema type"
+          },
+          {
+            "name": "ZodError",
+            "item_type": "class",
+            "description": "Zod validation error class"
+          },
+          {
+            "name": "infer",
+            "item_type": "type",
+            "description": "Infer TypeScript type from Zod schema: z.infer<typeof schema>"
           }
         ],
         "submodules": []
@@ -793,7 +1536,7 @@
           {
             "name": "Simplify",
             "item_type": "type",
-            "description": "Simplifies complex types"
+            "description": "Simplifies complex types for better readability"
           },
           {
             "name": "SetRequired",
@@ -804,6 +1547,103 @@
             "name": "SetOptional",
             "item_type": "type",
             "description": "Makes specified keys optional"
+          },
+          {
+            "name": "Merge",
+            "item_type": "type",
+            "description": "Merge two types, second overrides first"
+          },
+          {
+            "name": "RequireAtLeastOne",
+            "item_type": "type",
+            "description": "Requires at least one of the specified keys"
+          },
+          {
+            "name": "RequireExactlyOne",
+            "item_type": "type",
+            "description": "Requires exactly one of the specified keys"
+          },
+          {
+            "name": "PartialDeep",
+            "item_type": "type",
+            "description": "Recursively makes all properties optional"
+          },
+          {
+            "name": "ReadonlyDeep",
+            "item_type": "type",
+            "description": "Recursively makes all properties readonly"
+          },
+          {
+            "name": "LiteralUnion",
+            "item_type": "type",
+            "description": "Creates union of literal types with autocomplete for string"
+          },
+          {
+            "name": "Jsonify",
+            "item_type": "type",
+            "description": "Type after JSON serialization round-trip"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "ts-pattern",
+        "items": [
+          {
+            "name": "match",
+            "item_type": "function",
+            "description": "Start a pattern matching expression"
+          },
+          {
+            "name": "P",
+            "item_type": "object",
+            "description": "Pattern helper with string, number, boolean, etc."
+          },
+          {
+            "name": "Pattern",
+            "item_type": "type",
+            "description": "Pattern type for type-safe pattern matching"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "vitest",
+        "items": [
+          {
+            "name": "describe",
+            "item_type": "function",
+            "description": "Group related tests"
+          },
+          {
+            "name": "it",
+            "item_type": "function",
+            "description": "Define a test case"
+          },
+          {
+            "name": "expect",
+            "item_type": "function",
+            "description": "Create an assertion"
+          },
+          {
+            "name": "vi",
+            "item_type": "object",
+            "description": "Vitest utility for mocking, timers, etc."
+          },
+          {
+            "name": "beforeEach",
+            "item_type": "function",
+            "description": "Run before each test in block"
+          },
+          {
+            "name": "afterEach",
+            "item_type": "function",
+            "description": "Run after each test in block"
+          },
+          {
+            "name": "Mock",
+            "item_type": "type",
+            "description": "Mock function type"
           }
         ],
         "submodules": []

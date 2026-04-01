@@ -624,6 +624,314 @@
       "description": "removeEventListener - DOM method to remove previously registered event listeners.",
       "example": "element.removeEventListener('click', handler);",
       "category": "events"
+    },
+    {
+      "keyword": "globalThis",
+      "type": "object",
+      "description": "globalThis - Universal global object that works in any environment (browser, Node.js, workers). Preferred over window/global.",
+      "example": "globalThis.setTimeout(() => {}, 1000);",
+      "category": "globals"
+    },
+    {
+      "keyword": "structuredClone",
+      "type": "function",
+      "description": "structuredClone - Creates a deep clone of a value using the structured clone algorithm. Works with most built-in types.",
+      "example": "const clone = structuredClone({ nested: { data: [1, 2] } });",
+      "category": "utilities"
+    },
+    {
+      "keyword": "queueMicrotask",
+      "type": "function",
+      "description": "queueMicrotask - Queues a microtask to run after current task completes but before rendering. Higher priority than setTimeout.",
+      "example": "queueMicrotask(() => { console.log('runs soon'); });",
+      "category": "scheduling"
+    },
+    {
+      "keyword": "requestAnimationFrame",
+      "type": "function",
+      "description": "requestAnimationFrame - Schedules a callback before the next browser repaint. Ideal for animations at 60fps.",
+      "example": "const id = requestAnimationFrame((timestamp) => { animate(timestamp); });",
+      "category": "animation"
+    },
+    {
+      "keyword": "cancelAnimationFrame",
+      "type": "function",
+      "description": "cancelAnimationFrame - Cancels an animation frame request previously scheduled with requestAnimationFrame.",
+      "example": "cancelAnimationFrame(animationId);",
+      "category": "animation"
+    },
+    {
+      "keyword": "requestIdleCallback",
+      "type": "function",
+      "description": "requestIdleCallback - Schedules a callback to run during browser idle periods. Good for non-urgent background work.",
+      "example": "requestIdleCallback((deadline) => { while (deadline.timeRemaining() > 0) { doWork(); } });",
+      "category": "scheduling"
+    },
+    {
+      "keyword": "AbortController",
+      "type": "constructor",
+      "description": "AbortController - Creates a controller object to abort one or more web requests (fetch, event listeners, streams).",
+      "example": "const controller = new AbortController(); fetch(url, { signal: controller.signal });",
+      "category": "async"
+    },
+    {
+      "keyword": "AbortSignal",
+      "type": "constructor",
+      "description": "AbortSignal - Signal object used to communicate with and abort asynchronous operations. Created via AbortController.",
+      "example": "AbortSignal.timeout(5000); AbortSignal.any([signal1, signal2]);",
+      "category": "async"
+    },
+    {
+      "keyword": "TextEncoder",
+      "type": "constructor",
+      "description": "TextEncoder - Encodes strings into Uint8Array using UTF-8 encoding.",
+      "example": "const encoder = new TextEncoder(); const bytes = encoder.encode('hello');",
+      "category": "encoding"
+    },
+    {
+      "keyword": "TextDecoder",
+      "type": "constructor",
+      "description": "TextDecoder - Decodes Uint8Array or ArrayBuffer into strings. Supports multiple encodings.",
+      "example": "const decoder = new TextDecoder('utf-8'); const text = decoder.decode(bytes);",
+      "category": "encoding"
+    },
+    {
+      "keyword": "URL",
+      "type": "constructor",
+      "description": "URL - Parses and constructs URLs with access to individual components (host, pathname, search params).",
+      "example": "const url = new URL('/api/data', 'https://example.com');",
+      "category": "web_apis"
+    },
+    {
+      "keyword": "URLSearchParams",
+      "type": "constructor",
+      "description": "URLSearchParams - Utility for working with URL query strings. Supports iteration and manipulation.",
+      "example": "const params = new URLSearchParams({ q: 'search', page: '1' });",
+      "category": "web_apis"
+    },
+    {
+      "keyword": "FormData",
+      "type": "constructor",
+      "description": "FormData - Constructs key/value pairs representing form fields. Used with fetch for multipart/form-data uploads.",
+      "example": "const form = new FormData(); form.append('file', blob, 'filename.txt');",
+      "category": "web_apis"
+    },
+    {
+      "keyword": "Headers",
+      "type": "constructor",
+      "description": "Headers - Represents HTTP request/response headers. Used with fetch API.",
+      "example": "const headers = new Headers({ 'Content-Type': 'application/json' });",
+      "category": "http"
+    },
+    {
+      "keyword": "Response",
+      "type": "constructor",
+      "description": "Response - Represents the response to a fetch request. Provides methods to read body as JSON, text, blob, etc.",
+      "example": "new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });",
+      "category": "http"
+    },
+    {
+      "keyword": "Request",
+      "type": "constructor",
+      "description": "Request - Represents a resource request. Used with fetch API and service workers.",
+      "example": "const req = new Request('/api/data', { method: 'POST', body: JSON.stringify(data) });",
+      "category": "http"
+    },
+    {
+      "keyword": "IntersectionObserver",
+      "type": "constructor",
+      "description": "IntersectionObserver - Observes when elements enter or leave the viewport. Used for lazy loading, infinite scroll.",
+      "example": "const observer = new IntersectionObserver((entries) => { entries.forEach(e => e.isIntersecting && load(e.target)); });",
+      "category": "observers"
+    },
+    {
+      "keyword": "MutationObserver",
+      "type": "constructor",
+      "description": "MutationObserver - Watches for changes to the DOM tree (attributes, child nodes, text content).",
+      "example": "const observer = new MutationObserver((mutations) => { mutations.forEach(m => handle(m)); });",
+      "category": "observers"
+    },
+    {
+      "keyword": "ResizeObserver",
+      "type": "constructor",
+      "description": "ResizeObserver - Observes changes to element dimensions. More efficient than polling or resize events.",
+      "example": "const observer = new ResizeObserver((entries) => { entries.forEach(e => updateLayout(e.contentRect)); });",
+      "category": "observers"
+    },
+    {
+      "keyword": "PerformanceObserver",
+      "type": "constructor",
+      "description": "PerformanceObserver - Observes performance measurement events (paint, navigation, resource loading).",
+      "example": "const observer = new PerformanceObserver((list) => { list.getEntries().forEach(e => log(e)); });",
+      "category": "observers"
+    },
+    {
+      "keyword": "performance",
+      "type": "object",
+      "description": "performance - High-resolution timing API for measuring code performance and page load metrics.",
+      "example": "const start = performance.now(); doWork(); console.log(performance.now() - start);",
+      "category": "performance"
+    },
+    {
+      "keyword": "navigator",
+      "type": "object",
+      "description": "navigator - Browser API providing information about the user agent, geolocation, permissions, and more.",
+      "example": "navigator.clipboard.writeText('copied'); navigator.geolocation.getCurrentPosition(cb);",
+      "category": "browser_apis"
+    },
+    {
+      "keyword": "Intl",
+      "type": "object",
+      "description": "Intl - Internationalization API for locale-sensitive formatting of numbers, dates, and strings.",
+      "example": "new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(1234.56);",
+      "category": "internationalization"
+    },
+    {
+      "keyword": "WeakRef",
+      "type": "constructor",
+      "description": "WeakRef - Holds a weak reference to an object that doesn't prevent garbage collection. ES2021.",
+      "example": "const weakRef = new WeakRef(largeObject); const obj = weakRef.deref();",
+      "category": "memory"
+    },
+    {
+      "keyword": "FinalizationRegistry",
+      "type": "constructor",
+      "description": "FinalizationRegistry - Registers callbacks to run when objects are garbage collected. ES2021.",
+      "example": "const registry = new FinalizationRegistry((value) => cleanup(value));",
+      "category": "memory"
+    },
+    {
+      "keyword": "ArrayBuffer",
+      "type": "constructor",
+      "description": "ArrayBuffer - Fixed-length raw binary data buffer. Foundation for typed arrays and DataView.",
+      "example": "const buffer = new ArrayBuffer(16);",
+      "category": "binary_data"
+    },
+    {
+      "keyword": "SharedArrayBuffer",
+      "type": "constructor",
+      "description": "SharedArrayBuffer - Binary data buffer that can be shared between workers for parallel computation.",
+      "example": "const sab = new SharedArrayBuffer(1024);",
+      "category": "binary_data"
+    },
+    {
+      "keyword": "DataView",
+      "type": "constructor",
+      "description": "DataView - Low-level interface for reading/writing multiple number types in an ArrayBuffer.",
+      "example": "const view = new DataView(buffer); view.setInt32(0, 42);",
+      "category": "binary_data"
+    },
+    {
+      "keyword": "Uint8Array",
+      "type": "constructor",
+      "description": "Uint8Array - Typed array of 8-bit unsigned integers. Common for binary data, file I/O, and crypto.",
+      "example": "const bytes = new Uint8Array([72, 101, 108, 108, 111]);",
+      "category": "binary_data"
+    },
+    {
+      "keyword": "Atomics",
+      "type": "object",
+      "description": "Atomics - Provides atomic operations on SharedArrayBuffer for thread-safe parallel programming.",
+      "example": "Atomics.add(int32Array, 0, 1); Atomics.wait(int32Array, 0, 0);",
+      "category": "binary_data"
+    },
+    {
+      "keyword": "AggregateError",
+      "type": "constructor",
+      "description": "AggregateError - Error wrapping multiple errors into one. Thrown by Promise.any() when all promises reject.",
+      "example": "throw new AggregateError([error1, error2], 'All promises rejected');",
+      "category": "error_types"
+    },
+    {
+      "keyword": "RangeError",
+      "type": "constructor",
+      "description": "RangeError - Error thrown when a value is not within the expected range.",
+      "example": "throw new RangeError('Index out of bounds');",
+      "category": "error_types"
+    },
+    {
+      "keyword": "URIError",
+      "type": "constructor",
+      "description": "URIError - Error thrown when a URI handling function is used incorrectly.",
+      "example": "// Thrown by decodeURIComponent('%')",
+      "category": "error_types"
+    },
+    {
+      "keyword": "EvalError",
+      "type": "constructor",
+      "description": "EvalError - Error relating to the global eval() function. Rarely used in modern code.",
+      "example": "throw new EvalError('Eval failed');",
+      "category": "error_types"
+    },
+    {
+      "keyword": "Iterator",
+      "type": "object",
+      "description": "Iterator - Protocol for creating custom iterable objects. Requires a next() method returning { value, done }.",
+      "example": "const iter = { [Symbol.iterator]() { let i = 0; return { next() { return { value: i++, done: i > 3 }; } }; } };",
+      "category": "iteration"
+    },
+    {
+      "keyword": "ReadableStream",
+      "type": "constructor",
+      "description": "ReadableStream - Represents a readable stream of data. Used by fetch response body and other streaming APIs.",
+      "example": "const stream = new ReadableStream({ start(controller) { controller.enqueue('chunk'); controller.close(); } });",
+      "category": "streams"
+    },
+    {
+      "keyword": "WritableStream",
+      "type": "constructor",
+      "description": "WritableStream - Represents a writable destination for streaming data.",
+      "example": "const stream = new WritableStream({ write(chunk) { process(chunk); } });",
+      "category": "streams"
+    },
+    {
+      "keyword": "TransformStream",
+      "type": "constructor",
+      "description": "TransformStream - A pair of readable and writable streams that transforms data flowing through.",
+      "example": "const { readable, writable } = new TransformStream({ transform(chunk, controller) { controller.enqueue(chunk.toUpperCase()); } });",
+      "category": "streams"
+    },
+    {
+      "keyword": "BroadcastChannel",
+      "type": "constructor",
+      "description": "BroadcastChannel - Enables messaging between browsing contexts (tabs, iframes, workers) on the same origin.",
+      "example": "const channel = new BroadcastChannel('app'); channel.postMessage({ type: 'update' });",
+      "category": "messaging"
+    },
+    {
+      "keyword": "MessageChannel",
+      "type": "constructor",
+      "description": "MessageChannel - Creates a two-port message channel for communicating between different contexts.",
+      "example": "const { port1, port2 } = new MessageChannel(); port1.onmessage = (e) => handle(e.data);",
+      "category": "messaging"
+    },
+    {
+      "keyword": "Blob",
+      "type": "constructor",
+      "description": "Blob - Represents immutable raw binary data. Used for file creation, downloads, and data URLs.",
+      "example": "const blob = new Blob(['Hello'], { type: 'text/plain' });",
+      "category": "binary_data"
+    },
+    {
+      "keyword": "File",
+      "type": "constructor",
+      "description": "File - Extends Blob with file metadata (name, lastModified). Represents files from input or drag-and-drop.",
+      "example": "const file = new File(['content'], 'filename.txt', { type: 'text/plain' });",
+      "category": "binary_data"
+    },
+    {
+      "keyword": "FileReader",
+      "type": "constructor",
+      "description": "FileReader - Asynchronously reads File or Blob contents as text, data URL, or ArrayBuffer.",
+      "example": "const reader = new FileReader(); reader.onload = (e) => console.log(e.target.result); reader.readAsText(file);",
+      "category": "binary_data"
+    },
+    {
+      "keyword": "crypto",
+      "type": "object",
+      "description": "crypto - Web Crypto API for cryptographic operations. Provides randomUUID() and SubtleCrypto methods.",
+      "example": "crypto.randomUUID(); crypto.getRandomValues(new Uint8Array(16));",
+      "category": "security"
     }
   ],
   "snippets": [
@@ -902,6 +1210,264 @@
       "description": "Debounce and throttle utility functions",
       "content": "// Debounce function - delays execution until after delay has passed since last call\nfunction debounce(func, delay) {\n    let timeoutId;\n    \n    return function debounced(...args) {\n        const context = this;\n        \n        clearTimeout(timeoutId);\n        timeoutId = setTimeout(() => {\n            func.apply(context, args);\n        }, delay);\n    };\n}\n\n// Throttle function - limits execution to at most once per delay period\nfunction throttle(func, delay) {\n    let lastCallTime = 0;\n    let timeoutId;\n    \n    return function throttled(...args) {\n        const context = this;\n        const now = Date.now();\n        \n        if (now - lastCallTime >= delay) {\n            // Execute immediately if enough time has passed\n            lastCallTime = now;\n            func.apply(context, args);\n        } else {\n            // Schedule execution at the end of the current period\n            clearTimeout(timeoutId);\n            timeoutId = setTimeout(() => {\n                lastCallTime = Date.now();\n                func.apply(context, args);\n            }, delay - (now - lastCallTime));\n        }\n    };\n}\n\n// Enhanced debounce with immediate option\nfunction debounceAdvanced(func, delay, immediate = false) {\n    let timeoutId;\n    \n    return function debouncedAdvanced(...args) {\n        const context = this;\n        const callNow = immediate && !timeoutId;\n        \n        clearTimeout(timeoutId);\n        timeoutId = setTimeout(() => {\n            timeoutId = null;\n            if (!immediate) func.apply(context, args);\n        }, delay);\n        \n        if (callNow) func.apply(context, args);\n    };\n}\n\n// Usage examples:\n// const debouncedSearch = debounce((query) => {\n//     console.log('Searching for:', query);\n// }, 300);\n// \n// const throttledScroll = throttle(() => {\n//     console.log('Scroll event handled');\n// }, 100);",
       "category": "utilities"
+    },
+    {
+      "trigger": "foreach",
+      "description": "Array forEach iteration template",
+      "content": "${1:array}.forEach((${2:item}, ${3:index}) => {\n    ${4:// process each item}\n});",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "map",
+      "description": "Array map transformation template",
+      "content": "const ${1:result} = ${2:array}.map((${3:item}) => {\n    return ${4:transformedItem};\n});",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "filter",
+      "description": "Array filter template",
+      "content": "const ${1:filtered} = ${2:array}.filter((${3:item}) => {\n    return ${4:condition};\n});",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "reduce",
+      "description": "Array reduce template",
+      "content": "const ${1:result} = ${2:array}.reduce((${3:accumulator}, ${4:current}) => {\n    ${5:// accumulate logic}\n    return ${3:accumulator};\n}, ${6:initialValue});",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "find",
+      "description": "Array find template",
+      "content": "const ${1:found} = ${2:array}.find((${3:item}) => ${4:condition});",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "some_every",
+      "description": "Array some/every check template",
+      "content": "const ${1:hasMatch} = ${2:array}.some((${3:item}) => ${4:condition});\nconst ${5:allMatch} = ${2:array}.every((${3:item}) => ${6:condition});",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "flatmap",
+      "description": "Array flatMap template for mapping and flattening",
+      "content": "const ${1:result} = ${2:array}.flatMap((${3:item}) => {\n    return ${4:arrayOrValue};\n});",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "sort_custom",
+      "description": "Array sort with custom comparator",
+      "content": "${1:array}.sort((a, b) => {\n    ${2:// return negative if a < b, positive if a > b, 0 if equal}\n    return ${3:a.property - b.property};\n});",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "group_by",
+      "description": "Group array items using Object.groupBy (ES2024) or manual reduce",
+      "content": "// ES2024\nconst ${1:grouped} = Object.groupBy(${2:array}, (${3:item}) => ${4:item.category});\n\n// Fallback with reduce\nconst ${1:grouped} = ${2:array}.reduce((groups, ${3:item}) => {\n    const key = ${4:item.category};\n    (groups[key] ??= []).push(${3:item});\n    return groups;\n}, {});",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "async_arrow",
+      "description": "Async arrow function template",
+      "content": "const ${1:functionName} = async (${2:parameters}) => {\n    try {\n        const ${3:result} = await ${4:asyncOperation};\n        return ${3:result};\n    } catch (${5:error}) {\n        console.error(${5:error});\n        throw ${5:error};\n    }\n};",
+      "category": "async"
+    },
+    {
+      "trigger": "promise_all",
+      "description": "Promise.all for concurrent async operations",
+      "content": "const [${1:result1}, ${2:result2}, ${3:result3}] = await Promise.all([\n    ${4:asyncOperation1}(),\n    ${5:asyncOperation2}(),\n    ${6:asyncOperation3}(),\n]);",
+      "category": "async"
+    },
+    {
+      "trigger": "promise_allsettled",
+      "description": "Promise.allSettled for handling mixed success/failure",
+      "content": "const ${1:results} = await Promise.allSettled([\n    ${2:promise1},\n    ${3:promise2},\n    ${4:promise3},\n]);\n\nconst ${5:fulfilled} = ${1:results}\n    .filter(r => r.status === 'fulfilled')\n    .map(r => r.value);\nconst ${6:rejected} = ${1:results}\n    .filter(r => r.status === 'rejected')\n    .map(r => r.reason);",
+      "category": "async"
+    },
+    {
+      "trigger": "promise_race",
+      "description": "Promise.race with timeout pattern",
+      "content": "const ${1:result} = await Promise.race([\n    ${2:asyncOperation}(),\n    new Promise((_, reject) =>\n        setTimeout(() => reject(new Error('Timeout')), ${3:5000})\n    ),\n]);",
+      "category": "async"
+    },
+    {
+      "trigger": "async_iterator",
+      "description": "Async iteration with for-await-of",
+      "content": "for await (const ${1:item} of ${2:asyncIterable}) {\n    ${3:// process each async item}\n}",
+      "category": "async"
+    },
+    {
+      "trigger": "import_dynamic",
+      "description": "Dynamic import for code splitting",
+      "content": "const ${1:module} = await import('${2:./module}');\nconst { ${3:namedExport} } = ${1:module};",
+      "category": "module"
+    },
+    {
+      "trigger": "iife",
+      "description": "Immediately Invoked Function Expression",
+      "content": "(async () => {\n    ${1:// code here}\n})();",
+      "category": "function"
+    },
+    {
+      "trigger": "class_extends",
+      "description": "Class with inheritance template",
+      "content": "class ${1:ChildClass} extends ${2:ParentClass} {\n    constructor(${3:parameters}) {\n        super(${4:parentArgs});\n        ${5:// child-specific initialization}\n    }\n    \n    ${6:methodName}() {\n        ${7:// method body}\n    }\n}",
+      "category": "class"
+    },
+    {
+      "trigger": "class_private",
+      "description": "Class with private fields and methods (ES2022)",
+      "content": "class ${1:ClassName} {\n    #${2:privateField};\n    \n    constructor(${3:value}) {\n        this.#${2:privateField} = ${3:value};\n    }\n    \n    get ${4:publicAccessor}() {\n        return this.#${2:privateField};\n    }\n    \n    #${5:privateMethod}() {\n        ${6:// private logic}\n    }\n    \n    ${7:publicMethod}() {\n        return this.#${5:privateMethod}();\n    }\n}",
+      "category": "class"
+    },
+    {
+      "trigger": "error_custom",
+      "description": "Custom Error class template",
+      "content": "class ${1:CustomError} extends Error {\n    constructor(message, ${2:options = {}}) {\n        super(message);\n        this.name = '${1:CustomError}';\n        this.${3:code} = ${2:options}.${3:code};\n        \n        if (Error.captureStackTrace) {\n            Error.captureStackTrace(this, ${1:CustomError});\n        }\n    }\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "event_emitter",
+      "description": "Simple event emitter / pub-sub pattern",
+      "content": "class ${1:EventEmitter} {\n    #listeners = new Map();\n    \n    on(event, callback) {\n        if (!this.#listeners.has(event)) {\n            this.#listeners.set(event, new Set());\n        }\n        this.#listeners.get(event).add(callback);\n        return () => this.off(event, callback);\n    }\n    \n    off(event, callback) {\n        this.#listeners.get(event)?.delete(callback);\n    }\n    \n    emit(event, ...args) {\n        this.#listeners.get(event)?.forEach(cb => cb(...args));\n    }\n    \n    once(event, callback) {\n        const wrapper = (...args) => {\n            callback(...args);\n            this.off(event, wrapper);\n        };\n        return this.on(event, wrapper);\n    }\n}",
+      "category": "patterns"
+    },
+    {
+      "trigger": "proxy_validator",
+      "description": "Proxy-based object validation pattern",
+      "content": "const ${1:validated} = new Proxy(${2:target}, {\n    set(obj, prop, value) {\n        ${3:// Validate before setting}\n        if (prop === '${4:age}' && typeof value !== 'number') {\n            throw new TypeError(`Expected number for ${prop}`);\n        }\n        obj[prop] = value;\n        return true;\n    },\n    get(obj, prop) {\n        if (!(prop in obj)) {\n            throw new ReferenceError(`Property ${prop} does not exist`);\n        }\n        return obj[prop];\n    }\n});",
+      "category": "patterns"
+    },
+    {
+      "trigger": "enum_pattern",
+      "description": "Frozen object enum pattern for JavaScript",
+      "content": "const ${1:Status} = Object.freeze({\n    ${2:PENDING}: '${2:PENDING}',\n    ${3:ACTIVE}: '${3:ACTIVE}',\n    ${4:INACTIVE}: '${4:INACTIVE}',\n});",
+      "category": "patterns"
+    },
+    {
+      "trigger": "intersection_observer",
+      "description": "IntersectionObserver for lazy loading or scroll detection",
+      "content": "const ${1:observer} = new IntersectionObserver(\n    (entries) => {\n        entries.forEach((entry) => {\n            if (entry.isIntersecting) {\n                ${2:// Element is visible}\n                ${1:observer}.unobserve(entry.target);\n            }\n        });\n    },\n    {\n        root: ${3:null},\n        rootMargin: '${4:0px}',\n        threshold: ${5:0.1},\n    }\n);\n\n${6:elements}.forEach((el) => ${1:observer}.observe(el));",
+      "category": "observers"
+    },
+    {
+      "trigger": "abort_fetch",
+      "description": "Fetch with AbortController and timeout",
+      "content": "async function ${1:fetchWithTimeout}(url, options = {}, timeout = ${2:5000}) {\n    const controller = new AbortController();\n    const timeoutId = setTimeout(() => controller.abort(), timeout);\n    \n    try {\n        const response = await fetch(url, {\n            ...options,\n            signal: controller.signal,\n        });\n        if (!response.ok) {\n            throw new Error(`HTTP ${response.status}: ${response.statusText}`);\n        }\n        return await response.json();\n    } finally {\n        clearTimeout(timeoutId);\n    }\n}",
+      "category": "http"
+    },
+    {
+      "trigger": "fetch_post",
+      "description": "Fetch POST request with JSON body",
+      "content": "const ${1:response} = await fetch('${2:url}', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify(${3:data}),\n});\nconst ${4:result} = await ${1:response}.json();",
+      "category": "http"
+    },
+    {
+      "trigger": "try_catch_async",
+      "description": "Async try-catch with specific error handling",
+      "content": "try {\n    ${1:const result = await asyncOperation();}\n} catch (error) {\n    if (error instanceof TypeError) {\n        ${2:// Handle type errors}\n    } else if (error.name === 'AbortError') {\n        ${3:// Handle abort}\n    } else {\n        ${4:throw error;}\n    }\n}",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "intl_format",
+      "description": "Intl formatting for numbers, dates, and relative time",
+      "content": "// Number formatting\nconst ${1:formatCurrency} = new Intl.NumberFormat('${2:en-US}', {\n    style: 'currency',\n    currency: '${3:USD}',\n});\n\n// Date formatting\nconst ${4:formatDate} = new Intl.DateTimeFormat('${2:en-US}', {\n    year: 'numeric',\n    month: 'long',\n    day: 'numeric',\n});\n\n// Relative time\nconst ${5:formatRelative} = new Intl.RelativeTimeFormat('${2:en-US}', {\n    numeric: 'auto',\n});",
+      "category": "internationalization"
+    },
+    {
+      "trigger": "iterator_custom",
+      "description": "Custom iterable object with Symbol.iterator",
+      "content": "class ${1:Range} {\n    constructor(${2:start}, ${3:end}) {\n        this.${2:start} = ${2:start};\n        this.${3:end} = ${3:end};\n    }\n    \n    [Symbol.iterator]() {\n        let current = this.${2:start};\n        const end = this.${3:end};\n        \n        return {\n            next() {\n                if (current <= end) {\n                    return { value: current++, done: false };\n                }\n                return { done: true };\n            },\n        };\n    }\n}\n\n// Usage: for (const n of new ${1:Range}(1, 5)) { console.log(n); }",
+      "category": "iteration"
+    },
+    {
+      "trigger": "object_entries",
+      "description": "Object.entries/keys/values iteration patterns",
+      "content": "// Iterate entries\nfor (const [${1:key}, ${2:value}] of Object.entries(${3:object})) {\n    ${4:// process key-value pairs}\n}\n\n// Transform to new object\nconst ${5:transformed} = Object.fromEntries(\n    Object.entries(${3:object}).map(([k, v]) => [k, ${6:transformValue(v)}])\n);",
+      "category": "object_operations"
+    },
+    {
+      "trigger": "optional_chaining",
+      "description": "Optional chaining and nullish coalescing patterns",
+      "content": "const ${1:value} = ${2:obj}?.${3:deeply}?.${4:nested}?.${5:property} ?? ${6:defaultValue};\nconst ${7:result} = ${8:obj}?.${9:method}?.(${10:args});",
+      "category": "operators"
+    },
+    {
+      "trigger": "at_method",
+      "description": "Array/String .at() for indexing from the end",
+      "content": "const ${1:last} = ${2:array}.at(-1);\nconst ${3:secondLast} = ${2:array}.at(-2);",
+      "category": "array_methods"
+    },
+    {
+      "trigger": "structured_clone",
+      "description": "Deep clone with structuredClone",
+      "content": "const ${1:clone} = structuredClone(${2:original});",
+      "category": "utilities"
+    },
+    {
+      "trigger": "using_disposable",
+      "description": "Explicit Resource Management with using (ES2024)",
+      "content": "class ${1:Resource} {\n    [Symbol.dispose]() {\n        ${2:// cleanup logic}\n    }\n}\n\n// Usage:\n// using resource = new ${1:Resource}();\n// resource is automatically disposed when scope exits",
+      "category": "resource_management"
+    },
+    {
+      "trigger": "stream_readable",
+      "description": "ReadableStream with async iteration",
+      "content": "const ${1:stream} = new ReadableStream({\n    async start(controller) {\n        ${2:// Push data to stream}\n        controller.enqueue(${3:'chunk 1'});\n        controller.enqueue(${4:'chunk 2'});\n        controller.close();\n    },\n});\n\n// Consume\nfor await (const chunk of ${1:stream}) {\n    ${5:// process chunk}\n}",
+      "category": "streams"
+    },
+    {
+      "trigger": "vitest_test",
+      "description": "Vitest test suite template",
+      "content": "import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';\n\ndescribe('${1:subject}', () => {\n    beforeEach(() => {\n        ${2:// setup}\n    });\n    \n    afterEach(() => {\n        vi.restoreAllMocks();\n    });\n    \n    it('should ${3:behavior}', () => {\n        const ${4:result} = ${5:functionUnderTest}();\n        expect(${4:result}).${6:toBe}(${7:expected});\n    });\n    \n    it('should ${8:async behavior}', async () => {\n        const ${9:result} = await ${10:asyncFunction}();\n        expect(${9:result}).${11:toEqual}(${12:expected});\n    });\n});",
+      "category": "testing"
+    },
+    {
+      "trigger": "nextjs_server_component",
+      "description": "Next.js App Router server component",
+      "content": "export default async function ${1:PageName}({ params, searchParams }) {\n    const ${2:data} = await ${3:fetchData}();\n    \n    return (\n        <div>\n            <h1>${4:Title}</h1>\n            ${5:// Component JSX}\n        </div>\n    );\n}",
+      "category": "nextjs"
+    },
+    {
+      "trigger": "nextjs_api_route",
+      "description": "Next.js App Router API route handler",
+      "content": "import { NextResponse } from 'next/server';\n\nexport async function GET(request) {\n    const { searchParams } = new URL(request.url);\n    const ${1:param} = searchParams.get('${1:param}');\n    \n    try {\n        const ${2:data} = await ${3:fetchData}(${1:param});\n        return NextResponse.json(${2:data});\n    } catch (error) {\n        return NextResponse.json(\n            { error: error.message },\n            { status: 500 }\n        );\n    }\n}\n\nexport async function POST(request) {\n    const body = await request.json();\n    \n    try {\n        const ${4:result} = await ${5:processData}(body);\n        return NextResponse.json(${4:result}, { status: 201 });\n    } catch (error) {\n        return NextResponse.json(\n            { error: error.message },\n            { status: 500 }\n        );\n    }\n}",
+      "category": "nextjs"
+    },
+    {
+      "trigger": "react_use_state",
+      "description": "React useState hook with setter",
+      "content": "const [${1:state}, set${2:State}] = useState(${3:initialValue});",
+      "category": "react"
+    },
+    {
+      "trigger": "react_use_effect",
+      "description": "React useEffect with cleanup",
+      "content": "useEffect(() => {\n    ${1:// effect logic}\n    \n    return () => {\n        ${2:// cleanup}\n    };\n}, [${3:dependencies}]);",
+      "category": "react"
+    },
+    {
+      "trigger": "react_use_memo",
+      "description": "React useMemo for expensive computations",
+      "content": "const ${1:memoized} = useMemo(() => {\n    return ${2:expensiveComputation}(${3:deps});\n}, [${3:deps}]);",
+      "category": "react"
+    },
+    {
+      "trigger": "react_use_callback",
+      "description": "React useCallback for stable function references",
+      "content": "const ${1:handler} = useCallback((${2:params}) => {\n    ${3:// callback logic}\n}, [${4:dependencies}]);",
+      "category": "react"
+    },
+    {
+      "trigger": "react_use_ref",
+      "description": "React useRef for DOM refs or mutable values",
+      "content": "const ${1:ref} = useRef(${2:null});",
+      "category": "react"
+    },
+    {
+      "trigger": "react_use_reducer",
+      "description": "React useReducer for complex state",
+      "content": "const ${1:reducer} = (state, action) => {\n    switch (action.type) {\n        case '${2:ACTION}':\n            return { ...state, ${3:property}: action.payload };\n        default:\n            return state;\n    }\n};\n\nconst [state, dispatch] = useReducer(${1:reducer}, ${4:initialState});",
+      "category": "react"
     }
   ],
   "imports": {
@@ -1762,6 +2328,425 @@
             "name": "subscribeWithSelector",
             "item_type": "function",
             "description": "Subscribe with selector middleware"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "zod",
+        "items": [
+          {
+            "name": "z",
+            "item_type": "object",
+            "description": "Zod schema builder namespace"
+          },
+          {
+            "name": "string",
+            "item_type": "function",
+            "description": "Create string schema"
+          },
+          {
+            "name": "number",
+            "item_type": "function",
+            "description": "Create number schema"
+          },
+          {
+            "name": "object",
+            "item_type": "function",
+            "description": "Create object schema"
+          },
+          {
+            "name": "array",
+            "item_type": "function",
+            "description": "Create array schema"
+          },
+          {
+            "name": "enum",
+            "item_type": "function",
+            "description": "Create enum schema"
+          },
+          {
+            "name": "union",
+            "item_type": "function",
+            "description": "Create union type schema"
+          },
+          {
+            "name": "infer",
+            "item_type": "type",
+            "description": "Infer TypeScript type from schema"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "@tanstack/react-query",
+        "items": [
+          {
+            "name": "useQuery",
+            "item_type": "hook",
+            "description": "Hook for fetching and caching data"
+          },
+          {
+            "name": "useMutation",
+            "item_type": "hook",
+            "description": "Hook for creating/updating/deleting data"
+          },
+          {
+            "name": "useQueryClient",
+            "item_type": "hook",
+            "description": "Access the query client instance"
+          },
+          {
+            "name": "QueryClient",
+            "item_type": "class",
+            "description": "Query client for managing cache"
+          },
+          {
+            "name": "QueryClientProvider",
+            "item_type": "component",
+            "description": "Provider for query client context"
+          },
+          {
+            "name": "useInfiniteQuery",
+            "item_type": "hook",
+            "description": "Hook for infinite scrolling queries"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "next/navigation",
+        "items": [
+          {
+            "name": "useRouter",
+            "item_type": "hook",
+            "description": "App Router navigation hook"
+          },
+          {
+            "name": "usePathname",
+            "item_type": "hook",
+            "description": "Get current pathname"
+          },
+          {
+            "name": "useSearchParams",
+            "item_type": "hook",
+            "description": "Access URL search params"
+          },
+          {
+            "name": "useParams",
+            "item_type": "hook",
+            "description": "Access dynamic route params"
+          },
+          {
+            "name": "redirect",
+            "item_type": "function",
+            "description": "Server-side redirect"
+          },
+          {
+            "name": "notFound",
+            "item_type": "function",
+            "description": "Trigger 404 not found"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "next/server",
+        "items": [
+          {
+            "name": "NextResponse",
+            "item_type": "class",
+            "description": "Extended Response for Next.js"
+          },
+          {
+            "name": "NextRequest",
+            "item_type": "class",
+            "description": "Extended Request for Next.js"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "vitest",
+        "items": [
+          {
+            "name": "describe",
+            "item_type": "function",
+            "description": "Define test suite"
+          },
+          {
+            "name": "it",
+            "item_type": "function",
+            "description": "Define test case"
+          },
+          {
+            "name": "expect",
+            "item_type": "function",
+            "description": "Create assertion"
+          },
+          {
+            "name": "vi",
+            "item_type": "object",
+            "description": "Vitest utility for mocks and timers"
+          },
+          {
+            "name": "beforeEach",
+            "item_type": "function",
+            "description": "Run before each test"
+          },
+          {
+            "name": "afterEach",
+            "item_type": "function",
+            "description": "Run after each test"
+          },
+          {
+            "name": "beforeAll",
+            "item_type": "function",
+            "description": "Run once before all tests"
+          },
+          {
+            "name": "afterAll",
+            "item_type": "function",
+            "description": "Run once after all tests"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "@testing-library/react",
+        "items": [
+          {
+            "name": "render",
+            "item_type": "function",
+            "description": "Render component for testing"
+          },
+          {
+            "name": "screen",
+            "item_type": "object",
+            "description": "Query rendered output"
+          },
+          {
+            "name": "fireEvent",
+            "item_type": "object",
+            "description": "Fire DOM events"
+          },
+          {
+            "name": "waitFor",
+            "item_type": "function",
+            "description": "Wait for async assertions"
+          },
+          {
+            "name": "act",
+            "item_type": "function",
+            "description": "Wrap state updates"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "socket.io-client",
+        "items": [
+          {
+            "name": "io",
+            "item_type": "function",
+            "description": "Create Socket.IO client connection"
+          },
+          {
+            "name": "Socket",
+            "item_type": "class",
+            "description": "Socket instance class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "@prisma/client",
+        "items": [
+          {
+            "name": "PrismaClient",
+            "item_type": "class",
+            "description": "Prisma database client"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "drizzle-orm",
+        "items": [
+          {
+            "name": "eq",
+            "item_type": "function",
+            "description": "Equality comparison operator"
+          },
+          {
+            "name": "and",
+            "item_type": "function",
+            "description": "AND logical operator"
+          },
+          {
+            "name": "or",
+            "item_type": "function",
+            "description": "OR logical operator"
+          },
+          {
+            "name": "sql",
+            "item_type": "function",
+            "description": "Tagged template for raw SQL"
+          },
+          {
+            "name": "desc",
+            "item_type": "function",
+            "description": "Descending order"
+          },
+          {
+            "name": "asc",
+            "item_type": "function",
+            "description": "Ascending order"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "swr",
+        "items": [
+          {
+            "name": "default",
+            "item_type": "hook",
+            "description": "useSWR hook for data fetching"
+          },
+          {
+            "name": "useSWRMutation",
+            "item_type": "hook",
+            "description": "Hook for remote mutations"
+          },
+          {
+            "name": "SWRConfig",
+            "item_type": "component",
+            "description": "Global SWR configuration provider"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "child_process",
+        "items": [
+          {
+            "name": "exec",
+            "item_type": "function",
+            "description": "Execute shell command"
+          },
+          {
+            "name": "execSync",
+            "item_type": "function",
+            "description": "Execute shell command synchronously"
+          },
+          {
+            "name": "spawn",
+            "item_type": "function",
+            "description": "Spawn child process with stream I/O"
+          },
+          {
+            "name": "fork",
+            "item_type": "function",
+            "description": "Spawn Node.js child process with IPC"
+          },
+          {
+            "name": "execFile",
+            "item_type": "function",
+            "description": "Execute a file directly"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "worker_threads",
+        "items": [
+          {
+            "name": "Worker",
+            "item_type": "class",
+            "description": "Create worker thread"
+          },
+          {
+            "name": "isMainThread",
+            "item_type": "variable",
+            "description": "Check if running in main thread"
+          },
+          {
+            "name": "parentPort",
+            "item_type": "object",
+            "description": "Communication port to parent"
+          },
+          {
+            "name": "workerData",
+            "item_type": "variable",
+            "description": "Data passed to worker"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "node:test",
+        "items": [
+          {
+            "name": "describe",
+            "item_type": "function",
+            "description": "Define test suite"
+          },
+          {
+            "name": "it",
+            "item_type": "function",
+            "description": "Define test case"
+          },
+          {
+            "name": "test",
+            "item_type": "function",
+            "description": "Define test case"
+          },
+          {
+            "name": "mock",
+            "item_type": "object",
+            "description": "Built-in mocking utilities"
+          },
+          {
+            "name": "before",
+            "item_type": "function",
+            "description": "Run before tests"
+          },
+          {
+            "name": "after",
+            "item_type": "function",
+            "description": "Run after tests"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "node:assert",
+        "items": [
+          {
+            "name": "strictEqual",
+            "item_type": "function",
+            "description": "Assert strict equality"
+          },
+          {
+            "name": "deepStrictEqual",
+            "item_type": "function",
+            "description": "Assert deep strict equality"
+          },
+          {
+            "name": "throws",
+            "item_type": "function",
+            "description": "Assert function throws"
+          },
+          {
+            "name": "rejects",
+            "item_type": "function",
+            "description": "Assert promise rejects"
+          },
+          {
+            "name": "ok",
+            "item_type": "function",
+            "description": "Assert truthy value"
           }
         ],
         "submodules": []

@@ -302,6 +302,601 @@
       "description": "@const - Define local constants in markup. Scoped to current block.",
       "example": "{@const total = price * quantity}",
       "category": "special_tags"
+    },
+    {
+      "keyword": "on:keydown",
+      "type": "keyword",
+      "description": "on:keydown - Keyboard key press event handler.",
+      "example": "<input on:keydown={handleKeydown} /> <svelte:window on:keydown={handleKey} />",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:keyup",
+      "type": "keyword",
+      "description": "on:keyup - Keyboard key release event handler.",
+      "example": "<input on:keyup={handleKeyup} />",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:focus",
+      "type": "keyword",
+      "description": "on:focus - Element receives focus event handler.",
+      "example": "<input on:focus={handleFocus} />",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:blur",
+      "type": "keyword",
+      "description": "on:blur - Element loses focus event handler.",
+      "example": "<input on:blur={handleBlur} />",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:mouseover",
+      "type": "keyword",
+      "description": "on:mouseover - Mouse enters element or child event handler.",
+      "example": "<div on:mouseover={handleMouseOver}>Hover me</div>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:mouseenter",
+      "type": "keyword",
+      "description": "on:mouseenter - Mouse enters element (no bubbling) event handler.",
+      "example": "<div on:mouseenter={handleEnter}>Hover me</div>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:mouseleave",
+      "type": "keyword",
+      "description": "on:mouseleave - Mouse leaves element (no bubbling) event handler.",
+      "example": "<div on:mouseleave={handleLeave}>Hover me</div>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:touchstart",
+      "type": "keyword",
+      "description": "on:touchstart - Touch begins on element event handler. For mobile interactions.",
+      "example": "<div on:touchstart={handleTouch}>Touch me</div>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:contextmenu",
+      "type": "keyword",
+      "description": "on:contextmenu - Right-click / context menu event handler.",
+      "example": "<div on:contextmenu|preventDefault={handleRightClick}>Right-click me</div>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:scroll",
+      "type": "keyword",
+      "description": "on:scroll - Element scroll event handler.",
+      "example": "<div on:scroll={handleScroll}>Scrollable content</div>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:drag",
+      "type": "keyword",
+      "description": "on:drag - Element drag event handler. Part of HTML5 drag and drop API.",
+      "example": "<div draggable=\"true\" on:drag={handleDrag}>Drag me</div>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "on:drop",
+      "type": "keyword",
+      "description": "on:drop - Drop event handler for drag-and-drop targets.",
+      "example": "<div on:drop|preventDefault={handleDrop} on:dragover|preventDefault>Drop here</div>",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "|preventDefault",
+      "type": "modifier",
+      "description": "|preventDefault - Event modifier that calls event.preventDefault() before the handler.",
+      "example": "<form on:submit|preventDefault={handleSubmit}>",
+      "category": "event_modifiers"
+    },
+    {
+      "keyword": "|stopPropagation",
+      "type": "modifier",
+      "description": "|stopPropagation - Event modifier that calls event.stopPropagation().",
+      "example": "<button on:click|stopPropagation={handleClick}>Click</button>",
+      "category": "event_modifiers"
+    },
+    {
+      "keyword": "|capture",
+      "type": "modifier",
+      "description": "|capture - Event modifier that fires handler during capture phase instead of bubbling.",
+      "example": "<div on:click|capture={handleClick}>Content</div>",
+      "category": "event_modifiers"
+    },
+    {
+      "keyword": "|once",
+      "type": "modifier",
+      "description": "|once - Event modifier that removes handler after first invocation.",
+      "example": "<button on:click|once={handleClick}>Click once</button>",
+      "category": "event_modifiers"
+    },
+    {
+      "keyword": "|self",
+      "type": "modifier",
+      "description": "|self - Event modifier that triggers handler only if event.target is the element itself.",
+      "example": "<div on:click|self={handleClick}>Only direct clicks</div>",
+      "category": "event_modifiers"
+    },
+    {
+      "keyword": "|trusted",
+      "type": "modifier",
+      "description": "|trusted - Event modifier that fires handler only if event.isTrusted is true (user-initiated).",
+      "example": "<button on:click|trusted={handleClick}>User clicks only</button>",
+      "category": "event_modifiers"
+    },
+    {
+      "keyword": "|passive",
+      "type": "modifier",
+      "description": "|passive - Event modifier that improves scrolling performance. Handler cannot call preventDefault.",
+      "example": "<div on:touchstart|passive={handleTouch}>Content</div>",
+      "category": "event_modifiers"
+    },
+    {
+      "keyword": "|nonpassive",
+      "type": "modifier",
+      "description": "|nonpassive - Event modifier that explicitly sets passive: false. Needed for preventDefault on touch events.",
+      "example": "<div on:touchmove|nonpassive|preventDefault={handleTouch}>Content</div>",
+      "category": "event_modifiers"
+    },
+    {
+      "keyword": "bind:innerHTML",
+      "type": "keyword",
+      "description": "bind:innerHTML - Two-way binding for element's HTML content. Use with contenteditable.",
+      "example": "<div contenteditable=\"true\" bind:innerHTML={html}></div>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:textContent",
+      "type": "keyword",
+      "description": "bind:textContent - Two-way binding for element's text content. Use with contenteditable.",
+      "example": "<div contenteditable=\"true\" bind:textContent={text}></div>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:clientWidth",
+      "type": "keyword",
+      "description": "bind:clientWidth - Read-only binding for element's width. Updates on resize.",
+      "example": "<div bind:clientWidth={width}>Content</div>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:clientHeight",
+      "type": "keyword",
+      "description": "bind:clientHeight - Read-only binding for element's height. Updates on resize.",
+      "example": "<div bind:clientHeight={height}>Content</div>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:offsetWidth",
+      "type": "keyword",
+      "description": "bind:offsetWidth - Read-only binding for element's offset width (includes border).",
+      "example": "<div bind:offsetWidth={width}>Content</div>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:offsetHeight",
+      "type": "keyword",
+      "description": "bind:offsetHeight - Read-only binding for element's offset height (includes border).",
+      "example": "<div bind:offsetHeight={height}>Content</div>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:open",
+      "type": "keyword",
+      "description": "bind:open - Two-way binding for <details> element's open state.",
+      "example": "<details bind:open={isOpen}><summary>Details</summary>Content</details>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:files",
+      "type": "keyword",
+      "description": "bind:files - Binding for file input's FileList. Read the selected files.",
+      "example": "<input type=\"file\" bind:files={fileList} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:currentTime",
+      "type": "keyword",
+      "description": "bind:currentTime - Two-way binding for media element's current playback position.",
+      "example": "<video bind:currentTime={time} src={videoSrc}></video>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:duration",
+      "type": "keyword",
+      "description": "bind:duration - Read-only binding for media element's total duration.",
+      "example": "<audio bind:duration={totalTime} src={audioSrc}></audio>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:paused",
+      "type": "keyword",
+      "description": "bind:paused - Two-way binding for media element's paused state.",
+      "example": "<video bind:paused={isPaused} src={videoSrc}></video>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:volume",
+      "type": "keyword",
+      "description": "bind:volume - Two-way binding for media element's volume (0 to 1).",
+      "example": "<audio bind:volume={vol} src={audioSrc}></audio>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:muted",
+      "type": "keyword",
+      "description": "bind:muted - Two-way binding for media element's muted state.",
+      "example": "<video bind:muted={isMuted} src={videoSrc}></video>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:playbackRate",
+      "type": "keyword",
+      "description": "bind:playbackRate - Two-way binding for media element's playback speed.",
+      "example": "<video bind:playbackRate={speed} src={videoSrc}></video>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:seeking",
+      "type": "keyword",
+      "description": "bind:seeking - Read-only binding for whether media is currently seeking.",
+      "example": "<video bind:seeking={isSeeking} src={videoSrc}></video>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:ended",
+      "type": "keyword",
+      "description": "bind:ended - Read-only binding for whether media playback has ended.",
+      "example": "<video bind:ended={hasEnded} src={videoSrc}></video>",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:scrollX",
+      "type": "keyword",
+      "description": "bind:scrollX - Two-way binding for window's horizontal scroll position.",
+      "example": "<svelte:window bind:scrollX={x} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:scrollY",
+      "type": "keyword",
+      "description": "bind:scrollY - Two-way binding for window's vertical scroll position.",
+      "example": "<svelte:window bind:scrollY={y} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:innerWidth",
+      "type": "keyword",
+      "description": "bind:innerWidth - Read-only binding for window's inner width.",
+      "example": "<svelte:window bind:innerWidth={w} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:innerHeight",
+      "type": "keyword",
+      "description": "bind:innerHeight - Read-only binding for window's inner height.",
+      "example": "<svelte:window bind:innerHeight={h} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:outerWidth",
+      "type": "keyword",
+      "description": "bind:outerWidth - Read-only binding for window's outer width.",
+      "example": "<svelte:window bind:outerWidth={w} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:outerHeight",
+      "type": "keyword",
+      "description": "bind:outerHeight - Read-only binding for window's outer height.",
+      "example": "<svelte:window bind:outerHeight={h} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "bind:online",
+      "type": "keyword",
+      "description": "bind:online - Read-only binding for window's navigator.onLine status.",
+      "example": "<svelte:window bind:online={isOnline} />",
+      "category": "bindings"
+    },
+    {
+      "keyword": "style:",
+      "type": "keyword",
+      "description": "style: - Dynamic inline style directive. Apply individual CSS properties reactively.",
+      "example": "<div style:color={textColor} style:font-size=\"{size}px\">Styled</div>",
+      "category": "directives"
+    },
+    {
+      "keyword": "fade",
+      "type": "transition",
+      "description": "fade - Transition that animates opacity. Import from 'svelte/transition'.",
+      "example": "<div transition:fade={{ duration: 300, delay: 0 }}>Content</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "blur",
+      "type": "transition",
+      "description": "blur - Transition that animates a blur filter with opacity. Import from 'svelte/transition'.",
+      "example": "<div transition:blur={{ amount: 10, duration: 400 }}>Content</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "fly",
+      "type": "transition",
+      "description": "fly - Transition that animates x/y position with opacity. Import from 'svelte/transition'.",
+      "example": "<div transition:fly={{ y: 200, duration: 500 }}>Content</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "slide",
+      "type": "transition",
+      "description": "slide - Transition that slides element in/out by animating height. Import from 'svelte/transition'.",
+      "example": "<div transition:slide={{ duration: 300 }}>Content</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "scale",
+      "type": "transition",
+      "description": "scale - Transition that animates opacity and scale. Import from 'svelte/transition'.",
+      "example": "<div transition:scale={{ start: 0.5, duration: 300 }}>Content</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "draw",
+      "type": "transition",
+      "description": "draw - Transition for SVG elements that animates stroke. Import from 'svelte/transition'.",
+      "example": "<path transition:draw={{ duration: 1000 }} d={pathData} />",
+      "category": "transitions"
+    },
+    {
+      "keyword": "crossfade",
+      "type": "transition",
+      "description": "crossfade - Creates paired send/receive transitions for elements moving between containers.",
+      "example": "const [send, receive] = crossfade({ duration: 300, fallback: fade });",
+      "category": "transitions"
+    },
+    {
+      "keyword": "flip",
+      "type": "transition",
+      "description": "flip - FLIP animation for keyed each blocks. Import from 'svelte/animate'.",
+      "example": "<div animate:flip={{ duration: 300 }}>Item</div>",
+      "category": "transitions"
+    },
+    {
+      "keyword": "writable",
+      "type": "function",
+      "description": "writable - Create a writable store with get/set/update methods. From 'svelte/store'.",
+      "example": "import { writable } from 'svelte/store'; const count = writable(0);",
+      "category": "stores"
+    },
+    {
+      "keyword": "readable",
+      "type": "function",
+      "description": "readable - Create a read-only store. Set values via callback. From 'svelte/store'.",
+      "example": "import { readable } from 'svelte/store'; const time = readable(new Date(), set => { ... });",
+      "category": "stores"
+    },
+    {
+      "keyword": "derived",
+      "type": "function",
+      "description": "derived - Create a store whose value is derived from other stores. From 'svelte/store'.",
+      "example": "import { derived } from 'svelte/store'; const doubled = derived(count, $c => $c * 2);",
+      "category": "stores"
+    },
+    {
+      "keyword": "get",
+      "type": "function",
+      "description": "get - Read store value once without subscribing. From 'svelte/store'.",
+      "example": "import { get } from 'svelte/store'; const value = get(myStore);",
+      "category": "stores"
+    },
+    {
+      "keyword": "tweened",
+      "type": "function",
+      "description": "tweened - Create a store that animates between values over time. From 'svelte/motion'.",
+      "example": "import { tweened } from 'svelte/motion'; const progress = tweened(0, { duration: 400 });",
+      "category": "motion"
+    },
+    {
+      "keyword": "spring",
+      "type": "function",
+      "description": "spring - Create a store that animates with spring physics. From 'svelte/motion'.",
+      "example": "import { spring } from 'svelte/motion'; const coords = spring({ x: 0, y: 0 }, { stiffness: 0.1, damping: 0.25 });",
+      "category": "motion"
+    },
+    {
+      "keyword": "onMount",
+      "type": "function",
+      "description": "onMount - Lifecycle: runs after component is first rendered to DOM. From 'svelte'.",
+      "example": "import { onMount } from 'svelte'; onMount(() => { /* setup */ return () => { /* cleanup */ }; });",
+      "category": "lifecycle"
+    },
+    {
+      "keyword": "onDestroy",
+      "type": "function",
+      "description": "onDestroy - Lifecycle: runs when component is destroyed. From 'svelte'.",
+      "example": "import { onDestroy } from 'svelte'; onDestroy(() => { /* cleanup */ });",
+      "category": "lifecycle"
+    },
+    {
+      "keyword": "beforeUpdate",
+      "type": "function",
+      "description": "beforeUpdate - Lifecycle: runs before DOM is updated. From 'svelte'.",
+      "example": "import { beforeUpdate } from 'svelte'; beforeUpdate(() => { /* pre-update logic */ });",
+      "category": "lifecycle"
+    },
+    {
+      "keyword": "afterUpdate",
+      "type": "function",
+      "description": "afterUpdate - Lifecycle: runs after DOM is updated. From 'svelte'.",
+      "example": "import { afterUpdate } from 'svelte'; afterUpdate(() => { /* post-update logic */ });",
+      "category": "lifecycle"
+    },
+    {
+      "keyword": "tick",
+      "type": "function",
+      "description": "tick - Returns a promise that resolves after pending state changes are applied to DOM.",
+      "example": "import { tick } from 'svelte'; await tick(); // DOM is now updated",
+      "category": "lifecycle"
+    },
+    {
+      "keyword": "setContext",
+      "type": "function",
+      "description": "setContext - Set a context value accessible to child components. From 'svelte'.",
+      "example": "import { setContext } from 'svelte'; setContext('theme', { color: 'blue' });",
+      "category": "context"
+    },
+    {
+      "keyword": "getContext",
+      "type": "function",
+      "description": "getContext - Get a context value set by a parent component. From 'svelte'.",
+      "example": "import { getContext } from 'svelte'; const theme = getContext('theme');",
+      "category": "context"
+    },
+    {
+      "keyword": "hasContext",
+      "type": "function",
+      "description": "hasContext - Check if a context key has been set by a parent. From 'svelte'.",
+      "example": "import { hasContext } from 'svelte'; if (hasContext('theme')) { ... }",
+      "category": "context"
+    },
+    {
+      "keyword": "getAllContexts",
+      "type": "function",
+      "description": "getAllContexts - Get all context as a Map. Useful for forwarding context. From 'svelte'.",
+      "example": "import { getAllContexts } from 'svelte'; const contexts = getAllContexts();",
+      "category": "context"
+    },
+    {
+      "keyword": "createEventDispatcher",
+      "type": "function",
+      "description": "createEventDispatcher - Create a dispatcher for custom component events. From 'svelte'.",
+      "example": "const dispatch = createEventDispatcher(); dispatch('message', { text: 'hello' });",
+      "category": "event_handlers"
+    },
+    {
+      "keyword": "$state",
+      "type": "keyword",
+      "description": "$state - Svelte 5 rune: declare reactive state. Replaces top-level let declarations.",
+      "example": "let count = $state(0); let user = $state({ name: 'Alice' });",
+      "category": "runes"
+    },
+    {
+      "keyword": "$derived",
+      "type": "keyword",
+      "description": "$derived - Svelte 5 rune: declare derived state. Replaces $: reactive declarations.",
+      "example": "let doubled = $derived(count * 2); let full = $derived(first + ' ' + last);",
+      "category": "runes"
+    },
+    {
+      "keyword": "$derived.by",
+      "type": "keyword",
+      "description": "$derived.by - Svelte 5 rune: derived state with a function body for complex computations.",
+      "example": "let total = $derived.by(() => { return items.reduce((sum, i) => sum + i.price, 0); });",
+      "category": "runes"
+    },
+    {
+      "keyword": "$effect",
+      "type": "keyword",
+      "description": "$effect - Svelte 5 rune: run side effects when dependencies change. Replaces $: blocks.",
+      "example": "$effect(() => { console.log(count); return () => { /* cleanup */ }; });",
+      "category": "runes"
+    },
+    {
+      "keyword": "$effect.pre",
+      "type": "keyword",
+      "description": "$effect.pre - Svelte 5 rune: run effect before DOM updates. Replaces beforeUpdate.",
+      "example": "$effect.pre(() => { /* runs before DOM update */ });",
+      "category": "runes"
+    },
+    {
+      "keyword": "$props",
+      "type": "keyword",
+      "description": "$props - Svelte 5 rune: declare component props. Replaces export let.",
+      "example": "let { name, age = 25, ...rest } = $props();",
+      "category": "runes"
+    },
+    {
+      "keyword": "$bindable",
+      "type": "keyword",
+      "description": "$bindable - Svelte 5 rune: mark a prop as bindable from parent components.",
+      "example": "let { value = $bindable('') } = $props();",
+      "category": "runes"
+    },
+    {
+      "keyword": "$inspect",
+      "type": "keyword",
+      "description": "$inspect - Svelte 5 rune: debug reactive state changes. Logs when values change.",
+      "example": "$inspect(count); $inspect(user).with(console.trace);",
+      "category": "runes"
+    },
+    {
+      "keyword": "$host",
+      "type": "keyword",
+      "description": "$host - Svelte 5 rune: access host element in custom elements mode.",
+      "example": "$host().dispatchEvent(new CustomEvent('change'));",
+      "category": "runes"
+    },
+    {
+      "keyword": "{#snippet}",
+      "type": "keyword",
+      "description": "{#snippet} - Svelte 5: define reusable markup blocks within a component.",
+      "example": "{#snippet row(item)}<tr><td>{item.name}</td></tr>{/snippet}",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "{@render}",
+      "type": "keyword",
+      "description": "{@render} - Svelte 5: render a snippet. Replaces slot-based composition.",
+      "example": "{@render row(item)} {@render children?.()}",
+      "category": "special_tags"
+    },
+    {
+      "keyword": "svelte:boundary",
+      "type": "keyword",
+      "description": "svelte:boundary - Svelte 5: error boundary. Catches errors in child components.",
+      "example": "<svelte:boundary onerror={handleError}><Component /><svelte:boundary>",
+      "category": "special_elements"
+    },
+    {
+      "keyword": "untrack",
+      "type": "function",
+      "description": "untrack - Read reactive state without creating a dependency. From 'svelte'.",
+      "example": "import { untrack } from 'svelte'; $effect(() => { const val = untrack(() => other); });",
+      "category": "runes"
+    },
+    {
+      "keyword": "unstate",
+      "type": "function",
+      "description": "unstate - Get a plain object from $state proxy. From 'svelte'. For serialization.",
+      "example": "import { unstate } from 'svelte'; const plain = unstate(myState);",
+      "category": "runes"
+    },
+    {
+      "keyword": "mount",
+      "type": "function",
+      "description": "mount - Svelte 5: programmatically mount a component. From 'svelte'.",
+      "example": "import { mount } from 'svelte'; const app = mount(App, { target: document.body, props: {} });",
+      "category": "lifecycle"
+    },
+    {
+      "keyword": "unmount",
+      "type": "function",
+      "description": "unmount - Svelte 5: programmatically unmount a component. From 'svelte'.",
+      "example": "import { unmount } from 'svelte'; unmount(app);",
+      "category": "lifecycle"
+    },
+    {
+      "keyword": "hydrate",
+      "type": "function",
+      "description": "hydrate - Svelte 5: hydrate a server-rendered component. From 'svelte'.",
+      "example": "import { hydrate } from 'svelte'; hydrate(App, { target: document.body });",
+      "category": "lifecycle"
     }
   ],
   "snippets": [
@@ -658,6 +1253,431 @@
       "description": "Access props not declared with export let",
       "content": "<div {...$$restProps}>${1:content}</div>",
       "category": "advanced"
+    },
+    {
+      "trigger": "svelte:store-custom",
+      "description": "Create a custom store with encapsulated logic",
+      "content": "import { writable } from 'svelte/store';\n\nfunction create${1:Counter}() {\n\tconst { subscribe, set, update } = writable(${2:0});\n\n\treturn {\n\t\tsubscribe,\n\t\t${3:increment}: () => update(n => n + 1),\n\t\t${4:decrement}: () => update(n => n - 1),\n\t\t${5:reset}: () => set(${2:0})\n\t};\n}\n\nexport const ${6:counter} = create${1:Counter}();",
+      "category": "stores"
+    },
+    {
+      "trigger": "svelte:store-get",
+      "description": "Read store value once without subscribing",
+      "content": "import { get } from 'svelte/store';\n\nconst ${1:value} = get(${2:store});",
+      "category": "stores"
+    },
+    {
+      "trigger": "svelte:store-subscribe",
+      "description": "Manually subscribe to store with cleanup",
+      "content": "import { onDestroy } from 'svelte';\n\nlet ${1:value};\nconst unsubscribe = ${2:store}.subscribe(v => ${1:value} = v);\nonDestroy(unsubscribe);",
+      "category": "stores"
+    },
+    {
+      "trigger": "svelte:store-derived-multi",
+      "description": "Derive from multiple stores",
+      "content": "import { derived } from 'svelte/store';\n\nexport const ${1:combined} = derived(\n\t[${2:store1}, ${3:store2}],\n\t([$${2:store1}, $${3:store2}]) => {\n\t\treturn ${4:$store1 + $store2};\n\t}\n);",
+      "category": "stores"
+    },
+    {
+      "trigger": "svelte:tweened",
+      "description": "Tweened store for smooth animations",
+      "content": "import { tweened } from 'svelte/motion';\nimport { cubicOut } from 'svelte/easing';\n\nconst ${1:progress} = tweened(${2:0}, {\n\tduration: ${3:400},\n\teasing: cubicOut\n});",
+      "category": "motion"
+    },
+    {
+      "trigger": "svelte:spring",
+      "description": "Spring store for physics-based animations",
+      "content": "import { spring } from 'svelte/motion';\n\nconst ${1:coords} = spring({ x: ${2:0}, y: ${3:0} }, {\n\tstiffness: ${4:0.1},\n\tdamping: ${5:0.25}\n});",
+      "category": "motion"
+    },
+    {
+      "trigger": "svelte:crossfade",
+      "description": "Crossfade transition for elements moving between lists",
+      "content": "import { crossfade } from 'svelte/transition';\nimport { quintOut } from 'svelte/easing';\n\nconst [send, receive] = crossfade({\n\tduration: ${1:300},\n\teasing: quintOut,\n\tfallback(node) {\n\t\treturn { duration: ${1:300}, css: t => `opacity: ${t}` };\n\t}\n});",
+      "category": "transitions"
+    },
+    {
+      "trigger": "svelte:transition-params",
+      "description": "Transition with full parameters",
+      "content": "<div transition:${1:fly}={{ x: ${2:0}, y: ${3:-200}, duration: ${4:500}, delay: ${5:0}, easing: ${6:quintOut} }}>\n\t${7:content}\n</div>",
+      "category": "transitions"
+    },
+    {
+      "trigger": "svelte:transition-local",
+      "description": "Local transition (only plays on direct block changes, not parent)",
+      "content": "<div transition:${1:slide}|local={{ duration: ${2:300} }}>\n\t${3:content}\n</div>",
+      "category": "transitions"
+    },
+    {
+      "trigger": "svelte:each-destructure",
+      "description": "Iterate with destructured objects",
+      "content": "{#each ${1:items} as { ${2:id}, ${3:name}, ${4:value} } (${2:id})}\n\t${5:<div>{${3:name}}: {${4:value}}</div>}\n{/each}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:each-nested",
+      "description": "Nested each loops",
+      "content": "{#each ${1:categories} as ${2:category}}\n\t<h2>{${2:category}.${3:name}}</h2>\n\t{#each ${2:category}.${4:items} as ${5:item}}\n\t\t${6:<p>{${5:item}}</p>}\n\t{/each}\n{/each}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "svelte:bind-dimensions",
+      "description": "Bind element dimensions",
+      "content": "<${1:div}\n\tbind:clientWidth={${2:width}}\n\tbind:clientHeight={${3:height}}\n>\n\t${4:content} ({${2:width}}x{${3:height}})\n</${1:div}>",
+      "category": "bindings"
+    },
+    {
+      "trigger": "svelte:bind-media",
+      "description": "Media element with bindings",
+      "content": "<${1:video}\n\tsrc={${2:src}}\n\tbind:currentTime={${3:time}}\n\tbind:duration={${4:duration}}\n\tbind:paused={${5:paused}}\n\tbind:volume={${6:volume}}\n/>",
+      "category": "bindings"
+    },
+    {
+      "trigger": "svelte:bind-contenteditable",
+      "description": "Contenteditable element with binding",
+      "content": "<div\n\tcontenteditable=\"true\"\n\tbind:innerHTML={${1:html}}\n>\n\t${2:Editable content}\n</div>",
+      "category": "bindings"
+    },
+    {
+      "trigger": "svelte:bind-window",
+      "description": "Window bindings for scroll and dimensions",
+      "content": "<svelte:window\n\tbind:scrollY={${1:y}}\n\tbind:innerWidth={${2:width}}\n\tbind:innerHeight={${3:height}}\n\tbind:online={${4:online}}\n/>",
+      "category": "bindings"
+    },
+    {
+      "trigger": "svelte:bind-files",
+      "description": "File input with binding",
+      "content": "<input\n\ttype=\"file\"\n\tbind:files={${1:files}}\n\taccept=\"${2:image/*}\"\n\t${3:multiple}\n/>",
+      "category": "forms"
+    },
+    {
+      "trigger": "svelte:bind-range",
+      "description": "Range slider with binding",
+      "content": "<input\n\ttype=\"range\"\n\tbind:value={${1:value}}\n\tmin={${2:0}}\n\tmax={${3:100}}\n\tstep={${4:1}}\n/>",
+      "category": "forms"
+    },
+    {
+      "trigger": "svelte:form-complete",
+      "description": "Complete form with multiple field types",
+      "content": "<form on:submit|preventDefault={${1:handleSubmit}}>\n\t<label>\n\t\t${2:Name}:\n\t\t<input type=\"text\" bind:value={${3:name}} required />\n\t</label>\n\n\t<label>\n\t\t${4:Email}:\n\t\t<input type=\"email\" bind:value={${5:email}} required />\n\t</label>\n\n\t<label>\n\t\t<input type=\"checkbox\" bind:checked={${6:agreed}} />\n\t\t${7:I agree to terms}\n\t</label>\n\n\t<button type=\"submit\" disabled={!${6:agreed}}>${8:Submit}</button>\n</form>",
+      "category": "forms"
+    },
+    {
+      "trigger": "svelte:slots-named",
+      "description": "Component with multiple named slots",
+      "content": "<div class=\"${1:card}\">\n\t<header>\n\t\t<slot name=\"header\">${2:Default header}</slot>\n\t</header>\n\t<main>\n\t\t<slot>${3:Default content}</slot>\n\t</main>\n\t<footer>\n\t\t<slot name=\"footer\">${4:Default footer}</slot>\n\t</footer>\n</div>",
+      "category": "slots"
+    },
+    {
+      "trigger": "svelte:context-provider",
+      "description": "Context provider pattern (parent + child)",
+      "content": "<!-- Provider component -->\n<script>\n\timport { setContext } from 'svelte';\n\timport { writable } from 'svelte/store';\n\n\tconst ${1:store} = writable(${2:initialValue});\n\tsetContext('${3:key}', ${1:store});\n</script>\n\n<slot />",
+      "category": "context"
+    },
+    {
+      "trigger": "svelte:context-consumer",
+      "description": "Context consumer (child component)",
+      "content": "<script>\n\timport { getContext } from 'svelte';\n\n\tconst ${1:store} = getContext('${2:key}');\n</script>\n\n<p>Value: {$${1:store}}</p>",
+      "category": "context"
+    },
+    {
+      "trigger": "svelte:fetch-onmount",
+      "description": "Fetch data on component mount",
+      "content": "<script>\n\timport { onMount } from 'svelte';\n\n\tlet ${1:data} = [];\n\tlet ${2:loading} = true;\n\tlet ${3:error} = null;\n\n\tonMount(async () => {\n\t\ttry {\n\t\t\tconst res = await fetch('${4:/api/data}');\n\t\t\tif (!res.ok) throw new Error(res.statusText);\n\t\t\t${1:data} = await res.json();\n\t\t} catch (e) {\n\t\t\t${3:error} = e.message;\n\t\t} finally {\n\t\t\t${2:loading} = false;\n\t\t}\n\t});\n</script>\n\n{#if ${2:loading}}\n\t<p>Loading...</p>\n{:else if ${3:error}}\n\t<p>Error: {${3:error}}</p>\n{:else}\n\t{#each ${1:data} as ${5:item}}\n\t\t<p>{${5:item}}</p>\n\t{/each}\n{/if}",
+      "category": "advanced"
+    },
+    {
+      "trigger": "svelte:event-forward",
+      "description": "Forward DOM events from child to parent",
+      "content": "<${1:button} on:click on:mouseenter on:mouseleave>\n\t<slot />\n</${1:button}>",
+      "category": "events"
+    },
+    {
+      "trigger": "svelte:drag-drop",
+      "description": "Drag and drop setup",
+      "content": "<div\n\ton:dragover|preventDefault\n\ton:drop|preventDefault={${1:handleDrop}}\n\tclass:${2:drag-over}={${3:isDragOver}}\n\ton:dragenter={() => ${3:isDragOver} = true}\n\ton:dragleave={() => ${3:isDragOver} = false}\n>\n\t${4:Drop zone}\n</div>",
+      "category": "events"
+    },
+    {
+      "trigger": "svelte:class-multiple",
+      "description": "Multiple conditional class bindings",
+      "content": "<div\n\tclass:${1:active}={${2:isActive}}\n\tclass:${3:disabled}={${4:isDisabled}}\n\tclass:${5:error}={${6:hasError}}\n>\n\t${7:content}\n</div>",
+      "category": "directives"
+    },
+    {
+      "trigger": "svelte:style-multiple",
+      "description": "Multiple dynamic style directives",
+      "content": "<div\n\tstyle:color={${1:color}}\n\tstyle:font-size=\"{${2:size}}px\"\n\tstyle:opacity={${3:opacity}}\n>\n\t${4:content}\n</div>",
+      "category": "directives"
+    },
+    {
+      "trigger": "svelte:action-tooltip",
+      "description": "Tooltip action example",
+      "content": "export function tooltip(node, text) {\n\tlet tip;\n\n\tfunction handleMouseEnter() {\n\t\ttip = document.createElement('div');\n\t\ttip.className = '${1:tooltip}';\n\t\ttip.textContent = text;\n\t\tnode.appendChild(tip);\n\t}\n\n\tfunction handleMouseLeave() {\n\t\tif (tip) tip.remove();\n\t}\n\n\tnode.addEventListener('mouseenter', handleMouseEnter);\n\tnode.addEventListener('mouseleave', handleMouseLeave);\n\n\treturn {\n\t\tupdate(newText) {\n\t\t\ttext = newText;\n\t\t\tif (tip) tip.textContent = text;\n\t\t},\n\t\tdestroy() {\n\t\t\tnode.removeEventListener('mouseenter', handleMouseEnter);\n\t\t\tnode.removeEventListener('mouseleave', handleMouseLeave);\n\t\t}\n\t};\n}",
+      "category": "actions"
+    },
+    {
+      "trigger": "svelte:action-clickoutside",
+      "description": "Click outside action for closing dropdowns/modals",
+      "content": "export function clickOutside(node) {\n\tfunction handleClick(event) {\n\t\tif (!node.contains(event.target)) {\n\t\t\tnode.dispatchEvent(new CustomEvent('${1:outclick}'));\n\t\t}\n\t}\n\n\tdocument.addEventListener('click', handleClick, true);\n\n\treturn {\n\t\tdestroy() {\n\t\t\tdocument.removeEventListener('click', handleClick, true);\n\t\t}\n\t};\n}",
+      "category": "actions"
+    },
+    {
+      "trigger": "svelte:options-immutable",
+      "description": "Component options for immutable data optimization",
+      "content": "<svelte:options immutable={${1:true}} />",
+      "category": "special"
+    },
+    {
+      "trigger": "svelte:options-accessors",
+      "description": "Component options to generate accessors",
+      "content": "<svelte:options accessors={${1:true}} />",
+      "category": "special"
+    },
+    {
+      "trigger": "svelte:options-customElement",
+      "description": "Compile component as custom element (web component)",
+      "content": "<svelte:options customElement=\"${1:my-component}\" />",
+      "category": "special"
+    },
+    {
+      "trigger": "svelte:dynamic-import",
+      "description": "Lazy load component with dynamic import",
+      "content": "<script>\n\timport { onMount } from 'svelte';\n\n\tlet ${1:Component};\n\n\tonMount(async () => {\n\t\tconst module = await import('${2:./HeavyComponent.svelte}');\n\t\t${1:Component} = module.default;\n\t});\n</script>\n\n{#if ${1:Component}}\n\t<svelte:component this={${1:Component}} />\n{:else}\n\t<p>Loading...</p>\n{/if}",
+      "category": "advanced"
+    },
+    {
+      "trigger": "svelte:class-conditional",
+      "description": "Class with computed condition",
+      "content": "<div class=\"{${1:base}} {${2:condition} ? '${3:active}' : '${4:inactive}'}\">\n\t${5:content}\n</div>",
+      "category": "directives"
+    },
+    {
+      "trigger": "svelte5:component",
+      "description": "Svelte 5 component with runes",
+      "content": "<script>\n\tlet ${1:count} = $state(${2:0});\n\tlet ${3:doubled} = $derived(${1:count} * 2);\n\n\tfunction ${4:increment}() {\n\t\t${1:count}++;\n\t}\n</script>\n\n<button onclick={${4:increment}}>\n\tClicked {${1:count}} times (doubled: {${3:doubled}})\n</button>",
+      "category": "component"
+    },
+    {
+      "trigger": "svelte5:props",
+      "description": "Svelte 5 component props with $props rune",
+      "content": "<script>\n\tlet { ${1:name}, ${2:age} = ${3:25}, ...${4:rest} } = $props();\n</script>\n\n<p>Hello {${1:name}}, age {${2:age}}</p>",
+      "category": "props"
+    },
+    {
+      "trigger": "svelte5:state",
+      "description": "Svelte 5 reactive state with $state",
+      "content": "let ${1:value} = $state(${2:initialValue});",
+      "category": "runes"
+    },
+    {
+      "trigger": "svelte5:derived",
+      "description": "Svelte 5 derived state with $derived",
+      "content": "let ${1:computed} = $derived(${2:expression});",
+      "category": "runes"
+    },
+    {
+      "trigger": "svelte5:derived-by",
+      "description": "Svelte 5 derived state with function body",
+      "content": "let ${1:computed} = $derived.by(() => {\n\t${2:// Complex computation}\n\treturn ${3:result};\n});",
+      "category": "runes"
+    },
+    {
+      "trigger": "svelte5:effect",
+      "description": "Svelte 5 effect with cleanup",
+      "content": "$effect(() => {\n\t${1:// Runs when dependencies change}\n\n\treturn () => {\n\t\t${2:// Cleanup}\n\t};\n});",
+      "category": "runes"
+    },
+    {
+      "trigger": "svelte5:effect-pre",
+      "description": "Svelte 5 pre-update effect",
+      "content": "$effect.pre(() => {\n\t${1:// Runs before DOM update}\n});",
+      "category": "runes"
+    },
+    {
+      "trigger": "svelte5:bindable",
+      "description": "Svelte 5 bindable prop",
+      "content": "let { ${1:value} = $bindable(${2:''}) } = $props();",
+      "category": "runes"
+    },
+    {
+      "trigger": "svelte5:inspect",
+      "description": "Svelte 5 debug reactive values",
+      "content": "$inspect(${1:value});",
+      "category": "runes"
+    },
+    {
+      "trigger": "svelte5:snippet",
+      "description": "Svelte 5 reusable snippet",
+      "content": "{#snippet ${1:name}(${2:param})}\n\t${3:<div>{${2:param}}</div>}\n{/snippet}\n\n{@render ${1:name}(${4:value})}",
+      "category": "component"
+    },
+    {
+      "trigger": "svelte5:snippet-children",
+      "description": "Svelte 5 component with children snippet (replaces slots)",
+      "content": "<script>\n\tlet { children } = $props();\n</script>\n\n<div class=\"${1:wrapper}\">\n\t{@render children?.()}\n</div>",
+      "category": "component"
+    },
+    {
+      "trigger": "svelte5:event",
+      "description": "Svelte 5 event handler (new syntax)",
+      "content": "<${1:button} onclick={${2:handleClick}}>${3:Click me}</${1:button}>",
+      "category": "events"
+    },
+    {
+      "trigger": "svelte5:event-inline",
+      "description": "Svelte 5 inline event handler",
+      "content": "<${1:button} onclick={() => ${2:count++}}>${3:Click me}</${1:button}>",
+      "category": "events"
+    },
+    {
+      "trigger": "svelte5:class-toggle",
+      "description": "Svelte 5 class toggle",
+      "content": "<div class:${1:active}={${2:isActive}} class:${3:disabled}={${4:isDisabled}}>\n\t${5:content}\n</div>",
+      "category": "directives"
+    },
+    {
+      "trigger": "svelte:interval",
+      "description": "Interval with lifecycle cleanup",
+      "content": "<script>\n\timport { onMount, onDestroy } from 'svelte';\n\n\tlet ${1:count} = 0;\n\tlet interval;\n\n\tonMount(() => {\n\t\tinterval = setInterval(() => {\n\t\t\t${1:count}++;\n\t\t}, ${2:1000});\n\t});\n\n\tonDestroy(() => {\n\t\tif (interval) clearInterval(interval);\n\t});\n</script>",
+      "category": "lifecycle"
+    },
+    {
+      "trigger": "svelte:portal",
+      "description": "Portal pattern using action",
+      "content": "function portal(node, target = 'body') {\n\tconst targetEl = document.querySelector(target);\n\ttargetEl.appendChild(node);\n\n\treturn {\n\t\tdestroy() {\n\t\t\tif (node.parentNode) node.parentNode.removeChild(node);\n\t\t}\n\t};\n}",
+      "category": "actions"
+    },
+    {
+      "trigger": "svelte:modal",
+      "description": "Modal component pattern",
+      "content": "<script>\n\texport let ${1:showModal} = false;\n\n\tfunction ${2:close}() {\n\t\t${1:showModal} = false;\n\t}\n</script>\n\n{#if ${1:showModal}}\n\t<div class=\"modal-backdrop\" on:click|self={${2:close}}>\n\t\t<div class=\"modal\" role=\"dialog\">\n\t\t\t<slot />\n\t\t\t<button on:click={${2:close}}>Close</button>\n\t\t</div>\n\t</div>\n{/if}\n\n<style>\n\t.modal-backdrop {\n\t\tposition: fixed;\n\t\tinset: 0;\n\t\tbackground: rgba(0, 0, 0, 0.5);\n\t\tdisplay: flex;\n\t\talign-items: center;\n\t\tjustify-content: center;\n\t}\n\t.modal {\n\t\tbackground: white;\n\t\tpadding: 1rem;\n\t\tborder-radius: 8px;\n\t\tmax-width: 500px;\n\t}\n</style>",
+      "category": "component"
+    },
+    {
+      "trigger": "svelte:each-animate",
+      "description": "Animated list with keyed each and FLIP",
+      "content": "<script>\n\timport { flip } from 'svelte/animate';\n\timport { fade } from 'svelte/transition';\n</script>\n\n{#each ${1:items} as ${2:item} (${2:item}.${3:id})}\n\t<div animate:flip={{ duration: 300 }} transition:fade>\n\t\t{${2:item}.${4:name}}\n\t</div>\n{/each}",
+      "category": "transitions"
+    },
+    {
+      "trigger": "svelte5:state-object",
+      "description": "Svelte 5 reactive object state",
+      "content": "let ${1:form} = $state({\n\t${2:name}: '${3:}',\n\t${4:email}: '${5:}',\n\t${6:message}: '${7:}'\n});",
+      "category": "runes"
+    },
+    {
+      "trigger": "svelte5:state-array",
+      "description": "Svelte 5 reactive array state",
+      "content": "let ${1:items} = $state([${2:}]);\n\nfunction ${3:add}(item) {\n\t${1:items}.push(item);\n}\n\nfunction ${4:remove}(index) {\n\t${1:items}.splice(index, 1);\n}",
+      "category": "runes"
+    },
+    {
+      "trigger": "svelte5:mount",
+      "description": "Svelte 5 programmatic mount",
+      "content": "import { mount } from 'svelte';\nimport ${1:App} from '${2:./App.svelte}';\n\nconst ${3:app} = mount(${1:App}, {\n\ttarget: document.getElementById('${4:app}'),\n\tprops: {\n\t\t${5:// props}\n\t}\n});",
+      "category": "advanced"
+    },
+    {
+      "trigger": "svelte5:boundary",
+      "description": "Svelte 5 error boundary",
+      "content": "<svelte:boundary onerror={(error, reset) => {\n\tconsole.error(error);\n\t${1:// handle error}\n}}>\n\t${2:<Component />}\n</svelte:boundary>",
+      "category": "special"
     }
-  ]
+  ],
+  "imports": {
+    "modules": [
+      {
+        "path": "svelte",
+        "items": [
+          "onMount",
+          "onDestroy",
+          "beforeUpdate",
+          "afterUpdate",
+          "tick",
+          "setContext",
+          "getContext",
+          "hasContext",
+          "getAllContexts",
+          "createEventDispatcher",
+          "mount",
+          "unmount",
+          "hydrate",
+          "untrack",
+          "unstate",
+          "flushSync"
+        ]
+      },
+      {
+        "path": "svelte/store",
+        "items": [
+          "writable",
+          "readable",
+          "derived",
+          "get"
+        ]
+      },
+      {
+        "path": "svelte/motion",
+        "items": [
+          "tweened",
+          "spring"
+        ]
+      },
+      {
+        "path": "svelte/transition",
+        "items": [
+          "fade",
+          "blur",
+          "fly",
+          "slide",
+          "scale",
+          "draw",
+          "crossfade"
+        ]
+      },
+      {
+        "path": "svelte/animate",
+        "items": [
+          "flip"
+        ]
+      },
+      {
+        "path": "svelte/easing",
+        "items": [
+          "linear",
+          "cubicIn",
+          "cubicOut",
+          "cubicInOut",
+          "quadIn",
+          "quadOut",
+          "quadInOut",
+          "quartIn",
+          "quartOut",
+          "quartInOut",
+          "quintIn",
+          "quintOut",
+          "quintInOut",
+          "sineIn",
+          "sineOut",
+          "sineInOut",
+          "expoIn",
+          "expoOut",
+          "expoInOut",
+          "circIn",
+          "circOut",
+          "circInOut",
+          "elasticIn",
+          "elasticOut",
+          "elasticInOut",
+          "backIn",
+          "backOut",
+          "backInOut",
+          "bounceIn",
+          "bounceOut",
+          "bounceInOut"
+        ]
+      }
+    ]
+  }
 }

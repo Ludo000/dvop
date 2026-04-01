@@ -771,6 +771,293 @@
       "description": "zip - Combines multiple iterables element-wise into tuples.",
       "example": "for name, age in zip(names, ages): print(f'{name}: {age}')",
       "category": "builtin_functions"
+    },
+    {
+      "keyword": "breakpoint",
+      "type": "builtin_function",
+      "description": "breakpoint - Drops into the debugger at the call site. Calls sys.breakpointhook() which defaults to pdb. Python 3.7+.",
+      "example": "breakpoint()  # drops into pdb debugger",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "callable",
+      "type": "builtin_function",
+      "description": "callable - Returns True if the object appears callable (has __call__ method).",
+      "example": "if callable(func): func()",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "globals",
+      "type": "builtin_function",
+      "description": "globals - Returns dictionary of current global symbol table.",
+      "example": "g = globals(); print(g['__name__'])",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "locals",
+      "type": "builtin_function",
+      "description": "locals - Returns dictionary of current local symbol table.",
+      "example": "local_vars = locals(); print(local_vars)",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "iter",
+      "type": "builtin_function",
+      "description": "iter - Returns an iterator object. Can take a callable and sentinel value as alternative form.",
+      "example": "it = iter([1, 2, 3]); next(it)  # 1",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "next",
+      "type": "builtin_function",
+      "description": "next - Retrieves the next item from an iterator. Optional default returned when exhausted.",
+      "example": "val = next(iterator); val = next(iterator, 'default')",
+      "category": "builtin_functions"
+    },
+    {
+      "keyword": "object",
+      "type": "builtin_type",
+      "description": "object - Base class for all Python classes. Every class implicitly inherits from object.",
+      "example": "class MyClass(object): pass",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "memoryview",
+      "type": "builtin_type",
+      "description": "memoryview - Creates a memory view object for zero-copy slicing of binary data.",
+      "example": "mv = memoryview(b'Hello'); mv[1:3]",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "slice",
+      "type": "builtin_type",
+      "description": "slice - Creates a slice object used for extended slicing (start, stop, step).",
+      "example": "s = slice(1, 10, 2); my_list[s]",
+      "category": "builtin_types"
+    },
+    {
+      "keyword": "Ellipsis",
+      "type": "constant",
+      "description": "Ellipsis - Special constant (...) used as placeholder in type hints, numpy indexing, and abstract methods.",
+      "example": "def abstract_method(self) -> None: ...",
+      "category": "constants"
+    },
+    {
+      "keyword": "NotImplemented",
+      "type": "constant",
+      "description": "NotImplemented - Special value returned by binary special methods to indicate operation not implemented for given types.",
+      "example": "def __eq__(self, other): if not isinstance(other, MyClass): return NotImplemented",
+      "category": "constants"
+    },
+    {
+      "keyword": "__all__",
+      "type": "special_variable",
+      "description": "__all__ - List of public names exported by a module when 'from module import *' is used.",
+      "example": "__all__ = ['MyClass', 'my_function', 'CONSTANT']",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "__slots__",
+      "type": "special_variable",
+      "description": "__slots__ - Restricts class attributes to listed names, saving memory by avoiding __dict__.",
+      "example": "class Point: __slots__ = ('x', 'y')",
+      "category": "special_variables"
+    },
+    {
+      "keyword": "__init__",
+      "type": "special_method",
+      "description": "__init__ - Instance initializer called after object creation. Sets up instance attributes.",
+      "example": "def __init__(self, name): self.name = name",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__str__",
+      "type": "special_method",
+      "description": "__str__ - Returns human-readable string representation. Called by str() and print().",
+      "example": "def __str__(self): return f'Person({self.name})'",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__repr__",
+      "type": "special_method",
+      "description": "__repr__ - Returns unambiguous developer string representation. Called by repr() and in REPL.",
+      "example": "def __repr__(self): return f'Person(name={self.name!r})'",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__enter__",
+      "type": "special_method",
+      "description": "__enter__ - Called when entering a with block. Returns the context manager value.",
+      "example": "def __enter__(self): return self",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__exit__",
+      "type": "special_method",
+      "description": "__exit__ - Called when exiting a with block. Handles cleanup and optionally suppresses exceptions.",
+      "example": "def __exit__(self, exc_type, exc_val, exc_tb): self.close(); return False",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__iter__",
+      "type": "special_method",
+      "description": "__iter__ - Makes object iterable. Should return an iterator (usually self).",
+      "example": "def __iter__(self): return iter(self._items)",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__next__",
+      "type": "special_method",
+      "description": "__next__ - Returns next value from iterator. Raises StopIteration when exhausted.",
+      "example": "def __next__(self): if self._index >= len(self._data): raise StopIteration; ...",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__getitem__",
+      "type": "special_method",
+      "description": "__getitem__ - Enables item access with bracket notation (obj[key]).",
+      "example": "def __getitem__(self, key): return self._data[key]",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__setitem__",
+      "type": "special_method",
+      "description": "__setitem__ - Enables item assignment with bracket notation (obj[key] = value).",
+      "example": "def __setitem__(self, key, value): self._data[key] = value",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__len__",
+      "type": "special_method",
+      "description": "__len__ - Returns the length of the object. Called by len() and bool() for truthiness.",
+      "example": "def __len__(self): return len(self._items)",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__call__",
+      "type": "special_method",
+      "description": "__call__ - Makes instances callable like functions. Invoked when obj() is used.",
+      "example": "def __call__(self, *args): return self.process(*args)",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__eq__",
+      "type": "special_method",
+      "description": "__eq__ - Defines equality comparison (==). Should return NotImplemented for unsupported types.",
+      "example": "def __eq__(self, other): return self.value == other.value",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__hash__",
+      "type": "special_method",
+      "description": "__hash__ - Returns hash value for use in sets and dict keys. Must be consistent with __eq__.",
+      "example": "def __hash__(self): return hash(self.value)",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__contains__",
+      "type": "special_method",
+      "description": "__contains__ - Implements the 'in' operator for membership testing.",
+      "example": "def __contains__(self, item): return item in self._data",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__del__",
+      "type": "special_method",
+      "description": "__del__ - Called when object is about to be destroyed. Avoid using for cleanup; use context managers instead.",
+      "example": "def __del__(self): self.close()",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__class_getitem__",
+      "type": "special_method",
+      "description": "__class_getitem__ - Enables subscripting of classes for type hints (e.g., MyClass[int]). Python 3.9+.",
+      "example": "def __class_getitem__(cls, item): return cls",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "__post_init__",
+      "type": "special_method",
+      "description": "__post_init__ - Called after dataclass __init__. Used for validation or derived field computation.",
+      "example": "@dataclass\nclass Point:\n    x: float\n    y: float\n    def __post_init__(self): self.magnitude = (self.x**2 + self.y**2)**0.5",
+      "category": "special_methods"
+    },
+    {
+      "keyword": "OSError",
+      "type": "exception",
+      "description": "OSError - Exception raised for system-related errors including I/O failures and OS-level issues.",
+      "example": "try: os.remove('file') except OSError as e: print(e.strerror)",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "RuntimeError",
+      "type": "exception",
+      "description": "RuntimeError - Exception raised when an error doesn't fall into other categories.",
+      "example": "raise RuntimeError('unexpected state reached')",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "StopIteration",
+      "type": "exception",
+      "description": "StopIteration - Raised by __next__() to signal that there are no further items. Ends for loops.",
+      "example": "def __next__(self): raise StopIteration",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "NotImplementedError",
+      "type": "exception",
+      "description": "NotImplementedError - Raised when an abstract method needs to be overridden in a subclass.",
+      "example": "raise NotImplementedError('subclasses must implement this method')",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "PermissionError",
+      "type": "exception",
+      "description": "PermissionError - Raised when trying to run an operation without adequate access rights.",
+      "example": "try: open('/etc/shadow') except PermissionError: print('Access denied')",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "TimeoutError",
+      "type": "exception",
+      "description": "TimeoutError - Raised when a system or async operation times out.",
+      "example": "try: await asyncio.wait_for(coro, timeout=5) except TimeoutError: handle_timeout()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "ConnectionError",
+      "type": "exception",
+      "description": "ConnectionError - Base class for connection-related errors (ConnectionRefusedError, ConnectionResetError).",
+      "example": "try: requests.get(url) except ConnectionError: print('Connection failed')",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "OverflowError",
+      "type": "exception",
+      "description": "OverflowError - Raised when arithmetic operation result is too large to be represented.",
+      "example": "try: math.exp(1000) except OverflowError: handle_overflow()",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "ZeroDivisionError",
+      "type": "exception",
+      "description": "ZeroDivisionError - Raised when dividing by zero or taking modulo of zero.",
+      "example": "try: result = x / y except ZeroDivisionError: result = float('inf')",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "RecursionError",
+      "type": "exception",
+      "description": "RecursionError - Raised when maximum recursion depth is exceeded.",
+      "example": "try: deep_recursion() except RecursionError: print('Max depth exceeded')",
+      "category": "exceptions"
+    },
+    {
+      "keyword": "UnicodeError",
+      "type": "exception",
+      "description": "UnicodeError - Base class for Unicode encoding/decoding errors.",
+      "example": "try: text.encode('ascii') except UnicodeError: text.encode('utf-8')",
+      "category": "exceptions"
     }
   ],
   "snippets": [
@@ -1037,6 +1324,216 @@
       "description": "Configuration manager template",
       "content": "import os\nimport json\nimport yaml\nfrom pathlib import Path\nfrom typing import Dict, Any, Union\nfrom dataclasses import dataclass, field\n\n@dataclass\nclass ${1:AppConfig}:\n    \"\"\"${2:Application configuration}.\"\"\"\n    \n    # Database settings\n    database_url: str = field(default=\"sqlite:///app.db\")\n    database_echo: bool = field(default=False)\n    \n    # Server settings\n    host: str = field(default=\"0.0.0.0\")\n    port: int = field(default=8000)\n    debug: bool = field(default=False)\n    \n    # Logging\n    log_level: str = field(default=\"INFO\")\n    log_file: str = field(default=None)\n    \n    # API settings\n    api_key: str = field(default=\"\")\n    rate_limit: int = field(default=100)\n    \n    @classmethod\n    def from_file(cls, config_path: Union[str, Path]) -> '${1:AppConfig}':\n        \"\"\"Load configuration from file.\"\"\"\n        config_path = Path(config_path)\n        \n        if not config_path.exists():\n            raise FileNotFoundError(f\"Config file not found: {config_path}\")\n        \n        if config_path.suffix.lower() == '.json':\n            with open(config_path) as f:\n                data = json.load(f)\n        elif config_path.suffix.lower() in ['.yml', '.yaml']:\n            with open(config_path) as f:\n                data = yaml.safe_load(f)\n        else:\n            raise ValueError(f\"Unsupported config format: {config_path.suffix}\")\n        \n        return cls(**data)\n    \n    @classmethod\n    def from_env(cls, prefix: str = \"APP_\") -> '${1:AppConfig}':\n        \"\"\"Load configuration from environment variables.\"\"\"\n        config = cls()\n        \n        for field_name in config.__dataclass_fields__:\n            env_name = f\"{prefix}{field_name.upper()}\"\n            env_value = os.getenv(env_name)\n            \n            if env_value is not None:\n                field_type = config.__dataclass_fields__[field_name].type\n                \n                if field_type == bool:\n                    value = env_value.lower() in ('true', '1', 'yes', 'on')\n                elif field_type == int:\n                    value = int(env_value)\n                else:\n                    value = env_value\n                \n                setattr(config, field_name, value)\n        \n        return config\n    \n    def to_dict(self) -> Dict[str, Any]:\n        \"\"\"Convert config to dictionary.\"\"\"\n        return {\n            field.name: getattr(self, field.name)\n            for field in self.__dataclass_fields__.values()\n        }\n    \n    def save_to_file(self, config_path: Union[str, Path]):\n        \"\"\"Save configuration to file.\"\"\"\n        config_path = Path(config_path)\n        config_path.parent.mkdir(parents=True, exist_ok=True)\n        \n        data = self.to_dict()\n        \n        if config_path.suffix.lower() == '.json':\n            with open(config_path, 'w') as f:\n                json.dump(data, f, indent=2)\n        elif config_path.suffix.lower() in ['.yml', '.yaml']:\n            with open(config_path, 'w') as f:\n                yaml.dump(data, f, default_flow_style=False)\n        else:\n            raise ValueError(f\"Unsupported config format: {config_path.suffix}\")\n\n# Usage example\nif __name__ == \"__main__\":\n    # Load from file\n    try:\n        config = ${1:AppConfig}.from_file(\"config.yaml\")\n    except FileNotFoundError:\n        # Use environment variables or defaults\n        config = ${1:AppConfig}.from_env()\n    \n    print(f\"Config: {config}\")\n    \n    # Save current config\n    config.save_to_file(\"current_config.yaml\")",
       "category": "configuration"
+    },
+    {
+      "trigger": "if_else",
+      "description": "If-elif-else chain template",
+      "content": "if ${1:condition}:\n    ${2:pass}\nelif ${3:condition}:\n    ${4:pass}\nelse:\n    ${5:pass}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "for_enumerate",
+      "description": "For loop with enumerate for index and value",
+      "content": "for ${1:i}, ${2:item} in enumerate(${3:iterable}):\n    ${4:pass}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "for_zip",
+      "description": "For loop with zip for parallel iteration",
+      "content": "for ${1:a}, ${2:b} in zip(${3:iterable1}, ${4:iterable2}):\n    ${5:pass}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "set_comp",
+      "description": "Set comprehension template",
+      "content": "{${1:expression} for ${2:item} in ${3:iterable}}",
+      "category": "comprehension"
+    },
+    {
+      "trigger": "gen_expr",
+      "description": "Generator expression template",
+      "content": "(${1:expression} for ${2:item} in ${3:iterable} if ${4:condition})",
+      "category": "comprehension"
+    },
+    {
+      "trigger": "list_comp_filter",
+      "description": "List comprehension with condition filter",
+      "content": "[${1:expression} for ${2:item} in ${3:iterable} if ${4:condition}]",
+      "category": "comprehension"
+    },
+    {
+      "trigger": "match_case",
+      "description": "Match-case structural pattern matching (Python 3.10+)",
+      "content": "match ${1:subject}:\n    case ${2:pattern1}:\n        ${3:pass}\n    case ${4:pattern2}:\n        ${5:pass}\n    case _:\n        ${6:pass}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "walrus",
+      "description": "Walrus operator assignment expression (Python 3.8+)",
+      "content": "if (${1:n} := ${2:expression}) ${3:> 0}:\n    ${4:print(n)}",
+      "category": "operators"
+    },
+    {
+      "trigger": "async_with",
+      "description": "Async context manager usage",
+      "content": "async with ${1:expression} as ${2:variable}:\n    ${3:pass}",
+      "category": "async"
+    },
+    {
+      "trigger": "async_for",
+      "description": "Async for loop for async iterables",
+      "content": "async for ${1:item} in ${2:async_iterable}:\n    ${3:pass}",
+      "category": "async"
+    },
+    {
+      "trigger": "asyncio_gather",
+      "description": "Asyncio gather for concurrent tasks",
+      "content": "import asyncio\n\nasync def ${1:main}():\n    results = await asyncio.gather(\n        ${2:coroutine1}(),\n        ${3:coroutine2}(),\n        ${4:coroutine3}(),\n    )\n    return results\n\nasyncio.run(${1:main}())",
+      "category": "async"
+    },
+    {
+      "trigger": "asyncio_task",
+      "description": "Asyncio task creation and management",
+      "content": "import asyncio\n\nasync def ${1:main}():\n    task1 = asyncio.create_task(${2:coroutine1}())\n    task2 = asyncio.create_task(${3:coroutine2}())\n    \n    ${4:result1} = await task1\n    ${5:result2} = await task2\n    \n    return ${4:result1}, ${5:result2}\n\nasyncio.run(${1:main}())",
+      "category": "async"
+    },
+    {
+      "trigger": "pydantic_model",
+      "description": "Pydantic BaseModel for data validation",
+      "content": "from pydantic import BaseModel, Field, field_validator\nfrom typing import Optional\nfrom datetime import datetime\n\nclass ${1:MyModel}(BaseModel):\n    \"\"\"${2:Model description}.\"\"\"\n    \n    ${3:name}: str = Field(..., min_length=1, max_length=100)\n    ${4:age}: int = Field(..., ge=0, le=150)\n    ${5:email}: Optional[str] = None\n    ${6:created_at}: datetime = Field(default_factory=datetime.now)\n    \n    @field_validator('${3:name}')\n    @classmethod\n    def validate_name(cls, v: str) -> str:\n        return v.strip()\n    \n    model_config = {\n        'str_strip_whitespace': True,\n    }",
+      "category": "validation"
+    },
+    {
+      "trigger": "class_slots",
+      "description": "Class with __slots__ for memory efficiency",
+      "content": "class ${1:ClassName}:\n    \"\"\"${2:Class description}.\"\"\"\n    __slots__ = (${3:'attr1', 'attr2'})\n    \n    def __init__(self, ${4:attr1, attr2}):\n        self.attr1 = ${4:attr1}\n        self.attr2 = ${5:attr2}\n    \n    def __repr__(self):\n        return f'{self.__class__.__name__}({self.attr1!r}, {self.attr2!r})'",
+      "category": "class"
+    },
+    {
+      "trigger": "dataclass_frozen",
+      "description": "Frozen dataclass for immutable data",
+      "content": "from dataclasses import dataclass\n\n@dataclass(frozen=True)\nclass ${1:ClassName}:\n    \"\"\"${2:Immutable data class}.\"\"\"\n    ${3:field1}: ${4:str}\n    ${5:field2}: ${6:int}\n    \n    def ${7:computed_property}(self) -> ${8:str}:\n        return f'{self.${3:field1}}-{self.${5:field2}}'",
+      "category": "dataclass"
+    },
+    {
+      "trigger": "dataclass_post_init",
+      "description": "Dataclass with __post_init__ validation",
+      "content": "from dataclasses import dataclass, field\n\n@dataclass\nclass ${1:ClassName}:\n    \"\"\"${2:Class with post-init validation}.\"\"\"\n    ${3:value}: ${4:float}\n    ${5:computed}: ${6:float} = field(init=False)\n    \n    def __post_init__(self):\n        if self.${3:value} < 0:\n            raise ValueError(f'${3:value} must be non-negative, got {self.${3:value}}')\n        self.${5:computed} = self.${3:value} * 2",
+      "category": "dataclass"
+    },
+    {
+      "trigger": "property_setter",
+      "description": "Property with getter, setter, and deleter",
+      "content": "@property\ndef ${1:name}(self) -> ${2:str}:\n    \"\"\"Get ${1:name}.\"\"\"\n    return self._${1:name}\n\n@${1:name}.setter\ndef ${1:name}(self, value: ${2:str}) -> None:\n    \"\"\"Set ${1:name}.\"\"\"\n    ${3:# validation}\n    self._${1:name} = value",
+      "category": "property"
+    },
+    {
+      "trigger": "singleton",
+      "description": "Singleton pattern using class method",
+      "content": "class ${1:Singleton}:\n    \"\"\"${2:Singleton class}.\"\"\"\n    _instance = None\n    \n    def __new__(cls, *args, **kwargs):\n        if cls._instance is None:\n            cls._instance = super().__new__(cls)\n        return cls._instance\n    \n    def __init__(self, ${3:args}):\n        if not hasattr(self, '_initialized'):\n            ${4:# Initialize once}\n            self._initialized = True",
+      "category": "patterns"
+    },
+    {
+      "trigger": "retry",
+      "description": "Retry decorator with exponential backoff",
+      "content": "import time\nimport functools\nfrom typing import Type\n\ndef retry(\n    max_attempts: int = ${1:3},\n    delay: float = ${2:1.0},\n    backoff: float = ${3:2.0},\n    exceptions: tuple[Type[Exception], ...] = (Exception,),\n):\n    \"\"\"Retry decorator with exponential backoff.\"\"\"\n    def decorator(func):\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            current_delay = delay\n            for attempt in range(1, max_attempts + 1):\n                try:\n                    return func(*args, **kwargs)\n                except exceptions as e:\n                    if attempt == max_attempts:\n                        raise\n                    time.sleep(current_delay)\n                    current_delay *= backoff\n        return wrapper\n    return decorator\n\n# Usage: @retry(max_attempts=3, delay=1.0)\n# def flaky_function(): ...",
+      "category": "patterns"
+    },
+    {
+      "trigger": "file_read",
+      "description": "File read with Path and error handling",
+      "content": "from pathlib import Path\n\n${1:file_path} = Path('${2:filename.txt}')\n\ntry:\n    ${3:content} = ${1:file_path}.read_text(encoding='utf-8')\nexcept FileNotFoundError:\n    print(f'File not found: {${1:file_path}}')\nexcept PermissionError:\n    print(f'Permission denied: {${1:file_path}}')",
+      "category": "file_io"
+    },
+    {
+      "trigger": "file_write",
+      "description": "File write with Path and parent directory creation",
+      "content": "from pathlib import Path\n\n${1:file_path} = Path('${2:output/filename.txt}')\n${1:file_path}.parent.mkdir(parents=True, exist_ok=True)\n${1:file_path}.write_text(${3:content}, encoding='utf-8')",
+      "category": "file_io"
+    },
+    {
+      "trigger": "pathlib_ops",
+      "description": "Common pathlib operations",
+      "content": "from pathlib import Path\n\n${1:path} = Path('${2:directory}')\n\n# List files\n${3:files} = list(${1:path}.glob('${4:*.py}'))\n${5:recursive} = list(${1:path}.rglob('${6:*.py}'))\n\n# Path operations\nparent = ${1:path}.parent\nname = ${1:path}.name\nstem = ${1:path}.stem\nsuffix = ${1:path}.suffix\nabsolute = ${1:path}.resolve()\n\n# Checks\nexists = ${1:path}.exists()\nis_file = ${1:path}.is_file()\nis_dir = ${1:path}.is_dir()",
+      "category": "file_io"
+    },
+    {
+      "trigger": "click_cli",
+      "description": "Click CLI application template",
+      "content": "import click\n\n@click.group()\n@click.version_option(version='${1:1.0.0}')\ndef cli():\n    \"\"\"${2:CLI application description}.\"\"\"\n    pass\n\n@cli.command()\n@click.argument('${3:name}')\n@click.option('--${4:count}', '-c', default=${5:1}, help='${6:Number of times}')\n@click.option('--${7:verbose}', '-v', is_flag=True, help='Enable verbose output')\ndef ${8:greet}(${3:name}, ${4:count}, ${7:verbose}):\n    \"\"\"${9:Command description}.\"\"\"\n    for _ in range(${4:count}):\n        click.echo(f'Hello, {${3:name}}!')\n        if ${7:verbose}:\n            click.echo('(verbose mode)')\n\nif __name__ == '__main__':\n    cli()",
+      "category": "cli"
+    },
+    {
+      "trigger": "pytest_parametrize",
+      "description": "Pytest parametrized test template",
+      "content": "import pytest\n\n@pytest.mark.parametrize(\n    '${1:input_val}, ${2:expected}',\n    [\n        (${3:1}, ${4:2}),\n        (${5:2}, ${6:4}),\n        (${7:0}, ${8:0}),\n    ],\n)\ndef test_${9:function_name}(${1:input_val}, ${2:expected}):\n    \"\"\"Test ${10:description} with various inputs.\"\"\"\n    result = ${11:function_under_test}(${1:input_val})\n    assert result == ${2:expected}",
+      "category": "testing"
+    },
+    {
+      "trigger": "pytest_class",
+      "description": "Pytest test class with setup/teardown",
+      "content": "import pytest\n\nclass Test${1:ClassName}:\n    \"\"\"Tests for ${2:ClassName}.\"\"\"\n    \n    @pytest.fixture(autouse=True)\n    def setup(self):\n        \"\"\"Set up test fixtures.\"\"\"\n        self.${3:instance} = ${2:ClassName}()\n        yield\n        ${4:# teardown}\n    \n    def test_${5:method}(self):\n        \"\"\"Test ${6:description}.\"\"\"\n        result = self.${3:instance}.${5:method}()\n        assert result == ${7:expected}\n    \n    def test_${8:raises}(self):\n        \"\"\"Test ${9:error condition}.\"\"\"\n        with pytest.raises(${10:ValueError}):\n            self.${3:instance}.${11:bad_method}()",
+      "category": "testing"
+    },
+    {
+      "trigger": "pytest_mock",
+      "description": "Pytest with mock/patch template",
+      "content": "from unittest.mock import patch, MagicMock\nimport pytest\n\ndef test_${1:function_name}():\n    \"\"\"Test ${2:description} with mocking.\"\"\"\n    with patch('${3:module.ClassName}') as mock_cls:\n        mock_instance = MagicMock()\n        mock_cls.return_value = mock_instance\n        mock_instance.${4:method}.return_value = ${5:mock_value}\n        \n        result = ${6:function_under_test}()\n        \n        mock_instance.${4:method}.assert_called_once_with(${7:expected_args})\n        assert result == ${8:expected}",
+      "category": "testing"
+    },
+    {
+      "trigger": "custom_exception",
+      "description": "Custom exception hierarchy",
+      "content": "class ${1:AppError}(Exception):\n    \"\"\"Base exception for ${2:application}.\"\"\"\n    \n    def __init__(self, message: str, code: str = None):\n        self.message = message\n        self.code = code\n        super().__init__(self.message)\n\nclass ${3:ValidationError}(${1:AppError}):\n    \"\"\"Raised when validation fails.\"\"\"\n    pass\n\nclass ${4:NotFoundError}(${1:AppError}):\n    \"\"\"Raised when a resource is not found.\"\"\"\n    pass",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "class_inherit",
+      "description": "Class with inheritance template",
+      "content": "class ${1:ChildClass}(${2:ParentClass}):\n    \"\"\"${3:Child class description}.\"\"\"\n    \n    def __init__(self, ${4:params}, ${5:child_params}):\n        super().__init__(${4:params})\n        self.${6:child_attr} = ${5:child_params}\n    \n    def ${7:method}(self):\n        \"\"\"${8:Method description}.\"\"\"\n        ${9:pass}",
+      "category": "class"
+    },
+    {
+      "trigger": "iterator_class",
+      "description": "Custom iterator class following the iterator protocol",
+      "content": "class ${1:MyIterator}:\n    \"\"\"${2:Iterator description}.\"\"\"\n    \n    def __init__(self, ${3:data}):\n        self._data = ${3:data}\n        self._index = 0\n    \n    def __iter__(self):\n        return self\n    \n    def __next__(self):\n        if self._index >= len(self._data):\n            raise StopIteration\n        value = self._data[self._index]\n        self._index += 1\n        return value",
+      "category": "iteration"
+    },
+    {
+      "trigger": "descriptor",
+      "description": "Python descriptor for attribute access control",
+      "content": "class ${1:Validator}:\n    \"\"\"${2:Descriptor for validated attributes}.\"\"\"\n    \n    def __set_name__(self, owner, name):\n        self.private_name = f'_{name}'\n    \n    def __get__(self, obj, objtype=None):\n        if obj is None:\n            return self\n        return getattr(obj, self.private_name, None)\n    \n    def __set__(self, obj, value):\n        ${3:# Validate value}\n        setattr(obj, self.private_name, value)",
+      "category": "patterns"
+    },
+    {
+      "trigger": "subprocess_run",
+      "description": "Subprocess execution with error handling",
+      "content": "import subprocess\n\ntry:\n    result = subprocess.run(\n        [${1:'command', 'arg1', 'arg2'}],\n        capture_output=True,\n        text=True,\n        check=True,\n        timeout=${2:30},\n    )\n    ${3:output} = result.stdout\nexcept subprocess.CalledProcessError as e:\n    print(f'Command failed with exit code {e.returncode}')\n    print(f'stderr: {e.stderr}')\nexcept subprocess.TimeoutExpired:\n    print('Command timed out')",
+      "category": "system"
+    },
+    {
+      "trigger": "httpx_client",
+      "description": "HTTPX async HTTP client pattern",
+      "content": "import httpx\n\nasync def ${1:fetch_data}(url: str) -> dict:\n    \"\"\"${2:Fetch data from API}.\"\"\"\n    async with httpx.AsyncClient() as client:\n        response = await client.get(\n            url,\n            headers={'Authorization': f'Bearer {${3:token}}'},\n            timeout=${4:10.0},\n        )\n        response.raise_for_status()\n        return response.json()",
+      "category": "http"
+    },
+    {
+      "trigger": "cache_lru",
+      "description": "LRU cache for expensive function calls",
+      "content": "from functools import lru_cache\n\n@lru_cache(maxsize=${1:128})\ndef ${2:expensive_function}(${3:param}: ${4:str}) -> ${5:dict}:\n    \"\"\"${6:Cached expensive computation}.\"\"\"\n    ${7:result = compute(param)}\n    return ${7:result}\n\n# Clear cache: ${2:expensive_function}.cache_clear()\n# Cache info: ${2:expensive_function}.cache_info()",
+      "category": "performance"
+    },
+    {
+      "trigger": "type_guard",
+      "description": "Type narrowing with TypeGuard (Python 3.10+)",
+      "content": "from typing import TypeGuard\n\ndef is_${1:string_list}(val: list) -> TypeGuard[list[${2:str}]]:\n    \"\"\"Check if all items are ${2:str}.\"\"\"\n    return all(isinstance(item, ${2:str}) for item in val)\n\ndef ${3:process}(items: list) -> None:\n    if is_${1:string_list}(items):\n        # items is now list[${2:str}]\n        ${4:pass}",
+      "category": "typing"
+    },
+    {
+      "trigger": "overload",
+      "description": "Function overloading with @overload decorator",
+      "content": "from typing import overload\n\n@overload\ndef ${1:process}(data: str) -> str: ...\n@overload\ndef ${1:process}(data: int) -> int: ...\n@overload\ndef ${1:process}(data: list) -> list: ...\n\ndef ${1:process}(data):\n    \"\"\"${2:Process data of various types}.\"\"\"\n    if isinstance(data, str):\n        return data.upper()\n    elif isinstance(data, int):\n        return data * 2\n    elif isinstance(data, list):\n        return sorted(data)\n    raise TypeError(f'Unsupported type: {type(data)}')",
+      "category": "typing"
     }
   ],
   "imports": {
@@ -2405,6 +2902,970 @@
             "name": "Database",
             "item_type": "class",
             "description": "MongoDB database"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "abc",
+        "items": [
+          {
+            "name": "ABC",
+            "item_type": "class",
+            "description": "Abstract base class helper"
+          },
+          {
+            "name": "abstractmethod",
+            "item_type": "decorator",
+            "description": "Declare abstract method"
+          },
+          {
+            "name": "ABCMeta",
+            "item_type": "class",
+            "description": "Abstract base class metaclass"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "contextlib",
+        "items": [
+          {
+            "name": "contextmanager",
+            "item_type": "decorator",
+            "description": "Create context manager from generator"
+          },
+          {
+            "name": "asynccontextmanager",
+            "item_type": "decorator",
+            "description": "Create async context manager"
+          },
+          {
+            "name": "suppress",
+            "item_type": "class",
+            "description": "Suppress specified exceptions"
+          },
+          {
+            "name": "closing",
+            "item_type": "function",
+            "description": "Context manager that closes on exit"
+          },
+          {
+            "name": "nullcontext",
+            "item_type": "function",
+            "description": "No-op context manager"
+          },
+          {
+            "name": "ExitStack",
+            "item_type": "class",
+            "description": "Dynamic context manager stack"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "copy",
+        "items": [
+          {
+            "name": "copy",
+            "item_type": "function",
+            "description": "Shallow copy"
+          },
+          {
+            "name": "deepcopy",
+            "item_type": "function",
+            "description": "Deep copy"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "hashlib",
+        "items": [
+          {
+            "name": "sha256",
+            "item_type": "function",
+            "description": "SHA-256 hash"
+          },
+          {
+            "name": "sha512",
+            "item_type": "function",
+            "description": "SHA-512 hash"
+          },
+          {
+            "name": "md5",
+            "item_type": "function",
+            "description": "MD5 hash"
+          },
+          {
+            "name": "blake2b",
+            "item_type": "function",
+            "description": "BLAKE2b hash"
+          },
+          {
+            "name": "pbkdf2_hmac",
+            "item_type": "function",
+            "description": "PBKDF2 key derivation"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "secrets",
+        "items": [
+          {
+            "name": "token_hex",
+            "item_type": "function",
+            "description": "Generate random hex string"
+          },
+          {
+            "name": "token_urlsafe",
+            "item_type": "function",
+            "description": "Generate URL-safe random token"
+          },
+          {
+            "name": "token_bytes",
+            "item_type": "function",
+            "description": "Generate random bytes"
+          },
+          {
+            "name": "compare_digest",
+            "item_type": "function",
+            "description": "Constant-time string comparison"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "io",
+        "items": [
+          {
+            "name": "StringIO",
+            "item_type": "class",
+            "description": "In-memory text stream"
+          },
+          {
+            "name": "BytesIO",
+            "item_type": "class",
+            "description": "In-memory binary stream"
+          },
+          {
+            "name": "TextIOWrapper",
+            "item_type": "class",
+            "description": "Text I/O wrapper"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "operator",
+        "items": [
+          {
+            "name": "itemgetter",
+            "item_type": "function",
+            "description": "Get items by index/key"
+          },
+          {
+            "name": "attrgetter",
+            "item_type": "function",
+            "description": "Get attributes by name"
+          },
+          {
+            "name": "methodcaller",
+            "item_type": "function",
+            "description": "Call method by name"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "pprint",
+        "items": [
+          {
+            "name": "pprint",
+            "item_type": "function",
+            "description": "Pretty-print data structures"
+          },
+          {
+            "name": "pformat",
+            "item_type": "function",
+            "description": "Format as pretty-printed string"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "shutil",
+        "items": [
+          {
+            "name": "copy2",
+            "item_type": "function",
+            "description": "Copy file preserving metadata"
+          },
+          {
+            "name": "copytree",
+            "item_type": "function",
+            "description": "Recursively copy directory"
+          },
+          {
+            "name": "rmtree",
+            "item_type": "function",
+            "description": "Recursively delete directory"
+          },
+          {
+            "name": "move",
+            "item_type": "function",
+            "description": "Move file or directory"
+          },
+          {
+            "name": "which",
+            "item_type": "function",
+            "description": "Find executable in PATH"
+          },
+          {
+            "name": "disk_usage",
+            "item_type": "function",
+            "description": "Get disk usage statistics"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "subprocess",
+        "items": [
+          {
+            "name": "run",
+            "item_type": "function",
+            "description": "Run command and wait for completion"
+          },
+          {
+            "name": "Popen",
+            "item_type": "class",
+            "description": "Process creation and management"
+          },
+          {
+            "name": "PIPE",
+            "item_type": "constant",
+            "description": "Pipe for stdin/stdout/stderr"
+          },
+          {
+            "name": "CalledProcessError",
+            "item_type": "exception",
+            "description": "Error for non-zero exit codes"
+          },
+          {
+            "name": "TimeoutExpired",
+            "item_type": "exception",
+            "description": "Error for command timeout"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "tempfile",
+        "items": [
+          {
+            "name": "NamedTemporaryFile",
+            "item_type": "function",
+            "description": "Create named temporary file"
+          },
+          {
+            "name": "TemporaryDirectory",
+            "item_type": "class",
+            "description": "Create temporary directory"
+          },
+          {
+            "name": "mkdtemp",
+            "item_type": "function",
+            "description": "Create temporary directory (name only)"
+          },
+          {
+            "name": "gettempdir",
+            "item_type": "function",
+            "description": "Get default temp directory"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "textwrap",
+        "items": [
+          {
+            "name": "dedent",
+            "item_type": "function",
+            "description": "Remove common leading whitespace"
+          },
+          {
+            "name": "indent",
+            "item_type": "function",
+            "description": "Add prefix to lines"
+          },
+          {
+            "name": "wrap",
+            "item_type": "function",
+            "description": "Wrap text to specified width"
+          },
+          {
+            "name": "fill",
+            "item_type": "function",
+            "description": "Wrap and join text lines"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "traceback",
+        "items": [
+          {
+            "name": "format_exc",
+            "item_type": "function",
+            "description": "Format current exception as string"
+          },
+          {
+            "name": "print_exc",
+            "item_type": "function",
+            "description": "Print current exception"
+          },
+          {
+            "name": "format_exception",
+            "item_type": "function",
+            "description": "Format exception as list of strings"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "uuid",
+        "items": [
+          {
+            "name": "uuid4",
+            "item_type": "function",
+            "description": "Generate random UUID"
+          },
+          {
+            "name": "uuid1",
+            "item_type": "function",
+            "description": "Generate time-based UUID"
+          },
+          {
+            "name": "UUID",
+            "item_type": "class",
+            "description": "UUID class"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "struct",
+        "items": [
+          {
+            "name": "pack",
+            "item_type": "function",
+            "description": "Pack values into bytes"
+          },
+          {
+            "name": "unpack",
+            "item_type": "function",
+            "description": "Unpack bytes into values"
+          },
+          {
+            "name": "calcsize",
+            "item_type": "function",
+            "description": "Calculate struct size"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "socket",
+        "items": [
+          {
+            "name": "socket",
+            "item_type": "class",
+            "description": "Socket object for networking"
+          },
+          {
+            "name": "AF_INET",
+            "item_type": "constant",
+            "description": "IPv4 address family"
+          },
+          {
+            "name": "SOCK_STREAM",
+            "item_type": "constant",
+            "description": "TCP socket type"
+          },
+          {
+            "name": "SOCK_DGRAM",
+            "item_type": "constant",
+            "description": "UDP socket type"
+          },
+          {
+            "name": "gethostname",
+            "item_type": "function",
+            "description": "Get local hostname"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "zoneinfo",
+        "items": [
+          {
+            "name": "ZoneInfo",
+            "item_type": "class",
+            "description": "IANA timezone (Python 3.9+)"
+          },
+          {
+            "name": "available_timezones",
+            "item_type": "function",
+            "description": "Set of available timezone names"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "tomllib",
+        "items": [
+          {
+            "name": "loads",
+            "item_type": "function",
+            "description": "Parse TOML string (Python 3.11+)"
+          },
+          {
+            "name": "load",
+            "item_type": "function",
+            "description": "Parse TOML file (Python 3.11+)"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "unittest.mock",
+        "items": [
+          {
+            "name": "Mock",
+            "item_type": "class",
+            "description": "Flexible mock object"
+          },
+          {
+            "name": "MagicMock",
+            "item_type": "class",
+            "description": "Mock with magic methods"
+          },
+          {
+            "name": "patch",
+            "item_type": "function",
+            "description": "Temporarily replace objects"
+          },
+          {
+            "name": "PropertyMock",
+            "item_type": "class",
+            "description": "Mock for properties"
+          },
+          {
+            "name": "AsyncMock",
+            "item_type": "class",
+            "description": "Mock for async functions"
+          },
+          {
+            "name": "call",
+            "item_type": "object",
+            "description": "Call assertion helper"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "pytest",
+        "items": [
+          {
+            "name": "fixture",
+            "item_type": "decorator",
+            "description": "Define test fixture"
+          },
+          {
+            "name": "mark",
+            "item_type": "object",
+            "description": "Test markers (skip, parametrize, etc.)"
+          },
+          {
+            "name": "raises",
+            "item_type": "function",
+            "description": "Assert exception is raised"
+          },
+          {
+            "name": "approx",
+            "item_type": "function",
+            "description": "Approximate floating point comparison"
+          },
+          {
+            "name": "MonkeyPatch",
+            "item_type": "class",
+            "description": "Dynamic attribute/env modification"
+          },
+          {
+            "name": "tmp_path",
+            "item_type": "fixture",
+            "description": "Temporary directory path fixture"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "pydantic",
+        "items": [
+          {
+            "name": "BaseModel",
+            "item_type": "class",
+            "description": "Pydantic model base class"
+          },
+          {
+            "name": "Field",
+            "item_type": "function",
+            "description": "Field configuration and validation"
+          },
+          {
+            "name": "field_validator",
+            "item_type": "decorator",
+            "description": "Custom field validator"
+          },
+          {
+            "name": "model_validator",
+            "item_type": "decorator",
+            "description": "Model-level validator"
+          },
+          {
+            "name": "ConfigDict",
+            "item_type": "class",
+            "description": "Model configuration dictionary"
+          },
+          {
+            "name": "ValidationError",
+            "item_type": "exception",
+            "description": "Validation error"
+          }
+        ],
+        "submodules": [
+          "settings"
+        ]
+      },
+      {
+        "path": "httpx",
+        "items": [
+          {
+            "name": "get",
+            "item_type": "function",
+            "description": "HTTP GET request"
+          },
+          {
+            "name": "post",
+            "item_type": "function",
+            "description": "HTTP POST request"
+          },
+          {
+            "name": "Client",
+            "item_type": "class",
+            "description": "Sync HTTP client"
+          },
+          {
+            "name": "AsyncClient",
+            "item_type": "class",
+            "description": "Async HTTP client"
+          },
+          {
+            "name": "Response",
+            "item_type": "class",
+            "description": "HTTP response"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "aiohttp",
+        "items": [
+          {
+            "name": "ClientSession",
+            "item_type": "class",
+            "description": "Async HTTP client session"
+          },
+          {
+            "name": "web",
+            "item_type": "module",
+            "description": "Web server components"
+          },
+          {
+            "name": "ClientError",
+            "item_type": "exception",
+            "description": "Client error base class"
+          }
+        ],
+        "submodules": [
+          "web"
+        ]
+      },
+      {
+        "path": "fastapi",
+        "items": [
+          {
+            "name": "FastAPI",
+            "item_type": "class",
+            "description": "FastAPI application"
+          },
+          {
+            "name": "HTTPException",
+            "item_type": "exception",
+            "description": "HTTP error response"
+          },
+          {
+            "name": "Depends",
+            "item_type": "function",
+            "description": "Dependency injection"
+          },
+          {
+            "name": "Query",
+            "item_type": "function",
+            "description": "Query parameter declaration"
+          },
+          {
+            "name": "Path",
+            "item_type": "function",
+            "description": "Path parameter declaration"
+          },
+          {
+            "name": "Body",
+            "item_type": "function",
+            "description": "Request body declaration"
+          },
+          {
+            "name": "Header",
+            "item_type": "function",
+            "description": "Header parameter declaration"
+          },
+          {
+            "name": "APIRouter",
+            "item_type": "class",
+            "description": "Router for organizing endpoints"
+          }
+        ],
+        "submodules": [
+          "responses",
+          "middleware",
+          "security"
+        ]
+      },
+      {
+        "path": "click",
+        "items": [
+          {
+            "name": "command",
+            "item_type": "decorator",
+            "description": "Create CLI command"
+          },
+          {
+            "name": "group",
+            "item_type": "decorator",
+            "description": "Create command group"
+          },
+          {
+            "name": "option",
+            "item_type": "decorator",
+            "description": "Add CLI option"
+          },
+          {
+            "name": "argument",
+            "item_type": "decorator",
+            "description": "Add CLI argument"
+          },
+          {
+            "name": "echo",
+            "item_type": "function",
+            "description": "Print to terminal"
+          },
+          {
+            "name": "confirm",
+            "item_type": "function",
+            "description": "Ask for confirmation"
+          },
+          {
+            "name": "prompt",
+            "item_type": "function",
+            "description": "Prompt for input"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "typer",
+        "items": [
+          {
+            "name": "Typer",
+            "item_type": "class",
+            "description": "Typer application"
+          },
+          {
+            "name": "Argument",
+            "item_type": "function",
+            "description": "CLI argument with type hints"
+          },
+          {
+            "name": "Option",
+            "item_type": "function",
+            "description": "CLI option with type hints"
+          },
+          {
+            "name": "echo",
+            "item_type": "function",
+            "description": "Print to terminal"
+          },
+          {
+            "name": "Exit",
+            "item_type": "exception",
+            "description": "Exit the CLI application"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "sqlalchemy",
+        "items": [
+          {
+            "name": "create_engine",
+            "item_type": "function",
+            "description": "Create database engine"
+          },
+          {
+            "name": "Column",
+            "item_type": "class",
+            "description": "Table column definition"
+          },
+          {
+            "name": "Integer",
+            "item_type": "class",
+            "description": "Integer column type"
+          },
+          {
+            "name": "String",
+            "item_type": "class",
+            "description": "String column type"
+          },
+          {
+            "name": "ForeignKey",
+            "item_type": "class",
+            "description": "Foreign key constraint"
+          },
+          {
+            "name": "select",
+            "item_type": "function",
+            "description": "Create SELECT statement"
+          },
+          {
+            "name": "text",
+            "item_type": "function",
+            "description": "Create textual SQL"
+          }
+        ],
+        "submodules": [
+          "orm",
+          "ext"
+        ]
+      },
+      {
+        "path": "sqlalchemy.orm",
+        "items": [
+          {
+            "name": "Session",
+            "item_type": "class",
+            "description": "Database session"
+          },
+          {
+            "name": "sessionmaker",
+            "item_type": "function",
+            "description": "Create session factory"
+          },
+          {
+            "name": "relationship",
+            "item_type": "function",
+            "description": "Define model relationship"
+          },
+          {
+            "name": "DeclarativeBase",
+            "item_type": "class",
+            "description": "Declarative base for models"
+          },
+          {
+            "name": "Mapped",
+            "item_type": "type",
+            "description": "Mapped column type annotation"
+          },
+          {
+            "name": "mapped_column",
+            "item_type": "function",
+            "description": "Annotated column definition"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "celery",
+        "items": [
+          {
+            "name": "Celery",
+            "item_type": "class",
+            "description": "Celery application"
+          },
+          {
+            "name": "shared_task",
+            "item_type": "decorator",
+            "description": "Define shared task"
+          },
+          {
+            "name": "group",
+            "item_type": "function",
+            "description": "Group tasks for parallel execution"
+          },
+          {
+            "name": "chain",
+            "item_type": "function",
+            "description": "Chain tasks sequentially"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "redis",
+        "items": [
+          {
+            "name": "Redis",
+            "item_type": "class",
+            "description": "Redis client"
+          },
+          {
+            "name": "ConnectionPool",
+            "item_type": "class",
+            "description": "Redis connection pool"
+          },
+          {
+            "name": "from_url",
+            "item_type": "function",
+            "description": "Create client from URL"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "boto3",
+        "items": [
+          {
+            "name": "client",
+            "item_type": "function",
+            "description": "Create AWS service client"
+          },
+          {
+            "name": "resource",
+            "item_type": "function",
+            "description": "Create AWS resource"
+          },
+          {
+            "name": "Session",
+            "item_type": "class",
+            "description": "AWS session"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "rich",
+        "items": [
+          {
+            "name": "print",
+            "item_type": "function",
+            "description": "Rich print with formatting"
+          },
+          {
+            "name": "Console",
+            "item_type": "class",
+            "description": "Rich console output"
+          },
+          {
+            "name": "Table",
+            "item_type": "class",
+            "description": "Rich table display"
+          },
+          {
+            "name": "Progress",
+            "item_type": "class",
+            "description": "Progress bar display"
+          },
+          {
+            "name": "Panel",
+            "item_type": "class",
+            "description": "Rich panel display"
+          }
+        ],
+        "submodules": [
+          "console",
+          "table",
+          "progress"
+        ]
+      },
+      {
+        "path": "dotenv",
+        "items": [
+          {
+            "name": "load_dotenv",
+            "item_type": "function",
+            "description": "Load .env file into environment"
+          },
+          {
+            "name": "find_dotenv",
+            "item_type": "function",
+            "description": "Find .env file"
+          },
+          {
+            "name": "dotenv_values",
+            "item_type": "function",
+            "description": "Read .env as dictionary"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "polars",
+        "items": [
+          {
+            "name": "DataFrame",
+            "item_type": "class",
+            "description": "Polars DataFrame"
+          },
+          {
+            "name": "Series",
+            "item_type": "class",
+            "description": "Polars Series"
+          },
+          {
+            "name": "read_csv",
+            "item_type": "function",
+            "description": "Read CSV file"
+          },
+          {
+            "name": "read_parquet",
+            "item_type": "function",
+            "description": "Read Parquet file"
+          },
+          {
+            "name": "col",
+            "item_type": "function",
+            "description": "Column expression"
+          },
+          {
+            "name": "lit",
+            "item_type": "function",
+            "description": "Literal value expression"
+          },
+          {
+            "name": "LazyFrame",
+            "item_type": "class",
+            "description": "Lazy evaluation DataFrame"
           }
         ],
         "submodules": []

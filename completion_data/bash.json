@@ -407,6 +407,678 @@
       "description": "cp - Copy files or directories. -r recursive, -p preserve attributes.",
       "example": "cp file.txt copy.txt; cp -r dir/ newdir/; cp -p file dest",
       "category": "command"
+    },
+    {
+      "keyword": "in",
+      "type": "keyword",
+      "description": "in - Used with for and case to specify the list or patterns to iterate/match.",
+      "example": "for i in 1 2 3; do echo $i; done",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "select",
+      "type": "keyword",
+      "description": "select - Creates a numbered menu from a word list and prompts the user to choose.",
+      "example": "select opt in \"Start\" \"Stop\" \"Quit\"; do echo $opt; break; done",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "time",
+      "type": "keyword",
+      "description": "time - Reports the real, user, and system time consumed by a pipeline.",
+      "example": "time find / -name '*.log' 2>/dev/null",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "coproc",
+      "type": "keyword",
+      "description": "coproc - Runs a command in a coprocess with two-way pipe communication.",
+      "example": "coproc myproc { while read line; do echo \"got: $line\"; done; }",
+      "category": "control_flow"
+    },
+    {
+      "keyword": "alias",
+      "type": "builtin",
+      "description": "alias - Define or display shell aliases. Creates shorthand for longer commands.",
+      "example": "alias ll='ls -la'",
+      "category": "builtin"
+    },
+    {
+      "keyword": "unalias",
+      "type": "builtin",
+      "description": "unalias - Remove previously defined aliases.",
+      "example": "unalias ll",
+      "category": "builtin"
+    },
+    {
+      "keyword": "type",
+      "type": "builtin",
+      "description": "type - Displays how a command name would be interpreted (alias, builtin, file, function, keyword).",
+      "example": "type ls  # ls is aliased to 'ls --color=auto'",
+      "category": "builtin"
+    },
+    {
+      "keyword": "hash",
+      "type": "builtin",
+      "description": "hash - Manage the hash table of remembered command paths for faster lookups.",
+      "example": "hash -r  # clear remembered paths",
+      "category": "builtin"
+    },
+    {
+      "keyword": "command",
+      "type": "builtin",
+      "description": "command - Run a command bypassing shell functions. Useful to call the real binary when a function shadows it.",
+      "example": "command ls  # bypass any 'ls' function/alias",
+      "category": "builtin"
+    },
+    {
+      "keyword": "builtin",
+      "type": "builtin",
+      "description": "builtin - Execute a shell builtin directly, bypassing functions with the same name.",
+      "example": "builtin cd /tmp",
+      "category": "builtin"
+    },
+    {
+      "keyword": "enable",
+      "type": "builtin",
+      "description": "enable - Enable or disable shell builtins.",
+      "example": "enable -n echo  # disable the echo builtin",
+      "category": "builtin"
+    },
+    {
+      "keyword": "wait",
+      "type": "builtin",
+      "description": "wait - Wait for background processes to finish and return their exit status.",
+      "example": "cmd1 & cmd2 & wait  # wait for both",
+      "category": "builtin"
+    },
+    {
+      "keyword": "jobs",
+      "type": "builtin",
+      "description": "jobs - List active jobs started in the current shell session.",
+      "example": "jobs -l  # list with PIDs",
+      "category": "builtin"
+    },
+    {
+      "keyword": "bg",
+      "type": "builtin",
+      "description": "bg - Resume a suspended job in the background.",
+      "example": "bg %1",
+      "category": "builtin"
+    },
+    {
+      "keyword": "fg",
+      "type": "builtin",
+      "description": "fg - Bring a background job to the foreground.",
+      "example": "fg %1",
+      "category": "builtin"
+    },
+    {
+      "keyword": "disown",
+      "type": "builtin",
+      "description": "disown - Remove a job from the shell's job table so it won't receive SIGHUP on shell exit.",
+      "example": "long_process & disown",
+      "category": "builtin"
+    },
+    {
+      "keyword": "pushd",
+      "type": "builtin",
+      "description": "pushd - Push directory onto the stack and cd to it. Use popd to return.",
+      "example": "pushd /var/log  # now in /var/log, previous dir saved",
+      "category": "builtin"
+    },
+    {
+      "keyword": "popd",
+      "type": "builtin",
+      "description": "popd - Pop the top directory from the stack and cd to it.",
+      "example": "popd  # return to previously pushed directory",
+      "category": "builtin"
+    },
+    {
+      "keyword": "dirs",
+      "type": "builtin",
+      "description": "dirs - Display the directory stack managed by pushd/popd.",
+      "example": "dirs -v  # show numbered stack",
+      "category": "builtin"
+    },
+    {
+      "keyword": "ulimit",
+      "type": "builtin",
+      "description": "ulimit - Get or set user resource limits (file size, open files, stack size, etc.).",
+      "example": "ulimit -n 4096  # set max open files",
+      "category": "builtin"
+    },
+    {
+      "keyword": "umask",
+      "type": "builtin",
+      "description": "umask - Get or set the file creation permission mask.",
+      "example": "umask 022  # default: owner rw, group/other r-only",
+      "category": "builtin"
+    },
+    {
+      "keyword": "complete",
+      "type": "builtin",
+      "description": "complete - Specify how arguments to a command are completed with Tab.",
+      "example": "complete -f -X '!*.pdf' evince  # complete only .pdf files",
+      "category": "builtin"
+    },
+    {
+      "keyword": "compgen",
+      "type": "builtin",
+      "description": "compgen - Generate possible completions matching a word. Used in completion functions.",
+      "example": "compgen -W 'start stop restart' -- \"$cur\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "compopt",
+      "type": "builtin",
+      "description": "compopt - Modify completion options for the current completion.",
+      "example": "compopt -o nospace  # don't add space after completion",
+      "category": "builtin"
+    },
+    {
+      "keyword": "mapfile",
+      "type": "builtin",
+      "description": "mapfile - Read lines from stdin into an indexed array (also called readarray).",
+      "example": "mapfile -t lines < file.txt",
+      "category": "builtin"
+    },
+    {
+      "keyword": "readarray",
+      "type": "builtin",
+      "description": "readarray - Synonym for mapfile. Reads lines from stdin into an array.",
+      "example": "readarray -t arr < <(ls)",
+      "category": "builtin"
+    },
+    {
+      "keyword": "caller",
+      "type": "builtin",
+      "description": "caller - Returns the context of the current subroutine call (line number, function, file). Used for debugging.",
+      "example": "caller 0  # prints line_number subroutine filename",
+      "category": "builtin"
+    },
+    {
+      "keyword": "suspend",
+      "type": "builtin",
+      "description": "suspend - Suspend execution of the current shell (like Ctrl+Z on itself).",
+      "example": "suspend  # pause this shell",
+      "category": "builtin"
+    },
+    {
+      "keyword": "basename",
+      "type": "command",
+      "description": "basename - Strip directory and optionally suffix from a filename.",
+      "example": "basename /home/user/file.txt .txt  # outputs: file",
+      "category": "command"
+    },
+    {
+      "keyword": "dirname",
+      "type": "command",
+      "description": "dirname - Strip the last component from a file path, returning the directory.",
+      "example": "dirname /home/user/file.txt  # outputs: /home/user",
+      "category": "command"
+    },
+    {
+      "keyword": "realpath",
+      "type": "command",
+      "description": "realpath - Resolve symlinks and relative paths to get the canonical absolute path.",
+      "example": "realpath ../scripts/deploy.sh",
+      "category": "command"
+    },
+    {
+      "keyword": "mktemp",
+      "type": "command",
+      "description": "mktemp - Create a temporary file or directory safely with a unique name.",
+      "example": "tmpfile=$(mktemp /tmp/myapp.XXXXXX)",
+      "category": "command"
+    },
+    {
+      "keyword": "date",
+      "type": "command",
+      "description": "date - Display or set the system date and time.",
+      "example": "date '+%Y-%m-%d %H:%M:%S'  # 2026-04-01 14:30:00",
+      "category": "command"
+    },
+    {
+      "keyword": "sleep",
+      "type": "command",
+      "description": "sleep - Pause execution for a specified duration.",
+      "example": "sleep 5  # wait 5 seconds",
+      "category": "command"
+    },
+    {
+      "keyword": "kill",
+      "type": "command",
+      "description": "kill - Send a signal to a process. Defaults to SIGTERM.",
+      "example": "kill -9 $PID  # force kill",
+      "category": "command"
+    },
+    {
+      "keyword": "diff",
+      "type": "command",
+      "description": "diff - Compare files line by line and show differences.",
+      "example": "diff -u file1.txt file2.txt",
+      "category": "command"
+    },
+    {
+      "keyword": "patch",
+      "type": "command",
+      "description": "patch - Apply a diff/patch file to a source file.",
+      "example": "patch < fix.patch",
+      "category": "command"
+    },
+    {
+      "keyword": "tar",
+      "type": "command",
+      "description": "tar - Archive and compress files.",
+      "example": "tar -czf archive.tar.gz dir/  # create gzip archive",
+      "category": "command"
+    },
+    {
+      "keyword": "gzip",
+      "type": "command",
+      "description": "gzip - Compress files using the gzip algorithm.",
+      "example": "gzip file.txt  # creates file.txt.gz",
+      "category": "command"
+    },
+    {
+      "keyword": "curl",
+      "type": "command",
+      "description": "curl - Transfer data from or to a server using URLs. Supports HTTP, FTP, and more.",
+      "example": "curl -sS https://example.com/api | jq .",
+      "category": "command"
+    },
+    {
+      "keyword": "wget",
+      "type": "command",
+      "description": "wget - Non-interactive network downloader. Good for recursive downloads.",
+      "example": "wget -q https://example.com/file.tar.gz",
+      "category": "command"
+    },
+    {
+      "keyword": "ssh",
+      "type": "command",
+      "description": "ssh - Secure shell client for remote login and command execution.",
+      "example": "ssh user@host 'uptime'",
+      "category": "command"
+    },
+    {
+      "keyword": "scp",
+      "type": "command",
+      "description": "scp - Securely copy files between hosts over SSH.",
+      "example": "scp file.txt user@host:/tmp/",
+      "category": "command"
+    },
+    {
+      "keyword": "rsync",
+      "type": "command",
+      "description": "rsync - Fast, versatile file copying supporting incremental transfers.",
+      "example": "rsync -avz src/ user@host:dest/",
+      "category": "command"
+    },
+    {
+      "keyword": "touch",
+      "type": "command",
+      "description": "touch - Create an empty file or update the timestamp of an existing file.",
+      "example": "touch newfile.txt",
+      "category": "command"
+    },
+    {
+      "keyword": "ln",
+      "type": "command",
+      "description": "ln - Create hard or symbolic links between files.",
+      "example": "ln -s /path/to/target link_name",
+      "category": "command"
+    },
+    {
+      "keyword": "du",
+      "type": "command",
+      "description": "du - Estimate file and directory space usage.",
+      "example": "du -sh /var/log/*  # human-readable summary",
+      "category": "command"
+    },
+    {
+      "keyword": "df",
+      "type": "command",
+      "description": "df - Report filesystem disk space usage.",
+      "example": "df -h  # human-readable sizes",
+      "category": "command"
+    },
+    {
+      "keyword": "ps",
+      "type": "command",
+      "description": "ps - Report a snapshot of current processes.",
+      "example": "ps aux | grep nginx",
+      "category": "command"
+    },
+    {
+      "keyword": "top",
+      "type": "command",
+      "description": "top - Interactive process viewer showing system resource usage.",
+      "example": "top -bn1 | head -20  # batch mode, one iteration",
+      "category": "command"
+    },
+    {
+      "keyword": "env",
+      "type": "command",
+      "description": "env - Run a command with a modified environment or print environment variables.",
+      "example": "env VAR=value command",
+      "category": "command"
+    },
+    {
+      "keyword": "which",
+      "type": "command",
+      "description": "which - Locate a command in the user's PATH.",
+      "example": "which python3  # /usr/bin/python3",
+      "category": "command"
+    },
+    {
+      "keyword": "whoami",
+      "type": "command",
+      "description": "whoami - Print the current effective user name.",
+      "example": "whoami  # outputs: username",
+      "category": "command"
+    },
+    {
+      "keyword": "id",
+      "type": "command",
+      "description": "id - Print real and effective user and group IDs.",
+      "example": "id -u  # print numeric user ID only",
+      "category": "command"
+    },
+    {
+      "keyword": "su",
+      "type": "command",
+      "description": "su - Switch user identity. Run a shell or command as another user.",
+      "example": "su - username",
+      "category": "command"
+    },
+    {
+      "keyword": "sudo",
+      "type": "command",
+      "description": "sudo - Execute a command as another user (default: root) with elevated privileges.",
+      "example": "sudo apt update",
+      "category": "command"
+    },
+    {
+      "keyword": "chgrp",
+      "type": "command",
+      "description": "chgrp - Change the group ownership of files.",
+      "example": "chgrp staff project/",
+      "category": "command"
+    },
+    {
+      "keyword": "stat",
+      "type": "command",
+      "description": "stat - Display detailed file or filesystem status information.",
+      "example": "stat -c '%s bytes, modified %y' file.txt",
+      "category": "command"
+    },
+    {
+      "keyword": "file",
+      "type": "command",
+      "description": "file - Determine the type of a file by examining its content.",
+      "example": "file image.png  # PNG image data, 800 x 600",
+      "category": "command"
+    },
+    {
+      "keyword": "md5sum",
+      "type": "command",
+      "description": "md5sum - Compute and check MD5 message digest checksums.",
+      "example": "md5sum file.iso",
+      "category": "command"
+    },
+    {
+      "keyword": "sha256sum",
+      "type": "command",
+      "description": "sha256sum - Compute and check SHA-256 checksums.",
+      "example": "sha256sum file.iso > file.sha256",
+      "category": "command"
+    },
+    {
+      "keyword": "yes",
+      "type": "command",
+      "description": "yes - Repeatedly output a line of text (default 'y'). Useful for piping into interactive commands.",
+      "example": "yes | apt install package",
+      "category": "command"
+    },
+    {
+      "keyword": "seq",
+      "type": "command",
+      "description": "seq - Print a sequence of numbers with configurable start, step, and end.",
+      "example": "seq 1 2 10  # 1 3 5 7 9",
+      "category": "command"
+    },
+    {
+      "keyword": "bc",
+      "type": "command",
+      "description": "bc - Arbitrary precision calculator language.",
+      "example": "echo 'scale=2; 22/7' | bc  # 3.14",
+      "category": "command"
+    },
+    {
+      "keyword": "column",
+      "type": "command",
+      "description": "column - Format text into aligned columns.",
+      "example": "cat data.csv | column -t -s ','",
+      "category": "command"
+    },
+    {
+      "keyword": "paste",
+      "type": "command",
+      "description": "paste - Merge lines of files side by side.",
+      "example": "paste -d',' file1.txt file2.txt",
+      "category": "command"
+    },
+    {
+      "keyword": "comm",
+      "type": "command",
+      "description": "comm - Compare two sorted files line by line, showing lines unique to each and common lines.",
+      "example": "comm -23 file1.txt file2.txt  # lines only in file1",
+      "category": "command"
+    },
+    {
+      "keyword": "rev",
+      "type": "command",
+      "description": "rev - Reverse each line character by character.",
+      "example": "echo 'hello' | rev  # olleh",
+      "category": "command"
+    },
+    {
+      "keyword": "nl",
+      "type": "command",
+      "description": "nl - Number lines of files.",
+      "example": "nl -ba script.sh  # number all lines",
+      "category": "command"
+    },
+    {
+      "keyword": "fold",
+      "type": "command",
+      "description": "fold - Wrap lines to a specified width.",
+      "example": "fold -w 80 -s longfile.txt  # wrap at 80 chars, break at spaces",
+      "category": "command"
+    },
+    {
+      "keyword": "fmt",
+      "type": "command",
+      "description": "fmt - Simple text formatter that reflowed paragraphs to a given width.",
+      "example": "fmt -w 72 README.txt",
+      "category": "command"
+    },
+    {
+      "keyword": "nohup",
+      "type": "command",
+      "description": "nohup - Run a command immune to hangup signals, persisting after terminal close.",
+      "example": "nohup ./long_task.sh &",
+      "category": "command"
+    },
+    {
+      "keyword": "timeout",
+      "type": "command",
+      "description": "timeout - Run a command with a time limit, killing it if it takes too long.",
+      "example": "timeout 30s curl https://slow-api.example.com",
+      "category": "command"
+    },
+    {
+      "keyword": "watch",
+      "type": "command",
+      "description": "watch - Execute a command periodically, showing output fullscreen.",
+      "example": "watch -n 5 df -h  # refresh every 5 seconds",
+      "category": "command"
+    },
+    {
+      "keyword": "jq",
+      "type": "command",
+      "description": "jq - Lightweight JSON processor for querying, filtering, and transforming JSON data.",
+      "example": "curl -s api.example.com | jq '.items[] | .name'",
+      "category": "command"
+    },
+    {
+      "keyword": "tput",
+      "type": "command",
+      "description": "tput - Query and set terminal capabilities (colors, cursor positioning, etc.).",
+      "example": "tput setaf 1  # set text color to red",
+      "category": "command"
+    },
+    {
+      "keyword": "$?",
+      "type": "builtin",
+      "description": "$? - Exit status of the last executed command. 0 means success, non-zero means failure.",
+      "example": "if [ $? -ne 0 ]; then echo 'command failed'; fi",
+      "category": "builtin"
+    },
+    {
+      "keyword": "$#",
+      "type": "builtin",
+      "description": "$# - The number of positional parameters passed to the script or function.",
+      "example": "if [ $# -lt 2 ]; then echo 'Usage: script arg1 arg2'; fi",
+      "category": "builtin"
+    },
+    {
+      "keyword": "$@",
+      "type": "builtin",
+      "description": "$@ - All positional parameters as separate words (preserves quoting per argument).",
+      "example": "for arg in \"$@\"; do process \"$arg\"; done",
+      "category": "builtin"
+    },
+    {
+      "keyword": "$*",
+      "type": "builtin",
+      "description": "$* - All positional parameters as a single word, joined by IFS.",
+      "example": "echo \"All args: $*\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "$$",
+      "type": "builtin",
+      "description": "$$ - Process ID of the current shell.",
+      "example": "echo \"PID: $$\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "$!",
+      "type": "builtin",
+      "description": "$! - Process ID of the last background command.",
+      "example": "long_cmd & wait $!",
+      "category": "builtin"
+    },
+    {
+      "keyword": "$0",
+      "type": "builtin",
+      "description": "$0 - Name of the current script or shell.",
+      "example": "echo \"Script name: $0\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "$_",
+      "type": "builtin",
+      "description": "$_ - Last argument of the previous command.",
+      "example": "mkdir /tmp/test && cd $_  # cd into the just-created dir",
+      "category": "builtin"
+    },
+    {
+      "keyword": "BASH_VERSION",
+      "type": "builtin",
+      "description": "BASH_VERSION - String describing the version of this Bash instance.",
+      "example": "echo \"Bash version: $BASH_VERSION\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "RANDOM",
+      "type": "builtin",
+      "description": "RANDOM - Generates a random integer between 0 and 32767 on each reference.",
+      "example": "echo $((RANDOM % 100))  # random 0-99",
+      "category": "builtin"
+    },
+    {
+      "keyword": "SECONDS",
+      "type": "builtin",
+      "description": "SECONDS - Number of seconds since the shell was started. Can be reset.",
+      "example": "SECONDS=0; heavy_task; echo \"Took $SECONDS seconds\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "LINENO",
+      "type": "builtin",
+      "description": "LINENO - Current line number in the script. Useful in error messages.",
+      "example": "echo \"Error at line $LINENO\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "FUNCNAME",
+      "type": "builtin",
+      "description": "FUNCNAME - Array of function names in the call stack. FUNCNAME[0] is the current function.",
+      "example": "echo \"In function: ${FUNCNAME[0]}\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "BASH_SOURCE",
+      "type": "builtin",
+      "description": "BASH_SOURCE - Array of source filenames in the call stack. Used to find the script's own path.",
+      "example": "SCRIPT_DIR=$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)",
+      "category": "builtin"
+    },
+    {
+      "keyword": "PIPESTATUS",
+      "type": "builtin",
+      "description": "PIPESTATUS - Array of exit statuses from the most recent pipeline.",
+      "example": "cmd1 | cmd2; echo \"${PIPESTATUS[0]} ${PIPESTATUS[1]}\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "IFS",
+      "type": "builtin",
+      "description": "IFS - Internal Field Separator. Controls word splitting for unquoted expansions (default: space/tab/newline).",
+      "example": "IFS=',' read -ra arr <<< \"a,b,c\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "PATH",
+      "type": "builtin",
+      "description": "PATH - Colon-separated list of directories searched for commands.",
+      "example": "export PATH=\"$HOME/.local/bin:$PATH\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "HOME",
+      "type": "builtin",
+      "description": "HOME - Home directory of the current user.",
+      "example": "config=\"$HOME/.config/myapp\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "PWD",
+      "type": "builtin",
+      "description": "PWD - Current working directory (set by cd).",
+      "example": "echo \"Currently in: $PWD\"",
+      "category": "builtin"
+    },
+    {
+      "keyword": "OLDPWD",
+      "type": "builtin",
+      "description": "OLDPWD - Previous working directory (set by cd). Used by 'cd -'.",
+      "example": "cd -  # equivalent to cd \"$OLDPWD\"",
+      "category": "builtin"
     }
   ],
   "snippets": [
@@ -589,6 +1261,330 @@
       "description": "Arithmetic expansion",
       "content": "${1:result}=$((${2:expression}))\nlet ${1:result}=\"${2:expression}\"\n((${1:result} = ${2:expression}))",
       "category": "arithmetic"
+    },
+    {
+      "trigger": "bash_strict",
+      "description": "Strict mode header — fail on errors, unset vars, and pipe failures",
+      "content": "#!/usr/bin/env bash\nset -euo pipefail\nIFS=$'\\n\\t'\n\n${1:# script body}",
+      "category": "template"
+    },
+    {
+      "trigger": "bash_strict_debug",
+      "description": "Strict mode with debug tracing (set -x)",
+      "content": "#!/usr/bin/env bash\nset -euxo pipefail\nIFS=$'\\n\\t'\n\n${1:# script body}",
+      "category": "template"
+    },
+    {
+      "trigger": "script_dir",
+      "description": "Get the directory where the script itself is located (resolves symlinks)",
+      "content": "SCRIPT_DIR=$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)",
+      "category": "template"
+    },
+    {
+      "trigger": "usage",
+      "description": "Print usage/help message and exit",
+      "content": "usage() {\n    cat <<EOF\nUsage: $(basename \"$0\") [OPTIONS] ${1:args}\n\n${2:Description of the script.}\n\nOptions:\n    -h, --help    Show this help message\n    ${3:-v, --verbose  Enable verbose output}\nEOF\n    exit \"${4:0}\"\n}",
+      "category": "template"
+    },
+    {
+      "trigger": "args_long",
+      "description": "Parse long and short options with while/case",
+      "content": "while [[ $# -gt 0 ]]; do\n    case \"$1\" in\n        -h|--help)\n            usage\n            ;;\n        -v|--verbose)\n            VERBOSE=true\n            shift\n            ;;\n        -o|--output)\n            OUTPUT=\"$2\"\n            shift 2\n            ;;\n        --)\n            shift\n            break\n            ;;\n        -*)\n            echo \"Unknown option: $1\" >&2\n            exit 1\n            ;;\n        *)\n            ARGS+=(\"$1\")\n            shift\n            ;;\n    esac\ndone",
+      "category": "argument_parsing"
+    },
+    {
+      "trigger": "require_args",
+      "description": "Validate minimum number of arguments",
+      "content": "if [[ $# -lt ${1:2} ]]; then\n    echo \"Error: expected at least ${1:2} arguments, got $#\" >&2\n    usage\nfi",
+      "category": "validation"
+    },
+    {
+      "trigger": "require_command",
+      "description": "Ensure a command is available or exit with an error",
+      "content": "for cmd in ${1:curl jq}; do\n    if ! command -v \"$cmd\" &>/dev/null; then\n        echo \"Error: required command '$cmd' not found\" >&2\n        exit 1\n    fi\ndone",
+      "category": "validation"
+    },
+    {
+      "trigger": "select_menu",
+      "description": "Interactive menu with select",
+      "content": "PS3=\"${1:Choose an option}: \"\nselect opt in ${2:\"Option1\" \"Option2\" \"Quit\"}; do\n    case \"$opt\" in\n        ${3:Option1}) echo \"Selected $opt\" ;;\n        ${4:Quit}) break ;;\n        *) echo \"Invalid option\" ;;\n    esac\ndone",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "retry",
+      "description": "Retry a command up to N times with delay",
+      "content": "retry() {\n    local max_attempts=${1:3}\n    local delay=${2:5}\n    local attempt=1\n    while [[ $attempt -le $max_attempts ]]; do\n        if \"$@\"; then\n            return 0\n        fi\n        echo \"Attempt $attempt/$max_attempts failed. Retrying in ${delay}s...\" >&2\n        sleep \"$delay\"\n        ((attempt++))\n    done\n    echo \"All $max_attempts attempts failed\" >&2\n    return 1\n}",
+      "category": "control_flow"
+    },
+    {
+      "trigger": "until_loop",
+      "description": "Until loop — repeats until condition becomes true",
+      "content": "until ${1:condition}; do\n    ${2:# body}\ndone",
+      "category": "loop"
+    },
+    {
+      "trigger": "for_c_style",
+      "description": "C-style for loop with arithmetic",
+      "content": "for ((${1:i}=0; ${1:i}<${2:10}; ${1:i}++)); do\n    ${3:echo \"$i\"}\ndone",
+      "category": "loop"
+    },
+    {
+      "trigger": "infinite_loop",
+      "description": "Infinite while loop with break condition",
+      "content": "while true; do\n    ${1:# body}\n    if ${2:condition}; then\n        break\n    fi\n    sleep ${3:1}\ndone",
+      "category": "loop"
+    },
+    {
+      "trigger": "string_upper",
+      "description": "Convert string to uppercase",
+      "content": "upper=\"${${1:var}^^}\"",
+      "category": "string"
+    },
+    {
+      "trigger": "string_lower",
+      "description": "Convert string to lowercase",
+      "content": "lower=\"${${1:var},,}\"",
+      "category": "string"
+    },
+    {
+      "trigger": "string_replace",
+      "description": "Replace pattern in a string variable",
+      "content": "result=\"${${1:var}//${2:pattern}/${3:replacement}}\"",
+      "category": "string"
+    },
+    {
+      "trigger": "string_trim",
+      "description": "Trim leading/trailing whitespace from a variable",
+      "content": "${1:var}=\"$(echo -e \"${${1:var}}\" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')\"",
+      "category": "string"
+    },
+    {
+      "trigger": "string_split",
+      "description": "Split string into array by delimiter",
+      "content": "IFS='${1:,}' read -ra ${2:arr} <<< \"${3:string}\"",
+      "category": "string"
+    },
+    {
+      "trigger": "string_contains",
+      "description": "Check if a string contains a substring",
+      "content": "if [[ \"${1:string}\" == *\"${2:substring}\"* ]]; then\n    ${3:echo \"found\"}\nfi",
+      "category": "string"
+    },
+    {
+      "trigger": "string_startswith",
+      "description": "Check if a string starts with a prefix",
+      "content": "if [[ \"${1:string}\" == ${2:prefix}* ]]; then\n    ${3:echo \"starts with prefix\"}\nfi",
+      "category": "string"
+    },
+    {
+      "trigger": "string_length",
+      "description": "Get the length of a string",
+      "content": "len=${#${1:var}}",
+      "category": "string"
+    },
+    {
+      "trigger": "string_substr",
+      "description": "Extract a substring by position and length",
+      "content": "sub=\"${${1:var}:${2:offset}:${3:length}}\"",
+      "category": "string"
+    },
+    {
+      "trigger": "regex_match",
+      "description": "Regex match with Bash's =~ operator and BASH_REMATCH",
+      "content": "if [[ \"${1:string}\" =~ ${2:^([0-9]+)-([a-z]+)$} ]]; then\n    echo \"Full match: ${BASH_REMATCH[0]}\"\n    echo \"Group 1: ${BASH_REMATCH[1]}\"\n    echo \"Group 2: ${BASH_REMATCH[2]}\"\nfi",
+      "category": "string"
+    },
+    {
+      "trigger": "array_iterate",
+      "description": "Iterate over all elements of an array",
+      "content": "for ${1:item} in \"${${2:arr}[@]}\"; do\n    ${3:echo \"$item\"}\ndone",
+      "category": "array"
+    },
+    {
+      "trigger": "array_length",
+      "description": "Get the number of elements in an array",
+      "content": "len=${#${1:arr}[@]}",
+      "category": "array"
+    },
+    {
+      "trigger": "array_append",
+      "description": "Append an element to an array",
+      "content": "${1:arr}+=(\"${2:new_element}\")",
+      "category": "array"
+    },
+    {
+      "trigger": "array_slice",
+      "description": "Get a slice of an array",
+      "content": "slice=(\"${${1:arr}[@]:${2:start}:${3:count}}\")",
+      "category": "array"
+    },
+    {
+      "trigger": "array_contains",
+      "description": "Check if an array contains a value",
+      "content": "contains() {\n    local needle=\"$1\"; shift\n    for item in \"$@\"; do\n        [[ \"$item\" == \"$needle\" ]] && return 0\n    done\n    return 1\n}\nif contains \"${1:value}\" \"${${2:arr}[@]}\"; then\n    echo \"found\"\nfi",
+      "category": "array"
+    },
+    {
+      "trigger": "array_join",
+      "description": "Join array elements with a delimiter",
+      "content": "joined=$(IFS='${1:,}'; echo \"${${2:arr}[*]}\")",
+      "category": "array"
+    },
+    {
+      "trigger": "temp_file",
+      "description": "Create a temporary file with automatic cleanup on exit",
+      "content": "tmpfile=$(mktemp)\ntrap 'rm -f \"$tmpfile\"' EXIT\n${1:# use $tmpfile}",
+      "category": "io"
+    },
+    {
+      "trigger": "temp_dir",
+      "description": "Create a temporary directory with automatic cleanup on exit",
+      "content": "tmpdir=$(mktemp -d)\ntrap 'rm -rf \"$tmpdir\"' EXIT\n${1:# use $tmpdir}",
+      "category": "io"
+    },
+    {
+      "trigger": "read_csv",
+      "description": "Read a CSV file line by line, splitting fields",
+      "content": "while IFS=',' read -r ${1:col1} ${2:col2} ${3:col3}; do\n    echo \"$col1 $col2 $col3\"\ndone < \"${4:file.csv}\"",
+      "category": "io"
+    },
+    {
+      "trigger": "find_exec",
+      "description": "Find files and execute a command on each",
+      "content": "find ${1:.} -type f -name '${2:*.log}' -exec ${3:echo} {} \\;",
+      "category": "io"
+    },
+    {
+      "trigger": "find_while",
+      "description": "Safely process find results with a while loop (handles spaces in filenames)",
+      "content": "while IFS= read -r -d '' file; do\n    ${1:echo \"$file\"}\ndone < <(find ${2:.} -type f -name '${3:*}' -print0)",
+      "category": "io"
+    },
+    {
+      "trigger": "lock_file",
+      "description": "Create a lock file to prevent concurrent execution",
+      "content": "LOCKFILE=\"/tmp/$(basename \"$0\").lock\"\nif ! mkdir \"$LOCKFILE\" 2>/dev/null; then\n    echo \"Another instance is already running\" >&2\n    exit 1\nfi\ntrap 'rmdir \"$LOCKFILE\"' EXIT",
+      "category": "io"
+    },
+    {
+      "trigger": "log_func",
+      "description": "Logging function with timestamp and severity levels",
+      "content": "log() {\n    local level=\"$1\"; shift\n    echo \"[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $*\" >&2\n}\nlog_info()  { log INFO \"$@\"; }\nlog_warn()  { log WARN \"$@\"; }\nlog_error() { log ERROR \"$@\"; }",
+      "category": "io"
+    },
+    {
+      "trigger": "progress",
+      "description": "Simple progress bar for loops",
+      "content": "total=${1:100}\nfor ((i=1; i<=total; i++)); do\n    pct=$((i * 100 / total))\n    printf '\\r[%-50s] %d%%' \"$(printf '#%.0s' $(seq 1 $((pct/2))))\" \"$pct\"\ndone\necho",
+      "category": "io"
+    },
+    {
+      "trigger": "die",
+      "description": "Print error message and exit with failure",
+      "content": "die() { echo \"Error: $*\" >&2; exit 1; }",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "trap_signals",
+      "description": "Trap multiple signals for proper cleanup",
+      "content": "cleanup() {\n    ${1:echo \"Cleaning up...\"}\n    ${2:# cleanup commands}\n}\ntrap cleanup EXIT INT TERM HUP",
+      "category": "cleanup"
+    },
+    {
+      "trigger": "set_error_trap",
+      "description": "Trap ERR to print a stack trace on failure (with set -e)",
+      "content": "trap 'echo \"Error at ${BASH_SOURCE[0]}:${LINENO} in ${FUNCNAME[0]:-main}\" >&2' ERR",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "try_catch",
+      "description": "Try-catch pattern using subshell and error capture",
+      "content": "if output=$(${1:risky_command} 2>&1); then\n    echo \"Success: $output\"\nelse\n    rc=$?\n    echo \"Failed (exit $rc): $output\" >&2\nfi",
+      "category": "error_handling"
+    },
+    {
+      "trigger": "parallel_jobs",
+      "description": "Run commands in parallel with a job limit",
+      "content": "MAX_JOBS=${1:4}\nfor ${2:item} in ${3:\"${items[@]}\"}; do\n    (\n        ${4:process \"$item\"}\n    ) &\n    # Limit parallel jobs\n    while [[ $(jobs -rp | wc -l) -ge $MAX_JOBS ]]; do\n        wait -n\n    done\ndone\nwait  # wait for all remaining jobs",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "background_wait",
+      "description": "Run tasks in background and wait for all to finish",
+      "content": "pids=()\n${1:command1} & pids+=($!)\n${2:command2} & pids+=($!)\n\nfor pid in \"${pids[@]}\"; do\n    wait \"$pid\" || echo \"Process $pid failed\" >&2\ndone",
+      "category": "concurrency"
+    },
+    {
+      "trigger": "curl_json",
+      "description": "HTTP GET request with JSON parsing",
+      "content": "response=$(curl -sS -H 'Content-Type: application/json' \"${1:https://api.example.com/endpoint}\")\necho \"$response\" | jq '${2:.}'",
+      "category": "network"
+    },
+    {
+      "trigger": "curl_post",
+      "description": "HTTP POST request with JSON body",
+      "content": "curl -sS -X POST \\\n    -H 'Content-Type: application/json' \\\n    -d '{${1:\"key\": \"value\"}}' \\\n    \"${2:https://api.example.com/endpoint}\"",
+      "category": "network"
+    },
+    {
+      "trigger": "port_check",
+      "description": "Check if a port is open on a host",
+      "content": "if timeout 3 bash -c \"</dev/tcp/${1:localhost}/${2:8080}\" 2>/dev/null; then\n    echo \"Port ${2:8080} is open\"\nelse\n    echo \"Port ${2:8080} is closed\"\nfi",
+      "category": "network"
+    },
+    {
+      "trigger": "read_config",
+      "description": "Read a key=value config file, ignoring comments and blank lines",
+      "content": "while IFS='=' read -r key value; do\n    [[ -z \"$key\" || \"$key\" == \\#* ]] && continue\n    export \"$key=$value\"\ndone < \"${1:config.env}\"",
+      "category": "io"
+    },
+    {
+      "trigger": "default_var",
+      "description": "Set a variable to a default if not already set",
+      "content": "${1:VAR}=\"${${1:VAR}:-${2:default_value}}\"",
+      "category": "variable"
+    },
+    {
+      "trigger": "require_var",
+      "description": "Ensure a variable is set or exit with error",
+      "content": ": \"${${1:VAR}:?Error: ${1:VAR} is not set}\"",
+      "category": "validation"
+    },
+    {
+      "trigger": "timestamp",
+      "description": "Generate an ISO-format timestamp",
+      "content": "timestamp=$(date '+%Y-%m-%dT%H:%M:%S%z')",
+      "category": "date"
+    },
+    {
+      "trigger": "elapsed_time",
+      "description": "Measure elapsed time of a block of code",
+      "content": "start_time=$SECONDS\n${1:# code to time}\nelapsed=$((SECONDS - start_time))\necho \"Elapsed: ${elapsed}s\"",
+      "category": "date"
+    },
+    {
+      "trigger": "process_sub",
+      "description": "Compare two command outputs using process substitution",
+      "content": "diff <(${1:command1}) <(${2:command2})",
+      "category": "substitution"
+    },
+    {
+      "trigger": "redirect_both",
+      "description": "Redirect both stdout and stderr to a file",
+      "content": "${1:command} > \"${2:output.log}\" 2>&1",
+      "category": "io"
+    },
+    {
+      "trigger": "redirect_tee",
+      "description": "Log output to file while still showing on screen",
+      "content": "${1:command} 2>&1 | tee \"${2:output.log}\"",
+      "category": "io"
+    },
+    {
+      "trigger": "fd_redirect",
+      "description": "Open a custom file descriptor for writing",
+      "content": "exec 3> \"${1:logfile.txt}\"\necho \"logged to fd 3\" >&3\nexec 3>&-  # close fd 3",
+      "category": "io"
     }
   ],
   "imports": {
@@ -599,17 +1595,107 @@
           {
             "name": "set",
             "item_type": "builtin",
-            "description": "Set shell options"
+            "description": "Set or unset shell options and positional parameters (-e, -u, -o pipefail, etc.)"
           },
           {
             "name": "shopt",
             "item_type": "builtin",
-            "description": "Set shell options"
+            "description": "Set or unset optional shell behaviors (extglob, globstar, nullglob, etc.)"
           },
           {
             "name": "trap",
             "item_type": "builtin",
-            "description": "Signal handling"
+            "description": "Register commands to execute when signals or events occur (EXIT, INT, ERR, etc.)"
+          },
+          {
+            "name": "declare",
+            "item_type": "builtin",
+            "description": "Declare variables with attributes: -a (array), -A (assoc), -i (integer), -r (readonly), -x (export)"
+          },
+          {
+            "name": "local",
+            "item_type": "builtin",
+            "description": "Declare a function-local variable, preventing outer scope pollution"
+          },
+          {
+            "name": "export",
+            "item_type": "builtin",
+            "description": "Mark variables for export to child processes"
+          },
+          {
+            "name": "readonly",
+            "item_type": "builtin",
+            "description": "Mark variables as read-only, preventing modification or unsetting"
+          },
+          {
+            "name": "eval",
+            "item_type": "builtin",
+            "description": "Evaluate arguments as a shell command. Use sparingly due to security risks."
+          },
+          {
+            "name": "exec",
+            "item_type": "builtin",
+            "description": "Replace the shell process with a command, or redirect file descriptors permanently"
+          },
+          {
+            "name": "source",
+            "item_type": "builtin",
+            "description": "Read and execute commands from a file in the current shell (synonym: '.')"
+          },
+          {
+            "name": "printf",
+            "item_type": "builtin",
+            "description": "Formatted output with printf-style format strings (%s, %d, %f, etc.)"
+          },
+          {
+            "name": "read",
+            "item_type": "builtin",
+            "description": "Read a line from stdin into variables. Flags: -r (raw), -a (array), -p (prompt), -t (timeout)"
+          },
+          {
+            "name": "test",
+            "item_type": "builtin",
+            "description": "Evaluate conditional expressions. Synonym for [ ]. Use [[ ]] for pattern matching."
+          },
+          {
+            "name": "getopts",
+            "item_type": "builtin",
+            "description": "Parse short command-line options inside a while loop"
+          },
+          {
+            "name": "shift",
+            "item_type": "builtin",
+            "description": "Shift positional parameters left by N positions (default 1)"
+          },
+          {
+            "name": "return",
+            "item_type": "builtin",
+            "description": "Return from a shell function with an optional exit status"
+          },
+          {
+            "name": "exit",
+            "item_type": "builtin",
+            "description": "Exit the shell with an optional status code (0 = success, 1-255 = error)"
+          },
+          {
+            "name": "echo",
+            "item_type": "builtin",
+            "description": "Display a line of text. For portable formatting, prefer printf."
+          },
+          {
+            "name": "unset",
+            "item_type": "builtin",
+            "description": "Unset variables or functions, removing them from the environment"
+          },
+          {
+            "name": "wait",
+            "item_type": "builtin",
+            "description": "Wait for background jobs to finish. Returns the exit status of the last waited job."
+          },
+          {
+            "name": "mapfile",
+            "item_type": "builtin",
+            "description": "Read lines from stdin into an array. Alias: readarray. Flags: -t (trim newlines)"
           }
         ],
         "submodules": []
@@ -620,22 +1706,628 @@
           {
             "name": "grep",
             "item_type": "command",
-            "description": "Pattern matching"
+            "description": "Search text using patterns. Flags: -r (recursive), -i (case-insensitive), -n (line numbers), -E (extended regex)"
           },
           {
             "name": "sed",
             "item_type": "command",
-            "description": "Stream editing"
+            "description": "Stream editor for text transformations. Common: sed 's/old/new/g', sed -i (in-place)"
           },
           {
             "name": "awk",
             "item_type": "command",
-            "description": "Text processing"
+            "description": "Pattern scanning and text processing language. Column extraction: awk '{print $1}'"
           },
           {
             "name": "find",
             "item_type": "command",
-            "description": "File search"
+            "description": "Search directory tree for files matching criteria (-name, -type, -mtime, -exec)"
+          },
+          {
+            "name": "sort",
+            "item_type": "command",
+            "description": "Sort lines. Flags: -n (numeric), -r (reverse), -k (column), -u (unique), -t (delimiter)"
+          },
+          {
+            "name": "uniq",
+            "item_type": "command",
+            "description": "Filter adjacent duplicate lines. Flags: -c (count), -d (show dupes only), -u (unique only)"
+          },
+          {
+            "name": "cut",
+            "item_type": "command",
+            "description": "Extract fields/columns from lines. Flags: -d (delimiter), -f (fields), -c (characters)"
+          },
+          {
+            "name": "tr",
+            "item_type": "command",
+            "description": "Translate or delete characters. Examples: tr 'a-z' 'A-Z', tr -d '\\n'"
+          },
+          {
+            "name": "xargs",
+            "item_type": "command",
+            "description": "Build and execute commands from stdin. Flags: -I{} (replace string), -P (parallel), -0 (null-delimited)"
+          },
+          {
+            "name": "tee",
+            "item_type": "command",
+            "description": "Read stdin and write to both stdout and one or more files simultaneously"
+          },
+          {
+            "name": "wc",
+            "item_type": "command",
+            "description": "Count lines (-l), words (-w), characters (-c), or bytes of input"
+          },
+          {
+            "name": "head",
+            "item_type": "command",
+            "description": "Output the first N lines of input (default 10). Flag: -n"
+          },
+          {
+            "name": "tail",
+            "item_type": "command",
+            "description": "Output the last N lines of input. Flags: -n (lines), -f (follow/stream)"
+          },
+          {
+            "name": "cat",
+            "item_type": "command",
+            "description": "Concatenate and display file contents. Flags: -n (number lines), -A (show all chars)"
+          },
+          {
+            "name": "less",
+            "item_type": "command",
+            "description": "Interactive pager for viewing file contents. Supports search (/) and navigation."
+          },
+          {
+            "name": "diff",
+            "item_type": "command",
+            "description": "Compare files line by line. Flags: -u (unified), -r (recursive), --color"
+          },
+          {
+            "name": "tar",
+            "item_type": "command",
+            "description": "Archive utility. Create: tar -czf archive.tar.gz dir/. Extract: tar -xzf archive.tar.gz"
+          },
+          {
+            "name": "curl",
+            "item_type": "command",
+            "description": "Transfer data to/from URLs. Flags: -s (silent), -o (output), -X (method), -H (header), -d (data)"
+          },
+          {
+            "name": "jq",
+            "item_type": "command",
+            "description": "JSON processor. Query: jq '.key', filter: jq '.[] | select(.x>1)', format: jq '.'"
+          },
+          {
+            "name": "date",
+            "item_type": "command",
+            "description": "Display/set date-time. Format: date '+%Y-%m-%d'. Arithmetic: date -d '+1 day'"
+          },
+          {
+            "name": "mktemp",
+            "item_type": "command",
+            "description": "Create unique temporary files (-d for directories). Pattern: mktemp /tmp/myapp.XXXXXX"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "text_processing",
+        "items": [
+          {
+            "name": "grep",
+            "item_type": "command",
+            "description": "Search patterns in files. Extended (-E), Perl (-P), recursive (-r), invert (-v)"
+          },
+          {
+            "name": "sed",
+            "item_type": "command",
+            "description": "Stream editor. Substitute: s/old/new/g. Delete: /pattern/d. In-place: -i"
+          },
+          {
+            "name": "awk",
+            "item_type": "command",
+            "description": "Text processing. Fields: $1,$2. Math: awk '{sum+=$1} END{print sum}'. Printf support."
+          },
+          {
+            "name": "cut",
+            "item_type": "command",
+            "description": "Extract columns/fields. By delimiter: cut -d',' -f1,3. By chars: cut -c1-10"
+          },
+          {
+            "name": "tr",
+            "item_type": "command",
+            "description": "Character translation/deletion. Uppercase: tr 'a-z' 'A-Z'. Squeeze: tr -s ' '"
+          },
+          {
+            "name": "sort",
+            "item_type": "command",
+            "description": "Sort lines. Numeric: -n. Reverse: -r. Column: -k2. Unique: -u. Stable: -s"
+          },
+          {
+            "name": "uniq",
+            "item_type": "command",
+            "description": "Remove adjacent duplicates. Count: -c. Dupes only: -d. Case-insensitive: -i"
+          },
+          {
+            "name": "paste",
+            "item_type": "command",
+            "description": "Merge lines side by side. Delimiter: -d','"
+          },
+          {
+            "name": "column",
+            "item_type": "command",
+            "description": "Align text. Table mode: -t. Separator: -s','"
+          },
+          {
+            "name": "nl",
+            "item_type": "command",
+            "description": "Number lines. All lines: -ba"
+          },
+          {
+            "name": "rev",
+            "item_type": "command",
+            "description": "Reverse characters on each line"
+          },
+          {
+            "name": "fold",
+            "item_type": "command",
+            "description": "Wrap long lines. Width: -w80. Break at words: -s"
+          },
+          {
+            "name": "fmt",
+            "item_type": "command",
+            "description": "Reflow text to width. Default 75 chars."
+          },
+          {
+            "name": "comm",
+            "item_type": "command",
+            "description": "Compare sorted files. Unique to file1: -23. Common: -12"
+          },
+          {
+            "name": "wc",
+            "item_type": "command",
+            "description": "Count lines (-l), words (-w), bytes (-c) in input"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "file_management",
+        "items": [
+          {
+            "name": "cp",
+            "item_type": "command",
+            "description": "Copy files/dirs. Recursive: -r. Preserve: -p. Interactive: -i. Archive: -a"
+          },
+          {
+            "name": "mv",
+            "item_type": "command",
+            "description": "Move/rename files. Interactive: -i. No overwrite: -n. Verbose: -v"
+          },
+          {
+            "name": "rm",
+            "item_type": "command",
+            "description": "Remove files. Recursive: -r. Force: -f. Interactive: -i"
+          },
+          {
+            "name": "mkdir",
+            "item_type": "command",
+            "description": "Create directories. Parents: -p. Mode: -m 0755"
+          },
+          {
+            "name": "rmdir",
+            "item_type": "command",
+            "description": "Remove empty directories. Parents: -p"
+          },
+          {
+            "name": "touch",
+            "item_type": "command",
+            "description": "Create empty files or update timestamps"
+          },
+          {
+            "name": "ln",
+            "item_type": "command",
+            "description": "Create links. Symbolic: -s. Force: -f"
+          },
+          {
+            "name": "chmod",
+            "item_type": "command",
+            "description": "Change permissions. Recursive: -R. Octal: 755. Symbolic: u+x"
+          },
+          {
+            "name": "chown",
+            "item_type": "command",
+            "description": "Change file owner/group. Recursive: -R. Format: user:group"
+          },
+          {
+            "name": "stat",
+            "item_type": "command",
+            "description": "File status. Format: -c '%s %Y' (size, mtime)"
+          },
+          {
+            "name": "file",
+            "item_type": "command",
+            "description": "Detect file type by content inspection"
+          },
+          {
+            "name": "basename",
+            "item_type": "command",
+            "description": "Strip directory prefix. Optional suffix removal: basename f.txt .txt"
+          },
+          {
+            "name": "dirname",
+            "item_type": "command",
+            "description": "Strip last path component, returning the directory portion"
+          },
+          {
+            "name": "realpath",
+            "item_type": "command",
+            "description": "Resolve to canonical absolute path, following symlinks"
+          },
+          {
+            "name": "find",
+            "item_type": "command",
+            "description": "Search directory tree. Name: -name. Type: -type f. Time: -mtime. Action: -exec"
+          },
+          {
+            "name": "du",
+            "item_type": "command",
+            "description": "Disk usage. Summary: -s. Human: -h. Depth: --max-depth=1"
+          },
+          {
+            "name": "df",
+            "item_type": "command",
+            "description": "Filesystem space. Human: -h. Type: -T. Inode: -i"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "process_management",
+        "items": [
+          {
+            "name": "ps",
+            "item_type": "command",
+            "description": "Process status. Full listing: ps aux. Tree: ps axjf. By PID: ps -p PID"
+          },
+          {
+            "name": "kill",
+            "item_type": "command",
+            "description": "Send signal to process. SIGTERM: kill PID. SIGKILL: kill -9 PID. List: kill -l"
+          },
+          {
+            "name": "killall",
+            "item_type": "command",
+            "description": "Kill processes by name. Signal: killall -9 name"
+          },
+          {
+            "name": "pkill",
+            "item_type": "command",
+            "description": "Kill processes matching a pattern. Full cmdline: -f"
+          },
+          {
+            "name": "pgrep",
+            "item_type": "command",
+            "description": "Find PIDs matching a pattern. List names: -l. Full: -f"
+          },
+          {
+            "name": "top",
+            "item_type": "command",
+            "description": "Interactive process monitor. Batch: -bn1. Sort by mem: Shift+M"
+          },
+          {
+            "name": "nohup",
+            "item_type": "command",
+            "description": "Run command immune to hangup signals, persisting after terminal close"
+          },
+          {
+            "name": "timeout",
+            "item_type": "command",
+            "description": "Run with time limit. Signal: --signal=KILL. Foreground: --foreground"
+          },
+          {
+            "name": "nice",
+            "item_type": "command",
+            "description": "Run with modified scheduling priority. Lower: nice -n 10 cmd"
+          },
+          {
+            "name": "wait",
+            "item_type": "command",
+            "description": "Wait for background process. By PID: wait $PID. Any: wait -n"
+          },
+          {
+            "name": "jobs",
+            "item_type": "command",
+            "description": "List background jobs. With PIDs: -l. Running: -r"
+          },
+          {
+            "name": "bg",
+            "item_type": "command",
+            "description": "Resume suspended job in background"
+          },
+          {
+            "name": "fg",
+            "item_type": "command",
+            "description": "Bring background job to foreground"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "networking",
+        "items": [
+          {
+            "name": "curl",
+            "item_type": "command",
+            "description": "HTTP client. GET: curl URL. POST: -X POST -d data. Headers: -H. Follow redirects: -L"
+          },
+          {
+            "name": "wget",
+            "item_type": "command",
+            "description": "Download files. Quiet: -q. Output: -O file. Recursive: -r. Continue: -c"
+          },
+          {
+            "name": "ssh",
+            "item_type": "command",
+            "description": "Remote login. Port: -p. Key: -i. Tunnel: -L local:host:remote"
+          },
+          {
+            "name": "scp",
+            "item_type": "command",
+            "description": "Secure copy. Port: -P. Recursive: -r. Format: user@host:path"
+          },
+          {
+            "name": "rsync",
+            "item_type": "command",
+            "description": "Efficient sync. Archive: -a. Verbose: -v. Compress: -z. Dry-run: -n. Delete: --delete"
+          },
+          {
+            "name": "nc",
+            "item_type": "command",
+            "description": "Netcat: TCP/UDP connections. Listen: -l. Port scan: -z. UDP: -u"
+          },
+          {
+            "name": "ss",
+            "item_type": "command",
+            "description": "Socket statistics. Listening: -l. TCP: -t. UDP: -u. Processes: -p. Numeric: -n"
+          },
+          {
+            "name": "ip",
+            "item_type": "command",
+            "description": "Network config. Show: ip addr. Routes: ip route. Links: ip link"
+          },
+          {
+            "name": "dig",
+            "item_type": "command",
+            "description": "DNS lookup. Short: +short. Trace: +trace. Type: -t MX"
+          },
+          {
+            "name": "host",
+            "item_type": "command",
+            "description": "Simple DNS lookup. Reverse: host IP"
+          },
+          {
+            "name": "ping",
+            "item_type": "command",
+            "description": "Test connectivity. Count: -c 3. Timeout: -W 2"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "parameter_expansion",
+        "items": [
+          {
+            "name": "${var:-default}",
+            "item_type": "expansion",
+            "description": "Use default value if var is unset or empty"
+          },
+          {
+            "name": "${var:=default}",
+            "item_type": "expansion",
+            "description": "Assign default if var is unset or empty, then expand"
+          },
+          {
+            "name": "${var:+alternate}",
+            "item_type": "expansion",
+            "description": "Use alternate value if var IS set and non-empty"
+          },
+          {
+            "name": "${var:?message}",
+            "item_type": "expansion",
+            "description": "Error with message if var is unset or empty (exits in non-interactive shell)"
+          },
+          {
+            "name": "${#var}",
+            "item_type": "expansion",
+            "description": "String length of var"
+          },
+          {
+            "name": "${var#pattern}",
+            "item_type": "expansion",
+            "description": "Remove shortest prefix matching pattern"
+          },
+          {
+            "name": "${var##pattern}",
+            "item_type": "expansion",
+            "description": "Remove longest prefix matching pattern"
+          },
+          {
+            "name": "${var%pattern}",
+            "item_type": "expansion",
+            "description": "Remove shortest suffix matching pattern"
+          },
+          {
+            "name": "${var%%pattern}",
+            "item_type": "expansion",
+            "description": "Remove longest suffix matching pattern"
+          },
+          {
+            "name": "${var/old/new}",
+            "item_type": "expansion",
+            "description": "Replace first match of old with new"
+          },
+          {
+            "name": "${var//old/new}",
+            "item_type": "expansion",
+            "description": "Replace all matches of old with new"
+          },
+          {
+            "name": "${var^}",
+            "item_type": "expansion",
+            "description": "Uppercase first character"
+          },
+          {
+            "name": "${var^^}",
+            "item_type": "expansion",
+            "description": "Uppercase all characters"
+          },
+          {
+            "name": "${var,}",
+            "item_type": "expansion",
+            "description": "Lowercase first character"
+          },
+          {
+            "name": "${var,,}",
+            "item_type": "expansion",
+            "description": "Lowercase all characters"
+          },
+          {
+            "name": "${var:offset:length}",
+            "item_type": "expansion",
+            "description": "Substring extraction starting at offset for length characters"
+          },
+          {
+            "name": "${!prefix@}",
+            "item_type": "expansion",
+            "description": "All variable names matching prefix"
+          },
+          {
+            "name": "${!arr[@]}",
+            "item_type": "expansion",
+            "description": "All indices/keys of an array"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "test_operators",
+        "items": [
+          {
+            "name": "-e",
+            "item_type": "test",
+            "description": "True if file exists (any type)"
+          },
+          {
+            "name": "-f",
+            "item_type": "test",
+            "description": "True if file exists and is a regular file"
+          },
+          {
+            "name": "-d",
+            "item_type": "test",
+            "description": "True if file exists and is a directory"
+          },
+          {
+            "name": "-L",
+            "item_type": "test",
+            "description": "True if file exists and is a symbolic link"
+          },
+          {
+            "name": "-s",
+            "item_type": "test",
+            "description": "True if file exists and has size greater than zero"
+          },
+          {
+            "name": "-r",
+            "item_type": "test",
+            "description": "True if file exists and is readable"
+          },
+          {
+            "name": "-w",
+            "item_type": "test",
+            "description": "True if file exists and is writable"
+          },
+          {
+            "name": "-x",
+            "item_type": "test",
+            "description": "True if file exists and is executable"
+          },
+          {
+            "name": "-z",
+            "item_type": "test",
+            "description": "True if string is empty (zero length)"
+          },
+          {
+            "name": "-n",
+            "item_type": "test",
+            "description": "True if string is non-empty (non-zero length)"
+          },
+          {
+            "name": "-eq",
+            "item_type": "test",
+            "description": "Integer equal"
+          },
+          {
+            "name": "-ne",
+            "item_type": "test",
+            "description": "Integer not equal"
+          },
+          {
+            "name": "-lt",
+            "item_type": "test",
+            "description": "Integer less than"
+          },
+          {
+            "name": "-le",
+            "item_type": "test",
+            "description": "Integer less than or equal"
+          },
+          {
+            "name": "-gt",
+            "item_type": "test",
+            "description": "Integer greater than"
+          },
+          {
+            "name": "-ge",
+            "item_type": "test",
+            "description": "Integer greater than or equal"
+          },
+          {
+            "name": "==",
+            "item_type": "test",
+            "description": "String equal (in [[ ]], also supports glob patterns)"
+          },
+          {
+            "name": "!=",
+            "item_type": "test",
+            "description": "String not equal"
+          },
+          {
+            "name": "=~",
+            "item_type": "test",
+            "description": "Regex match (only in [[ ]]). Captures in BASH_REMATCH array."
+          },
+          {
+            "name": "-nt",
+            "item_type": "test",
+            "description": "True if file1 is newer than file2 (by modification time)"
+          },
+          {
+            "name": "-ot",
+            "item_type": "test",
+            "description": "True if file1 is older than file2"
+          },
+          {
+            "name": "-a",
+            "item_type": "test",
+            "description": "Logical AND inside [ ]. In [[ ]], use && instead."
+          },
+          {
+            "name": "-o",
+            "item_type": "test",
+            "description": "Logical OR inside [ ]. In [[ ]], use || instead."
           }
         ],
         "submodules": []

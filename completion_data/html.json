@@ -10,7 +10,7 @@
       "category": "block_elements"
     },
     {
-      "keyword": "span", 
+      "keyword": "span",
       "type": "keyword",
       "description": "span - Inline container element for styling parts of text or small sections of content without affecting layout.",
       "example": "<span style=\"color: red;\">important text</span>",
@@ -25,7 +25,7 @@
     },
     {
       "keyword": "h1",
-      "type": "keyword", 
+      "type": "keyword",
       "description": "h1 - Main heading element, the largest and most important heading. Use only one per page for best SEO and accessibility.",
       "example": "<h1>Main Page Title</h1>",
       "category": "heading_elements"
@@ -60,7 +60,7 @@
     },
     {
       "keyword": "button",
-      "type": "keyword", 
+      "type": "keyword",
       "description": "button - Interactive button element for user actions. More semantic than styled divs for accessibility.",
       "example": "<button type=\"button\" onclick=\"handleClick()\">Click Me</button>",
       "category": "form_elements"
@@ -90,7 +90,7 @@
       "keyword": "ol",
       "type": "keyword",
       "description": "ol - Ordered list container for numbered or sequenced items where order is important.",
-      "example": "<ol><li>Step one</li><li>Step two</li></ol>", 
+      "example": "<ol><li>Step one</li><li>Step two</li></ol>",
       "category": "list_elements"
     },
     {
@@ -694,6 +694,671 @@
       "description": "title - Element defining the document title shown in browser title bar or page tab.",
       "example": "<title>My Web Page - Company Name</title>",
       "category": "metadata"
+    },
+    {
+      "keyword": "template",
+      "type": "element",
+      "description": "<template> - Holds HTML content not rendered on load. Used for client-side instantiation via JavaScript.",
+      "example": "<template id=\"card-tmpl\">\n  <div class=\"card\">...</div>\n</template>",
+      "category": "scripting"
+    },
+    {
+      "keyword": "slot",
+      "type": "element",
+      "description": "<slot> - Placeholder inside a web component's shadow DOM. Named slots target specific content.",
+      "example": "<slot name=\"header\">Default header</slot>",
+      "category": "scripting"
+    },
+    {
+      "keyword": "data",
+      "type": "element",
+      "description": "<data> - Links content with a machine-readable value attribute.",
+      "example": "<data value=\"398\">Mini Ketchup</data>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "bdi",
+      "type": "element",
+      "description": "<bdi> - Bidirectional Isolate. Isolates text that may be formatted in a different direction.",
+      "example": "<p>User <bdi>إيان</bdi> posted 3 comments.</p>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "bdo",
+      "type": "element",
+      "description": "<bdo> - Bidirectional Override. Overrides text directionality with dir attribute.",
+      "example": "<bdo dir=\"rtl\">This text is reversed</bdo>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "ruby",
+      "type": "element",
+      "description": "<ruby> - Container for ruby annotations, used for East Asian typography pronunciation guides.",
+      "example": "<ruby>漢<rp>(</rp><rt>kan</rt><rp>)</rp></ruby>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "rt",
+      "type": "element",
+      "description": "<rt> - Defines the pronunciation/annotation text in a ruby annotation.",
+      "example": "<ruby>字<rt>ji</rt></ruby>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "rp",
+      "type": "element",
+      "description": "<rp> - Fallback parentheses for browsers that don't support ruby annotations.",
+      "example": "<ruby>漢<rp>(</rp><rt>kan</rt><rp>)</rp></ruby>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "s",
+      "type": "element",
+      "description": "<s> - Strikethrough text, indicating content that is no longer accurate or relevant.",
+      "example": "<s>$49.99</s> <strong>$29.99</strong>",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "u",
+      "type": "element",
+      "description": "<u> - Unarticulated annotation. Renders underlined text for proper nouns in Chinese or spelling errors.",
+      "example": "<u>teh</u> → the",
+      "category": "text_elements"
+    },
+    {
+      "keyword": "menu",
+      "type": "element",
+      "description": "<menu> - Semantic alternative to <ul> for interactive lists of commands/actions.",
+      "example": "<menu>\n  <li><button>Copy</button></li>\n  <li><button>Paste</button></li>\n</menu>",
+      "category": "interactive_elements"
+    },
+    {
+      "keyword": "search",
+      "type": "element",
+      "description": "<search> - Semantic container for search functionality. Replaces <div role=\"search\">. New in HTML5.",
+      "example": "<search>\n  <form action=\"/search\">\n    <input type=\"search\" name=\"q\">\n  </form>\n</search>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "hgroup",
+      "type": "element",
+      "description": "<hgroup> - Groups a heading with related subheadings or taglines.",
+      "example": "<hgroup>\n  <h1>Main Title</h1>\n  <p>A subtitle or tagline</p>\n</hgroup>",
+      "category": "semantic_elements"
+    },
+    {
+      "keyword": "portal",
+      "type": "element",
+      "description": "<portal> - Embeds another page for seamless navigation transitions (experimental).",
+      "example": "<portal src=\"https://example.com/page2\"></portal>",
+      "category": "media_elements"
+    },
+    {
+      "keyword": "class",
+      "type": "attribute",
+      "description": "class - Space-separated list of CSS class names for styling and JavaScript selection.",
+      "example": "<div class=\"card card--featured\">",
+      "category": "global_attributes"
+    },
+    {
+      "keyword": "id",
+      "type": "attribute",
+      "description": "id - Unique identifier for the element. Used for CSS, JS, and fragment links.",
+      "example": "<section id=\"about\">",
+      "category": "global_attributes"
+    },
+    {
+      "keyword": "hidden",
+      "type": "attribute",
+      "description": "hidden - Boolean attribute. Hides the element from rendering. Can be 'until-found' for searchable hidden content.",
+      "example": "<div hidden>Not visible</div>\n<div hidden=\"until-found\">Find-in-page can reveal this</div>",
+      "category": "global_attributes"
+    },
+    {
+      "keyword": "tabindex",
+      "type": "attribute",
+      "description": "tabindex - Controls focus order. 0=natural order, -1=programmatic only, positive=explicit order (avoid).",
+      "example": "<div tabindex=\"0\" role=\"button\">Click me</div>",
+      "category": "global_attributes"
+    },
+    {
+      "keyword": "contenteditable",
+      "type": "attribute",
+      "description": "contenteditable - Makes the element editable by the user. Values: true, false, plaintext-only.",
+      "example": "<div contenteditable=\"true\">Edit this text</div>",
+      "category": "global_attributes"
+    },
+    {
+      "keyword": "draggable",
+      "type": "attribute",
+      "description": "draggable - Makes the element draggable via the Drag and Drop API.",
+      "example": "<div draggable=\"true\" ondragstart=\"drag(event)\">Drag me</div>",
+      "category": "global_attributes"
+    },
+    {
+      "keyword": "lang",
+      "type": "attribute",
+      "description": "lang - Declares the language of the element's content. Critical for accessibility and SEO.",
+      "example": "<html lang=\"en\">\n<p lang=\"fr\">Bonjour le monde</p>",
+      "category": "global_attributes"
+    },
+    {
+      "keyword": "dir",
+      "type": "attribute",
+      "description": "dir - Text directionality: ltr, rtl, or auto (detects from content).",
+      "example": "<p dir=\"rtl\">مرحبا بالعالم</p>",
+      "category": "global_attributes"
+    },
+    {
+      "keyword": "data-*",
+      "type": "attribute",
+      "description": "data-* - Custom data attributes for storing extra information on elements. Accessed via dataset API.",
+      "example": "<button data-action=\"delete\" data-id=\"42\">Delete</button>\n// JS: el.dataset.action → \"delete\"",
+      "category": "global_attributes"
+    },
+    {
+      "keyword": "role",
+      "type": "attribute",
+      "description": "role - ARIA role defining the element's purpose for assistive technology.",
+      "example": "<div role=\"alert\">Form submitted successfully</div>",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-label",
+      "type": "attribute",
+      "description": "aria-label - Defines an accessible name for elements without visible text labels.",
+      "example": "<button aria-label=\"Close dialog\">×</button>",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-labelledby",
+      "type": "attribute",
+      "description": "aria-labelledby - References another element's ID as the accessible label. Preferred over aria-label when visible text exists.",
+      "example": "<h2 id=\"section-title\">Settings</h2>\n<div aria-labelledby=\"section-title\">...</div>",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-describedby",
+      "type": "attribute",
+      "description": "aria-describedby - References an element providing additional descriptive text.",
+      "example": "<input aria-describedby=\"help-text\">\n<p id=\"help-text\">Must be at least 8 characters</p>",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-hidden",
+      "type": "attribute",
+      "description": "aria-hidden - Hides element from the accessibility tree. Use \"true\" for decorative elements.",
+      "example": "<span aria-hidden=\"true\">🎉</span>",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-live",
+      "type": "attribute",
+      "description": "aria-live - Indicates a live region that announces dynamic content changes. Values: off, polite, assertive.",
+      "example": "<div aria-live=\"polite\" id=\"status\">2 results found</div>",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-expanded",
+      "type": "attribute",
+      "description": "aria-expanded - Indicates whether a collapsible element is expanded (true) or collapsed (false).",
+      "example": "<button aria-expanded=\"false\" aria-controls=\"menu\">Menu</button>",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-controls",
+      "type": "attribute",
+      "description": "aria-controls - Identifies the element(s) controlled by the current element.",
+      "example": "<button aria-controls=\"panel-1\">Tab 1</button>",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-current",
+      "type": "attribute",
+      "description": "aria-current - Indicates the current item in a set. Values: page, step, location, date, time, true.",
+      "example": "<a href=\"/about\" aria-current=\"page\">About</a>",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-required",
+      "type": "attribute",
+      "description": "aria-required - Indicates that user input is required. Prefer the HTML required attribute when possible.",
+      "example": "<div role=\"textbox\" aria-required=\"true\">",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "aria-invalid",
+      "type": "attribute",
+      "description": "aria-invalid - Indicates the element's value does not conform to expected format.",
+      "example": "<input aria-invalid=\"true\" aria-describedby=\"error-msg\">",
+      "category": "aria_attributes"
+    },
+    {
+      "keyword": "required",
+      "type": "attribute",
+      "description": "required - Boolean. Form control must have a value before submission.",
+      "example": "<input type=\"email\" required>",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "placeholder",
+      "type": "attribute",
+      "description": "placeholder - Short hint displayed when the input is empty. Not a substitute for <label>.",
+      "example": "<input type=\"email\" placeholder=\"you@example.com\">",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "autofocus",
+      "type": "attribute",
+      "description": "autofocus - Boolean. Automatically focuses the element on page load. Use only once per page.",
+      "example": "<input type=\"search\" autofocus>",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "autocomplete",
+      "type": "attribute",
+      "description": "autocomplete - Hint for browser autofill. Values: on, off, name, email, tel, address-line1, etc.",
+      "example": "<input type=\"email\" autocomplete=\"email\">",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "disabled",
+      "type": "attribute",
+      "description": "disabled - Boolean. Disables the form control. Not submitted with the form.",
+      "example": "<button disabled>Processing...</button>",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "readonly",
+      "type": "attribute",
+      "description": "readonly - Boolean. Makes input non-editable but still submitted with form data.",
+      "example": "<input type=\"text\" value=\"locked\" readonly>",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "pattern",
+      "type": "attribute",
+      "description": "pattern - Regex pattern the input value must match for validation.",
+      "example": "<input type=\"text\" pattern=\"[A-Za-z]{3}\" title=\"3 letters\">",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "min",
+      "type": "attribute",
+      "description": "min - Minimum value for number, range, date, and time inputs.",
+      "example": "<input type=\"number\" min=\"0\" max=\"100\">",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "max",
+      "type": "attribute",
+      "description": "max - Maximum value for number, range, date, and time inputs.",
+      "example": "<input type=\"date\" max=\"2026-12-31\">",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "step",
+      "type": "attribute",
+      "description": "step - Granularity of input values. Use 'any' for no stepping constraint.",
+      "example": "<input type=\"number\" step=\"0.01\">",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "multiple",
+      "type": "attribute",
+      "description": "multiple - Allows multiple values for file inputs and select elements.",
+      "example": "<input type=\"file\" multiple>\n<select multiple>",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "accept",
+      "type": "attribute",
+      "description": "accept - Filters file types for file inputs. Use MIME types or extensions.",
+      "example": "<input type=\"file\" accept=\"image/*,.pdf\">",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "novalidate",
+      "type": "attribute",
+      "description": "novalidate - Skips form validation on submission. Used on <form> element.",
+      "example": "<form novalidate>",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "formaction",
+      "type": "attribute",
+      "description": "formaction - Overrides the form's action URL for this submit button.",
+      "example": "<button formaction=\"/save-draft\">Save Draft</button>",
+      "category": "form_attributes"
+    },
+    {
+      "keyword": "type=\"text\"",
+      "type": "input-type",
+      "description": "Single-line text input. Default input type.",
+      "example": "<input type=\"text\" name=\"username\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"email\"",
+      "type": "input-type",
+      "description": "Email input with built-in validation. Shows email keyboard on mobile.",
+      "example": "<input type=\"email\" name=\"email\" required>",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"password\"",
+      "type": "input-type",
+      "description": "Password input. Characters are masked. Use autocomplete=\"new-password\" or \"current-password\".",
+      "example": "<input type=\"password\" autocomplete=\"current-password\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"number\"",
+      "type": "input-type",
+      "description": "Numeric input with spinner. Shows numeric keyboard on mobile.",
+      "example": "<input type=\"number\" min=\"1\" max=\"99\" step=\"1\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"tel\"",
+      "type": "input-type",
+      "description": "Telephone input. Shows phone keypad on mobile. No built-in validation.",
+      "example": "<input type=\"tel\" pattern=\"[0-9]{3}-[0-9]{4}\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"url\"",
+      "type": "input-type",
+      "description": "URL input with protocol validation. Shows URL keyboard on mobile.",
+      "example": "<input type=\"url\" placeholder=\"https://example.com\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"search\"",
+      "type": "input-type",
+      "description": "Search input. May show a clear button. Styled differently on some platforms.",
+      "example": "<input type=\"search\" name=\"q\" placeholder=\"Search...\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"date\"",
+      "type": "input-type",
+      "description": "Date picker. Value format: YYYY-MM-DD.",
+      "example": "<input type=\"date\" name=\"birthday\" min=\"1900-01-01\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"datetime-local\"",
+      "type": "input-type",
+      "description": "Date and time picker without timezone. Format: YYYY-MM-DDTHH:MM.",
+      "example": "<input type=\"datetime-local\" name=\"meeting\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"time\"",
+      "type": "input-type",
+      "description": "Time picker. Value format: HH:MM or HH:MM:SS.",
+      "example": "<input type=\"time\" name=\"alarm\" step=\"60\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"color\"",
+      "type": "input-type",
+      "description": "Color picker. Value is a hex color string like #rrggbb.",
+      "example": "<input type=\"color\" name=\"theme\" value=\"#3b82f6\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"range\"",
+      "type": "input-type",
+      "description": "Slider input. Imprecise numeric input between min and max.",
+      "example": "<input type=\"range\" min=\"0\" max=\"100\" value=\"50\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"file\"",
+      "type": "input-type",
+      "description": "File upload input. Use accept to filter types, multiple for multi-select.",
+      "example": "<input type=\"file\" accept=\"image/*\" multiple>",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"checkbox\"",
+      "type": "input-type",
+      "description": "Checkbox input. Boolean toggle. Can be indeterminate via JavaScript.",
+      "example": "<input type=\"checkbox\" id=\"agree\" name=\"agree\">\n<label for=\"agree\">I agree</label>",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"radio\"",
+      "type": "input-type",
+      "description": "Radio button. One selection per group (same name attribute).",
+      "example": "<input type=\"radio\" name=\"size\" value=\"sm\" id=\"sm\">\n<label for=\"sm\">Small</label>",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"hidden\"",
+      "type": "input-type",
+      "description": "Hidden input. Submitted with form but not visible. For CSRF tokens, IDs, etc.",
+      "example": "<input type=\"hidden\" name=\"csrf\" value=\"token123\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "type=\"submit\"",
+      "type": "input-type",
+      "description": "Submit button that sends the form. Prefer <button> element instead.",
+      "example": "<input type=\"submit\" value=\"Send\">",
+      "category": "input_types"
+    },
+    {
+      "keyword": "rel",
+      "type": "attribute",
+      "description": "rel - Relationship between the current document and the linked resource.",
+      "example": "<link rel=\"stylesheet\" href=\"style.css\">\n<link rel=\"icon\" href=\"favicon.ico\">",
+      "category": "link_attributes"
+    },
+    {
+      "keyword": "href",
+      "type": "attribute",
+      "description": "href - URL of the linked resource. Used on <a>, <link>, <area>, <base>.",
+      "example": "<a href=\"/about\">About</a>",
+      "category": "link_attributes"
+    },
+    {
+      "keyword": "target",
+      "type": "attribute",
+      "description": "target - Where to open the linked URL: _self, _blank, _parent, _top, or frame name.",
+      "example": "<a href=\"https://example.com\" target=\"_blank\" rel=\"noopener\">External</a>",
+      "category": "link_attributes"
+    },
+    {
+      "keyword": "rel=\"noopener\"",
+      "type": "attribute",
+      "description": "rel=\"noopener\" - Prevents the opened page from accessing window.opener. Security best practice with target=\"_blank\".",
+      "example": "<a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">",
+      "category": "link_attributes"
+    },
+    {
+      "keyword": "loading",
+      "type": "attribute",
+      "description": "loading - Lazy-load images and iframes. Values: lazy (defer), eager (immediate).",
+      "example": "<img src=\"photo.jpg\" loading=\"lazy\" alt=\"Photo\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "decoding",
+      "type": "attribute",
+      "description": "decoding - Image decode hint: sync, async, or auto. async avoids blocking rendering.",
+      "example": "<img src=\"hero.jpg\" decoding=\"async\" alt=\"Hero\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "fetchpriority",
+      "type": "attribute",
+      "description": "fetchpriority - Resource fetch priority: high, low, auto. Use high for LCP images.",
+      "example": "<img src=\"hero.webp\" fetchpriority=\"high\" alt=\"Hero banner\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "srcset",
+      "type": "attribute",
+      "description": "srcset - Set of image sources with width descriptors or pixel density for responsive images.",
+      "example": "<img srcset=\"img-480.jpg 480w, img-800.jpg 800w\" sizes=\"(max-width: 600px) 480px, 800px\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "sizes",
+      "type": "attribute",
+      "description": "sizes - Media conditions with image display size, used with srcset width descriptors.",
+      "example": "sizes=\"(max-width: 600px) 100vw, 50vw\"",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "alt",
+      "type": "attribute",
+      "description": "alt - Alternative text for images. Required for accessibility. Empty string for decorative images.",
+      "example": "<img src=\"logo.svg\" alt=\"Company Logo\">\n<img src=\"divider.png\" alt=\"\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "width",
+      "type": "attribute",
+      "description": "width - Intrinsic width of image/video/canvas. Prevents layout shift when set with height.",
+      "example": "<img src=\"photo.jpg\" width=\"800\" height=\"600\" alt=\"\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "height",
+      "type": "attribute",
+      "description": "height - Intrinsic height of image/video/canvas. Set with width to reserve space.",
+      "example": "<video width=\"1280\" height=\"720\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "preload",
+      "type": "attribute",
+      "description": "preload - Media preload hint: none, metadata, auto. Controls how much is fetched before play.",
+      "example": "<video preload=\"metadata\" src=\"video.mp4\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "autoplay",
+      "type": "attribute",
+      "description": "autoplay - Starts media playback automatically. Muted required for autoplay without user interaction.",
+      "example": "<video autoplay muted loop playsinline>",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "controls",
+      "type": "attribute",
+      "description": "controls - Shows browser's built-in media player controls.",
+      "example": "<audio controls src=\"podcast.mp3\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "playsinline",
+      "type": "attribute",
+      "description": "playsinline - Plays video inline on mobile instead of fullscreen. Required for iOS autoplay.",
+      "example": "<video autoplay muted playsinline>",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "poster",
+      "type": "attribute",
+      "description": "poster - Image shown before video playback starts.",
+      "example": "<video poster=\"thumbnail.jpg\" src=\"video.mp4\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "sandbox",
+      "type": "attribute",
+      "description": "sandbox - Restricts iframe capabilities. Values: allow-scripts, allow-same-origin, allow-forms, etc.",
+      "example": "<iframe sandbox=\"allow-scripts allow-same-origin\" src=\"widget.html\">",
+      "category": "media_attributes"
+    },
+    {
+      "keyword": "charset",
+      "type": "attribute",
+      "description": "charset - Character encoding declaration. Must be UTF-8. Must be within first 1024 bytes.",
+      "example": "<meta charset=\"UTF-8\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "viewport",
+      "type": "attribute",
+      "description": "viewport meta - Controls the viewport for responsive design on mobile.",
+      "example": "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "og:title",
+      "type": "attribute",
+      "description": "og:title - Open Graph title for social media sharing previews.",
+      "example": "<meta property=\"og:title\" content=\"Page Title\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "og:description",
+      "type": "attribute",
+      "description": "og:description - Open Graph description for social media cards.",
+      "example": "<meta property=\"og:description\" content=\"Page description\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "og:image",
+      "type": "attribute",
+      "description": "og:image - Open Graph image URL for social media share cards. Recommended: 1200×630.",
+      "example": "<meta property=\"og:image\" content=\"https://example.com/image.jpg\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "theme-color",
+      "type": "attribute",
+      "description": "theme-color - Sets the browser's address bar / UI color on mobile.",
+      "example": "<meta name=\"theme-color\" content=\"#3b82f6\" media=\"(prefers-color-scheme: light)\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "description",
+      "type": "attribute",
+      "description": "meta description - Page description used by search engines in results snippets.",
+      "example": "<meta name=\"description\" content=\"A brief page description for SEO\">",
+      "category": "metadata"
+    },
+    {
+      "keyword": "popover",
+      "type": "attribute",
+      "description": "popover - Native popover behavior. Values: auto (light-dismiss) or manual. No JS needed.",
+      "example": "<button popovertarget=\"my-pop\">Open</button>\n<div popover id=\"my-pop\">Popover content</div>",
+      "category": "interactive_attributes"
+    },
+    {
+      "keyword": "popovertarget",
+      "type": "attribute",
+      "description": "popovertarget - References the popover element to toggle by ID.",
+      "example": "<button popovertarget=\"info\">Info</button>",
+      "category": "interactive_attributes"
+    },
+    {
+      "keyword": "popovertargetaction",
+      "type": "attribute",
+      "description": "popovertargetaction - Controls popover behavior: toggle (default), show, or hide.",
+      "example": "<button popovertarget=\"menu\" popovertargetaction=\"show\">Open</button>",
+      "category": "interactive_attributes"
+    },
+    {
+      "keyword": "open",
+      "type": "attribute",
+      "description": "open - Boolean attribute. Shows the dialog/details element. Use showModal() for modal dialogs.",
+      "example": "<dialog open>I'm visible</dialog>\n<details open><summary>Expanded</summary>Content</details>",
+      "category": "interactive_attributes"
+    },
+    {
+      "keyword": "inert",
+      "type": "attribute",
+      "description": "inert - Makes element and all descendants non-interactive and invisible to assistive technology.",
+      "example": "<div inert>This entire subtree is disabled</div>",
+      "category": "global_attributes"
     }
   ],
   "snippets": [
@@ -888,6 +1553,810 @@
       "description": "Progressive Web App manifest and service worker registration",
       "content": "<!-- PWA Manifest -->\n<link rel=\"manifest\" href=\"${1:/manifest.json}\">\n<meta name=\"theme-color\" content=\"${2:#000000}\">\n<meta name=\"background-color\" content=\"${3:#ffffff}\">\n\n<!-- iOS specific meta tags -->\n<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"${4:default}\">\n<meta name=\"apple-mobile-web-app-title\" content=\"${5:App Name}\">\n<link rel=\"apple-touch-icon\" href=\"${6:/icons/apple-touch-icon.png}\">\n\n<!-- Service Worker Registration -->\n<script>\nif ('serviceWorker' in navigator) {\n    window.addEventListener('load', () => {\n        navigator.serviceWorker.register('${7:/sw.js}')\n            .then(registration => {\n                console.log('SW registered: ', registration);\n            })\n            .catch(registrationError => {\n                console.log('SW registration failed: ', registrationError);\n            });\n    });\n}\n</script>",
       "category": "pwa"
+    },
+    {
+      "trigger": "html5_minimal",
+      "description": "Minimal HTML5 boilerplate with viewport meta",
+      "content": "<!DOCTYPE html>\n<html lang=\"${1:en}\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>${2:Document}</title>\n</head>\n<body>\n  ${3}\n</body>\n</html>",
+      "category": "document"
+    },
+    {
+      "trigger": "meta_social",
+      "description": "Open Graph and Twitter Card meta tags for social sharing",
+      "content": "<!-- Open Graph -->\n<meta property=\"og:title\" content=\"${1:Title}\">\n<meta property=\"og:description\" content=\"${2:Description}\">\n<meta property=\"og:image\" content=\"${3:https://example.com/image.jpg}\">\n<meta property=\"og:url\" content=\"${4:https://example.com}\">\n<meta property=\"og:type\" content=\"${5:website}\">\n\n<!-- Twitter Card -->\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\" content=\"${1:Title}\">\n<meta name=\"twitter:description\" content=\"${2:Description}\">\n<meta name=\"twitter:image\" content=\"${3:https://example.com/image.jpg}\">",
+      "category": "meta"
+    },
+    {
+      "trigger": "meta_seo",
+      "description": "Essential SEO meta tags",
+      "content": "<meta name=\"description\" content=\"${1:Page description for search engines}\">\n<meta name=\"robots\" content=\"${2:index, follow}\">\n<link rel=\"canonical\" href=\"${3:https://example.com/page}\">",
+      "category": "meta"
+    },
+    {
+      "trigger": "preload",
+      "description": "Resource preload hints for critical assets",
+      "content": "<link rel=\"preload\" href=\"${1:font.woff2}\" as=\"${2:font}\" type=\"${3:font/woff2}\" crossorigin>",
+      "category": "meta"
+    },
+    {
+      "trigger": "preconnect",
+      "description": "Preconnect to a third-party origin for faster loading",
+      "content": "<link rel=\"preconnect\" href=\"${1:https://fonts.googleapis.com}\">\n<link rel=\"preconnect\" href=\"${2:https://fonts.gstatic.com}\" crossorigin>",
+      "category": "meta"
+    },
+    {
+      "trigger": "favicon",
+      "description": "Modern favicon set with SVG and fallback",
+      "content": "<link rel=\"icon\" href=\"/favicon.ico\" sizes=\"32x32\">\n<link rel=\"icon\" href=\"/icon.svg\" type=\"image/svg+xml\">\n<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">",
+      "category": "meta"
+    },
+    {
+      "trigger": "input_text",
+      "description": "Text input with label and accessible structure",
+      "content": "<div class=\"${1:form-group}\">\n  <label for=\"${2:field}\">${3:Label}</label>\n  <input type=\"text\" id=\"${2:field}\" name=\"${2:field}\" ${4:required}>\n</div>",
+      "category": "forms"
+    },
+    {
+      "trigger": "input_email",
+      "description": "Email input with label and autocomplete",
+      "content": "<div class=\"${1:form-group}\">\n  <label for=\"email\">Email</label>\n  <input type=\"email\" id=\"email\" name=\"email\" autocomplete=\"email\" required>\n</div>",
+      "category": "forms"
+    },
+    {
+      "trigger": "input_password",
+      "description": "Password input with autocomplete hint",
+      "content": "<div class=\"${1:form-group}\">\n  <label for=\"password\">Password</label>\n  <input type=\"password\" id=\"password\" name=\"password\" autocomplete=\"${2:current-password}\" required minlength=\"${3:8}\">\n</div>",
+      "category": "forms"
+    },
+    {
+      "trigger": "select",
+      "description": "Select dropdown with label and placeholder option",
+      "content": "<div class=\"${1:form-group}\">\n  <label for=\"${2:select}\">${3:Choose option}</label>\n  <select id=\"${2:select}\" name=\"${2:select}\" required>\n    <option value=\"\" disabled selected>Select...</option>\n    <option value=\"${4:a}\">${5:Option A}</option>\n    <option value=\"${6:b}\">${7:Option B}</option>\n  </select>\n</div>",
+      "category": "forms"
+    },
+    {
+      "trigger": "checkbox_group",
+      "description": "Accessible checkbox group with fieldset and legend",
+      "content": "<fieldset>\n  <legend>${1:Options}</legend>\n  <div>\n    <input type=\"checkbox\" id=\"${2:opt1}\" name=\"${3:options}\" value=\"${2:opt1}\">\n    <label for=\"${2:opt1}\">${4:Option 1}</label>\n  </div>\n  <div>\n    <input type=\"checkbox\" id=\"${5:opt2}\" name=\"${3:options}\" value=\"${5:opt2}\">\n    <label for=\"${5:opt2}\">${6:Option 2}</label>\n  </div>\n</fieldset>",
+      "category": "forms"
+    },
+    {
+      "trigger": "radio_group",
+      "description": "Accessible radio button group with fieldset",
+      "content": "<fieldset>\n  <legend>${1:Select one}</legend>\n  <div>\n    <input type=\"radio\" id=\"${2:r1}\" name=\"${3:choice}\" value=\"${2:r1}\" checked>\n    <label for=\"${2:r1}\">${4:Choice A}</label>\n  </div>\n  <div>\n    <input type=\"radio\" id=\"${5:r2}\" name=\"${3:choice}\" value=\"${5:r2}\">\n    <label for=\"${5:r2}\">${6:Choice B}</label>\n  </div>\n</fieldset>",
+      "category": "forms"
+    },
+    {
+      "trigger": "textarea",
+      "description": "Textarea with label and character limit",
+      "content": "<div class=\"${1:form-group}\">\n  <label for=\"${2:message}\">${3:Message}</label>\n  <textarea id=\"${2:message}\" name=\"${2:message}\" rows=\"${4:4}\" maxlength=\"${5:500}\" ${6:required}></textarea>\n</div>",
+      "category": "forms"
+    },
+    {
+      "trigger": "datalist",
+      "description": "Input with datalist for autocomplete suggestions",
+      "content": "<label for=\"${1:browser}\">${2:Choose a browser}:</label>\n<input list=\"${1:browser}-list\" id=\"${1:browser}\" name=\"${1:browser}\">\n<datalist id=\"${1:browser}-list\">\n  <option value=\"${3:Chrome}\">\n  <option value=\"${4:Firefox}\">\n  <option value=\"${5:Safari}\">\n</datalist>",
+      "category": "forms"
+    },
+    {
+      "trigger": "form_validation",
+      "description": "Form with built-in HTML5 validation patterns",
+      "content": "<form ${1:action=\"/submit\"} method=\"${2:post}\">\n  <div>\n    <label for=\"name\">Name (required)</label>\n    <input type=\"text\" id=\"name\" name=\"name\" required minlength=\"2\">\n  </div>\n  <div>\n    <label for=\"email\">Email (required)</label>\n    <input type=\"email\" id=\"email\" name=\"email\" required autocomplete=\"email\">\n  </div>\n  <div>\n    <label for=\"phone\">Phone (optional, format: 123-456-7890)</label>\n    <input type=\"tel\" id=\"phone\" name=\"phone\" pattern=\"[0-9]{3}-[0-9]{3}-[0-9]{4}\">\n  </div>\n  <button type=\"submit\">Submit</button>\n</form>",
+      "category": "forms"
+    },
+    {
+      "trigger": "picture_art_direction",
+      "description": "Picture element with art direction for different viewports",
+      "content": "<picture>\n  <source media=\"(min-width: 1024px)\" srcset=\"${1:img-desktop.webp}\">\n  <source media=\"(min-width: 640px)\" srcset=\"${2:img-tablet.webp}\">\n  <img src=\"${3:img-mobile.webp}\" alt=\"${4:Description}\" width=\"${5:800}\" height=\"${6:600}\" loading=\"lazy\">\n</picture>",
+      "category": "media"
+    },
+    {
+      "trigger": "img_srcset",
+      "description": "Responsive image with srcset and sizes for resolution switching",
+      "content": "<img\n  srcset=\"${1:img-480.webp} 480w,\n         ${2:img-800.webp} 800w,\n         ${3:img-1200.webp} 1200w\"\n  sizes=\"(max-width: 600px) 100vw,\n         (max-width: 1024px) 50vw,\n         33vw\"\n  src=\"${2:img-800.webp}\"\n  alt=\"${4:Description}\"\n  width=\"${5:800}\"\n  height=\"${6:600}\"\n  loading=\"lazy\"\n  decoding=\"async\"\n>",
+      "category": "media"
+    },
+    {
+      "trigger": "video_responsive",
+      "description": "Responsive video with multiple sources and fallback",
+      "content": "<video\n  width=\"${1:1280}\"\n  height=\"${2:720}\"\n  controls\n  preload=\"metadata\"\n  poster=\"${3:poster.jpg}\"\n>\n  <source src=\"${4:video.webm}\" type=\"video/webm\">\n  <source src=\"${5:video.mp4}\" type=\"video/mp4\">\n  <track kind=\"captions\" src=\"${6:captions.vtt}\" srclang=\"en\" label=\"English\" default>\n  Your browser does not support the video element.\n</video>",
+      "category": "media"
+    },
+    {
+      "trigger": "figure",
+      "description": "Figure with image and figcaption",
+      "content": "<figure>\n  <img src=\"${1:image.jpg}\" alt=\"${2:Description}\" width=\"${3:800}\" height=\"${4:600}\" loading=\"lazy\">\n  <figcaption>${5:Caption text}</figcaption>\n</figure>",
+      "category": "media"
+    },
+    {
+      "trigger": "landmark_page",
+      "description": "Full page structure with all ARIA landmark regions",
+      "content": "<header>\n  <nav aria-label=\"Main\">\n    <ul>\n      <li><a href=\"/\">${1:Home}</a></li>\n      <li><a href=\"/${2:about}\">${3:About}</a></li>\n    </ul>\n  </nav>\n</header>\n\n<main>\n  <h1>${4:Page Title}</h1>\n  ${5}\n</main>\n\n<aside aria-label=\"${6:Sidebar}\">\n  ${7}\n</aside>\n\n<footer>\n  <p>&copy; ${8:2026} ${9:Company}</p>\n</footer>",
+      "category": "semantic"
+    },
+    {
+      "trigger": "skip_link",
+      "description": "Skip navigation link for keyboard accessibility",
+      "content": "<a href=\"#main-content\" class=\"skip-link\">${1:Skip to main content}</a>\n<!-- Place at start of body, style to be visually hidden until focused -->",
+      "category": "accessibility"
+    },
+    {
+      "trigger": "sr_only",
+      "description": "Screen-reader-only text pattern",
+      "content": "<span class=\"sr-only\">${1:Descriptive text for screen readers}</span>",
+      "category": "accessibility"
+    },
+    {
+      "trigger": "live_region",
+      "description": "ARIA live region for dynamic content updates",
+      "content": "<div aria-live=\"${1:polite}\" aria-atomic=\"${2:true}\" id=\"${3:status}\">\n  ${4:<!-- Dynamic content announced to screen readers -->}\n</div>",
+      "category": "accessibility"
+    },
+    {
+      "trigger": "dialog_modal",
+      "description": "Native dialog element used as a modal",
+      "content": "<button id=\"open-${1:dialog}\">Open ${2:Dialog}</button>\n\n<dialog id=\"${1:dialog}\">\n  <form method=\"dialog\">\n    <h2>${2:Dialog} Title</h2>\n    <p>${3:Dialog content goes here.}</p>\n    <div>\n      <button value=\"cancel\">Cancel</button>\n      <button value=\"confirm\">Confirm</button>\n    </div>\n  </form>\n</dialog>\n\n<script>\n  const dialog = document.getElementById('${1:dialog}');\n  document.getElementById('open-${1:dialog}').addEventListener('click', () => dialog.showModal());\n</script>",
+      "category": "interactive"
+    },
+    {
+      "trigger": "details_summary",
+      "description": "Disclosure widget with details/summary",
+      "content": "<details${1: open}>\n  <summary>${2:Click to expand}</summary>\n  <div>\n    ${3:Hidden content revealed on toggle.}\n  </div>\n</details>",
+      "category": "interactive"
+    },
+    {
+      "trigger": "popover",
+      "description": "Native popover with button trigger (no JS needed)",
+      "content": "<button popovertarget=\"${1:pop}\">${2:Toggle Popover}</button>\n\n<div popover id=\"${1:pop}\">\n  ${3:Popover content. Click outside to dismiss.}\n</div>",
+      "category": "interactive"
+    },
+    {
+      "trigger": "accordion_details",
+      "description": "Accordion using details/summary with shared name (exclusive)",
+      "content": "<div class=\"${1:accordion}\">\n  <details name=\"${2:faq}\">\n    <summary>${3:Question 1}</summary>\n    <p>${4:Answer 1}</p>\n  </details>\n  <details name=\"${2:faq}\">\n    <summary>${5:Question 2}</summary>\n    <p>${6:Answer 2}</p>\n  </details>\n  <details name=\"${2:faq}\">\n    <summary>${7:Question 3}</summary>\n    <p>${8:Answer 3}</p>\n  </details>\n</div>",
+      "category": "interactive"
+    },
+    {
+      "trigger": "table_responsive",
+      "description": "Responsive data table with scope attributes for accessibility",
+      "content": "<div style=\"overflow-x: auto;\">\n  <table>\n    <caption>${1:Table caption}</caption>\n    <thead>\n      <tr>\n        <th scope=\"col\">${2:Header 1}</th>\n        <th scope=\"col\">${3:Header 2}</th>\n        <th scope=\"col\">${4:Header 3}</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr>\n        <td>${5:Data 1}</td>\n        <td>${6:Data 2}</td>\n        <td>${7:Data 3}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>",
+      "category": "tables"
+    },
+    {
+      "trigger": "template_slot",
+      "description": "Web component template with named slots",
+      "content": "<template id=\"${1:my-component}\">\n  <style>\n    :host {\n      display: block;\n      ${2}\n    }\n  </style>\n  <slot name=\"${3:header}\">Default header</slot>\n  <slot>Default content</slot>\n</template>",
+      "category": "web_components"
+    },
+    {
+      "trigger": "script_module",
+      "description": "ES module script tag",
+      "content": "<script type=\"module\" src=\"${1:app.js}\"></script>",
+      "category": "scripting"
+    },
+    {
+      "trigger": "script_defer",
+      "description": "Deferred external script (runs after parsing)",
+      "content": "<script defer src=\"${1:app.js}\"></script>",
+      "category": "scripting"
+    },
+    {
+      "trigger": "script_async",
+      "description": "Async external script (runs as soon as available)",
+      "content": "<script async src=\"${1:analytics.js}\"></script>",
+      "category": "scripting"
+    },
+    {
+      "trigger": "script_json_ld",
+      "description": "JSON-LD structured data for SEO",
+      "content": "<script type=\"application/ld+json\">\n{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"${1:WebPage}\",\n  \"name\": \"${2:Page Title}\",\n  \"description\": \"${3:Page description}\"\n}\n</script>",
+      "category": "seo"
+    },
+    {
+      "trigger": "grid_layout",
+      "description": "CSS Grid layout container with responsive items",
+      "content": "<div class=\"${1:grid}\" style=\"display: grid; grid-template-columns: repeat(auto-fill, minmax(${2:250px}, 1fr)); gap: ${3:1rem};\">\n  <div>${4:Item 1}</div>\n  <div>${5:Item 2}</div>\n  <div>${6:Item 3}</div>\n</div>",
+      "category": "layout"
+    },
+    {
+      "trigger": "flex_layout",
+      "description": "Flexbox layout container",
+      "content": "<div class=\"${1:flex}\" style=\"display: flex; gap: ${2:1rem}; ${3:align-items: center;}\">\n  <div>${4:Item 1}</div>\n  <div>${5:Item 2}</div>\n</div>",
+      "category": "layout"
+    },
+    {
+      "trigger": "hero",
+      "description": "Hero section with heading, text, and CTA",
+      "content": "<section class=\"${1:hero}\">\n  <h1>${2:Headline Text}</h1>\n  <p>${3:Supporting description text that explains the value proposition.}</p>\n  <a href=\"${4:#cta}\" class=\"${5:btn}\">${6:Get Started}</a>\n</section>",
+      "category": "components"
+    },
+    {
+      "trigger": "footer",
+      "description": "Footer with nav links and copyright",
+      "content": "<footer>\n  <nav aria-label=\"Footer\">\n    <ul>\n      <li><a href=\"/${1:privacy}\">${2:Privacy}</a></li>\n      <li><a href=\"/${3:terms}\">${4:Terms}</a></li>\n      <li><a href=\"/${5:contact}\">${6:Contact}</a></li>\n    </ul>\n  </nav>\n  <p>&copy; ${7:2026} ${8:Company}. All rights reserved.</p>\n</footer>",
+      "category": "components"
+    },
+    {
+      "trigger": "notification",
+      "description": "Alert/notification banner with ARIA role",
+      "content": "<div role=\"${1:alert}\" class=\"${2:notification}\">\n  <p>${3:This is an important message.}</p>\n  <button aria-label=\"Dismiss\">&times;</button>\n</div>",
+      "category": "components"
     }
-  ]
+  ],
+  "imports": {
+    "modules": [
+      {
+        "path": "global_attributes",
+        "items": [
+          {
+            "name": "class",
+            "item_type": "attribute",
+            "description": "Space-separated CSS class names"
+          },
+          {
+            "name": "id",
+            "item_type": "attribute",
+            "description": "Unique element identifier"
+          },
+          {
+            "name": "style",
+            "item_type": "attribute",
+            "description": "Inline CSS styles"
+          },
+          {
+            "name": "title",
+            "item_type": "attribute",
+            "description": "Advisory tooltip text"
+          },
+          {
+            "name": "hidden",
+            "item_type": "attribute",
+            "description": "Hides element from rendering"
+          },
+          {
+            "name": "tabindex",
+            "item_type": "attribute",
+            "description": "Focus order control"
+          },
+          {
+            "name": "contenteditable",
+            "item_type": "attribute",
+            "description": "Makes element user-editable"
+          },
+          {
+            "name": "draggable",
+            "item_type": "attribute",
+            "description": "Enables drag-and-drop"
+          },
+          {
+            "name": "lang",
+            "item_type": "attribute",
+            "description": "Language of the element's content"
+          },
+          {
+            "name": "dir",
+            "item_type": "attribute",
+            "description": "Text directionality (ltr/rtl/auto)"
+          },
+          {
+            "name": "inert",
+            "item_type": "attribute",
+            "description": "Makes element and descendants non-interactive"
+          },
+          {
+            "name": "autofocus",
+            "item_type": "attribute",
+            "description": "Auto-focus on page load"
+          },
+          {
+            "name": "spellcheck",
+            "item_type": "attribute",
+            "description": "Enable/disable spell checking"
+          },
+          {
+            "name": "translate",
+            "item_type": "attribute",
+            "description": "Whether content should be translated"
+          },
+          {
+            "name": "enterkeyhint",
+            "item_type": "attribute",
+            "description": "Hint for virtual keyboard enter key label"
+          },
+          {
+            "name": "inputmode",
+            "item_type": "attribute",
+            "description": "Virtual keyboard type hint (numeric, tel, email, url, etc.)"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "aria_roles",
+        "items": [
+          {
+            "name": "alert",
+            "item_type": "role",
+            "description": "Important, time-sensitive message"
+          },
+          {
+            "name": "alertdialog",
+            "item_type": "role",
+            "description": "Alert that requires user response"
+          },
+          {
+            "name": "button",
+            "item_type": "role",
+            "description": "Clickable trigger for actions"
+          },
+          {
+            "name": "checkbox",
+            "item_type": "role",
+            "description": "Checkable input with true/false/mixed states"
+          },
+          {
+            "name": "dialog",
+            "item_type": "role",
+            "description": "Modal or non-modal dialog window"
+          },
+          {
+            "name": "feed",
+            "item_type": "role",
+            "description": "Scrollable list of articles"
+          },
+          {
+            "name": "grid",
+            "item_type": "role",
+            "description": "Interactive tabular data (like spreadsheet)"
+          },
+          {
+            "name": "listbox",
+            "item_type": "role",
+            "description": "Selectable list of options"
+          },
+          {
+            "name": "menu",
+            "item_type": "role",
+            "description": "List of choices/actions"
+          },
+          {
+            "name": "menubar",
+            "item_type": "role",
+            "description": "Horizontal menu bar"
+          },
+          {
+            "name": "navigation",
+            "item_type": "role",
+            "description": "Navigation landmark"
+          },
+          {
+            "name": "progressbar",
+            "item_type": "role",
+            "description": "Progress indicator"
+          },
+          {
+            "name": "search",
+            "item_type": "role",
+            "description": "Search landmark region"
+          },
+          {
+            "name": "status",
+            "item_type": "role",
+            "description": "Advisory information (polite live region)"
+          },
+          {
+            "name": "switch",
+            "item_type": "role",
+            "description": "On/off toggle (like checkbox but semantically different)"
+          },
+          {
+            "name": "tab",
+            "item_type": "role",
+            "description": "Tab in a tablist"
+          },
+          {
+            "name": "tablist",
+            "item_type": "role",
+            "description": "Container for tab elements"
+          },
+          {
+            "name": "tabpanel",
+            "item_type": "role",
+            "description": "Panel associated with a tab"
+          },
+          {
+            "name": "tooltip",
+            "item_type": "role",
+            "description": "Contextual popup with descriptive text"
+          },
+          {
+            "name": "tree",
+            "item_type": "role",
+            "description": "Hierarchical list (like file explorer)"
+          },
+          {
+            "name": "treeitem",
+            "item_type": "role",
+            "description": "Item in a tree widget"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "input_types",
+        "items": [
+          {
+            "name": "text",
+            "item_type": "type",
+            "description": "Single-line text input (default)"
+          },
+          {
+            "name": "email",
+            "item_type": "type",
+            "description": "Email with validation and keyboard"
+          },
+          {
+            "name": "password",
+            "item_type": "type",
+            "description": "Masked password input"
+          },
+          {
+            "name": "number",
+            "item_type": "type",
+            "description": "Numeric input with spinner"
+          },
+          {
+            "name": "tel",
+            "item_type": "type",
+            "description": "Phone number with keypad"
+          },
+          {
+            "name": "url",
+            "item_type": "type",
+            "description": "URL input with validation"
+          },
+          {
+            "name": "search",
+            "item_type": "type",
+            "description": "Search input with clear button"
+          },
+          {
+            "name": "date",
+            "item_type": "type",
+            "description": "Date picker (YYYY-MM-DD)"
+          },
+          {
+            "name": "datetime-local",
+            "item_type": "type",
+            "description": "Date and time picker"
+          },
+          {
+            "name": "time",
+            "item_type": "type",
+            "description": "Time picker (HH:MM)"
+          },
+          {
+            "name": "color",
+            "item_type": "type",
+            "description": "Color picker (#rrggbb)"
+          },
+          {
+            "name": "range",
+            "item_type": "type",
+            "description": "Slider for imprecise numbers"
+          },
+          {
+            "name": "file",
+            "item_type": "type",
+            "description": "File upload control"
+          },
+          {
+            "name": "checkbox",
+            "item_type": "type",
+            "description": "Boolean toggle"
+          },
+          {
+            "name": "radio",
+            "item_type": "type",
+            "description": "One-of-many selection"
+          },
+          {
+            "name": "hidden",
+            "item_type": "type",
+            "description": "Hidden data submitted with form"
+          },
+          {
+            "name": "submit",
+            "item_type": "type",
+            "description": "Form submit button"
+          },
+          {
+            "name": "reset",
+            "item_type": "type",
+            "description": "Form reset button"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "meta_tags",
+        "items": [
+          {
+            "name": "charset",
+            "item_type": "attribute",
+            "description": "Character encoding (UTF-8)"
+          },
+          {
+            "name": "viewport",
+            "item_type": "name",
+            "description": "Responsive viewport configuration"
+          },
+          {
+            "name": "description",
+            "item_type": "name",
+            "description": "Page description for SEO"
+          },
+          {
+            "name": "theme-color",
+            "item_type": "name",
+            "description": "Browser UI color on mobile"
+          },
+          {
+            "name": "robots",
+            "item_type": "name",
+            "description": "Search engine crawling directives"
+          },
+          {
+            "name": "og:title",
+            "item_type": "property",
+            "description": "Open Graph title for social sharing"
+          },
+          {
+            "name": "og:description",
+            "item_type": "property",
+            "description": "Open Graph description"
+          },
+          {
+            "name": "og:image",
+            "item_type": "property",
+            "description": "Open Graph image URL"
+          },
+          {
+            "name": "og:url",
+            "item_type": "property",
+            "description": "Canonical URL for Open Graph"
+          },
+          {
+            "name": "og:type",
+            "item_type": "property",
+            "description": "Open Graph content type"
+          },
+          {
+            "name": "twitter:card",
+            "item_type": "name",
+            "description": "Twitter Card type (summary, summary_large_image)"
+          },
+          {
+            "name": "color-scheme",
+            "item_type": "name",
+            "description": "Supported color schemes (light dark)"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "link_rel_values",
+        "items": [
+          {
+            "name": "stylesheet",
+            "item_type": "value",
+            "description": "External CSS stylesheet"
+          },
+          {
+            "name": "icon",
+            "item_type": "value",
+            "description": "Favicon/site icon"
+          },
+          {
+            "name": "apple-touch-icon",
+            "item_type": "value",
+            "description": "iOS home screen icon"
+          },
+          {
+            "name": "manifest",
+            "item_type": "value",
+            "description": "PWA web app manifest"
+          },
+          {
+            "name": "canonical",
+            "item_type": "value",
+            "description": "Preferred URL for duplicate content"
+          },
+          {
+            "name": "preload",
+            "item_type": "value",
+            "description": "Preload critical resource"
+          },
+          {
+            "name": "preconnect",
+            "item_type": "value",
+            "description": "Pre-establish connection to origin"
+          },
+          {
+            "name": "dns-prefetch",
+            "item_type": "value",
+            "description": "Pre-resolve DNS for origin"
+          },
+          {
+            "name": "prefetch",
+            "item_type": "value",
+            "description": "Prefetch resource for next navigation"
+          },
+          {
+            "name": "modulepreload",
+            "item_type": "value",
+            "description": "Preload ES module and dependencies"
+          },
+          {
+            "name": "noopener",
+            "item_type": "value",
+            "description": "Prevent opener access (security)"
+          },
+          {
+            "name": "noreferrer",
+            "item_type": "value",
+            "description": "No Referer header sent"
+          },
+          {
+            "name": "alternate",
+            "item_type": "value",
+            "description": "Alternate version (RSS, language, etc.)"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "event_attributes",
+        "items": [
+          {
+            "name": "onclick",
+            "item_type": "event",
+            "description": "Element clicked"
+          },
+          {
+            "name": "onchange",
+            "item_type": "event",
+            "description": "Form control value changed"
+          },
+          {
+            "name": "oninput",
+            "item_type": "event",
+            "description": "Input value changed (real-time)"
+          },
+          {
+            "name": "onsubmit",
+            "item_type": "event",
+            "description": "Form submitted"
+          },
+          {
+            "name": "onkeydown",
+            "item_type": "event",
+            "description": "Key pressed down"
+          },
+          {
+            "name": "onkeyup",
+            "item_type": "event",
+            "description": "Key released"
+          },
+          {
+            "name": "onfocus",
+            "item_type": "event",
+            "description": "Element received focus"
+          },
+          {
+            "name": "onblur",
+            "item_type": "event",
+            "description": "Element lost focus"
+          },
+          {
+            "name": "onload",
+            "item_type": "event",
+            "description": "Resource finished loading"
+          },
+          {
+            "name": "onerror",
+            "item_type": "event",
+            "description": "Error occurred loading resource"
+          },
+          {
+            "name": "onscroll",
+            "item_type": "event",
+            "description": "Element scrolled"
+          },
+          {
+            "name": "onresize",
+            "item_type": "event",
+            "description": "Window resized"
+          }
+        ],
+        "submodules": []
+      },
+      {
+        "path": "html_entities",
+        "items": [
+          {
+            "name": "&amp;",
+            "item_type": "entity",
+            "description": "& (ampersand)"
+          },
+          {
+            "name": "&lt;",
+            "item_type": "entity",
+            "description": "< (less than)"
+          },
+          {
+            "name": "&gt;",
+            "item_type": "entity",
+            "description": "> (greater than)"
+          },
+          {
+            "name": "&quot;",
+            "item_type": "entity",
+            "description": "\" (double quote)"
+          },
+          {
+            "name": "&apos;",
+            "item_type": "entity",
+            "description": "' (apostrophe)"
+          },
+          {
+            "name": "&nbsp;",
+            "item_type": "entity",
+            "description": "Non-breaking space"
+          },
+          {
+            "name": "&copy;",
+            "item_type": "entity",
+            "description": "© (copyright)"
+          },
+          {
+            "name": "&mdash;",
+            "item_type": "entity",
+            "description": "— (em dash)"
+          },
+          {
+            "name": "&ndash;",
+            "item_type": "entity",
+            "description": "– (en dash)"
+          },
+          {
+            "name": "&hellip;",
+            "item_type": "entity",
+            "description": "… (ellipsis)"
+          },
+          {
+            "name": "&laquo;",
+            "item_type": "entity",
+            "description": "« (left guillemet)"
+          },
+          {
+            "name": "&raquo;",
+            "item_type": "entity",
+            "description": "» (right guillemet)"
+          },
+          {
+            "name": "&trade;",
+            "item_type": "entity",
+            "description": "™ (trademark)"
+          },
+          {
+            "name": "&reg;",
+            "item_type": "entity",
+            "description": "® (registered)"
+          }
+        ],
+        "submodules": []
+      }
+    ]
+  }
 }
