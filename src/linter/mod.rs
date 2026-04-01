@@ -83,22 +83,27 @@ impl Diagnostic {
 /// Run linter for a specific file based on its language
 pub fn lint_file(file_path: &Path, content: &str) -> Vec<Diagnostic> {
     // Determine language from file extension
-    let mut diagnostics = if let Some(ext) = file_path.extension().and_then(|e| e.to_str()) {
-        match ext {
-            "rs" => Vec::new(), // Rust files use rust-analyzer via LSP, not local linter
-            "ui" => gtk_ui_linter::lint_gtk_ui(content),
-            // Add more languages here as they are implemented
-            _ => Vec::new(),
-        }
-    } else {
-        Vec::new()
-    };
+    let mut diagnostics = lint_file_builtin(file_path, content);
 
     // Append diagnostics from extension linters
     let ext_diags = crate::extensions::hooks::run_extension_linters(file_path);
     diagnostics.extend(ext_diags);
 
     diagnostics
+}
+
+/// Run only built-in (fast, local) linters — no extension subprocesses.
+/// Safe to call on the GTK main thread.
+pub fn lint_file_builtin(file_path: &Path, content: &str) -> Vec<Diagnostic> {
+    if let Some(ext) = file_path.extension().and_then(|e| e.to_str()) {
+        match ext {
+            "rs" => Vec::new(), // Rust files use rust-analyzer via LSP, not local linter
+            "ui" => gtk_ui_linter::lint_gtk_ui(content),
+            _ => Vec::new(),
+        }
+    } else {
+        Vec::new()
+    }
 }
 
 /// Run linter for a specific language

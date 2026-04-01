@@ -29,7 +29,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use super::{lint_by_language, lint_file, Diagnostic, DiagnosticSeverity};
+use super::{lint_by_language, Diagnostic, DiagnosticSeverity};
 
 // Type alias for complex callback types
 type VisibilityCallback = RefCell<Option<Rc<dyn Fn(bool)>>>;
@@ -258,21 +258,33 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
     let source_view_weak = source_view.downgrade();
     let file_path_opt = file_path.map(|p| p.to_path_buf());
 
+    // Debounce timer — cancel previous timer on each keystroke so the linter
+    // only runs once after the user *stops* typing for 800ms.
+    let pending_source_id: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
+
     // Connect to buffer changes
     buffer.connect_changed(move |buffer| {
         if let Some(source_view) = source_view_weak.upgrade() {
-            // Run linter after a short delay to avoid running on every keystroke
+            // Cancel any previously scheduled linter run (debounce)
+            if let Some(old_id) = pending_source_id.borrow_mut().take() {
+                old_id.remove();
+            }
+
             let buffer_clone = buffer.clone();
             let source_view_clone = source_view.clone();
             let file_path_clone = file_path_opt.clone();
+            let pending_clone = pending_source_id.clone();
 
-            glib::timeout_add_local_once(std::time::Duration::from_millis(500), move || {
+            let source_id = glib::timeout_add_local_once(std::time::Duration::from_millis(800), move || {
+                // Clear the stored source ID since we're now executing
+                pending_clone.borrow_mut().take();
                 run_linter(
                     &source_view_clone,
                     &buffer_clone,
                     file_path_clone.as_deref(),
                 );
             });
+            *pending_source_id.borrow_mut() = Some(source_id);
         }
     });
 
@@ -294,18 +306,19 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
     }
 }
 
-/// Run the linter and display diagnostics
+/// Run the linter and display diagnostics.
+/// Built-in linters run synchronously (fast); extension linters run in a
+/// background thread to avoid blocking the GTK main loop.
 fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_path: Option<&Path>) {
     // Get buffer content
     let start = buffer.start_iter();
     let end = buffer.end_iter();
     let content = buffer.text(&start, &end, true).to_string();
 
-    // Run linter
-    let diagnostics = if let Some(path) = file_path {
-        lint_file(path, &content)
+    // ── Phase 1: fast built-in linters (main thread) ──────────────
+    let builtin_diagnostics = if let Some(path) = file_path {
+        crate::linter::lint_file_builtin(path, &content)
     } else {
-        // Try to detect language from buffer
         if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
             if let Some(language) = source_buffer.language() {
                 let lang_id = language.id().to_string();
@@ -318,10 +331,55 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
         }
     };
 
+    // Apply built-in diagnostics immediately
+    if let Some(path) = file_path {
+        apply_diagnostics_to_ui(buffer, path, &builtin_diagnostics);
+    }
+
+    // ── Phase 2: extension linters (background thread) ────────────
+    if let Some(path) = file_path {
+        let path_buf = path.to_path_buf();
+
+        std::thread::spawn(move || {
+            let ext_diags = crate::extensions::hooks::run_extension_linters(&path_buf);
+            if ext_diags.is_empty() {
+                return;
+            }
+            // Marshal results back to the GTK main thread
+            glib::idle_add_local_once(move || {
+                let file_uri = format!("file://{}", path_buf.display());
+                let file_path_str = path_buf.to_string_lossy().to_string();
+
+                if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
+                    let entry = store.entry(file_uri.clone()).or_insert_with(Vec::new);
+                    entry.extend(ext_diags.clone());
+                }
+
+                crate::linter::store_file_diagnostics(&file_path_str, ext_diags);
+
+                // Re-apply underlines using the buffer registry
+                reapply_diagnostic_underlines(&file_uri);
+
+                // Refresh UI
+                update_diagnostics_count();
+                refresh_diagnostics_panel();
+            });
+        });
+    }
+}
+
+/// Helper: store diagnostics and update the UI widgets (main-thread only).
+fn apply_diagnostics_to_ui(
+    buffer: &impl IsA<gtk4::TextBuffer>,
+    path: &Path,
+    diagnostics: &[Diagnostic],
+) {
+    let file_uri = format!("file://{}", path.display());
+
     // Display diagnostics in console
     if !diagnostics.is_empty() {
         println!("🔍 Linter found {} diagnostic(s)", diagnostics.len());
-        for diag in &diagnostics {
+        for diag in diagnostics {
             let severity_str = match diag.severity {
                 DiagnosticSeverity::Error => "ERROR",
                 DiagnosticSeverity::Warning => "WARNING",
@@ -336,45 +394,40 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
         println!("✅ Linter found no issues");
     }
 
-    // Store diagnostics and update UI
-    if let Some(path) = file_path {
-        let file_uri = format!("file://{}", path.display());
-        
-        // Store in DIAGNOSTICS_STORE
-        let has_any_diagnostics = if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
-            if diagnostics.is_empty() {
-                store.remove(&file_uri);
-            } else {
-                store.insert(file_uri.clone(), diagnostics.clone());
-            }
-            !store.is_empty()
+    // Store in DIAGNOSTICS_STORE
+    let has_any_diagnostics = if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
+        if diagnostics.is_empty() {
+            store.remove(&file_uri);
         } else {
-            false
-        };
-        
-        // Also store in the global file diagnostics (for underlines)
-        crate::linter::store_file_diagnostics(&path.to_string_lossy(), diagnostics.clone());
-        
-        // Apply underlines if we have a source buffer
-        if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
-            crate::linter::apply_diagnostic_underlines(source_buffer, &path.to_string_lossy());
+            store.insert(file_uri.clone(), diagnostics.to_vec());
         }
-        
-        // Show linter status widget if we have any diagnostics
-        // and the rust diagnostics extension is enabled
-        if has_any_diagnostics && crate::extensions::rust_diagnostics::is_enabled() {
-            LINTER_STATUS_VISIBILITY_CALLBACK.with(|cell| {
-                if let Some(ref callback) = *cell.borrow() {
-                    callback(true);
-                }
-            });
-        }
-        
-        // Refresh the diagnostics panel
-        glib::idle_add_local_once(|| {
-            refresh_diagnostics_panel();
+        !store.is_empty()
+    } else {
+        false
+    };
+
+    // Also store in the global file diagnostics (for underlines)
+    crate::linter::store_file_diagnostics(&path.to_string_lossy(), diagnostics.to_vec());
+
+    // Apply underlines if we have a source buffer
+    if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
+        crate::linter::apply_diagnostic_underlines(source_buffer, &path.to_string_lossy());
+    }
+
+    // Show linter status widget if we have any diagnostics
+    // and the rust diagnostics extension is enabled
+    if has_any_diagnostics && crate::extensions::rust_diagnostics::is_enabled() {
+        LINTER_STATUS_VISIBILITY_CALLBACK.with(|cell| {
+            if let Some(ref callback) = *cell.borrow() {
+                callback(true);
+            }
         });
     }
+
+    // Refresh the diagnostics panel
+    glib::idle_add_local_once(|| {
+        refresh_diagnostics_panel();
+    });
 }
 
 /// Create a diagnostics panel widget to display lint results

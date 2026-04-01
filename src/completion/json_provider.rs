@@ -449,6 +449,7 @@ pub fn get_completion_manager() -> std::sync::MutexGuard<'static, CompletionData
 }
 
 /// Convenience function to get keywords for a language using JSON data
+#[allow(dead_code)]
 pub fn get_json_keywords(language: &str) -> Vec<String> {
     let mut manager = get_completion_manager();
 
@@ -464,6 +465,7 @@ pub fn get_json_keywords(language: &str) -> Vec<String> {
 }
 
 /// Convenience function to get snippets for a language using JSON data
+#[allow(dead_code)]
 pub fn get_json_snippets(language: &str) -> Vec<(String, String)> {
     let mut manager = get_completion_manager();
 
@@ -479,6 +481,7 @@ pub fn get_json_snippets(language: &str) -> Vec<(String, String)> {
 }
 
 /// Convenience function to get keyword documentation using JSON data
+#[allow(dead_code)]
 pub fn get_json_keyword_documentation(language: &str, keyword: &str) -> String {
     let mut manager = get_completion_manager();
 
@@ -493,6 +496,7 @@ pub fn get_json_keyword_documentation(language: &str, keyword: &str) -> String {
 }
 
 /// Convenience function to get snippet documentation using JSON data
+#[allow(dead_code)]
 pub fn get_json_snippet_documentation(language: &str, trigger: &str) -> String {
     let mut manager = get_completion_manager();
 
@@ -513,6 +517,7 @@ pub fn initialize_completion_data() -> Result<Vec<String>, Box<dyn std::error::E
 }
 
 /// Get import suggestions for a language and module path
+#[allow(dead_code)]
 pub fn get_import_suggestions(language: &str, module_path: &str) -> Vec<ImportItem> {
     let mut manager = get_completion_manager();
 
@@ -524,6 +529,7 @@ pub fn get_import_suggestions(language: &str, module_path: &str) -> Vec<ImportIt
 }
 
 /// Get submodules for a language and module path
+#[allow(dead_code)]
 pub fn get_submodules(language: &str, module_path: &str) -> Vec<String> {
     let mut manager = get_completion_manager();
 
@@ -535,6 +541,7 @@ pub fn get_submodules(language: &str, module_path: &str) -> Vec<String> {
 }
 
 /// Find matching modules for partial import path
+#[allow(dead_code)]
 pub fn find_matching_modules(language: &str, partial_path: &str) -> Vec<String> {
     let mut manager = get_completion_manager();
 
