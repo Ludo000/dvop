@@ -400,6 +400,11 @@ pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
 ///
 /// See FEATURES.md: Feature #111 — Code Completion
 pub fn trigger_completion(source_view: &View) {
+    // Bail out immediately if the extension is disabled
+    if !crate::extensions::code_completion::is_enabled() {
+        return;
+    }
+
     // Check if completion is already in progress to prevent recursive calls
     if COMPLETION_IN_PROGRESS.swap(true, Ordering::SeqCst) {
         completion_debug!("Completion already in progress, skipping...");
@@ -1166,6 +1171,9 @@ fn scroll_to_row(scrolled: &ScrolledWindow, row: &gtk4::ListBoxRow) {
 
 /// Setup keyboard shortcuts for completion with manual trigger only
 pub fn setup_completion_shortcuts(source_view: &View) {
+    if !crate::extensions::code_completion::is_enabled() {
+        return;
+    }
     completion_debug!("Setting up completion keyboard shortcuts...");
 
     // Create key controller with high priority to ensure it gets events

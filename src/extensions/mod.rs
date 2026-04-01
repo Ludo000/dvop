@@ -26,6 +26,7 @@
 //!
 //! See FEATURES.md: Feature #87–#109 — Extension System
 
+pub mod code_completion;
 pub mod hooks;
 pub mod manager;
 pub mod native;
