@@ -2959,6 +2959,25 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     }
 
+    // After session restoration, re-focus the file that was requested via "Open with" / command line
+    // Session restoration opens all previously saved files, which overrides the current page.
+    if let Some(ref file_path) = file_to_open {
+        let num_pages = editor_notebook.n_pages();
+        for i in 0..num_pages {
+            if let Some(path) = file_path_manager.borrow().get(&i) {
+                if path == file_path {
+                    editor_notebook.set_current_page(Some(i));
+                    if let Some((text_view, _)) =
+                        handlers::get_text_view_and_buffer_for_page(&editor_notebook, i)
+                    {
+                        text_view.grab_focus();
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
     // After session restoration, file_path_manager is now populated.
     // Re-run the status update for the active tab so the file size is shown.
     {
