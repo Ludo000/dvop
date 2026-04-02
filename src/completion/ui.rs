@@ -400,22 +400,26 @@ pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
 ///
 /// See FEATURES.md: Feature #111 — Code Completion
 pub fn trigger_completion(source_view: &View) {
-    // Bail out immediately if the code-completion extension is disabled
-    if !crate::extensions::code_completion::is_enabled() {
-        return;
-    }
+    let code_completion_on = crate::extensions::code_completion::is_enabled();
+    let rust_completion_on = crate::extensions::rust_completion::is_enabled();
 
-    // Bail out if the rust-completion extension is disabled and this is a Rust file
-    // (the extension owns all Rust completion data; when off, no Rust completions)
-    if !crate::extensions::rust_completion::is_enabled() {
+    // Determine if this is a Rust file
+    let is_rust = {
         let buf = source_view.buffer();
-        if let Some(sb) = buf.downcast_ref::<sourceview5::Buffer>() {
-            if let Some(lang) = sb.language() {
-                if lang.id().as_str() == "rust" {
-                    return;
-                }
-            }
+        buf.downcast_ref::<sourceview5::Buffer>()
+            .and_then(|sb| sb.language())
+            .map(|lang| lang.id().as_str() == "rust")
+            .unwrap_or(false)
+    };
+
+    // For Rust files, rust_completion alone is sufficient.
+    // For other languages, code_completion must be enabled.
+    if is_rust {
+        if !rust_completion_on {
+            return;
         }
+    } else if !code_completion_on {
+        return;
     }
 
     // Check if completion is already in progress to prevent recursive calls
@@ -1137,8 +1141,19 @@ fn scroll_to_row(scrolled: &ScrolledWindow, row: &gtk4::ListBoxRow) {
 
 /// Setup keyboard shortcuts for completion with manual trigger only
 pub fn setup_completion_shortcuts(source_view: &View) {
+    // Allow shortcuts if code_completion is enabled, or if rust_completion
+    // is enabled and this is a Rust file (rust_completion works independently).
     if !crate::extensions::code_completion::is_enabled() {
-        return;
+        let is_rust = {
+            let buf = source_view.buffer();
+            buf.downcast_ref::<sourceview5::Buffer>()
+                .and_then(|sb| sb.language())
+                .map(|lang| lang.id().as_str() == "rust")
+                .unwrap_or(false)
+        };
+        if !(is_rust && crate::extensions::rust_completion::is_enabled()) {
+            return;
+        }
     }
     completion_debug!("Setting up completion keyboard shortcuts...");
 
