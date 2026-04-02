@@ -77,6 +77,11 @@ fn get_notebook_tab_styles() -> &'static str {
     "
     /* === NOTEBOOK AND TAB STYLES === */
     
+    /* Header bar left padding */
+    headerbar {
+        padding-left: 20px;
+    }
+    
     /* Notebook header container */
     notebook > header {
         padding: 1px;

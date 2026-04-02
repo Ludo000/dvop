@@ -16,30 +16,8 @@
           </object>
         </property>
         <child type="start">
-          <object class="GtkMenuButton" id="menu_button">
-            <property name="icon-name">open-menu-symbolic</property>
+          <object class="GtkPopoverMenuBar" id="menu_bar">
             <property name="menu-model">primary_menu</property>
-            <property name="tooltip-text">Application Menu</property>
-          </object>
-        </child>
-        <child type="start">
-          <object class="GtkButton" id="open_button">
-            <property name="tooltip-text">Open a file</property>
-            <child>
-              <object class="GtkBox">
-                <property name="spacing">5</property>
-                <child>
-                  <object class="GtkImage">
-                    <property name="icon-name">document-open-symbolic</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkLabel">
-                    <property name="label">Open</property>
-                  </object>
-                </child>
-              </object>
-            </child>
           </object>
         </child>
         <child type="end">
@@ -74,10 +52,28 @@
             </child>
           </object>
         </child>
+        <child type="end">
+          <object class="GtkButton" id="open_button">
+            <property name="tooltip-text">Open a file</property>
+            <child>
+              <object class="GtkBox">
+                <property name="spacing">5</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">document-open-symbolic</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">Open</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
       </object>
     </child>
-    
-    <!-- ===== MAIN CONTAINER (Body) ===== -->
     <child>
       <object class="GtkBox" id="main_container">
         <property name="orientation">vertical</property>
