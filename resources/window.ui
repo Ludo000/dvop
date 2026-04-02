@@ -23,6 +23,7 @@
         <child type="end">
           <object class="GtkBox" id="save_split_box">
             <property name="css-classes">linked</property>
+            <property name="margin-start">8</property>
             <child>
               <object class="GtkButton" id="save_main_button">
                 <property name="tooltip-text">Save the current file</property>
