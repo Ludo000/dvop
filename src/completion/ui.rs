@@ -23,7 +23,7 @@
 
 use glib;
 use gtk4::{
-    gdk, pango, Box as GtkBox, Image, Label, ListBox, Orientation, Popover, ScrolledWindow,
+    gdk, pango, Box as GtkBox, Label, ListBox, Orientation, Popover, ScrolledWindow,
 };
 use sourceview5::{prelude::*, Buffer, View};
 use std::cell::RefCell;
@@ -400,9 +400,22 @@ pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
 ///
 /// See FEATURES.md: Feature #111 — Code Completion
 pub fn trigger_completion(source_view: &View) {
-    // Bail out immediately if the extension is disabled
+    // Bail out immediately if the code-completion extension is disabled
     if !crate::extensions::code_completion::is_enabled() {
         return;
+    }
+
+    // Bail out if the rust-completion extension is disabled and this is a Rust file
+    // (the extension owns all Rust completion data; when off, no Rust completions)
+    if !crate::extensions::rust_completion::is_enabled() {
+        let buf = source_view.buffer();
+        if let Some(sb) = buf.downcast_ref::<sourceview5::Buffer>() {
+            if let Some(lang) = sb.language() {
+                if lang.id().as_str() == "rust" {
+                    return;
+                }
+            }
+        }
     }
 
     // Check if completion is already in progress to prevent recursive calls
@@ -830,15 +843,11 @@ fn create_completion_popup(
         }}
         .completion-doc {{ 
             font-size: {}pt; 
-            font-weight: 700;
-            color: alpha(@theme_fg_color, 0.75); 
-            margin-left: 40px;
-            line-height: 1.4;
-            padding-right: 20px;
-            padding-top: 2px;
-            padding-bottom: 2px;
+            font-weight: 400;
+            color: alpha(@theme_fg_color, 0.65); 
+            padding-top: 0px;
         }}",
-        font_size, font_size
+        font_size, font_size - 1
     );
     css_provider.load_from_data(&css_content);
     if let Some(display) = gdk::Display::default() {
@@ -849,9 +858,8 @@ fn create_completion_popup(
         );
     }
 
-    // Pre-compute label/doc widths once
-    let label_width = 10;
-    let doc_width = ((popup_width as f32 * 0.70 / 8.0) as i32).max(40);
+    // Pre-compute doc width for ellipsize
+    let doc_width = ((popup_width as f32 / 8.0) as i32).max(40);
 
     // Batch-fetch documentation for keywords and snippets in one lock
     let doc_cache: std::collections::HashMap<String, String> = {
@@ -876,61 +884,24 @@ fn create_completion_popup(
     // Add suggestions to list
     for (_i, (display_text, completion_item)) in suggestions_with_content.iter().enumerate() {
 
-        // Create a horizontal box to hold icon, text, and documentation
-        let item_box = GtkBox::new(Orientation::Horizontal, 8);
-        item_box.set_margin_start(8);
-        item_box.set_margin_end(8);
-        item_box.set_margin_top(4);
-        item_box.set_margin_bottom(4);
+        let text_box = GtkBox::new(Orientation::Vertical, 1);
+        text_box.set_margin_start(8);
+        text_box.set_margin_end(8);
+        text_box.set_margin_top(4);
+        text_box.set_margin_bottom(4);
+        text_box.set_hexpand(true);
 
-        // Create appropriate icon based on completion type
-        let icon = match completion_item {
-            CompletionItem::Keyword(_) => {
-                // Use a wrench/tool icon for language keywords (reserved words)
-                Image::from_icon_name("insert-text-symbolic")
-            }
-            CompletionItem::Snippet(_, _) => {
-                // Use a template/code block icon for code snippets
-                Image::from_icon_name("text-x-script-symbolic")
-            }
-            CompletionItem::BufferWord(_) => {
-                // Use a text file icon for words from the current buffer
-                Image::from_icon_name("text-x-generic-symbolic")
-            }
-            CompletionItem::ImportItem(import_item) => {
-                // Use different icons based on import item type
-                match import_item.item_type.as_str() {
-                    "function" => Image::from_icon_name("applications-utilities-symbolic"),
-                    "struct" | "enum" => Image::from_icon_name("document-properties-symbolic"),
-                    "trait" => Image::from_icon_name("preferences-system-symbolic"),
-                    "module" => Image::from_icon_name("folder-symbolic"),
-                    "const" => Image::from_icon_name("dialog-information-symbolic"),
-                    _ => Image::from_icon_name("insert-object-symbolic"),
-                }
-            }
-            CompletionItem::ImportModule(_) => {
-                // Use folder icon for modules
-                Image::from_icon_name("folder-symbolic")
-            }
-        };
-
-        // Set icon size
-        icon.set_icon_size(gtk4::IconSize::Normal);
-
-        // Create label for the main text with fixed width
+        // Row 1: completion name
         let label = Label::builder()
             .label(display_text)
             .xalign(0.0)
-            .hexpand(false)
-            .width_chars(label_width)
-            .max_width_chars(label_width)
+            .hexpand(true)
             .ellipsize(pango::EllipsizeMode::End)
+            .max_width_chars(doc_width)
             .build();
-
-        // Add CSS class for bold styling
         label.add_css_class("completion-label");
 
-        // Get documentation from batch cache or generate inline
+        // Row 2: description
         let doc_text = match completion_item {
             CompletionItem::Keyword(keyword) => {
                 doc_cache.get(keyword).cloned().unwrap_or_else(|| keyword.clone())
@@ -952,8 +923,6 @@ fn create_completion_popup(
             }
         };
 
-        // Create documentation label — use ellipsize instead of wrapping
-        // to avoid expensive Pango line-break calculations
         let doc_label = Label::builder()
             .label(&doc_text)
             .xalign(0.0)
@@ -961,15 +930,12 @@ fn create_completion_popup(
             .ellipsize(pango::EllipsizeMode::End)
             .max_width_chars(doc_width)
             .build();
-
         doc_label.add_css_class("completion-doc");
 
-        // Add icon, label, and documentation to the horizontal box
-        item_box.append(&icon);
-        item_box.append(&label);
-        item_box.append(&doc_label);
+        text_box.append(&label);
+        text_box.append(&doc_label);
 
-        list_box.append(&item_box);
+        list_box.append(&text_box);
     }
 
     // Select first row by default

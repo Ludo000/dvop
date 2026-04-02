@@ -16,7 +16,7 @@
 //! See FEATURES.md: Feature #112 — Multi-Language Completion Data
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
@@ -125,6 +125,11 @@ impl JsonCompletionProvider {
             language_data,
             keyword_map,
         })
+    }
+
+    /// Access the underlying language data.
+    pub fn language_data(&self) -> &LanguageCompletionData {
+        &self.language_data
     }
 
     /// Get all keywords as string references (compatible with existing trait)
@@ -304,6 +309,8 @@ impl JsonCompletionProvider {
 pub struct CompletionDataManager {
     providers: HashMap<String, JsonCompletionProvider>,
     data_directory: String,
+    /// Languages explicitly removed by an extension disable; prevents auto-reload from disk.
+    blocked: HashSet<String>,
 }
 
 impl CompletionDataManager {
@@ -312,6 +319,7 @@ impl CompletionDataManager {
         CompletionDataManager {
             providers: HashMap::new(),
             data_directory: data_directory.into(),
+            blocked: HashSet::new(),
         }
     }
 
@@ -330,12 +338,16 @@ impl CompletionDataManager {
         Ok(())
     }
 
-    /// Get provider for a language, loading it if necessary
+    /// Get provider for a language, loading it if necessary.
+    /// Returns `None` for languages that were explicitly blocked via `remove_provider`.
     pub fn get_provider(&mut self, language: &str) -> Option<&JsonCompletionProvider> {
+        // A blocked language was explicitly removed — do not auto-load from disk.
+        if self.blocked.contains(language) {
+            return None;
+        }
         // Try to load if not already loaded
         if !self.providers.contains_key(language) {
-            if let Err(e) = self.load_language(language) {
-                println!("Failed to load completion data for {}: {}", language, e);
+            if let Err(_) = self.load_language(language) {
                 return None;
             }
         }
@@ -416,6 +428,75 @@ impl CompletionDataManager {
         let provider = JsonCompletionProvider::from_json(json_content)?;
         self.providers.insert(language.to_string(), provider);
         Ok(())
+    }
+
+    /// Merge additional language data into an existing provider.
+    /// New keywords, snippets, and import modules are appended without
+    /// overwriting entries that already exist.
+    pub fn merge_language_data(&mut self, language: &str, extra: LanguageCompletionData) {
+        if let Some(provider) = self.providers.get_mut(language) {
+            // Merge keywords (skip duplicates by keyword name)
+            for kw in extra.keywords {
+                if !provider.keyword_map.contains_key(&kw.keyword) {
+                    provider.keyword_map.insert(kw.keyword.clone(), kw.clone());
+                    provider.language_data.keywords.push(kw);
+                }
+            }
+            // Merge snippets (skip duplicates by trigger)
+            let existing_triggers: std::collections::HashSet<String> = provider
+                .language_data
+                .snippets
+                .iter()
+                .map(|s| s.trigger.clone())
+                .collect();
+            for snippet in extra.snippets {
+                if !existing_triggers.contains(&snippet.trigger) {
+                    provider.language_data.snippets.push(snippet);
+                }
+            }
+            // Merge import modules
+            if let Some(extra_hierarchy) = extra.imports {
+                if let Some(ref mut existing) = provider.language_data.imports {
+                    let existing_paths: std::collections::HashSet<String> = existing
+                        .modules
+                        .iter()
+                        .map(|m| m.path.clone())
+                        .collect();
+                    for module in extra_hierarchy.modules {
+                        if !existing_paths.contains(&module.path) {
+                            existing.modules.push(module);
+                        }
+                    }
+                } else {
+                    provider.language_data.imports = Some(extra_hierarchy);
+                }
+            }
+        } else {
+            // No existing provider — just add it directly
+            self.add_language_data(language, extra);
+        }
+    }
+
+    /// Remove a language provider entirely and block auto-reload from disk.
+    /// Use `add_language_data` to re-add and unblock.
+    pub fn remove_provider(&mut self, language: &str) {
+        self.providers.remove(language);
+        self.blocked.insert(language.to_string());
+    }
+
+    /// Add pre-built language data directly (used by rust_completion extension).
+    /// Also unblocks the language if it was previously removed.
+    pub fn add_language_data(&mut self, language: &str, data: LanguageCompletionData) {
+        self.blocked.remove(language);
+        let mut keyword_map = HashMap::new();
+        for keyword_data in &data.keywords {
+            keyword_map.insert(keyword_data.keyword.clone(), keyword_data.clone());
+        }
+        let provider = JsonCompletionProvider {
+            language_data: data,
+            keyword_map,
+        };
+        self.providers.insert(language.to_string(), provider);
     }
 }
 

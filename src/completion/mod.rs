@@ -34,10 +34,12 @@ use json_provider::{
     initialize_completion_data, ImportItem,
 };
 
-/// Initialize completion system - loads JSON data and sets up providers
+/// Initialize completion system - loads JSON data files for all languages.
+/// Rust completions are loaded separately by the `rust-completion` native extension.
 pub fn initialize_completion() {
-    println!("Initializing JSON-based completion system...");
+    println!("Initializing completion system...");
 
+    // Load all languages from JSON files
     match initialize_completion_data() {
         Ok(languages) => {
             println!(
@@ -127,6 +129,15 @@ pub use ui::{setup_completion, setup_completion_for_file, setup_completion_short
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    fn ensure_initialized() {
+        INIT.call_once(|| {
+            initialize_completion();
+            // Also load Rust completions (normally done by the rust-completion extension)
+            crate::extensions::rust_completion::load_and_register();
+        });
+    }
 
     #[test]
     fn test_get_supported_languages() {
@@ -138,6 +149,7 @@ mod tests {
 
     #[test]
     fn test_get_language_keywords_rust() {
+        ensure_initialized();
         let keywords = get_language_keywords_owned("rust");
         assert!(keywords.contains(&"fn".to_string()));
         assert!(keywords.contains(&"let".to_string()));
@@ -155,6 +167,7 @@ mod tests {
 
     #[test]
     fn test_get_language_snippets() {
+        ensure_initialized();
         let snippets = get_language_snippets_owned("rust");
         assert!(!snippets.is_empty());
         // Check that snippets have both trigger and body
@@ -166,6 +179,7 @@ mod tests {
 
     #[test]
     fn test_get_keyword_documentation() {
+        ensure_initialized();
         let doc = get_keyword_documentation("rust", "fn");
         assert!(!doc.is_empty());
         assert!(doc.to_lowercase().contains("function"));

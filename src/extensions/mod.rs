@@ -31,6 +31,7 @@ pub mod hooks;
 pub mod manager;
 pub mod native;
 pub mod runner;
+pub mod rust_completion;
 pub mod rust_diagnostics;
 pub mod sample;
 pub mod ui;

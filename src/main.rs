@@ -955,6 +955,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Register and start native extensions
     extensions::rust_diagnostics::register();
     extensions::code_completion::register();
+    extensions::rust_completion::register();
     extensions::native::fire_on_app_start();
 
     // Let native extensions check the current directory (shows linter UI for Rust projects, etc.)
