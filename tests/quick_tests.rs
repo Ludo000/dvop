@@ -10,20 +10,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-// Helper to initialize GTK (only once)
-fn init_gtk() {
-    use std::sync::Once;
-    static INIT: Once = Once::new();
-    
-    INIT.call_once(|| {
-        gtk4::init().expect("Failed to initialize GTK");
-    });
-}
-
 #[serial]
 #[test]
 fn test_all_features() {
-    init_gtk();
+    gtk4::test_synced(|| {
     
     // Test 1: New file creation
     {
@@ -217,12 +207,13 @@ fn test_all_features() {
     }
     
     println!("✓ All 9 tests passed!");
+    });
 }
 
 #[serial]
 #[test]
 fn test_git_diff_path_bar_update() {
-    init_gtk();
+    gtk4::test_synced(|| {
     
     // Test that opening a git diff updates the path bar to show the file's directory
     use std::env;
@@ -282,12 +273,13 @@ fn test_git_diff_path_bar_update() {
     assert!(child_count > 0, "Path box should have path segment buttons");
     
     println!("✓ Git diff path bar update test passed!");
+    });
 }
 
 #[serial]
 #[test]
 fn test_path_bar_updates_for_different_files() {
-    init_gtk();
+    gtk4::test_synced(|| {
     
     // Test that the path bar updates correctly for files in different directories
     use std::env;
@@ -351,12 +343,13 @@ fn test_path_bar_updates_for_different_files() {
     }
     
     println!("✓ Path bar updates for different files test passed!");
+    });
 }
 
 #[serial]
 #[test]
 fn test_staged_revealer_behavior() {
-    init_gtk();
+    gtk4::test_synced(|| {
     
     // Test the behavior logic for staged revealer without creating actual widgets
     // This test verifies the conditional logic used in git_diff.rs
@@ -385,4 +378,5 @@ fn test_staged_revealer_behavior() {
     assert!(!should_reveal, "Should be hidden after removing all changes");
     
     println!("✓ Staged revealer behavior test passed!");
+    });
 }

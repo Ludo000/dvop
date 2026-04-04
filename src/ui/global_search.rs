@@ -99,7 +99,7 @@ fn search_in_content(
             results.push(SearchResult {
                 path: path.to_path_buf(),
                 line: line_num + 1,
-                col: actual_pos + 1,
+                col: search_line[..actual_pos].chars().count() + 1,
                 preview: line.to_string(),
                 needle: query.to_string(),
                 case_sensitive,
@@ -206,7 +206,7 @@ fn search_in_buffer(
             let before_match = &content[..abs_pos];
             let line_no = before_match.matches('\n').count() + 1;
             let last_newline = before_match.rfind('\n').map(|p| p + 1).unwrap_or(0);
-            let col = abs_pos - last_newline + 1;
+            let col = content[last_newline..abs_pos].chars().count() + 1;
 
             // Get preview
             let match_end = abs_pos + needle.len();
@@ -275,6 +275,7 @@ fn search_in_buffer(
                 let mut search_pos = 0;
                 while let Some(idx) = line[search_pos..].find(needle) {
                     let abs_idx = search_pos + idx;
+                    let char_col = line[..abs_idx].chars().count() + 1;
                     if whole_word {
                         let match_end = abs_idx + needle.len();
                         let before_ok = abs_idx == 0
@@ -293,7 +294,7 @@ fn search_in_buffer(
                             results.push(SearchResult {
                                 path: path.to_path_buf(),
                                 line: line_no,
-                                col: abs_idx + 1,
+                                col: char_col,
                                 preview: line.to_string(),
                                 needle: needle.to_string(),
                                 case_sensitive,
@@ -303,7 +304,7 @@ fn search_in_buffer(
                         results.push(SearchResult {
                             path: path.to_path_buf(),
                             line: line_no,
-                            col: abs_idx + 1,
+                            col: char_col,
                             preview: line.to_string(),
                             needle: needle.to_string(),
                             case_sensitive,
@@ -317,6 +318,7 @@ fn search_in_buffer(
                 let mut search_pos = 0;
                 while let Some(idx) = l[search_pos..].find(&n) {
                     let abs_idx = search_pos + idx;
+                    let char_col = l[..abs_idx].chars().count() + 1;
                     if whole_word {
                         let match_end = abs_idx + n.len();
                         let before_ok = abs_idx == 0
@@ -335,7 +337,7 @@ fn search_in_buffer(
                             results.push(SearchResult {
                                 path: path.to_path_buf(),
                                 line: line_no,
-                                col: abs_idx + 1,
+                                col: char_col,
                                 preview: line.to_string(),
                                 needle: needle.to_string(),
                                 case_sensitive,
@@ -345,7 +347,7 @@ fn search_in_buffer(
                         results.push(SearchResult {
                             path: path.to_path_buf(),
                             line: line_no,
-                            col: abs_idx + 1,
+                            col: char_col,
                             preview: line.to_string(),
                             needle: needle.to_string(),
                             case_sensitive,
@@ -429,7 +431,7 @@ fn search_file(
                 let before_match = &content[..abs_pos];
                 let line_no = before_match.matches('\n').count() + 1;
                 let last_newline = before_match.rfind('\n').map(|p| p + 1).unwrap_or(0);
-                let col = abs_pos - last_newline + 1;
+                let col = content[last_newline..abs_pos].chars().count() + 1;
 
                 // Get preview for multi-line match - show multiple lines from the file
                 let match_end = abs_pos + needle.len();
@@ -507,6 +509,7 @@ fn search_file(
                     let mut search_pos = 0;
                     while let Some(idx) = line[search_pos..].find(needle) {
                         let abs_idx = search_pos + idx;
+                        let char_col = line[..abs_idx].chars().count() + 1;
                         // Check whole word
                         if whole_word {
                             let match_end = abs_idx + needle.len();
@@ -526,7 +529,7 @@ fn search_file(
                                 results.push(SearchResult {
                                     path: path.to_path_buf(),
                                     line: line_no,
-                                    col: abs_idx + 1,
+                                    col: char_col,
                                     preview: line.clone(),
                                     needle: needle.to_string(),
                                     case_sensitive,
@@ -536,7 +539,7 @@ fn search_file(
                             results.push(SearchResult {
                                 path: path.to_path_buf(),
                                 line: line_no,
-                                col: abs_idx + 1,
+                                col: char_col,
                                 preview: line.clone(),
                                 needle: needle.to_string(),
                                 case_sensitive,
@@ -550,6 +553,7 @@ fn search_file(
                     let mut search_pos = 0;
                     while let Some(idx) = l[search_pos..].find(&n) {
                         let abs_idx = search_pos + idx;
+                        let char_col = l[..abs_idx].chars().count() + 1;
                         // Check whole word
                         if whole_word {
                             let match_end = abs_idx + n.len();
@@ -569,7 +573,7 @@ fn search_file(
                                 results.push(SearchResult {
                                     path: path.to_path_buf(),
                                     line: line_no,
-                                    col: abs_idx + 1,
+                                    col: char_col,
                                     preview: line.clone(),
                                     needle: needle.to_string(),
                                     case_sensitive,
@@ -579,7 +583,7 @@ fn search_file(
                             results.push(SearchResult {
                                 path: path.to_path_buf(),
                                 line: line_no,
-                                col: abs_idx + 1,
+                                col: char_col,
                                 preview: line.clone(),
                                 needle: needle.to_string(),
                                 case_sensitive,
@@ -1610,7 +1614,12 @@ pub fn show_global_search_dialog(
                                         ));
                                     }
 
-                                    // Don't auto-select/activate to avoid stealing focus from search input
+                                    // Auto-select the first result so Replace works immediately
+                                    if count == 1 {
+                                        if let Some(first_row) = results_list_c.row_at_index(0) {
+                                            results_list_c.select_row(Some(&first_row));
+                                        }
+                                    }
 
                                     processed += 1;
                                 }
@@ -1651,6 +1660,12 @@ pub fn show_global_search_dialog(
                                 count,
                                 if count == 1 { "" } else { "s" }
                             ));
+                        }
+                        // Activate the first result to open the file at the matching position
+                        if count > 0 {
+                            if let Some(first_row) = results_list_c.row_at_index(0) {
+                                first_row.activate();
+                            }
                         }
                         glib::ControlFlow::Break
                     } else {
@@ -1781,10 +1796,6 @@ pub fn show_global_search_dialog(
     let results_list_clone = results_list.clone();
     let editor_notebook_for_replace = editor_notebook.clone();
     let file_path_manager_for_replace = file_path_manager.clone();
-    let search_buffer_for_refresh = search_buffer.clone();
-    let case_toggle_for_refresh = case_toggle.clone();
-    let whole_word_toggle_for_refresh = whole_word_toggle.clone();
-    let start_search_for_refresh = start_search.clone();
     replace_btn.connect_clicked(move |_| {
         if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
             let replace_text = replace_buffer
@@ -1835,24 +1846,15 @@ pub fn show_global_search_dialog(
                                                     results_list_clone.row_at_index(current_index)
                                                 {
                                                     results_list_clone.select_row(Some(&next_row));
-                                                    // Trigger the activation to open the file and jump to the position
                                                     next_row.activate();
-                                                }
-
-                                                // Refresh the search to update results
-                                                let search_text = search_buffer_for_refresh
-                                                    .text(
-                                                        &search_buffer_for_refresh.start_iter(),
-                                                        &search_buffer_for_refresh.end_iter(),
-                                                        false,
-                                                    )
-                                                    .to_string();
-                                                if !search_text.trim().is_empty() {
-                                                    (start_search_for_refresh)(
-                                                        search_text,
-                                                        case_toggle_for_refresh.is_active(),
-                                                        whole_word_toggle_for_refresh.is_active(),
-                                                    );
+                                                } else if current_index > 0 {
+                                                    // If we were at the end, select the last remaining row
+                                                    if let Some(prev_row) =
+                                                        results_list_clone.row_at_index(current_index - 1)
+                                                    {
+                                                        results_list_clone.select_row(Some(&prev_row));
+                                                        prev_row.activate();
+                                                    }
                                                 }
                                             }
                                             Err(e) => {
@@ -2581,7 +2583,12 @@ pub fn create_global_search_panel(
                                     ));
                                 }
 
-                                // Don't auto-select/activate to avoid stealing focus from search input
+                                // Auto-select the first result so Replace works immediately
+                                if count == 1 {
+                                    if let Some(first_row) = results_list_c.row_at_index(0) {
+                                        results_list_c.select_row(Some(&first_row));
+                                    }
+                                }
 
                                 processed += 1;
                             }
@@ -2620,6 +2627,12 @@ pub fn create_global_search_panel(
                             count,
                             if count == 1 { "" } else { "s" }
                         ));
+                    }
+                    // Activate the first result to open the file at the matching position
+                    if count > 0 {
+                        if let Some(first_row) = results_list_c.row_at_index(0) {
+                            first_row.activate();
+                        }
                     }
                     glib::ControlFlow::Break
                 } else {
@@ -2749,10 +2762,6 @@ pub fn create_global_search_panel(
     let results_list_clone = results_list.clone();
     let editor_notebook_for_replace = editor_notebook.clone();
     let file_path_manager_for_replace = file_path_manager.clone();
-    let search_buffer_for_refresh = search_buffer.clone();
-    let case_toggle_for_refresh = case_toggle.clone();
-    let whole_word_toggle_for_refresh = whole_word_toggle.clone();
-    let start_search_for_refresh = start_search.clone();
     replace_btn.connect_clicked(move |_| {
         if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
             let replace_text = replace_buffer
@@ -2803,24 +2812,15 @@ pub fn create_global_search_panel(
                                                     results_list_clone.row_at_index(current_index)
                                                 {
                                                     results_list_clone.select_row(Some(&next_row));
-                                                    // Trigger the activation to open the file and jump to the position
                                                     next_row.activate();
-                                                }
-
-                                                // Refresh the search to update results
-                                                let search_text = search_buffer_for_refresh
-                                                    .text(
-                                                        &search_buffer_for_refresh.start_iter(),
-                                                        &search_buffer_for_refresh.end_iter(),
-                                                        false,
-                                                    )
-                                                    .to_string();
-                                                if !search_text.trim().is_empty() {
-                                                    (start_search_for_refresh)(
-                                                        search_text,
-                                                        case_toggle_for_refresh.is_active(),
-                                                        whole_word_toggle_for_refresh.is_active(),
-                                                    );
+                                                } else if current_index > 0 {
+                                                    // If we were at the end, select the last remaining row
+                                                    if let Some(prev_row) =
+                                                        results_list_clone.row_at_index(current_index - 1)
+                                                    {
+                                                        results_list_clone.select_row(Some(&prev_row));
+                                                        prev_row.activate();
+                                                    }
                                                 }
                                             }
                                             Err(e) => {
