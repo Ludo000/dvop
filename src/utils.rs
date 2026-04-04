@@ -402,23 +402,6 @@ pub fn update_file_list(
     }
 }
 
-/// Backward-compatible wrapper for update_file_list with default TabSwitch behavior
-///
-/// This function provides compatibility for existing calls that don't specify selection source
-#[allow(dead_code)]
-pub fn update_file_list_default(
-    file_list_box: &ListBox,
-    current_dir: &PathBuf,
-    file_path: &Option<PathBuf>,
-) {
-    update_file_list(
-        file_list_box,
-        current_dir,
-        file_path,
-        FileSelectionSource::TabSwitch,
-    );
-}
-
 /// Updates the visibility of save buttons based on content type
 ///
 /// Disables save functionality for content types that can't be edited,
@@ -470,24 +453,6 @@ pub fn update_save_menu_button_visibility(
             }
         }
     }
-}
-
-/// Updates the status bar path label with the current directory path
-///
-/// Updates the path label in the status bar with the current directory path
-///
-/// This formats the path in a user-friendly way and should be called whenever
-/// the current directory changes.
-#[allow(dead_code)]
-pub fn update_path_label(path_label: &gtk4::Label, current_dir: &PathBuf) {
-    // Simply display the full path for better reliability
-    path_label.set_text(&format!("{}", current_dir.display()));
-
-    // Set tooltip to show the full path on hover (helpful for long paths)
-    path_label.set_tooltip_text(Some(&current_dir.display().to_string()));
-
-    // Make the path label look interactive
-    path_label.add_css_class("clickable-path");
 }
 
 /// Parses a PathBuf into its component segments

@@ -146,10 +146,6 @@ impl NativeExtension for RustDiagnosticsExtension {
         notify_file_saved(file_path);
     }
 
-    fn on_file_close(&self, _file_path: &Path) {
-        // rust-analyzer handles file tracking internally
-    }
-
     fn shutdown(&self) {
         shutdown_rust_analyzer();
     }

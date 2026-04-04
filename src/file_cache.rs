@@ -113,13 +113,6 @@ impl FileCache {
         Ok(content)
     }
 
-    /// Clear the entire cache
-    #[allow(dead_code)]
-    pub fn clear(&self) {
-        let mut cache = self.cache.lock().unwrap();
-        cache.clear();
-    }
-
     /// Remove a specific file from the cache
     #[allow(dead_code)]
     pub fn invalidate<P: AsRef<Path>>(&self, path: P) {
@@ -133,12 +126,6 @@ impl FileCache {
     pub fn len(&self) -> usize {
         let cache = self.cache.lock().unwrap();
         cache.len()
-    }
-
-    /// Check if cache is empty
-    #[allow(dead_code)]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 
     /// Remove expired entries from the cache
@@ -163,12 +150,6 @@ lazy_static::lazy_static! {
 /// Get cached file content using the global cache
 pub fn get_cached_file_content(path: &std::path::Path) -> std::io::Result<String> {
     GLOBAL_FILE_CACHE.get_file_content(path)
-}
-
-/// Clear the global file cache
-#[allow(dead_code)]
-pub fn clear_file_cache() {
-    GLOBAL_FILE_CACHE.clear();
 }
 
 /// Invalidate a specific file in the global cache

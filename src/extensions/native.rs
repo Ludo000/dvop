@@ -52,9 +52,6 @@ pub trait NativeExtension: Send + Sync {
     /// Called when a file is saved
     fn on_file_save(&self, _file_path: &Path) {}
 
-    /// Called when a file tab is closed
-    fn on_file_close(&self, _file_path: &Path) {}
-
     /// Called on application shutdown
     fn shutdown(&self) {}
 }
@@ -137,17 +134,6 @@ pub fn fire_on_file_save(file_path: &Path) {
         for ext in registry.iter() {
             if ext.is_enabled() {
                 ext.on_file_save(file_path);
-            }
-        }
-    }
-}
-
-/// Fire on_file_close for all enabled native extensions.
-pub fn fire_on_file_close(file_path: &Path) {
-    if let Ok(registry) = NATIVE_REGISTRY.lock() {
-        for ext in registry.iter() {
-            if ext.is_enabled() {
-                ext.on_file_close(file_path);
             }
         }
     }

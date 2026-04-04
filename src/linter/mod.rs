@@ -81,6 +81,7 @@ impl Diagnostic {
 }
 
 /// Run linter for a specific file based on its language
+#[allow(dead_code)]
 pub fn lint_file(file_path: &Path, content: &str) -> Vec<Diagnostic> {
     // Determine language from file extension
     let mut diagnostics = lint_file_builtin(file_path, content);

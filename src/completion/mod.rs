@@ -29,9 +29,8 @@ pub mod json_provider;
 pub mod ui;
 
 use json_provider::{
-    find_matching_modules, get_import_suggestions, get_json_keyword_documentation,
-    get_json_keywords, get_json_snippet_documentation, get_json_snippets, get_submodules,
-    initialize_completion_data, ImportItem,
+    get_json_keyword_documentation, get_json_keywords, get_json_snippet_documentation,
+    get_json_snippets, initialize_completion_data,
 };
 
 /// Initialize completion system - loads JSON data files for all languages.
@@ -103,24 +102,6 @@ pub fn get_supported_languages() -> Vec<String> {
             }
         })
         .clone()
-}
-
-/// Get import suggestions for a specific module path
-#[allow(dead_code)]
-pub fn get_import_completions(language: &str, module_path: &str) -> Vec<ImportItem> {
-    get_import_suggestions(language, module_path)
-}
-
-/// Get available submodules for a module path
-#[allow(dead_code)]
-pub fn get_available_submodules(language: &str, module_path: &str) -> Vec<String> {
-    get_submodules(language, module_path)
-}
-
-/// Find modules that match a partial import path
-#[allow(dead_code)]
-pub fn find_modules_by_prefix(language: &str, partial_path: &str) -> Vec<String> {
-    find_matching_modules(language, partial_path)
 }
 
 // Re-export functions for external use
@@ -198,24 +179,4 @@ mod tests {
         assert!(keywords.is_empty());
     }
 
-    #[test]
-    fn test_import_completions() {
-        let imports = get_import_completions("rust", "std::collections");
-        // May be empty or have items depending on data
-        assert!(imports.is_empty() || !imports.is_empty());
-    }
-
-    #[test]
-    fn test_get_available_submodules() {
-        let submodules = get_available_submodules("rust", "std");
-        // Should have common submodules if data is loaded
-        assert!(submodules.is_empty() || submodules.len() > 0);
-    }
-
-    #[test]
-    fn test_find_modules_by_prefix() {
-        let modules = find_modules_by_prefix("rust", "std");
-        // Should match std and std::* modules
-        assert!(modules.is_empty() || modules.iter().any(|m| m.starts_with("std")));
-    }
 }

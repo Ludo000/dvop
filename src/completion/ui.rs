@@ -39,7 +39,7 @@ macro_rules! completion_debug {
     };
 }
 
-use super::ImportItem;
+use super::json_provider::ImportItem;
 
 // Static flag to prevent recursive completion triggering
 static COMPLETION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);

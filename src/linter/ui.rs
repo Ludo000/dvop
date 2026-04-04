@@ -21,7 +21,7 @@
 // This module handles displaying lint diagnostics in the editor.
 // Language-specific linting (e.g. Rust via rust-analyzer) is handled by
 // native extensions in extensions/rust_diagnostics.rs.
-use gtk4::{glib, Box as GtkBox, Label, ListBox, Orientation, ScrolledWindow, Image};
+use gtk4::{glib, Box as GtkBox, Label, Image};
 use sourceview5::{prelude::*, View};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -428,66 +428,6 @@ fn apply_diagnostics_to_ui(
     glib::idle_add_local_once(|| {
         refresh_diagnostics_panel();
     });
-}
-
-/// Create a diagnostics panel widget to display lint results
-#[allow(dead_code)]
-pub fn create_diagnostics_panel(diagnostics: &[Diagnostic]) -> GtkBox {
-    let panel = GtkBox::new(Orientation::Vertical, 4);
-    panel.set_margin_start(8);
-    panel.set_margin_end(8);
-    panel.set_margin_top(8);
-    panel.set_margin_bottom(8);
-
-    // Title
-    let title = Label::new(Some(&format!("Diagnostics ({})", diagnostics.len())));
-    title.add_css_class("title-4");
-    title.set_halign(gtk4::Align::Start);
-    title.set_margin_bottom(8);
-    panel.append(&title);
-
-    // List of diagnostics
-    let list = ListBox::new();
-    list.add_css_class("boxed-list");
-
-    for diag in diagnostics {
-        let row_box = GtkBox::new(Orientation::Vertical, 2);
-        row_box.set_margin_start(4);
-        row_box.set_margin_end(4);
-        row_box.set_margin_top(4);
-        row_box.set_margin_bottom(4);
-
-        // Severity and message
-        let severity_icon = match diag.severity {
-            DiagnosticSeverity::Error => "❌",
-            DiagnosticSeverity::Warning => "⚠️",
-            DiagnosticSeverity::Info => "ℹ️",
-        };
-
-        let message_label = Label::new(Some(&format!("{} {}", severity_icon, diag.message)));
-        message_label.set_halign(gtk4::Align::Start);
-        message_label.set_wrap(true);
-        row_box.append(&message_label);
-
-        // Location and rule
-        let detail_label = Label::new(Some(&format!(
-            "Line {}, Column {} • {}",
-            diag.line, diag.column, diag.rule
-        )));
-        detail_label.set_halign(gtk4::Align::Start);
-        detail_label.add_css_class("dim-label");
-        detail_label.add_css_class("caption");
-        row_box.append(&detail_label);
-
-        list.append(&row_box);
-    }
-
-    let scrolled = ScrolledWindow::new();
-    scrolled.set_vexpand(true);
-    scrolled.set_child(Some(&list));
-    panel.append(&scrolled);
-
-    panel
 }
 
 /// Refresh the diagnostics panel with all stored diagnostics

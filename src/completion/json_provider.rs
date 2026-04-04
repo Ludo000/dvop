@@ -110,23 +110,6 @@ impl JsonCompletionProvider {
         })
     }
 
-    /// Load completion data from JSON string
-    #[allow(dead_code)]
-    pub fn from_json(json_content: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let language_data: LanguageCompletionData = serde_json::from_str(json_content)?;
-
-        // Create a HashMap for quick keyword lookups
-        let mut keyword_map = HashMap::new();
-        for keyword_data in &language_data.keywords {
-            keyword_map.insert(keyword_data.keyword.clone(), keyword_data.clone());
-        }
-
-        Ok(JsonCompletionProvider {
-            language_data,
-            keyword_map,
-        })
-    }
-
     /// Access the underlying language data.
     pub fn language_data(&self) -> &LanguageCompletionData {
         &self.language_data
@@ -188,68 +171,6 @@ impl JsonCompletionProvider {
         &self.language_data.snippets
     }
 
-    /// Get language name
-    #[allow(dead_code)]
-    pub fn get_language(&self) -> &str {
-        &self.language_data.language
-    }
-
-    /// Get language description
-    #[allow(dead_code)]
-    pub fn get_description(&self) -> &str {
-        &self.language_data.description
-    }
-
-    /// Get keywords by category
-    #[allow(dead_code)]
-    pub fn get_keywords_by_category(&self, category: &str) -> Vec<&KeywordData> {
-        self.language_data
-            .keywords
-            .iter()
-            .filter(|k| k.category == category)
-            .collect()
-    }
-
-    /// Get snippets by category
-    #[allow(dead_code)]
-    pub fn get_snippets_by_category(&self, category: &str) -> Vec<&SnippetData> {
-        self.language_data
-            .snippets
-            .iter()
-            .filter(|s| s.category == category)
-            .collect()
-    }
-
-    /// Get all available categories for keywords
-    #[allow(dead_code)]
-    pub fn get_keyword_categories(&self) -> Vec<String> {
-        let mut categories: Vec<String> = self
-            .language_data
-            .keywords
-            .iter()
-            .map(|k| k.category.clone())
-            .collect::<std::collections::HashSet<_>>()
-            .into_iter()
-            .collect();
-        categories.sort();
-        categories
-    }
-
-    /// Get all available categories for snippets
-    #[allow(dead_code)]
-    pub fn get_snippet_categories(&self) -> Vec<String> {
-        let mut categories: Vec<String> = self
-            .language_data
-            .snippets
-            .iter()
-            .map(|s| s.category.clone())
-            .collect::<std::collections::HashSet<_>>()
-            .into_iter()
-            .collect();
-        categories.sort();
-        categories
-    }
-
     /// Get import suggestions for a given module path
     pub fn get_import_suggestions(&self, module_path: &str) -> Vec<ImportItem> {
         if let Some(imports) = &self.language_data.imports {
@@ -270,20 +191,6 @@ impl JsonCompletionProvider {
                     return module.submodules.clone();
                 }
             }
-        }
-        Vec::new()
-    }
-
-    /// Get all available root modules
-    #[allow(dead_code)]
-    pub fn get_root_modules(&self) -> Vec<String> {
-        if let Some(imports) = &self.language_data.imports {
-            return imports
-                .modules
-                .iter()
-                .filter(|module| !module.path.contains("::"))
-                .map(|module| module.path.clone())
-                .collect();
         }
         Vec::new()
     }
@@ -355,32 +262,6 @@ impl CompletionDataManager {
         self.providers.get(language)
     }
 
-    /// Get mutable provider for a language
-    #[allow(dead_code)]
-    pub fn get_provider_mut(&mut self, language: &str) -> Option<&mut JsonCompletionProvider> {
-        // Try to load if not already loaded
-        if !self.providers.contains_key(language) {
-            if let Err(e) = self.load_language(language) {
-                println!("Failed to load completion data for {}: {}", language, e);
-                return None;
-            }
-        }
-
-        self.providers.get_mut(language)
-    }
-
-    /// Check if language data is available
-    #[allow(dead_code)]
-    pub fn has_language(&self, language: &str) -> bool {
-        self.providers.contains_key(language)
-    }
-
-    /// Get list of loaded languages
-    #[allow(dead_code)]
-    pub fn get_loaded_languages(&self) -> Vec<&str> {
-        self.providers.keys().map(|s| s.as_str()).collect()
-    }
-
     /// Load all available language files in the data directory
     pub fn load_all_languages(&mut self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let data_dir = Path::new(&self.data_directory);
@@ -409,25 +290,6 @@ impl CompletionDataManager {
         }
 
         Ok(loaded_languages)
-    }
-
-    /// Reload a specific language from disk
-    #[allow(dead_code)]
-    pub fn reload_language(&mut self, language: &str) -> Result<(), Box<dyn std::error::Error>> {
-        self.providers.remove(language);
-        self.load_language(language)
-    }
-
-    /// Add custom language data from JSON string (for testing or dynamic data)
-    #[allow(dead_code)]
-    pub fn add_language_from_json(
-        &mut self,
-        language: &str,
-        json_content: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let provider = JsonCompletionProvider::from_json(json_content)?;
-        self.providers.insert(language.to_string(), provider);
-        Ok(())
     }
 
     /// Merge additional language data into an existing provider.
@@ -595,109 +457,4 @@ pub fn initialize_completion_data() -> Result<Vec<String>, Box<dyn std::error::E
     manager.load_all_languages()
 }
 
-/// Get import suggestions for a language and module path
-#[allow(dead_code)]
-pub fn get_import_suggestions(language: &str, module_path: &str) -> Vec<ImportItem> {
-    let mut manager = get_completion_manager();
 
-    if let Some(provider) = manager.get_provider(language) {
-        provider.get_import_suggestions(module_path)
-    } else {
-        Vec::new()
-    }
-}
-
-/// Get submodules for a language and module path
-#[allow(dead_code)]
-pub fn get_submodules(language: &str, module_path: &str) -> Vec<String> {
-    let mut manager = get_completion_manager();
-
-    if let Some(provider) = manager.get_provider(language) {
-        provider.get_submodules(module_path)
-    } else {
-        Vec::new()
-    }
-}
-
-/// Find matching modules for partial import path
-#[allow(dead_code)]
-pub fn find_matching_modules(language: &str, partial_path: &str) -> Vec<String> {
-    let mut manager = get_completion_manager();
-
-    if let Some(provider) = manager.get_provider(language) {
-        provider.find_matching_modules(partial_path)
-    } else {
-        Vec::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_json_provider_creation() {
-        let json_data = r#"
-        {
-            "language": "test",
-            "description": "Test language",
-            "keywords": [
-                {
-                    "keyword": "test_keyword",
-                    "type": "keyword",
-                    "description": "A test keyword",
-                    "example": "test_keyword value",
-                    "category": "test"
-                }
-            ],
-            "snippets": [
-                {
-                    "trigger": "test_snippet",
-                    "description": "A test snippet",
-                    "content": "test ${1:placeholder}",
-                    "category": "test"
-                }
-            ]
-        }
-        "#;
-
-        let provider = JsonCompletionProvider::from_json(json_data).unwrap();
-
-        assert_eq!(provider.get_language(), "test");
-        assert_eq!(provider.keywords().len(), 1);
-        assert_eq!(provider.snippets().len(), 1);
-        assert_eq!(provider.keywords()[0], "test_keyword");
-    }
-
-    #[test]
-    fn test_manager_functionality() {
-        let mut manager = CompletionDataManager::new("test_data");
-
-        let json_data = r#"
-        {
-            "language": "test_lang",
-            "description": "Test language for manager",
-            "keywords": [
-                {
-                    "keyword": "manager_test",
-                    "type": "keyword", 
-                    "description": "Manager test keyword",
-                    "example": "manager_test example",
-                    "category": "test"
-                }
-            ],
-            "snippets": []
-        }
-        "#;
-
-        manager
-            .add_language_from_json("test_lang", json_data)
-            .unwrap();
-
-        assert!(manager.has_language("test_lang"));
-
-        let provider = manager.get_provider("test_lang").unwrap();
-        assert_eq!(provider.get_language(), "test_lang");
-        assert_eq!(provider.keywords().len(), 1);
-    }
-}

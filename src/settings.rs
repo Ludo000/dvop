@@ -457,16 +457,6 @@ impl EditorSettings {
     }
 }
 
-/// Helper function to save the current folder to settings
-/// This should be called whenever the current directory changes
-#[allow(dead_code)]
-pub fn save_current_folder(folder: &Path) {
-    let mut settings = get_settings_mut();
-    settings.set_last_folder(folder);
-    // Don't save immediately to avoid too many disk writes
-    // The folder will be saved on app close
-}
-
 /// Returns the configuration directory path
 fn get_config_dir() -> PathBuf {
     // First try to use XDG_CONFIG_HOME
