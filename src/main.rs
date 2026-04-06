@@ -520,13 +520,65 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
         use gtk4::gdk::Key;
         use gtk4::gdk::ModifierType;
 
-        // Only handle arrow keys when modifier keys are not pressed
-        if state.contains(ModifierType::CONTROL_MASK | ModifierType::ALT_MASK | ModifierType::SUPER_MASK) {
-            return glib::Propagation::Proceed;
-        }
-
+        // Only handle arrow keys and Tab when modifier keys are not pressed (except Shift for Tab)
+        let shift_pressed = state.contains(ModifierType::SHIFT_MASK);
+        let other_modifiers = state.contains(ModifierType::CONTROL_MASK | ModifierType::ALT_MASK | ModifierType::SUPER_MASK);
+        
         match keyval {
+            Key::Tab => {
+                // Tab: cycle forward through results, Shift+Tab: cycle backward
+                let is_backward = shift_pressed;
+                
+                if let Some(selected) = listbox_for_keys.selected_row() {
+                    let next_row = if is_backward {
+                        // Shift+Tab: go to previous, or to last if at first
+                        if let Some(prev) = selected.prev_sibling()
+                            .and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok())
+                        {
+                            Some(prev)
+                        } else {
+                            // Cycle to last row - iterate through all children to find the last one
+                            let mut last = None;
+                            let mut child = listbox_for_keys.first_child();
+                            while let Some(current) = child {
+                                if let Ok(row) = current.clone().downcast::<gtk4::ListBoxRow>() {
+                                    last = Some(row.clone());
+                                    child = current.next_sibling();
+                                } else {
+                                    child = current.next_sibling();
+                                }
+                            }
+                            last
+                        }
+                    } else {
+                        // Tab: go to next, or to first if at last
+                        if let Some(next) = selected.next_sibling()
+                            .and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok())
+                        {
+                            Some(next)
+                        } else {
+                            // Cycle to first row
+                            listbox_for_keys.first_child()
+                                .and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok())
+                        }
+                    };
+                    
+                    if let Some(row) = next_row {
+                        listbox_for_keys.select_row(Some(&row));
+                    }
+                } else if let Some(first_row) = listbox_for_keys
+                    .first_child()
+                    .and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok())
+                {
+                    listbox_for_keys.select_row(Some(&first_row));
+                }
+                glib::Propagation::Stop
+            }
             Key::Down => {
+                // Only handle if other modifiers are not pressed
+                if other_modifiers {
+                    return glib::Propagation::Proceed;
+                }
                 // Move to next row
                 if let Some(selected) = listbox_for_keys.selected_row() {
                     if let Some(next_row) = selected.next_sibling().and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok()) {
@@ -541,6 +593,10 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
                 glib::Propagation::Stop
             }
             Key::Up => {
+                // Only handle if other modifiers are not pressed
+                if other_modifiers {
+                    return glib::Propagation::Proceed;
+                }
                 // Move to previous row
                 if let Some(selected) = listbox_for_keys.selected_row() {
                     if let Some(prev_row) = selected.prev_sibling().and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok()) {
