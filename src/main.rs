@@ -1079,6 +1079,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    // Set up callback for the refresh button in the diagnostics panel
+    linter::diagnostics_panel::set_refresh_callback(|| {
+        crate::linter::ui::trigger_lint_refresh();
+    });
+
     // Set up callback to show/hide linter status widget based on Rust file presence
     let linter_status_weak_for_visibility = linter_status_label.downgrade();
     linter::ui::set_linter_status_visibility_callback(move |show| {

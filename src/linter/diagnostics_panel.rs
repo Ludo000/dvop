@@ -24,7 +24,7 @@
 // Diagnostics panel UI for displaying LSP diagnostics
 // This module creates a terminal-like view for showing linter diagnostics
 
-use gtk4::{prelude::*, ScrolledWindow, Box as GtkBox, Orientation, Label, ListBox, ListBoxRow, Expander, Image, PopoverMenu, gio};
+use gtk4::{prelude::*, ScrolledWindow, Box as GtkBox, Orientation, Label, ListBox, ListBoxRow, Expander, Image, PopoverMenu, gio, Button};
 use gtk4::glib;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -43,6 +43,14 @@ static DIAGNOSTICS_SENDER: Lazy<Arc<Mutex<Option<Sender<DiagnosticMessage>>>>> =
 // Track expansion state per file so refreshes don't collapse everything
 static EXPANSION_STATE: Lazy<Arc<Mutex<HashMap<String, bool>>>> =
     Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
+
+// Type alias for refresh callback
+type RefreshCallback = Box<dyn Fn() + Send + 'static>;
+
+// Thread-local callback for refresh button
+thread_local! {
+    static REFRESH_CALLBACK: RefCell<Option<Arc<RefreshCallback>>> = RefCell::new(None);
+}
 
 // Note: Row indices and expander references are kept per-panel (not static) to avoid
 // Send/Sync constraints on GTK objects; they live inside the UI thread.
@@ -487,6 +495,24 @@ pub fn create_diagnostics_panel() -> GtkBox {
     summary_box.set_hexpand(true);
     header.append(&summary_box);
     
+    // Add refresh button with symbolic icon
+    let refresh_icon = Image::from_icon_name("view-refresh-symbolic");
+    refresh_icon.set_pixel_size(16);
+    let refresh_button = Button::new();
+    refresh_button.set_child(Some(&refresh_icon));
+    refresh_button.set_tooltip_text(Some("Refresh rust lint diagnostics"));
+    refresh_button.set_halign(gtk4::Align::End);
+    
+    refresh_button.connect_clicked(|_| {
+        REFRESH_CALLBACK.with(|cell| {
+            if let Some(ref callback) = *cell.borrow() {
+                callback();
+            }
+        });
+    });
+    
+    header.append(&refresh_button);
+    
     outer_container.append(&header);
     outer_container.append(&scrolled);
     
@@ -556,4 +582,23 @@ pub fn focus_diagnostic(file_path: &str, line: usize) {
             let _ = sender.send(DiagnosticMessage::FocusDiagnostic { file_path: file_path.to_string(), line });
         }
     }
+}
+
+/// Set the callback to be invoked when the refresh button is clicked
+pub fn set_refresh_callback<F>(callback: F)
+where
+    F: Fn() + Send + 'static,
+{
+    REFRESH_CALLBACK.with(|cell| {
+        *cell.borrow_mut() = Some(Arc::new(Box::new(callback)));
+    });
+}
+
+/// Trigger the refresh callback (useful for manual refresh from other parts of the code)
+pub fn trigger_refresh() {
+    REFRESH_CALLBACK.with(|cell| {
+        if let Some(ref callback) = *cell.borrow() {
+            callback();
+        }
+    });
 }

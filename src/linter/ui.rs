@@ -53,6 +53,10 @@ thread_local! {
     // Track source views by file URI for forcing redraw after diagnostic updates
     static VIEW_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::View>>> = 
         RefCell::new(HashMap::new());
+    
+    // Track the currently active view and its file path for refresh button
+    static ACTIVE_VIEW_INFO: RefCell<Option<(glib::WeakRef<sourceview5::View>, std::path::PathBuf)>> = 
+        RefCell::new(None);
 }
 
 /// Set the callback for showing/hiding the diagnostics panel
@@ -534,6 +538,33 @@ pub fn for_each_registered_file<F: FnMut(&str)>(mut f: F) {
         let registry = registry.borrow();
         for uri in registry.keys() {
             f(uri);
+        }
+    });
+}
+
+/// Set the currently active view for the refresh button
+/// This should be called whenever the user switches to a different file
+pub fn set_active_view_for_refresh(file_path: Option<&Path>, view: Option<&sourceview5::View>) {
+    ACTIVE_VIEW_INFO.with(|cell| {
+        if let (Some(path), Some(v)) = (file_path, view) {
+            *cell.borrow_mut() = Some((v.downgrade(), path.to_path_buf()));
+        } else {
+            *cell.borrow_mut() = None;
+        }
+    });
+}
+
+/// Trigger a refresh of diagnostics for the currently active file
+/// This is called by the refresh button in the diagnostics panel
+pub fn trigger_lint_refresh() {
+    ACTIVE_VIEW_INFO.with(|cell| {
+        if let Some((weak_view, file_path)) = &*cell.borrow() {
+            if let Some(view) = weak_view.upgrade() {
+                println!("🔄 Refreshing lint for: {:?}", file_path);
+                let buffer = view.buffer();
+                run_linter(&view, &buffer, Some(&file_path));
+                show_diagnostics_panel();
+            }
         }
     });
 }

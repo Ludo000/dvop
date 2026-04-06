@@ -999,6 +999,9 @@ fn create_svg_split_view(
     // Setup linting for the file
     crate::linter::ui::setup_linting(&source_view, Some(file_path));
 
+    // Set the active view for the refresh button
+    crate::linter::ui::set_active_view_for_refresh(Some(file_path), Some(&source_view));
+
     // Set up interaction tracking for the text editor
     let text_view = source_view.clone().upcast::<TextView>();
     setup_text_editor_interaction_tracking(&text_view);
@@ -1133,6 +1136,9 @@ fn create_markdown_split_view(
 
     // Setup linting for the file
     crate::linter::ui::setup_linting(&source_view, Some(file_path));
+
+    // Set the active view for the refresh button
+    crate::linter::ui::set_active_view_for_refresh(Some(file_path), Some(&source_view));
 
     // Set up interaction tracking for the text editor
     let text_view = source_view.clone().upcast::<TextView>();
@@ -1931,6 +1937,9 @@ pub fn open_or_focus_tab(
 
                 // Setup linting for the file
                 crate::linter::ui::setup_linting(&source_view, Some(file_to_open));
+
+                // Set the active view for the refresh button
+                crate::linter::ui::set_active_view_for_refresh(Some(file_to_open), Some(&source_view));
             }
 
             // Ctrl+Click on an underlined diagnostic focuses corresponding entry in diagnostics panel
