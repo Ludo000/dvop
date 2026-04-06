@@ -279,12 +279,13 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
     popover.set_parent(search_entry);
     popover.set_autohide(false);
     popover.set_can_focus(false);
+    popover.set_size_request(600, -1); // Set popover width to match search entry
 
     let listbox = gtk4::ListBox::new();
     listbox.add_css_class("navigation-sidebar");
-    listbox.set_can_focus(false);
+    listbox.set_can_focus(true); // Allow focus for keyboard navigation
     listbox.set_focus_on_click(false);
-    listbox.set_size_request(300, -1); // Fixed width, natural height
+    listbox.set_hexpand(true); // Make listbox expand to fill popover
     popover.set_child(Some(&listbox));
 
     let window_weak = window.downgrade();
@@ -342,76 +343,116 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
     let popover_for_search = popover.clone();
     let listbox_for_search = listbox.clone();
 
-    // Update search results as user types
+    // Debounce timeout for search - stored as Rc<RefCell<>> to be shared across closures
+    let search_debounce_id = Rc::new(RefCell::new(None::<glib::source::SourceId>));
+
+    // Update search results as user types (with debounce)
     search_entry.connect_search_changed(move |entry| {
         let search_text = entry.text().to_lowercase();
 
-        // Clear previous results
-        while let Some(child) = listbox_for_search.first_child() {
-            listbox_for_search.remove(&child);
-        }
-
-        // Reset size to allow natural sizing
-        listbox_for_search.set_size_request(300, -1);
-
+        // Don't wait if search is empty - close popup immediately
         if search_text.is_empty() {
             popover_for_search.popdown();
+            // Cancel any existing debounce timeout
+            if let Some(timeout_id) = search_debounce_id.borrow_mut().take() {
+                timeout_id.remove();
+            }
             return;
         }
 
-        // Find matching commands
-        let mut found_any = false;
-        for cmd in &commands_for_search {
-            let name_lower = cmd.label.to_lowercase();
-            let matches = name_lower.contains(&search_text)
-                || cmd.keywords.iter().any(|k| k.contains(&search_text));
-
-            if matches {
-                let label = gtk4::Label::new(Some(cmd.label));
-                label.set_xalign(0.0);
-                label.set_margin_start(8);
-                label.set_margin_end(8);
-                label.set_margin_top(4);
-                label.set_margin_bottom(4);
-
-                let row = gtk4::ListBoxRow::new();
-                row.set_child(Some(&label));
-                listbox_for_search.append(&row);
-                found_any = true;
+        // Cancel any existing debounce timeout
+        {
+            if let Some(timeout_id) = search_debounce_id.borrow_mut().take() {
+                timeout_id.remove();
             }
         }
 
-        // Also search extension commands and text transforms
-        let ext_cmds = get_extension_palette_commands();
-        for ext_cmd in &ext_cmds {
-            if ext_cmd.matches(&search_text) {
-                let label = gtk4::Label::new(Some(ext_cmd.label()));
-                label.set_xalign(0.0);
-                label.set_margin_start(8);
-                label.set_margin_end(8);
-                label.set_margin_top(4);
-                label.set_margin_bottom(4);
+        // Set a new debounce timeout (300ms)
+        let commands_for_search = commands_for_search.clone();
+        let popover_for_search = popover_for_search.clone();
+        let listbox_for_search = listbox_for_search.clone();
+        let search_text_debounced = search_text.clone();
+        let debounce_id_for_timeout = search_debounce_id.clone();
 
-                let row = gtk4::ListBoxRow::new();
-                row.add_css_class("ext-command");
-                row.set_child(Some(&label));
-                listbox_for_search.append(&row);
-                found_any = true;
+        let timeout_id = glib::timeout_add_local(std::time::Duration::from_millis(300), move || {
+            // Clear previous results
+            while let Some(child) = listbox_for_search.first_child() {
+                listbox_for_search.remove(&child);
             }
-        }
 
-        if found_any {
-            // Force popover to close and reopen to recalculate size
-            popover_for_search.popdown();
-            glib::idle_add_local_once({
-                let popover = popover_for_search.clone();
-                move || {
-                    popover.popup();
+            // Reset size to allow natural sizing
+            listbox_for_search.set_size_request(300, -1);
+
+            // Find matching commands
+            let mut found_any = false;
+            for cmd in &commands_for_search {
+                let name_lower = cmd.label.to_lowercase();
+                let matches = name_lower.contains(&search_text_debounced)
+                    || cmd.keywords.iter().any(|k| k.contains(&search_text_debounced));
+
+                if matches {
+                    let label = gtk4::Label::new(Some(cmd.label));
+                    label.set_xalign(0.0);
+                    label.set_margin_start(8);
+                    label.set_margin_end(8);
+                    label.set_margin_top(4);
+                    label.set_margin_bottom(4);
+
+                    let row = gtk4::ListBoxRow::new();
+                    row.set_child(Some(&label));
+                    listbox_for_search.append(&row);
+                    found_any = true;
                 }
-            });
-        } else {
-            popover_for_search.popdown();
-        }
+            }
+
+            // Also search extension commands and text transforms
+            let ext_cmds = get_extension_palette_commands();
+            for ext_cmd in &ext_cmds {
+                if ext_cmd.matches(&search_text_debounced) {
+                    let label = gtk4::Label::new(Some(ext_cmd.label()));
+                    label.set_xalign(0.0);
+                    label.set_margin_start(8);
+                    label.set_margin_end(8);
+                    label.set_margin_top(4);
+                    label.set_margin_bottom(4);
+
+                    let row = gtk4::ListBoxRow::new();
+                    row.add_css_class("ext-command");
+                    row.set_child(Some(&label));
+                    listbox_for_search.append(&row);
+                    found_any = true;
+                }
+            }
+
+            if found_any {
+                // Force popover to close and reopen to recalculate size
+                popover_for_search.popdown();
+                let listbox_for_select = listbox_for_search.clone();
+                glib::idle_add_local_once({
+                    let popover = popover_for_search.clone();
+                    move || {
+                        popover.popup();
+                        // Auto-select the first row so Return key can execute it
+                        if let Some(first_row) = listbox_for_select
+                            .first_child()
+                            .and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok())
+                        {
+                            listbox_for_select.select_row(Some(&first_row));
+                        }
+                    }
+                });
+            } else {
+                popover_for_search.popdown();
+            }
+
+            // Clear the stored timeout ID since it has now run
+            debounce_id_for_timeout.borrow_mut().take();
+
+            glib::ControlFlow::Break
+        });
+
+        // Store the new timeout ID
+        *search_debounce_id.borrow_mut() = Some(timeout_id);
     });
 
     // Handle Enter key to execute first result
@@ -420,22 +461,18 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
     let commands_for_enter = menu_commands.clone();
     let window_weak_for_enter = window_weak.clone();
     search_entry.connect_activate(move |entry| {
-        // Manually trigger the first row's action
-        if let Some(first_row) = listbox_for_activate
-            .first_child()
-            .and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok())
-        {
-            // Select and activate the first row
-            listbox_for_activate.select_row(Some(&first_row));
-            // Trigger the row-activated signal
-            if let Some(label) = first_row
-                .child()
-                .and_then(|w| w.downcast::<gtk4::Label>().ok())
-            {
+        // Get the selected row, or use first row if none selected
+        let selected_row = listbox_for_activate.selected_row()
+            .or_else(|| listbox_for_activate
+                .first_child()
+                .and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok()));
+        
+        if let Some(row) = selected_row {
+            if let Some(label) = row.child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
                 let text = label.text();
 
                 // Check if this is an extension command
-                if first_row.has_css_class("ext-command") {
+                if row.has_css_class("ext-command") {
                     let ext_cmds = get_extension_palette_commands();
                     for ext_cmd in &ext_cmds {
                         if ext_cmd.label() == text.as_str() {
@@ -475,6 +512,48 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
     search_entry.connect_stop_search(move |_| {
         popover_for_stop.popdown();
     });
+
+    // Handle arrow key navigation in the popover listbox
+    let listbox_for_keys = listbox.clone();
+    let event_controller = gtk4::EventControllerKey::new();
+    event_controller.connect_key_pressed(move |_, keyval, _keycode, state| {
+        use gtk4::gdk::Key;
+        use gtk4::gdk::ModifierType;
+
+        // Only handle arrow keys when modifier keys are not pressed
+        if state.contains(ModifierType::CONTROL_MASK | ModifierType::ALT_MASK | ModifierType::SUPER_MASK) {
+            return glib::Propagation::Proceed;
+        }
+
+        match keyval {
+            Key::Down => {
+                // Move to next row
+                if let Some(selected) = listbox_for_keys.selected_row() {
+                    if let Some(next_row) = selected.next_sibling().and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok()) {
+                        listbox_for_keys.select_row(Some(&next_row));
+                    }
+                } else if let Some(first_row) = listbox_for_keys
+                    .first_child()
+                    .and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok())
+                {
+                    listbox_for_keys.select_row(Some(&first_row));
+                }
+                glib::Propagation::Stop
+            }
+            Key::Up => {
+                // Move to previous row
+                if let Some(selected) = listbox_for_keys.selected_row() {
+                    if let Some(prev_row) = selected.prev_sibling().and_then(|w| w.downcast::<gtk4::ListBoxRow>().ok()) {
+                        listbox_for_keys.select_row(Some(&prev_row));
+                    }
+                }
+                glib::Propagation::Stop
+            }
+            // Return key is handled by connect_activate on search_entry
+            _ => glib::Propagation::Proceed,
+        }
+    });
+    search_entry.add_controller(event_controller);
 }
 
 /// Application entry point — initializes the GTK application and starts the event loop.
