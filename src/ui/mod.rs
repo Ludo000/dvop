@@ -240,10 +240,12 @@ mod imp {
             eprintln!("Window size_allocate called with width: {}", width);
             if width < 950 {
                 eprintln!("Showing hamburger, hiding menu_bar");
+                self.menu_revealer.set_visible(false);
                 self.menu_revealer.set_reveal_child(false);
                 self.hamburger_menu_button.set_visible(true);
             } else {
                 eprintln!("Showing menu_bar, hiding hamburger");
+                self.menu_revealer.set_visible(true);
                 self.menu_revealer.set_reveal_child(true);
                 self.hamburger_menu_button.set_visible(false);
             }
