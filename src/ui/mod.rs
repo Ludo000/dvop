@@ -79,6 +79,8 @@ use std::collections::HashMap;
 use std::path::PathBuf; // For file paths
 use std::rc::Rc; // For shared ownership // For file path manager
 
+const RESPONSIVE_HEADER_BREAKPOINT: i32 = 950;
+
 /// Type alias for the 12-element tuple returned by `create_text_view()`.
 ///
 /// Rust doesn't allow naming tuple fields, so this alias documents what each
@@ -240,9 +242,11 @@ mod imp {
     impl ObjectImpl for DvopWindow {}
     impl WidgetImpl for DvopWindow {
         fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+            const RESPONSIVE_HEADER_BREAKPOINT: i32 = 950;
+
             self.parent_size_allocate(width, height, baseline);
             eprintln!("Window size_allocate called with width: {}", width);
-            if width < 950 {
+            if width < RESPONSIVE_HEADER_BREAKPOINT {
                 eprintln!("Showing hamburger, hiding menu_bar");
                 self.menu_revealer.set_visible(false);
                 self.menu_revealer.set_reveal_child(false);
@@ -258,7 +262,7 @@ mod imp {
             self.obj().queue_resize();
 
             // Hide/show button labels based on width
-            if width < 900 {
+            if width < RESPONSIVE_HEADER_BREAKPOINT {
                 self.save_label.set_visible(false);
                 self.open_label.set_visible(false);
             } else {
@@ -317,6 +321,31 @@ impl DvopWindow {
         imp.volume_label.set_text(&format!("{}%", volume_percent));
 
         window
+    }
+
+    pub fn update_responsive_layout(&self) {
+        let imp = self.imp();
+        let width = self.width();
+        if width <= 0 {
+            return;
+        }
+
+        if width < RESPONSIVE_HEADER_BREAKPOINT {
+            imp.menu_revealer.set_visible(false);
+            imp.menu_revealer.set_reveal_child(false);
+            imp.hamburger_menu_button.set_visible(true);
+            imp.save_label.set_visible(false);
+            imp.open_label.set_visible(false);
+        } else {
+            imp.menu_revealer.set_visible(true);
+            imp.menu_revealer.set_reveal_child(true);
+            imp.hamburger_menu_button.set_visible(false);
+            imp.save_label.set_visible(true);
+            imp.open_label.set_visible(true);
+        }
+
+        imp.header_bar.queue_resize();
+        self.queue_resize();
     }
 
     fn setup_icon(&self) {

@@ -2968,6 +2968,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Show the main window to display the application
     window.show();
 
+    // Apply responsive layout once the window is visible and allocated.
+    let responsive_window = window.clone();
+    glib::idle_add_local_once(move || {
+        responsive_window.update_responsive_layout();
+    });
+
     // See FEATURES.md: Feature #136 — Session Restoration
     // Restore previously opened files from settings (after window is shown)
     let saved_files = settings::get_settings().get_opened_files();
