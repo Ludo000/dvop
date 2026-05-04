@@ -288,6 +288,38 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
     listbox.set_hexpand(true); // Make listbox expand to fill popover
     popover.set_child(Some(&listbox));
 
+    // Allow dragging the search entry to move the window like other header-bar widgets.
+    let move_drag_gesture = gtk4::GestureDrag::new();
+    move_drag_gesture.set_propagation_phase(gtk4::PropagationPhase::Capture);
+    let window_for_move = window.clone();
+    let search_entry_for_move = search_entry.clone();
+    move_drag_gesture.connect_drag_begin(move |_, start_x, start_y| {
+        if let Some((window_x, window_y)) =
+            search_entry_for_move.translate_coordinates(&window_for_move, start_x, start_y)
+        {
+            if let Some(display) = gdk4::Display::default() {
+                if let Some(seat) = display.default_seat() {
+                    if let Some(pointer) = seat.pointer() {
+                        if let Some(native) = window_for_move.native() {
+                            if let Some(surface) = native.surface() {
+                                if let Ok(toplevel) = surface.downcast::<gdk4::Toplevel>() {
+                                    toplevel.begin_move(
+                                        &pointer,
+                                        1,
+                                        window_x,
+                                        window_y,
+                                        gdk4::CURRENT_TIME,
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+    search_entry.add_controller(move_drag_gesture);
+
     let window_weak = window.downgrade();
     let commands_clone = menu_commands.clone();
     let popover_clone = popover.clone();
