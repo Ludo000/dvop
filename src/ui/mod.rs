@@ -134,6 +134,10 @@ mod imp {
         pub save_main_button: TemplateChild<Button>,
         #[template_child]
         pub save_menu_button: TemplateChild<MenuButton>,
+        #[template_child]
+        pub save_label: TemplateChild<Label>,
+        #[template_child]
+        pub open_label: TemplateChild<Label>,
 
         // Path bar widgets
         #[template_child]
@@ -252,6 +256,15 @@ mod imp {
             // Queue resize to ensure layout updates
             self.header_bar.queue_resize();
             self.obj().queue_resize();
+
+            // Hide/show button labels based on width
+            if width < 900 {
+                self.save_label.set_visible(false);
+                self.open_label.set_visible(false);
+            } else {
+                self.save_label.set_visible(true);
+                self.open_label.set_visible(true);
+            }
         }
     }
     impl WindowImpl for DvopWindow {}
