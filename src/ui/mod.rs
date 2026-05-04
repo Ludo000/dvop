@@ -59,6 +59,8 @@ use gtk4::{
     Label,
     // Menu components for split button functionality
     MenuButton,
+    PopoverMenuBar,
+    Revealer,
     Notebook,
 
     // Layout orientation for containers
@@ -118,6 +120,12 @@ mod imp {
         // Header bar widgets
         #[template_child]
         pub header_bar: TemplateChild<HeaderBar>,
+        #[template_child]
+        pub hamburger_menu_button: TemplateChild<MenuButton>,
+        #[template_child]
+        pub menu_revealer: TemplateChild<gtk4::Revealer>,
+        #[template_child]
+        pub menu_bar: TemplateChild<gtk4::PopoverMenuBar>,
         #[template_child]
         pub menu_search_entry: TemplateChild<gtk4::SearchEntry>,
         #[template_child]
@@ -226,7 +234,24 @@ mod imp {
     }
 
     impl ObjectImpl for DvopWindow {}
-    impl WidgetImpl for DvopWindow {}
+    impl WidgetImpl for DvopWindow {
+        fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+            self.parent_size_allocate(width, height, baseline);
+            eprintln!("Window size_allocate called with width: {}", width);
+            if width < 950 {
+                eprintln!("Showing hamburger, hiding menu_bar");
+                self.menu_revealer.set_reveal_child(false);
+                self.hamburger_menu_button.set_visible(true);
+            } else {
+                eprintln!("Showing menu_bar, hiding hamburger");
+                self.menu_revealer.set_reveal_child(true);
+                self.hamburger_menu_button.set_visible(false);
+            }
+            // Queue resize to ensure layout updates
+            self.header_bar.queue_resize();
+            self.obj().queue_resize();
+        }
+    }
     impl WindowImpl for DvopWindow {}
     impl ApplicationWindowImpl for DvopWindow {}
 }

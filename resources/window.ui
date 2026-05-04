@@ -18,8 +18,22 @@
           </object>
         </property>
         <child type="start">
-          <object class="GtkPopoverMenuBar" id="menu_bar">
+          <object class="GtkMenuButton" id="hamburger_menu_button">
+            <property name="icon-name">open-menu-symbolic</property>
+            <property name="tooltip-text">Application menu</property>
             <property name="menu-model">primary_menu</property>
+            <property name="visible">true</property>
+          </object>
+        </child>
+        <child type="start">
+          <object class="GtkRevealer" id="menu_revealer">
+            <property name="reveal-child">false</property>
+            <property name="transition-type">none</property>
+            <child>
+              <object class="GtkPopoverMenuBar" id="menu_bar">
+                <property name="menu-model">primary_menu</property>
+              </object>
+            </child>
           </object>
         </child>
         <child type="end">
