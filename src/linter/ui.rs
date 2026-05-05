@@ -36,22 +36,29 @@ type VisibilityCallback = RefCell<Option<Rc<dyn Fn(bool)>>>;
 
 // Global diagnostics store — used by both local linters and native extensions
 lazy_static::lazy_static! {
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     static ref DIAGNOSTICS_STORE: Arc<Mutex<HashMap<String, Vec<Diagnostic>>>> =
+        // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         Arc::new(Mutex::new(HashMap::new()));
 }
 
 // Thread-local callback for diagnostics panel visibility
 thread_local! {
+    // RefCell::new creates a container that checks borrowing rules at runtime.
     static DIAGNOSTICS_PANEL_CALLBACK: VisibilityCallback = RefCell::new(None);
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static LINTER_STATUS_BOX: RefCell<Option<GtkBox>> = const { RefCell::new(None) };
+    // RefCell::new creates a container that checks borrowing rules at runtime.
     static LINTER_STATUS_VISIBILITY_CALLBACK: VisibilityCallback = RefCell::new(None);
     
     // Track open buffers by file URI for reapplying diagnostics (thread-local since GTK is single-threaded)
     static BUFFER_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::Buffer>>> = 
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         RefCell::new(HashMap::new());
     
     // Track source views by file URI for forcing redraw after diagnostic updates
     static VIEW_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::View>>> = 
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         RefCell::new(HashMap::new());
     
     // Track the currently active view and its file path for refresh button
@@ -90,8 +97,10 @@ where
 pub fn update_linter_status(status: &str) {
     glib::idle_add_once({
         let status = status.to_string();
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         move || {
             LINTER_STATUS_BOX.with(|cell| {
+                // borrow() gets read-only access to the data inside a RefCell.
                 if let Some(ref status_box) = *cell.borrow() {
                     // Clear existing children
                     while let Some(child) = status_box.first_child() {
@@ -109,8 +118,10 @@ pub fn update_linter_status(status: &str) {
 
 /// Update the linter status with icons
 pub fn update_linter_status_with_icons(_rust_icon: bool, errors: usize, warnings: usize) {
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     glib::idle_add_once(move || {
         LINTER_STATUS_BOX.with(|cell| {
+            // borrow() gets read-only access to the data inside a RefCell.
             if let Some(ref status_box) = *cell.borrow() {
                 // Clear existing children
                 while let Some(child) = status_box.first_child() {
@@ -160,6 +171,7 @@ pub fn show_diagnostics_panel() {
             return;
         }
         DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
+            // borrow() gets read-only access to the data inside a RefCell.
             if let Some(ref callback) = *cell.borrow() {
                 callback(true);
             }
@@ -175,6 +187,7 @@ pub fn show_diagnostics_panel_on_main_thread() {
         return;
     }
     DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
+        // borrow() gets read-only access to the data inside a RefCell.
         if let Some(ref callback) = *cell.borrow() {
             callback(true);
         }
@@ -183,6 +196,7 @@ pub fn show_diagnostics_panel_on_main_thread() {
 
 /// Hide the diagnostics panel
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn hide_diagnostics_panel() {
     glib::idle_add_once(|| {
         DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
@@ -196,6 +210,7 @@ pub fn hide_diagnostics_panel() {
 /// Check if there are any diagnostics in the store
 pub fn has_any_diagnostics() -> bool {
     DIAGNOSTICS_STORE
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         .lock()
         .ok()
         .map(|store| !store.is_empty())
@@ -214,6 +229,7 @@ pub fn show_linter_status_visibility(show: bool) {
 /// Store diagnostics for a file URI (used by native extensions and local linters).
 /// Pass an empty vec to clear diagnostics for the URI.
 pub fn store_diagnostics_for_uri(file_uri: &str, diagnostics: Vec<Diagnostic>) {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
         if diagnostics.is_empty() {
             store.remove(file_uri);
@@ -225,6 +241,7 @@ pub fn store_diagnostics_for_uri(file_uri: &str, diagnostics: Vec<Diagnostic>) {
 
 /// Clear all diagnostics from the store (used during native extension shutdown).
 pub fn clear_all_diagnostics_store() {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
         store.clear();
     }
@@ -232,12 +249,14 @@ pub fn clear_all_diagnostics_store() {
 
 /// Update diagnostics count in the linter status
 pub fn update_diagnostics_count() {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(store) = DIAGNOSTICS_STORE.lock() {
         let mut errors = 0;
         let mut warnings = 0;
 
         for diagnostics in store.values() {
             for diag in diagnostics {
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match diag.severity {
                     DiagnosticSeverity::Error => errors += 1,
                     DiagnosticSeverity::Warning => warnings += 1,
@@ -279,6 +298,7 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
             let file_path_clone = file_path_opt.clone();
             let pending_clone = pending_source_id.clone();
 
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             let source_id = glib::timeout_add_local_once(std::time::Duration::from_millis(800), move || {
                 // Clear the stored source ID since we're now executing
                 pending_clone.borrow_mut().take();
@@ -344,6 +364,7 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
     if let Some(path) = file_path {
         let path_buf = path.to_path_buf();
 
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         std::thread::spawn(move || {
             let ext_diags = crate::extensions::hooks::run_extension_linters(&path_buf);
             if ext_diags.is_empty() {
@@ -384,6 +405,7 @@ fn apply_diagnostics_to_ui(
     if !diagnostics.is_empty() {
         println!("🔍 Linter found {} diagnostic(s)", diagnostics.len());
         for diag in diagnostics {
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             let severity_str = match diag.severity {
                 DiagnosticSeverity::Error => "ERROR",
                 DiagnosticSeverity::Warning => "WARNING",
@@ -453,6 +475,7 @@ pub fn refresh_diagnostics_panel() {
     // Display each file's diagnostics and count totals
     for (file_uri, diagnostics) in store.iter() {
         for diag in diagnostics {
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match diag.severity {
                 crate::linter::DiagnosticSeverity::Error => total_errors += 1,
                 crate::linter::DiagnosticSeverity::Warning => total_warnings += 1,
@@ -521,11 +544,13 @@ pub fn register_buffer_for_diagnostics(file_path: &Path, buffer: &sourceview5::B
         println!("📝 Registering buffer and view for diagnostics: {}", uri);
         
         BUFFER_REGISTRY.with(|registry| {
+            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
             let mut registry = registry.borrow_mut();
             registry.insert(uri.clone(), buffer.downgrade());
         });
         
         VIEW_REGISTRY.with(|registry| {
+            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
             let mut registry = registry.borrow_mut();
             registry.insert(uri, view.downgrade());
         });

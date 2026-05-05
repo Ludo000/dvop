@@ -56,6 +56,10 @@ pub const LARGE_FILE_THRESHOLD: usize = 10_485_760; // 10 MB
 /// if the schema isn't installed (e.g., running outside GNOME).
 ///
 /// See FEATURES.md: Feature #119 — Smart Dark Mode Detection
+
+// Linux doesn't have one "Dark Mode" variable. Every desktop (GNOME, KDE, etc.) 
+// does it differently. This function is a massive "if-else" detective that 
+// tries every known method until it finds an answer.
 pub fn is_dark_mode_enabled() -> bool {
     // Check for desktop environment specific settings FIRST (more reliable than GTK settings)
     let desktop_env = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
@@ -64,6 +68,7 @@ pub fn is_dark_mode_enabled() -> bool {
         // Try GIO Settings first (more reliable than gsettings command)
         use gtk4::gio::prelude::*;
         // GIO Settings new() can panic if schema doesn't exist, so we need to wrap it carefully
+        // catch_unwind is like a try-catch block for code that might crash (panic).
         match std::panic::catch_unwind(|| gtk4::gio::Settings::new("org.gnome.desktop.interface")) {
             Ok(gio_settings) => {
                 // Check the new color-scheme setting (Ubuntu 22.04+)
@@ -100,6 +105,9 @@ pub fn is_dark_mode_enabled() -> bool {
         }
 
         // Legacy method: Try gsettings command
+        
+        // std::process::Command literally runs a command in your terminal 
+        // and reads the text output back into Rust.
         let output = std::process::Command::new("gsettings")
             .args(["get", "org.gnome.desktop.interface", "color-scheme"])
             .output()
@@ -219,6 +227,9 @@ thread_local! {
 /// See FEATURES.md: Feature #120 — Automatic Theme Switching
 pub fn get_preferred_style_scheme() -> String {
     // Prevent recursive calls when refresh_settings calls back into this function
+    
+    // Recursion is when a function calls itself. If we don't have this check, 
+    // the app might get stuck in an infinite loop and crash.
     if GETTING_STYLE.with(|flag| flag.get()) {
         // Use generic fallback themes that are always available
         return if is_dark_mode_enabled() {
@@ -292,6 +303,8 @@ pub fn create_source_view() -> (View, Buffer) {
     let source_view = View::with_buffer(&buffer);
 
     // Configure standard options for the source view
+    
+    // This is where we turn on all the "Code Editor" features like line numbers.
     source_view.set_monospace(true);
     source_view.set_editable(true);
     source_view.set_cursor_visible(true);
@@ -339,6 +352,9 @@ pub fn create_source_view_for_large_file() -> (View, Buffer) {
     source_view.set_cursor_visible(true);
     source_view.set_show_line_numbers(true);
     // Disable features that are expensive on large buffers
+    
+    // On a 10MB file, highlighting the current line or checking for auto-indent 
+    // on every keystroke can make the app "stutter". We turn them off here.
     source_view.set_highlight_current_line(false);
     source_view.set_tab_width(4);
     source_view.set_auto_indent(false);
@@ -417,6 +433,9 @@ pub fn set_language_for_file(buffer: &Buffer, file_path: &Path) -> bool {
     }
 
     // If that fails, try to map the extension to a language ourselves
+    
+    // This is a simple lookup table. If the file is "main.rs", we tell GTK 
+    // to use the "rust" rules.
     let language_id = match extension.to_lowercase().as_str() {
         "rs" => "rust",
         "py" => "python",
@@ -491,6 +510,7 @@ pub fn debug_theme_detection() {
 
     // Check GIO settings for GNOME
     use gtk4::gio::prelude::*;
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match std::panic::catch_unwind(|| gtk4::gio::Settings::new("org.gnome.desktop.interface")) {
         Ok(gio_settings) => {
             // Check if keys exist before accessing them
@@ -610,6 +630,9 @@ pub fn reset_font_size() {
 }
 
 /// Applies the font size to all SourceView widgets in the application
+
+// In GTK, we style widgets using CSS, just like a website. 
+// We generate a CSS string with the font-size and "inject" it into the app.
 fn apply_font_size_to_all_views(font_size: u32) {
     let css = format!(
         "textview {{ font-size: {}pt; }} 

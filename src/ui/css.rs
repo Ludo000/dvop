@@ -58,6 +58,7 @@ fn build_complete_css() -> String {
     // Append CSS from enabled extensions (loaded from their CSS files)
     let mgr = crate::extensions::manager::get_manager();
     for css_path in mgr.get_extension_css_paths() {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match std::fs::read_to_string(&css_path) {
             Ok(ext_css) => {
                 css.push('\n');

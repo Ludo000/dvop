@@ -70,6 +70,7 @@ pub struct EditorSettings {
     config_path: PathBuf,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl EditorSettings {
     /// Creates a new `EditorSettings`, loading persisted values from disk.
     ///
@@ -153,6 +154,7 @@ impl EditorSettings {
 
     /// Loads settings from the config file
     fn load_from_file(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match crate::file_cache::get_cached_file_content(&self.config_path) {
             Ok(content) => {
                 // Parse the content line by line
@@ -169,6 +171,7 @@ impl EditorSettings {
                 // File doesn't exist, use defaults
                 Ok(())
             }
+            // Box::new(...) allocates the data on the heap rather than the stack.
             Err(e) => Err(Box::new(e)),
         }
     }
@@ -484,6 +487,7 @@ use std::sync::{Mutex, Once};
 
 // Global settings instance using thread-safe patterns
 static SETTINGS_INSTANCE: Lazy<Mutex<EditorSettings>> =
+    // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     Lazy::new(|| Mutex::new(EditorSettings::new()));
 static INIT: Once = Once::new();
 
@@ -530,6 +534,7 @@ pub fn get_settings() -> EditorSettings {
 /// ```
 pub fn get_settings_mut() -> std::sync::MutexGuard<'static, EditorSettings> {
     initialize_settings();
+    // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
     SETTINGS_INSTANCE.lock().unwrap()
 }
 
@@ -576,6 +581,7 @@ fn detect_os_default_themes() -> (String, String) {
         .or_else(|_| {
             // Try to get from GIO settings for GNOME
             use gtk4::gio::prelude::*;
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match std::panic::catch_unwind(|| {
                 gtk4::gio::Settings::new("org.gnome.desktop.interface")
             }) {
@@ -726,6 +732,7 @@ mod tests {
     #[test]
     fn test_last_folder() {
         let mut settings = EditorSettings::new();
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let temp_dir = TempDir::new().unwrap();
         
         settings.set_last_folder(temp_dir.path());

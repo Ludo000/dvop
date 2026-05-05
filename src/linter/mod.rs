@@ -49,12 +49,16 @@ pub struct Diagnostic {
     pub message: String,
     pub line: usize,
     pub column: usize,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub end_line: Option<usize>,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub end_column: Option<usize>,
     pub rule: String,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl Diagnostic {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new(
         severity: DiagnosticSeverity,
         message: String,
@@ -73,6 +77,7 @@ impl Diagnostic {
         }
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn with_end_position(mut self, end_line: usize, end_column: usize) -> Self {
         self.end_line = Some(end_line);
         self.end_column = Some(end_column);
@@ -82,6 +87,7 @@ impl Diagnostic {
 
 /// Run linter for a specific file based on its language
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn lint_file(file_path: &Path, content: &str) -> Vec<Diagnostic> {
     // Determine language from file extension
     let mut diagnostics = lint_file_builtin(file_path, content);
@@ -97,6 +103,7 @@ pub fn lint_file(file_path: &Path, content: &str) -> Vec<Diagnostic> {
 /// Safe to call on the GTK main thread.
 pub fn lint_file_builtin(file_path: &Path, content: &str) -> Vec<Diagnostic> {
     if let Some(ext) = file_path.extension().and_then(|e| e.to_str()) {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match ext {
             "rs" => Vec::new(), // Rust files use rust-analyzer via LSP, not local linter
             "ui" => gtk_ui_linter::lint_gtk_ui(content),
@@ -109,6 +116,7 @@ pub fn lint_file_builtin(file_path: &Path, content: &str) -> Vec<Diagnostic> {
 
 /// Run linter for a specific language
 pub fn lint_by_language(language: &str, _content: &str) -> Vec<Diagnostic> {
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match language.to_lowercase().as_str() {
         // Rust diagnostics are handled by the rust-diagnostics extension (via rust-analyzer LSP)
         // Add more languages here
@@ -125,10 +133,12 @@ type DiagnosticsMap = Arc<Mutex<HashMap<String, Vec<Diagnostic>>>>;
 
 // Global storage for file diagnostics
 static FILE_DIAGNOSTICS: Lazy<DiagnosticsMap> =
+    // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 /// Store diagnostics for a file
 pub fn store_file_diagnostics(file_path: &str, diagnostics: Vec<Diagnostic>) {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(mut map) = FILE_DIAGNOSTICS.lock() {
         if diagnostics.is_empty() {
             map.remove(file_path);
@@ -141,6 +151,7 @@ pub fn store_file_diagnostics(file_path: &str, diagnostics: Vec<Diagnostic>) {
 /// Get diagnostics for a file
 pub fn get_file_diagnostics(file_path: &str) -> Vec<Diagnostic> {
     FILE_DIAGNOSTICS
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         .lock()
         .ok()
         .and_then(|map| map.get(file_path).cloned())
@@ -178,6 +189,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
     
     // Sort diagnostics by severity (Info > Warning > Error) so more severe ones are applied last and take precedence
     diagnostics.sort_by(|a, b| {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         let severity_value = |s: &DiagnosticSeverity| match s {
             DiagnosticSeverity::Info => 0,
             DiagnosticSeverity::Warning => 1,
@@ -227,6 +239,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
     
     // Apply tags for each diagnostic (sorted by severity, so errors override warnings/info)
     for diag in diagnostics {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         let tag = match diag.severity {
             DiagnosticSeverity::Error => &error_tag,
             DiagnosticSeverity::Warning => &warning_tag,

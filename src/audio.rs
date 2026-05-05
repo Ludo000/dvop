@@ -77,13 +77,16 @@ struct SpectrogramData {
 /// Global volume manager to sync volume across all audio players
 #[derive(Clone)]
 struct GlobalVolumeManager {
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     current_volume: Arc<Mutex<f64>>,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl GlobalVolumeManager {
     fn new() -> Self {
         let initial_volume = settings::get_settings().get_audio_volume();
         Self {
+            // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
             current_volume: Arc::new(Mutex::new(initial_volume)),
         }
     }
@@ -117,20 +120,26 @@ static GLOBAL_VOLUME_MANAGER: Lazy<GlobalVolumeManager> = Lazy::new(GlobalVolume
 /// Global audio playback manager to coordinate multiple audio players
 #[derive(Clone)]
 struct GlobalAudioManager {
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     active_players: Arc<Mutex<Vec<(gstreamer::Pipeline, String, bool)>>>, // (pipeline, unique_id, is_music)
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     stopped_notifications: Arc<Mutex<Vec<String>>>, // List of player IDs that should be notified of stopping
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl GlobalAudioManager {
     fn new() -> Self {
         Self {
+            // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
             active_players: Arc::new(Mutex::new(Vec::new())),
+            // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
             stopped_notifications: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
     /// Register a new audio player pipeline with a unique ID
     fn register_player(&self, pipeline: &gstreamer::Pipeline, player_id: String, is_music: bool) {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut players = self.active_players.lock().unwrap();
 
         // Clean up any pipelines that have been set to NULL state (destroyed) BEFORE adding new one
@@ -161,6 +170,7 @@ impl GlobalAudioManager {
 
     /// Check if this player was stopped by another and should update its UI
     fn check_and_clear_stop_notification(&self, player_id: &str) -> bool {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut notifications = self.stopped_notifications.lock().unwrap();
         if let Some(pos) = notifications.iter().position(|id| id == player_id) {
             notifications.remove(pos);
@@ -172,7 +182,9 @@ impl GlobalAudioManager {
 
     /// Stop all other audio players except the one that's starting to play
     fn stop_other_players(&self, current_pipeline: &gstreamer::Pipeline, current_player_id: &str) {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut players = self.active_players.lock().unwrap();
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut notifications = self.stopped_notifications.lock().unwrap();
 
         let mut stopped_count = 0;
@@ -245,6 +257,7 @@ impl GlobalAudioManager {
 
     /// Clean up dead pipelines
     fn cleanup_dead_players(&self) {
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let mut players = self.active_players.lock().unwrap();
         let original_count = players.len();
         players.retain(|(p, _, _)| p.current_state() != gstreamer::State::Null);
@@ -257,7 +270,9 @@ impl GlobalAudioManager {
     /// Stop all audio players associated with a specific file path
     /// This is used when a music file tab is closed
     fn stop_players_for_file(&self, file_path: &std::path::Path) {
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let mut players = self.active_players.lock().unwrap();
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let mut notifications = self.stopped_notifications.lock().unwrap();
 
         let file_name = file_path
@@ -320,6 +335,7 @@ pub fn set_global_volume(volume: f64) {
 
 /// Public function to get current global volume
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_global_volume() -> f64 {
     GLOBAL_VOLUME_MANAGER.get_volume()
 }
@@ -338,6 +354,7 @@ pub fn stop_audio_for_file(file_path: &std::path::Path) {
 /// Public function to stop all currently playing audio players
 /// This should be called when a video starts playing
 pub fn stop_all_audio_players() {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     let players = GLOBAL_AUDIO_MANAGER.active_players.lock().unwrap();
     let mut notifications = GLOBAL_AUDIO_MANAGER.stopped_notifications.lock().unwrap();
 
@@ -365,6 +382,7 @@ fn is_music_content(audio_path: &Path) -> bool {
     // Check for music-specific file extensions
     if let Some(extension) = audio_path.extension() {
         let ext = extension.to_string_lossy().to_lowercase();
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match ext.as_str() {
             // Typically music formats
             "mp3" | "flac" | "m4a" | "aac" | "opus" | "wav" | "ogg" | "wma" => return true,
@@ -462,19 +480,25 @@ pub struct AudioPlayer {
     #[allow(dead_code)]
     play_button: Button,
     #[allow(dead_code)]
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     current_position: Rc<RefCell<u64>>,
     #[allow(dead_code)]
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     duration: Rc<RefCell<Option<u64>>>,
     #[allow(dead_code)]
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     is_playing: Rc<RefCell<bool>>,
     #[allow(dead_code)]
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     spectrogram_data: Rc<RefCell<Option<ImageSurface>>>,
     #[allow(dead_code)]
     spectrum_area: DrawingArea,
     #[allow(dead_code)]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     waveform_data: Rc<RefCell<Option<WaveformData>>>,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl AudioPlayer {
     /// Creates a new audio player widget for the given audio file
     pub fn new(audio_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
@@ -658,9 +682,13 @@ impl AudioPlayer {
 
         // State tracking
         let current_position = Rc::new(RefCell::new(0u64));
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         let duration = Rc::new(RefCell::new(None));
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         let is_playing = Rc::new(RefCell::new(false));
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         let pending_seek_position = Rc::new(RefCell::new(None::<u64>));
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         let is_seeking = Rc::new(RefCell::new(false));
 
         // Create a unique player ID for this audio player
@@ -679,6 +707,7 @@ impl AudioPlayer {
 
         // Waveform and spectrogram data
         let waveform_data = Rc::new(RefCell::new(None));
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         let spectrogram_data = Rc::new(RefCell::new(None));
         let audio_path_for_spectrogram = audio_path.to_path_buf();
 
@@ -687,8 +716,10 @@ impl AudioPlayer {
         let pipeline_debug = pipeline.clone();
 
         let _bus_watch = bus
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             .add_watch(move |_, msg| {
                 use gstreamer::MessageView;
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match msg.view() {
                     MessageView::Error(err) => {
                         println!(
@@ -746,12 +777,15 @@ impl AudioPlayer {
         let is_seeking_play = is_seeking.clone();
         let player_id_play = player_id.clone();
 
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         play_button.connect_clicked(move |_| {
             println!("Audio: Play button clicked!");
+            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
             let mut playing = is_playing_play.borrow_mut();
             if *playing {
                 // Pause
                 println!("Audio: Pausing playback");
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match pipeline_play.set_state(State::Paused) {
                     Ok(_) => {
                         *playing = false;
@@ -775,6 +809,7 @@ impl AudioPlayer {
 
                 // Play
                 println!("Audio: Starting playback");
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match pipeline_play.set_state(State::Playing) {
                     Ok(_) => {
                         *playing = true;
@@ -821,6 +856,7 @@ impl AudioPlayer {
                                         let is_seeking_reset = is_seeking_delayed.clone();
                                         glib::timeout_add_local_once(
                                             Duration::from_millis(200),
+                                            // The "move" keyword forces the closure to take ownership of the variables it uses.
                                             move || {
                                                 *is_seeking_reset.borrow_mut() = false;
                                             },
@@ -862,6 +898,7 @@ impl AudioPlayer {
             current_time_label_stop,
             #[weak]
             pending_seek_stop,
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             move |_| {
                 println!("Audio: Stop button clicked!");
                 let _ = pipeline_stop.set_state(State::Paused); // Use PAUSED instead of READY to maintain duration info
@@ -941,6 +978,7 @@ impl AudioPlayer {
             let progress_data = Arc::new(Mutex::new(SpectrogramProgress::NotStarted));
             let progress_data_thread = progress_data.clone();
 
+            // thread::spawn creates a new background thread to run operations without blocking the main UI.
             std::thread::spawn(move || {
                 println!("Audio: Starting background spectrogram generation...");
                 *progress_data_thread.lock().unwrap() = SpectrogramProgress::InProgress(0);
@@ -1058,6 +1096,7 @@ impl AudioPlayer {
             #[weak] current_position_seek,
             move |_, _, x, _| {
                 println!("Audio: Waveform clicked at x: {}", x);
+                // borrow() gets read-only access to the data inside a RefCell.
                 let duration_val = *duration_seek.borrow();
                 
                 // Get waveform width and calculate time position
@@ -1076,6 +1115,7 @@ impl AudioPlayer {
                         // Update the current position immediately for visual feedback
                         *current_position_seek.borrow_mut() = seek_pos_secs;
                         
+                        // borrow() gets read-only access to the data inside a RefCell.
                         if *is_playing_seek.borrow() {
                             // Pipeline is playing/paused, seek immediately
                             let seek_time = gstreamer::ClockTime::from_seconds(seek_pos_secs);
@@ -1119,6 +1159,7 @@ impl AudioPlayer {
                         // Update current position for immediate visual feedback
                         *current_position_seek.borrow_mut() = seek_pos_secs;
                         
+                        // borrow() gets read-only access to the data inside a RefCell.
                         if !*is_playing_seek.borrow() {
                             *pending_seek_seek.borrow_mut() = Some(seek_pos_secs);
                         }
@@ -1158,6 +1199,7 @@ impl AudioPlayer {
 
             println!("Audio: Timer callback executing...");
 
+            // borrow() gets read-only access to the data inside a RefCell.
             if *is_seeking_update.borrow() {
                 println!("Audio: Skipping update - currently seeking");
                 return glib::ControlFlow::Continue;
@@ -1363,6 +1405,7 @@ fn generate_placeholder_waveform_pattern() -> Vec<f32> {
 /// Simple, safe waveform generation that never hangs
 fn generate_waveform_simple_safe(
     audio_path: &Path,
+// Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<WaveformData, Box<dyn std::error::Error + Send + Sync>> {
     println!(
         "Audio: Generating simple safe waveform for: {}",
@@ -1442,6 +1485,7 @@ fn generate_waveform_simple_safe(
 /// Super fast WAV reading that only reads the first few seconds
 fn read_wav_file_super_fast(
     path: &Path,
+// Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<WaveformData, Box<dyn std::error::Error + Send + Sync>> {
     let mut reader = hound::WavReader::open(path)?;
     let spec = reader.spec();
@@ -1563,7 +1607,9 @@ fn draw_waveform(cr: &Context, waveform: &WaveformData, width: i32, height: i32)
 /// Generates a spectrogram image with progress tracking
 fn generate_spectrogram_simple(
     audio_path: &Path,
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     progress: Arc<Mutex<SpectrogramProgress>>,
+// Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<SpectrogramData, Box<dyn std::error::Error + Send + Sync>> {
     println!(
         "Audio: Generating spectrogram for: {}",
@@ -1684,6 +1730,7 @@ fn generate_spectrogram_simple(
 /// Creates a Cairo ImageSurface from RGB pixel data
 fn create_surface_from_data(
     data: &SpectrogramData,
+// Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<ImageSurface, Box<dyn std::error::Error + Send + Sync>> {
     let surface = ImageSurface::create(Format::Rgb24, data.width as i32, data.height as i32)?;
 
@@ -1954,12 +2001,14 @@ fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (f64, f64, f64) {
 
 /// Checks if a file is an audio file based on its MIME type
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn is_audio_file(mime_type: &mime_guess::Mime) -> bool {
     mime_type.type_() == "audio"
 }
 
 /// Gets supported audio file extensions
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_supported_audio_extensions() -> Vec<&'static str> {
     vec!["mp3", "wav", "flac", "ogg", "m4a", "aac", "opus", "wma"]
 }

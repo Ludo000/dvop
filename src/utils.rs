@@ -59,11 +59,13 @@ type TabPathUpdateCallback = RefCell<Option<Box<dyn Fn(&PathBuf, &PathBuf)>>>;
 
 // Global storage for file list refresh callback
 thread_local! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static FILE_LIST_REFRESH_CALLBACK: RefCell<Option<Box<dyn Fn()>>> = RefCell::new(None);
 }
 
 // Global storage for tab path update callback (for when files are moved)
 thread_local! {
+    // RefCell::new creates a container that checks borrowing rules at runtime.
     static TAB_PATH_UPDATE_CALLBACK: TabPathUpdateCallback = RefCell::new(None);
 }
 
@@ -92,6 +94,7 @@ where
 /// Trigger the file list refresh callback
 pub fn trigger_file_list_refresh() {
     FILE_LIST_REFRESH_CALLBACK.with(|cb| {
+        // borrow() gets read-only access to the data inside a RefCell.
         if let Some(ref callback) = *cb.borrow() {
             callback();
         }
@@ -102,6 +105,7 @@ pub fn trigger_file_list_refresh() {
 /// This should be called when a file is moved to update open tab references
 pub fn trigger_tab_path_update(old_path: &PathBuf, new_path: &PathBuf) {
     TAB_PATH_UPDATE_CALLBACK.with(|cb| {
+        // borrow() gets read-only access to the data inside a RefCell.
         if let Some(ref callback) = *cb.borrow() {
             callback(old_path, new_path);
         }
@@ -155,11 +159,14 @@ pub fn is_allowed_mime_type(mime_type: &Mime) -> bool {
 /// Returns true if the current file should not support saving (i.e., is media content),
 /// false if it's a text file that can be edited and saved.
 fn is_current_file_non_editable(
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     active_tab_path: Option<&Rc<RefCell<Option<PathBuf>>>>,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     editor_notebook: Option<&gtk4::Notebook>,
 ) -> bool {
     // Check if we have an active file path
     if let Some(tab_path_ref) = active_tab_path {
+        // borrow() gets read-only access to the data inside a RefCell.
         if let Some(file_path) = tab_path_ref.borrow().as_ref() {
             let mut mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
 
@@ -250,6 +257,7 @@ fn has_audio_controls(box_widget: &gtk4::Box) -> bool {
 pub fn update_file_list(
     file_list_box: &ListBox,
     current_dir: &PathBuf,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     file_path: &Option<PathBuf>,
     selection_source: FileSelectionSource,
 ) {
@@ -366,6 +374,7 @@ pub fn update_file_list(
         // Scroll to make the selected row visible (preferably centered)
         // Use timeout to ensure the row is properly laid out before scrolling
         let row_clone = row.clone();
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         glib::timeout_add_local_once(std::time::Duration::from_millis(10), move || {
             // Get the parent ScrolledWindow to control scrolling
             let mut parent = row_clone.parent();
@@ -409,8 +418,10 @@ pub fn update_file_list(
 pub fn update_save_buttons_visibility(
     save_button: &Button,
     save_as_button: &Button,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     mime_type: Option<mime_guess::Mime>,
 ) {
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match mime_type {
         // For images and audio files, disable save functionality since we don't support editing
         Some(mime) if mime.type_() == "image" || mime.type_() == "audio" => {
@@ -432,6 +443,7 @@ pub fn update_save_menu_button_visibility(
     save_menu_button: &MenuButton,
     mime_type: Option<mime_guess::Mime>,
 ) {
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match mime_type {
         // Hide menu button for images and audio files since saving is not supported
         Some(mime) if mime.type_() == "image" || mime.type_() == "audio" => {
@@ -497,6 +509,7 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
 
     // Add each path component with its full path
     for component in path.components() {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match component {
             std::path::Component::Normal(os_str) => {
                 if let Some(name) = os_str.to_str() {
@@ -531,10 +544,13 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
 /// allowing the user to click on any folder to navigate directly to it.
 pub fn update_path_buttons(
     path_box: &gtk4::Box,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
+    // borrow() gets read-only access to the data inside a RefCell.
     let current_path = current_dir.borrow().clone();
     // Clear any existing buttons
     while let Some(child) = path_box.first_child() {
@@ -638,6 +654,7 @@ fn setup_path_button_drop_target(button: &gtk4::Button, target_path: &std::path:
     );
 
     let target_path_clone = target_path.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     drop_target.connect_drop(move |target, value, _x, _y| {
         // Remove visual feedback immediately
         if let Some(widget) = target.widget() {
@@ -663,6 +680,7 @@ fn setup_path_button_drop_target(button: &gtk4::Button, target_path: &std::path:
         gdk::DragAction::MOVE
     });
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     drop_target.connect_leave(move |target| {
         if let Some(widget) = target.widget() {
             widget.remove_css_class("path-drop-target");
@@ -679,6 +697,7 @@ fn setup_path_button_drop_target(button: &gtk4::Button, target_path: &std::path:
 /// manually type a path and press Enter to navigate to it.
 pub fn toggle_path_input_mode(
     path_box: &gtk4::Box,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
@@ -827,6 +846,7 @@ fn show_path_input(
             // Remove error styling after a short delay
             let entry_weak = glib::object::WeakRef::new();
             entry_weak.set(Some(entry));
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             glib::timeout_add_local_once(std::time::Duration::from_secs(3), move || {
                 if let Some(e) = entry_weak.upgrade() {
                     if let Some(entry_widget) = e.downcast_ref::<Entry>() {
@@ -989,6 +1009,7 @@ pub fn setup_keyboard_shortcuts(
         
         // Handle keyboard shortcuts with Ctrl modifier
         if ctrl_pressed && !alt_pressed {
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match keyval.name().as_deref() {
                 // File operations
                 // Ctrl+S: Save or Ctrl+Shift+S: Save As
@@ -1481,6 +1502,7 @@ mod tests {
 
     #[test]
     fn test_is_allowed_mime_type_xml() {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let xml_mime = "application/xml".parse::<mime_guess::Mime>().unwrap();
         assert!(is_allowed_mime_type(&xml_mime));
     }
@@ -1490,8 +1512,10 @@ mod tests {
         use mime_guess::mime;
         assert!(!is_allowed_mime_type(&mime::IMAGE_PNG));
         assert!(!is_allowed_mime_type(&mime::IMAGE_JPEG));
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let video_mp4 = "video/mp4".parse::<mime_guess::Mime>().unwrap();
         assert!(!is_allowed_mime_type(&video_mp4));
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let audio_mp3 = "audio/mpeg".parse::<mime_guess::Mime>().unwrap();
         assert!(!is_allowed_mime_type(&audio_mp3));
     }
@@ -1507,6 +1531,7 @@ mod tests {
 
     #[test]
     fn test_path_components() {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let temp_dir = TempDir::new().unwrap();
         let test_path = temp_dir.path().join("folder1/folder2/file.txt");
         

@@ -108,8 +108,10 @@ enum ExtCommand {
     Transform { label: String, script_path: PathBuf },
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl ExtCommand {
     fn label(&self) -> &str {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match self {
             ExtCommand::Command { label, .. } | ExtCommand::Transform { label, .. } => label,
         }
@@ -118,6 +120,7 @@ impl ExtCommand {
         self.label().to_lowercase().contains(query)
     }
     fn execute(&self) {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match self {
             ExtCommand::Command { script_path, .. } => {
                 extensions::hooks::run_extension_command_on_active_editor(script_path);
@@ -293,6 +296,7 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
     move_drag_gesture.set_propagation_phase(gtk4::PropagationPhase::Capture);
     let window_for_move = window.clone();
     let search_entry_for_move = search_entry.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     move_drag_gesture.connect_drag_begin(move |_, start_x, start_y| {
         if let Some((window_x, window_y)) =
             search_entry_for_move.translate_coordinates(&window_for_move, start_x, start_y)
@@ -329,6 +333,7 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
     let window_weak_for_activate = window_weak.clone();
     let popover_clone_for_activate = popover_clone.clone();
     let entry_clone_for_activate = entry_clone.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     listbox.connect_row_activated(move |_, row| {
         if let Some(label) = row.child().and_then(|w| w.downcast::<gtk4::Label>().ok()) {
             let text = label.text();
@@ -394,6 +399,7 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
 
         // Cancel any existing debounce timeout
         {
+            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
             if let Some(timeout_id) = search_debounce_id.borrow_mut().take() {
                 timeout_id.remove();
             }
@@ -406,6 +412,7 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
         let search_text_debounced = search_text.clone();
         let debounce_id_for_timeout = search_debounce_id.clone();
 
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         let timeout_id = glib::timeout_add_local(std::time::Duration::from_millis(300), move || {
             // Clear previous results
             while let Some(child) = listbox_for_search.first_child() {
@@ -460,8 +467,10 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
                 // Force popover to close and reopen to recalculate size
                 popover_for_search.popdown();
                 let listbox_for_select = listbox_for_search.clone();
+                // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
                 glib::idle_add_local_once({
                     let popover = popover_for_search.clone();
+                    // The "move" keyword forces the closure to take ownership of the variables it uses.
                     move || {
                         popover.popup();
                         // Auto-select the first row so Return key can execute it
@@ -556,6 +565,7 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
         let shift_pressed = state.contains(ModifierType::SHIFT_MASK);
         let other_modifiers = state.contains(ModifierType::CONTROL_MASK | ModifierType::ALT_MASK | ModifierType::SUPER_MASK);
         
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match keyval {
             Key::Tab => {
                 // Tab: cycle forward through results, Shift+Tab: cycle backward
@@ -838,6 +848,7 @@ pub fn update_all_buffer_themes(window: &impl IsA<gtk4::Widget>) {
         let detected_dark_mode = syntax::is_dark_mode_enabled();
         if detected_dark_mode != is_dark {
             println!(
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 "Warning: Dark mode setting ({}) doesn't match detected preference ({}), fixing...",
                 if is_dark { "enabled" } else { "disabled" },
                 if detected_dark_mode {
@@ -1023,6 +1034,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let volume_control_clone = volume_control_box.clone();
     let active_tab_path_for_volume = active_tab_path.clone();
     glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
+        // borrow() gets read-only access to the data inside a RefCell.
         let current_path = active_tab_path_for_volume.borrow().clone();
         ui::update_volume_control_visibility_for_tab(&volume_control_clone, &current_path);
         glib::ControlFlow::Continue
@@ -1247,6 +1259,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Shared list of extension sidebar panel buttons (populated later)
     let ext_panel_buttons: std::rc::Rc<std::cell::RefCell<Vec<gtk4::ToggleButton>>> =
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
 
     // See FEATURES.md: Feature #19 — Three-Panel Sidebar System
@@ -1264,6 +1277,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             search_button_clone.set_active(false);
             git_diff_button_clone.set_active(false);
             extensions_button_clone.set_active(false);
+            // borrow() gets read-only access to the data inside a RefCell.
             for b in ext_panel_buttons_1.borrow().iter() { b.set_active(false); }
             sidebar_stack_clone.set_visible_child_name("explorer");
             // Show the sidebar by setting the first child visible
@@ -1308,6 +1322,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             explorer_button_clone.set_active(false);
             git_diff_button_clone2.set_active(false);
             extensions_button_clone2.set_active(false);
+            // borrow() gets read-only access to the data inside a RefCell.
             for b in ext_panel_buttons_2.borrow().iter() { b.set_active(false); }
             sidebar_stack_clone2.set_visible_child_name("search");
             // Show the sidebar by setting the first child visible
@@ -1352,6 +1367,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             explorer_button_clone2.set_active(false);
             search_button_clone2.set_active(false);
             extensions_button_clone3.set_active(false);
+            // borrow() gets read-only access to the data inside a RefCell.
             for b in ext_panel_buttons_3.borrow().iter() { b.set_active(false); }
             sidebar_stack_clone3.set_visible_child_name("git-diff");
             // Show the sidebar by setting the first child visible
@@ -1517,6 +1533,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 }
             });
 
+            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
             ext_panel_buttons.borrow_mut().push(btn.clone());
             let activity_bar_ref = imp.activity_bar.get();
             activity_bar_ref.append(&btn);
@@ -1537,6 +1554,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     
     // Track the initial state
     let drag_start_width = Rc::new(RefCell::new(0i32));
+    // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
     let drag_was_visible = Rc::new(RefCell::new(false));
     
     let drag_start_width_clone = drag_start_width.clone();
@@ -1943,6 +1961,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         if let Some(current_page) = editor_notebook_clone_for_close.current_page() {
             // Remove from file path manager
             file_path_manager_clone_for_close
+                // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                 .borrow_mut()
                 .remove(&current_page);
             // Close the tab
@@ -1958,6 +1977,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             if editor_notebook_clone_for_close_all.n_pages() > 0 {
                 let last_page = editor_notebook_clone_for_close_all.n_pages() - 1;
                 file_path_manager_clone_for_close_all
+                    // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                     .borrow_mut()
                     .remove(&last_page);
                 editor_notebook_clone_for_close_all.remove_page(Some(last_page));
@@ -2180,6 +2200,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 crate::status_log::log_error("No active tab found");
                 return;
             }
+            // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let current_page_num = current_page_num_opt.unwrap();
 
             // Look up the file path associated with this tab
@@ -2893,6 +2914,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let file_list_box_clone = file_list_box.clone();
         let current_dir_clone = current_dir.clone();
 
+        // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
         glib::idle_add_local(move || {
             // Process all pending file open requests
             while let Ok((file_path, line, column)) = receiver.try_recv() {
@@ -2928,6 +2950,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                             {
                                 // Use idle_add to ensure the view is fully focused and ready
                                 let source_view_clone = source_view.clone();
+                                // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
                                 glib::idle_add_local_once(move || {
                                     handlers::jump_to_line_and_column(&source_view_clone, line, column);
                                 });
@@ -2964,6 +2987,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                                 {
                                     // Use idle_add to ensure the view is fully loaded before jumping
                                     let source_view_clone = source_view.clone();
+                                    // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
                                     glib::idle_add_local_once(move || {
                                         handlers::jump_to_line_and_column(
                                             &source_view_clone,
@@ -3270,6 +3294,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     // User chose "Close Anyway" - force quit
                     println!("Closing anyway, quitting application...");
                     app_for_dialog.quit();
+                    // thread::spawn creates a new background thread to run operations without blocking the main UI.
                     std::thread::spawn(|| {
                         std::thread::sleep(std::time::Duration::from_millis(300));
                         std::process::exit(0);
@@ -3477,6 +3502,7 @@ fn update_cursor_position_status(
     text_view: &sourceview5::View,
     status_label: &Label,
     filename: &str,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     file_path: Option<&std::path::Path>,
 ) {
     let buffer = text_view.buffer();

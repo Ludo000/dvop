@@ -25,6 +25,7 @@ use std::collections::{HashMap, HashSet};
 #[derive(Clone)]
 struct StackElement {
     tag_name: String,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     class_name: Option<String>,
 }
 
@@ -46,6 +47,7 @@ pub fn lint_gtk_ui(content: &str) -> Vec<Diagnostic> {
     let known_properties = get_known_gtk4_properties();
 
     loop {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
                 let tag_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
@@ -152,6 +154,7 @@ fn validate_object_element(
             let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
             let value = String::from_utf8_lossy(&attr.value).to_string();
 
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match key.as_str() {
                 "class" => {
                     has_class = true;
@@ -216,6 +219,7 @@ fn validate_template_element(
     for attr in element.attributes().flatten() {
         let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
         
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match key.as_str() {
             "class" => has_class = true,
             "parent" => has_parent = true,
@@ -323,6 +327,7 @@ fn check_deprecated_attributes(
                 // Check for GTK3-specific properties that were removed in GTK4
                 if key == "name" {
                     let value = String::from_utf8_lossy(&attr.value).to_string();
+                    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                     match value.as_str() {
                         "stock" | "use-stock" | "stock-id" => {
                             diagnostics.push(Diagnostic::new(

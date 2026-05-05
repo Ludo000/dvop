@@ -38,10 +38,12 @@ type RowIndexMap = Rc<RefCell<HashMap<String, Vec<(usize, glib::WeakRef<ListBoxR
 
 // Channel for sending messages to the diagnostics panel
 static DIAGNOSTICS_SENDER: Lazy<Arc<Mutex<Option<Sender<DiagnosticMessage>>>>> =
+    // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     Lazy::new(|| Arc::new(Mutex::new(None)));
 
 // Track expansion state per file so refreshes don't collapse everything
 static EXPANSION_STATE: Lazy<Arc<Mutex<HashMap<String, bool>>>> =
+    // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 // Type alias for refresh callback
@@ -49,12 +51,14 @@ type RefreshCallback = Box<dyn Fn() + Send + 'static>;
 
 // Thread-local callback for refresh button
 thread_local! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static REFRESH_CALLBACK: RefCell<Option<Arc<RefreshCallback>>> = RefCell::new(None);
 }
 
 // Note: Row indices and expander references are kept per-panel (not static) to avoid
 // Send/Sync constraints on GTK objects; they live inside the UI thread.
 
+// #[derive(...)] asks the compiler to automatically generate basic trait implementations.
 #[derive(Debug, Clone)]
 enum DiagnosticMessage {
     Clear,
@@ -73,6 +77,7 @@ enum DiagnosticMessage {
     },
 }
 
+// #[derive(...)] asks the compiler to automatically generate basic trait implementations.
 #[derive(Debug, Clone)]
 struct DiagnosticItem {
     line: usize,
@@ -111,7 +116,9 @@ pub fn create_diagnostics_panel() -> GtkBox {
     
     // Per-panel indices for focusing
     let row_index: RowIndexMap = Rc::new(RefCell::new(HashMap::new()));
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     let file_expanders: Rc<RefCell<HashMap<String, glib::WeakRef<Expander>>>> =
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(RefCell::new(HashMap::new()));
 
     // Receive messages on the main thread and update the ListBox
@@ -119,9 +126,11 @@ pub fn create_diagnostics_panel() -> GtkBox {
     let summary_box_for_rx = summary_box.clone();
     let row_index_for_rx = row_index.clone();
     let file_expanders_for_rx = file_expanders.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     glib::idle_add_local(move || {
         // Process all pending messages
         while let Ok(msg) = rx.try_recv() {
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match msg {
                 DiagnosticMessage::Clear => {
                     // Remove all children
@@ -177,6 +186,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     let expander = Expander::new(None::<&str>);
                     // Restore previous expansion state if any
                     let expanded = EXPANSION_STATE
+                        // lock() acquires the Mutex lock. It blocks until the lock is available.
                         .lock()
                         .ok()
                         .and_then(|m| m.get(&file_path).cloned())
@@ -221,8 +231,10 @@ pub fn create_diagnostics_panel() -> GtkBox {
 
                     // Listen for expansion changes to persist state
                     let file_path_for_notify = file_path.clone();
+                    // The "move" keyword forces the closure to take ownership of the variables it uses.
                     expander.connect_notify_local(Some("expanded"), move |expander, _| {
                         let is_expanded = expander.is_expanded();
+                        // lock() acquires the Mutex lock. It blocks until the lock is available.
                         if let Ok(mut map) = EXPANSION_STATE.lock() {
                             map.insert(file_path_for_notify.clone(), is_expanded);
                         }
@@ -237,6 +249,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     for diag in diagnostics {
                         let item_box = GtkBox::new(Orientation::Horizontal, 8);
                         
+                        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                         let icon_name = match diag.severity {
                             crate::linter::DiagnosticSeverity::Error => "dialog-error-symbolic",
                             crate::linter::DiagnosticSeverity::Warning => "dialog-warning-symbolic",
@@ -278,6 +291,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         
                         // Add rule label and icon if rule is present with context-specific icon
                         if !diag.rule.is_empty() {
+                            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                             let icon_name = match diag.rule.as_str() {
                                 // Dead code / unused
                                 "dead_code" | "unused_variable" | "unused_imports" | "unused_mut" => "user-trash-symbolic",
@@ -322,6 +336,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         gesture.set_propagation_phase(gtk4::PropagationPhase::Capture);
                         
                         let file_path_for_gesture = file_path_clone.clone();
+                        // The "move" keyword forces the closure to take ownership of the variables it uses.
                         gesture.connect_pressed(move |gesture, _, _, _| {
                             gesture.set_state(gtk4::EventSequenceState::Claimed);
                             
@@ -369,6 +384,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         };
                         let row_for_menu = row.clone();
                         
+                        // The "move" keyword forces the closure to take ownership of the variables it uses.
                         right_click.connect_pressed(move |gesture, _, x, y| {
                             gesture.set_state(gtk4::EventSequenceState::Claimed);
                             
@@ -433,11 +449,13 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     expander.set_child(Some(&file_list_box));
                     // Store expander reference for this file
                     file_expanders_for_rx
+                        // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                         .borrow_mut()
                         .insert(file_path.clone(), expander.downgrade());
 
                     // Store row index for this file
                     row_index_for_rx
+                        // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                         .borrow_mut()
                         .insert(file_path.clone(), file_rows);
                     
@@ -505,6 +523,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
     
     refresh_button.connect_clicked(|_| {
         REFRESH_CALLBACK.with(|cell| {
+            // borrow() gets read-only access to the data inside a RefCell.
             if let Some(ref callback) = *cell.borrow() {
                 callback();
             }
@@ -521,6 +540,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
 
 /// Clear all diagnostics from the panel
 pub fn clear_diagnostics() {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(guard) = DIAGNOSTICS_SENDER.lock() {
         if let Some(sender) = guard.as_ref() {
             let _ = sender.send(DiagnosticMessage::Clear);
@@ -563,6 +583,7 @@ pub fn display_file_diagnostics(file_uri: &str, diagnostics: &[crate::linter::Di
 
 /// Update the summary header with total diagnostic counts
 pub fn update_summary(total_errors: usize, total_warnings: usize, total_infos: usize) {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(guard) = DIAGNOSTICS_SENDER.lock() {
         if let Some(sender) = guard.as_ref() {
             let msg = DiagnosticMessage::UpdateSummary {
@@ -597,6 +618,7 @@ where
 /// Trigger the refresh callback (useful for manual refresh from other parts of the code)
 pub fn trigger_refresh() {
     REFRESH_CALLBACK.with(|cell| {
+        // borrow() gets read-only access to the data inside a RefCell.
         if let Some(ref callback) = *cell.borrow() {
             callback();
         }

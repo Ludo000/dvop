@@ -37,20 +37,26 @@ use gstreamer::{Pipeline, State};
 /// Global video playback manager to coordinate multiple video players
 #[derive(Clone)]
 struct GlobalVideoManager {
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     active_players: Arc<Mutex<Vec<(gstreamer::Pipeline, String)>>>, // (pipeline, unique_id)
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     stopped_notifications: Arc<Mutex<Vec<String>>>, // List of player IDs that should be notified of stopping
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl GlobalVideoManager {
     fn new() -> Self {
         Self {
+            // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
             active_players: Arc::new(Mutex::new(Vec::new())),
+            // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
             stopped_notifications: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
     /// Register a new video player pipeline with a unique ID
     fn register_player(&self, pipeline: &gstreamer::Pipeline, player_id: String) {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut players = self.active_players.lock().unwrap();
 
         // Clean up any pipelines that have been set to NULL state (destroyed)
@@ -80,6 +86,7 @@ impl GlobalVideoManager {
 
     /// Check if this player was stopped by another and should update its UI
     fn check_and_clear_stop_notification(&self, player_id: &str) -> bool {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut notifications = self.stopped_notifications.lock().unwrap();
         if let Some(pos) = notifications.iter().position(|id| id == player_id) {
             notifications.remove(pos);
@@ -91,7 +98,9 @@ impl GlobalVideoManager {
 
     /// Stop all other video players except the one that's starting to play
     fn stop_other_players(&self, current_pipeline: &gstreamer::Pipeline, current_player_id: &str) {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut players = self.active_players.lock().unwrap();
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut notifications = self.stopped_notifications.lock().unwrap();
 
         let mut stopped_count = 0;
@@ -164,6 +173,7 @@ impl GlobalVideoManager {
 
     /// Clean up dead pipelines
     fn cleanup_dead_players(&self) {
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let mut players = self.active_players.lock().unwrap();
         let original_count = players.len();
         players.retain(|(p, _)| p.current_state() != gstreamer::State::Null);
@@ -175,7 +185,9 @@ impl GlobalVideoManager {
 
     /// Stop all video players associated with a specific file path
     fn stop_players_for_file(&self, file_path: &std::path::Path) {
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let mut players = self.active_players.lock().unwrap();
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let mut notifications = self.stopped_notifications.lock().unwrap();
 
         let file_name = file_path
@@ -265,6 +277,7 @@ pub fn stop_video_for_file(file_path: &std::path::Path) {
 /// Public function to stop all currently playing video players
 /// This should be called when an audio player starts playing
 pub fn stop_all_video_players() {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     let players = GLOBAL_VIDEO_MANAGER.active_players.lock().unwrap();
     let mut notifications = GLOBAL_VIDEO_MANAGER.stopped_notifications.lock().unwrap();
 
@@ -284,10 +297,13 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(
     video_picture: &gtk4::Picture,
     _parent_window: &W,
     pipeline: &Pipeline,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     is_playing: &Rc<RefCell<bool>>,
     play_button: &Button,
     player_id: &str,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     duration: &Rc<RefCell<Option<u64>>>,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     current_position: &Rc<RefCell<u64>>,
 ) {
     // Store the original parent so we can restore it later
@@ -323,6 +339,7 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(
 
     // Delay fullscreen to ensure proper initialization
     let fullscreen_window_fs = fullscreen_window.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     glib::timeout_add_local_once(Duration::from_millis(50), move || {
         fullscreen_window_fs.fullscreen();
     });
@@ -339,7 +356,9 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(
     let duration_keys = duration.clone();
     let current_position_keys = current_position.clone();
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     key_controller.connect_key_pressed(move |_controller, key, _code, _modifier| {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match key {
             // Escape or F: Exit fullscreen
             gtk4::gdk::Key::Escape | gtk4::gdk::Key::f | gtk4::gdk::Key::F => {
@@ -361,6 +380,7 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(
 
             // Space or K: Play/Pause toggle
             gtk4::gdk::Key::space | gtk4::gdk::Key::k | gtk4::gdk::Key::K => {
+                // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                 let mut playing = is_playing_keys.borrow_mut();
                 if *playing {
                     // Pause
@@ -388,6 +408,7 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(
 
             // Left arrow: Seek backward 5 seconds
             gtk4::gdk::Key::Left => {
+                // borrow() gets read-only access to the data inside a RefCell.
                 let current_pos = *current_position_keys.borrow();
                 let new_pos = current_pos.saturating_sub(5);
                 let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
@@ -401,7 +422,9 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(
 
             // Right arrow: Seek forward 5 seconds
             gtk4::gdk::Key::Right => {
+                // borrow() gets read-only access to the data inside a RefCell.
                 if let Some(dur) = *duration_keys.borrow() {
+                    // borrow() gets read-only access to the data inside a RefCell.
                     let current_pos = *current_position_keys.borrow();
                     let new_pos = (current_pos + 5).min(dur);
                     let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
@@ -416,6 +439,7 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(
 
             // J: Seek backward 10 seconds
             gtk4::gdk::Key::j | gtk4::gdk::Key::J => {
+                // borrow() gets read-only access to the data inside a RefCell.
                 let current_pos = *current_position_keys.borrow();
                 let new_pos = current_pos.saturating_sub(10);
                 let seek_time = gstreamer::ClockTime::from_seconds(new_pos);
@@ -481,6 +505,7 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(
     // Also restore on window close
     let video_picture_close = video_picture.clone();
     let original_parent_close = original_parent.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     fullscreen_window.connect_close_request(move |_| {
         println!("Video: Fullscreen window closing, restoring video");
 
@@ -506,6 +531,7 @@ pub struct VideoPlayer {
     pipeline: Pipeline,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl VideoPlayer {
     /// Creates a new video player widget for the given video file
     pub fn new(video_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
@@ -638,6 +664,7 @@ impl VideoPlayer {
         let pipeline = gstreamer::ElementFactory::make("playbin")
             .property("uri", format!("file://{}", video_path.display()))
             .build()
+            // Box::new(...) allocates the data on the heap rather than the stack.
             .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?
             .downcast::<gstreamer::Pipeline>()
             .map_err(|_| -> Box<dyn std::error::Error> { "Failed to cast to pipeline".into() })?;
@@ -649,6 +676,7 @@ impl VideoPlayer {
         // Defer the sink setup to avoid blocking
         let pipeline_sink_setup = pipeline.clone();
         let video_picture_clone = video_picture.clone();
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         glib::timeout_add_local_once(Duration::from_millis(50), move || {
             println!("Video: Setting up video sink asynchronously...");
 
@@ -691,6 +719,7 @@ impl VideoPlayer {
         // Instead, prepare it asynchronously after the widget is created
         let pipeline_async = pipeline.clone();
         glib::timeout_add_local_once(Duration::from_millis(100), move || {
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match pipeline_async.set_state(State::Paused) {
                 Ok(_) => println!("Video: Pipeline set to PAUSED state"),
                 Err(e) => println!("Video: Warning - could not set pipeline to PAUSED: {:?}", e),
@@ -699,8 +728,11 @@ impl VideoPlayer {
 
         // State tracking
         let current_position = Rc::new(RefCell::new(0u64));
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         let duration = Rc::new(RefCell::new(None));
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         let is_playing = Rc::new(RefCell::new(false));
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         let is_seeking = Rc::new(RefCell::new(false));
 
         // Create a unique player ID
@@ -724,6 +756,7 @@ impl VideoPlayer {
         let _bus_watch = bus
             .add_watch(move |_, msg| {
                 use gstreamer::MessageView;
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match msg.view() {
                     MessageView::Error(err) => {
                         println!(
@@ -770,10 +803,12 @@ impl VideoPlayer {
 
         play_button.connect_clicked(move |_| {
             println!("Video: Play button clicked!");
+            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
             let mut playing = is_playing_play.borrow_mut();
             if *playing {
                 // Pause
                 println!("Video: Pausing playback");
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match pipeline_play.set_state(State::Paused) {
                     Ok(_) => {
                         *playing = false;
@@ -977,6 +1012,7 @@ impl VideoPlayer {
             match key {
                 // Space or K: Play/Pause toggle
                 gtk4::gdk::Key::space | gtk4::gdk::Key::k | gtk4::gdk::Key::K => {
+                    // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                     let mut playing = is_playing_keys.borrow_mut();
                     if *playing {
                         // Pause

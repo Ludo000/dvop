@@ -57,12 +57,15 @@ pub struct SearchState {
     pub search_entry: SearchEntry,
     pub replace_entry: Entry,
     pub replace_box: GtkBox,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     pub search_context: Rc<RefCell<Option<SearchContext>>>,
     pub current_match_label: Label,
     pub revealer: Revealer,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     pub source_view: Rc<RefCell<Option<sourceview5::View>>>,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl SearchState {
     /// Creates a new search state with UI components
     pub fn new() -> Self {
@@ -132,7 +135,9 @@ impl SearchState {
         // Set the revealer as the child of the search bar
         search_bar.set_child(Some(&revealer));
 
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         let search_context = Rc::new(RefCell::new(None));
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         let source_view = Rc::new(RefCell::new(None));
 
         let search_state = SearchState {
@@ -177,8 +182,10 @@ impl SearchState {
         // Handle search entry changes
         let search_context_clone = search_context.clone();
         let current_match_label_clone = current_match_label.clone();
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         search_entry.connect_search_changed(move |entry| {
             let search_text = entry.text();
+            // borrow() gets read-only access to the data inside a RefCell.
             if let Some(context) = search_context_clone.borrow().as_ref() {
                 let settings = context.settings();
                 settings.set_search_text(Some(&search_text));
@@ -195,7 +202,9 @@ impl SearchState {
         // Handle Enter key to find next
         let search_context_clone = search_context.clone();
         let current_match_label_clone = current_match_label.clone();
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         search_entry.connect_activate(move |_| {
+            // borrow() gets read-only access to the data inside a RefCell.
             if let Some(context) = search_context_clone.borrow().as_ref() {
                 // Find mode: ensure we don't require a double Enter when no selection yet
                 let buffer = context.buffer();
@@ -230,7 +239,9 @@ impl SearchState {
         // Handle previous button
         let search_context_clone = search_context.clone();
         let current_match_label_clone = current_match_label.clone();
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         prev_button.connect_clicked(move |_| {
+            // borrow() gets read-only access to the data inside a RefCell.
             if let Some(context) = search_context_clone.borrow().as_ref() {
                 Self::find_previous(context);
                 Self::update_match_count(&current_match_label_clone, context);
@@ -240,7 +251,9 @@ impl SearchState {
         // Handle next button
         let search_context_clone = search_context.clone();
         let current_match_label_clone = current_match_label.clone();
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         next_button.connect_clicked(move |_| {
+            // borrow() gets read-only access to the data inside a RefCell.
             if let Some(context) = search_context_clone.borrow().as_ref() {
                 Self::find_next(context);
                 Self::update_match_count(&current_match_label_clone, context);
@@ -309,7 +322,9 @@ impl SearchState {
     /// Shows the search bar and focuses the search entry
     pub fn show_search(
         &self,
+        // Option<T> is an enum that represents an optional value: either Some(T) or None.
         text_buffer: Option<&sourceview5::Buffer>,
+        // Option<T> is an enum that represents an optional value: either Some(T) or None.
         source_view: Option<&sourceview5::View>,
     ) {
         self.show_search_internal(text_buffer, source_view, true);
@@ -318,7 +333,9 @@ impl SearchState {
     /// Shows only the find functionality (without replace)
     pub fn show_find_only(
         &self,
+        // Option<T> is an enum that represents an optional value: either Some(T) or None.
         text_buffer: Option<&sourceview5::Buffer>,
+        // Option<T> is an enum that represents an optional value: either Some(T) or None.
         source_view: Option<&sourceview5::View>,
     ) {
         self.show_search_internal(text_buffer, source_view, false);
@@ -509,6 +526,7 @@ impl SearchState {
 
         // If there's currently selected text, start searching after it
         if buffer.has_selection() {
+            // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let (_start, end) = buffer.selection_bounds().unwrap();
             start_iter = end;
         }
@@ -535,6 +553,7 @@ impl SearchState {
 
         // If there's currently selected text, start searching before it
         if buffer.has_selection() {
+            // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let (start, _end) = buffer.selection_bounds().unwrap();
             end_iter = start;
         }
@@ -645,11 +664,13 @@ static mut SEARCH_STATE: Option<SearchState> = None;
 /// are !Send / !Sync and can't live in thread-safe singletons. All access happens on the
 /// main GTK thread, so this is safe in practice.
 #[allow(static_mut_refs)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_search_state() -> &'static SearchState {
     unsafe {
         if SEARCH_STATE.is_none() {
             SEARCH_STATE = Some(SearchState::new());
         }
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         SEARCH_STATE.as_ref().unwrap()
     }
 }

@@ -49,6 +49,7 @@ pub struct ExtensionManifest {
     #[serde(default)]
     pub enabled: bool,
     #[serde(default)]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub icon: Option<String>,
     /// If true, this extension is a built-in native extension (code compiled in, no scripts).
     #[serde(default)]
@@ -63,10 +64,12 @@ pub struct ExtensionContributions {
     /// Script whose stdout is shown in the status bar.
     /// Called with the current file path as $1.
     #[serde(default)]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub status_bar: Option<StatusBarContribution>,
 
     /// CSS file to inject into the app (overrides default styles).
     #[serde(default)]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub css: Option<CssContribution>,
 
     /// Keyboard shortcuts bound to scripts.
@@ -79,6 +82,7 @@ pub struct ExtensionContributions {
 
     /// Context menu entries for editor and file explorer.
     #[serde(default)]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub context_menus: Option<ContextMenuContributions>,
 
     /// Linter scripts invoked per-language.
@@ -228,7 +232,9 @@ pub struct Extension {
     pub path: std::path::PathBuf,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl Extension {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new(manifest: ExtensionManifest, path: std::path::PathBuf) -> Self {
         Self { manifest, path }
     }

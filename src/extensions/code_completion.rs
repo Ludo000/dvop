@@ -27,7 +27,9 @@ lazy_static::lazy_static! {
 
 pub struct CodeCompletionExtension;
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl CodeCompletionExtension {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new() -> Self {
         let enabled = load_enabled_state();
         ENABLED.store(enabled, Ordering::SeqCst);
@@ -35,6 +37,7 @@ impl CodeCompletionExtension {
     }
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl NativeExtension for CodeCompletionExtension {
     fn id(&self) -> &str {
         "code-completion"
@@ -68,6 +71,7 @@ impl NativeExtension for CodeCompletionExtension {
 
 /// Register the code completion extension. Call once during app init.
 pub fn register() {
+    // Box::new(...) allocates the data on the heap rather than the stack.
     super::native::register(Box::new(CodeCompletionExtension::new()));
 }
 

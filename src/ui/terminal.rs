@@ -76,6 +76,7 @@ pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
                 || {},                     // Setup function (none)
                 -1,                        // Default timeout
                 None::<&Cancellable>,      // No cancellation
+                // The "move" keyword forces the closure to take ownership of the variables it uses.
                 move |res| {
                     // Handle spawn errors
                     if let Err(err) = res {
@@ -224,6 +225,7 @@ pub fn create_terminal_box(terminal: &VteTerminal) -> ScrolledWindow {
 /// See FEATURES.md: Feature #46 — Multiple Terminal Tabs
 pub fn add_terminal_tab_with_toggle(
     terminal_notebook: &Notebook,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     working_dir: Option<PathBuf>,
     editor_paned: &gtk4::Paned,
 ) -> u32 {
@@ -233,7 +235,9 @@ pub fn add_terminal_tab_with_toggle(
 /// Internal function to add a terminal tab with optional paned reference and auto-hide control
 fn add_terminal_tab_with_paned(
     terminal_notebook: &Notebook,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     working_dir: Option<PathBuf>,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     editor_paned: Option<&gtk4::Paned>,
     auto_hide: bool,
 ) -> u32 {
@@ -270,6 +274,7 @@ fn add_terminal_tab_with_paned(
     let notebook_clone = terminal_notebook.clone();
     let terminal_box_clone = terminal_box.clone();
     let editor_paned_clone = editor_paned.cloned();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     tab_close_button.connect_clicked(move |_| {
         // Find the current page number for this tab's content - it may have changed since creation
         if let Some(current_page_num) = notebook_clone.page_num(&terminal_box_clone) {

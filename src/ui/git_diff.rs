@@ -46,16 +46,21 @@ use super::git_diff_panel_template::GitDiffPanel;
 type DiffAlignResult = (
     String,
     String,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     Vec<Option<usize>>,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     Vec<Option<usize>>,
     usize,
     usize,
 );
+// Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
 type CallbackCell = Rc<RefCell<Option<Rc<dyn Fn()>>>>;
 
 // Global git status update callback with debouncing
 thread_local! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static GIT_STATUS_UPDATE_CALLBACK: RefCell<Option<Rc<dyn Fn()>>> = RefCell::new(None);
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static PENDING_UPDATE_TIMEOUT: RefCell<Option<glib::SourceId>> = const { RefCell::new(None) };
 }
 
@@ -88,8 +93,10 @@ pub fn trigger_git_status_update() {
         // Schedule a new update after a short delay (debouncing)
         let new_id = glib::timeout_add_local_once(
             std::time::Duration::from_millis(300),
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             move || {
                 GIT_STATUS_UPDATE_CALLBACK.with(|callback_cell| {
+                    // borrow() gets read-only access to the data inside a RefCell.
                     if let Some(callback) = callback_cell.borrow().as_ref() {
                         callback();
                     }
@@ -106,12 +113,14 @@ pub fn trigger_git_status_update() {
     });
 }
 
+// #[derive(...)] asks the compiler to automatically generate basic trait implementations.
 #[derive(Clone, Debug)]
 struct GitFileChange {
     path: PathBuf,
     status: GitStatus,
 }
 
+// #[derive(...)] asks the compiler to automatically generate basic trait implementations.
 #[derive(Clone, Debug, PartialEq)]
 enum GitStatus {
     Modified,
@@ -123,8 +132,10 @@ enum GitStatus {
     ModifiedStaged,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl GitStatus {
     fn from_git_code(staged_char: char, unstaged_char: char) -> Option<Self> {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match (staged_char, unstaged_char) {
             // Staged changes (first character non-space)
             ('M', ' ') => Some(GitStatus::Staged),
@@ -285,6 +296,7 @@ fn align_diff_content(
     );
 
     for (old_idx, new_idx) in diff_ops {
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match (old_idx, new_idx) {
             (Some(old_i), Some(new_i)) => {
                 // Both sides have content
@@ -662,6 +674,7 @@ fn revert_all_unstaged(repo_path: &Path) -> Result<(), String> {
 /// Reload open files that were reverted (if they don't have unsaved changes)
 fn reload_reverted_files(
     notebook: &gtk4::Notebook,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
     _repo_path: &Path,
 ) {
@@ -719,6 +732,7 @@ fn reload_reverted_files(
 /// Reload a specific file in the editor (if open and no unsaved changes)
 fn reload_file_in_editor(
     notebook: &gtk4::Notebook,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
     file_path: &Path,
 ) {
@@ -870,6 +884,7 @@ fn pull_changes(repo_path: &Path) -> Result<(), String> {
     }
 }
 
+// #[derive(...)] asks the compiler to automatically generate basic trait implementations.
 #[derive(Clone, Debug)]
 struct BranchInfo {
     name: String,
@@ -996,6 +1011,7 @@ fn setup_copy_handler(view: &sourceview5::View, buffer: &sourceview5::Buffer) {
     // Use key event controller to intercept copy operations
     let key_controller = gtk4::EventControllerKey::new();
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     key_controller.connect_key_pressed(move |_, key, _, modifier| {
         // Check for Ctrl+C or Ctrl+Insert
         let is_ctrl = modifier.contains(gtk4::gdk::ModifierType::CONTROL_MASK);
@@ -1116,6 +1132,7 @@ fn setup_minimap_drawing(
     minimap: &DrawingArea,
     scrolled: &gtk4::ScrolledWindow,
     buffer: &sourceview5::Buffer,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     line_changes: &Rc<RefCell<Vec<LineChangeType>>>,
     _is_left: bool,
 ) {
@@ -1164,6 +1181,7 @@ fn setup_minimap_drawing(
             return;
         }
 
+        // borrow() gets read-only access to the data inside a RefCell.
         let changes = line_changes_clone.borrow();
         if changes.is_empty() {
             return;
@@ -1178,6 +1196,7 @@ fn setup_minimap_drawing(
         for (i, change) in changes.iter().enumerate() {
             let y = i as f64 * line_height;
 
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match change {
                 LineChangeType::Added => {
                     // Green for added lines (muted colors)
@@ -1279,20 +1298,24 @@ fn setup_minimap_drawing(
         }
     };
 
+    // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
     let scroll_to_position_rc = Rc::new(RefCell::new(scroll_to_position));
     let scroll_to_position_clone = scroll_to_position_rc.clone();
 
     // On drag begin, scroll to initial position
     drag_gesture.connect_drag_begin(move |_, _start_x, start_y| {
+        // borrow() gets read-only access to the data inside a RefCell.
         let scroll_fn = scroll_to_position_clone.borrow();
         scroll_fn(start_y);
     });
 
     // On drag update, continuously scroll
     let scroll_to_position_clone2 = scroll_to_position_rc.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     drag_gesture.connect_drag_update(move |gesture, _offset_x, offset_y| {
         if let Some((_start_x, start_y)) = gesture.start_point() {
             let current_y = start_y + offset_y;
+            // borrow() gets read-only access to the data inside a RefCell.
             let scroll_fn = scroll_to_position_clone2.borrow();
             scroll_fn(current_y);
         }
@@ -1311,6 +1334,7 @@ fn setup_diff_tab_right_click(tab_box: &gtk4::Box, notebook: &gtk4::Notebook) {
     let notebook_clone = notebook.clone();
     let tab_box_clone = tab_box.clone();
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     right_click_gesture.connect_pressed(move |_, _n_press, x, y| {
         crate::status_log::log_info("Right-click detected on diff tab - showing menu");
         
@@ -1681,6 +1705,7 @@ fn create_diff_tab(
     // Compute diff in background thread
     crate::status_log::log_info(&format!("Computing diff for {}...", tab_title));
     
+    // async move creates an asynchronous block that takes ownership of its captured variables.
     glib::spawn_future_local(async move {
         let result = gtk4::gio::spawn_blocking(move || {
             // This runs in a background thread
@@ -1790,10 +1815,12 @@ fn create_diff_view_content(
     left_minimap.set_vexpand(true);
     left_minimap.set_valign(gtk4::Align::Fill);
 
+    // Box::new(...) allocates the data on the heap rather than the stack.
     let left_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     left_box.set_hexpand(true);
     left_box.append(&left_header);
 
+    // Box::new(...) allocates the data on the heap rather than the stack.
     let left_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
     left_content_box.set_hexpand(true);
     left_content_box.append(&left_scrolled);
@@ -1829,10 +1856,12 @@ fn create_diff_view_content(
     right_minimap.set_vexpand(true);
     right_minimap.set_valign(gtk4::Align::Fill);
 
+    // Box::new(...) allocates the data on the heap rather than the stack.
     let right_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     right_box.set_hexpand(true);
     right_box.append(&right_header);
 
+    // Box::new(...) allocates the data on the heap rather than the stack.
     let right_content_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
     right_content_box.set_hexpand(true);
     right_content_box.append(&right_scrolled);
@@ -2046,7 +2075,9 @@ pub fn create_git_diff_panel(
 
     // State for the panel
     let repo_path_rc: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
+    // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
     let changes_rc: Rc<RefCell<Vec<GitFileChange>>> = Rc::new(RefCell::new(Vec::new()));
+    // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
     let action_group_rc = Rc::new(RefCell::new(gtk4::gio::SimpleActionGroup::new()));
 
     // Create a RefCell to hold the update function (for self-reference)
@@ -2073,6 +2104,7 @@ pub fn create_git_diff_panel(
         let refresh_button_clone = refresh_button_for_actions.clone();
         let update_git_status_rc = update_git_status_rc.clone();
 
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(move || {
             // Clear previous content
             while let Some(child) = staged_files_list.first_child() {
@@ -2140,6 +2172,7 @@ pub fn create_git_diff_panel(
                                 "Switching to branch '{}'...",
                                 branch_name
                             ));
+                            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                             match switch_branch(repo, &branch_name, false) {
                                 Ok(()) => {
                                     crate::status_log::log_success(&format!(
@@ -2154,6 +2187,7 @@ pub fn create_git_diff_panel(
                                     let unstage_all_btn_clone = unstage_all_btn.clone();
                                     let refresh_btn_clone = refresh_btn.clone();
 
+                                    // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
                                     glib::idle_add_local_once(move || {
                                         btn.emit_clicked();
                                         // Re-enable UI elements after refresh
@@ -2245,6 +2279,7 @@ pub fn create_git_diff_panel(
                                     let unstage_all_btn_clone = unstage_all_btn.clone();
                                     let refresh_btn_clone = refresh_btn.clone();
 
+                                    // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
                                     glib::idle_add_local_once(move || {
                                         btn.emit_clicked();
                                         // Re-enable UI elements after refresh
@@ -2383,6 +2418,7 @@ pub fn create_git_diff_panel(
                             ));
                             if let Some(update_fn) = update_rc_clone.borrow().as_ref() {
                                 let update_fn = update_fn.clone();
+                                // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
                                 glib::idle_add_local_once(move || {
                                     update_fn();
                                 });
@@ -2444,6 +2480,7 @@ pub fn create_git_diff_panel(
                             ));
                             if let Some(update_fn) = update_rc_clone.borrow().as_ref() {
                                 let update_fn = update_fn.clone();
+                                // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
                                 glib::idle_add_local_once(move || {
                                     update_fn();
                                 });
@@ -2903,6 +2940,7 @@ pub fn create_git_diff_panel(
             let button_clone = button.clone();
             let update_clone = update_for_fetch.clone();
             
+            // async move creates an asynchronous block that takes ownership of its captured variables.
             glib::spawn_future_local(async move {
                 let result = gtk4::gio::spawn_blocking(move || {
                     std::process::Command::new("git")
@@ -3644,6 +3682,7 @@ pub fn create_git_diff_panel(
                     if let Some(keep_page) = clicked_page_num {
                         while notebook_for_close_right.n_pages() > keep_page + 1 {
                             let last_page = notebook_for_close_right.n_pages() - 1;
+                            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                             file_manager_for_close_right.borrow_mut().remove(&(last_page as u32));
                             notebook_for_close_right.remove_page(Some(last_page));
                         }
@@ -3677,6 +3716,7 @@ pub fn create_git_diff_panel(
                     if let Some(keep_page) = clicked_page_num {
                         for _ in 0..keep_page {
                             if notebook_for_close_left.n_pages() > 1 {
+                                // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                                 file_manager_for_close_left.borrow_mut().remove(&0);
                                 notebook_for_close_left.remove_page(Some(0));
                             }
@@ -3708,11 +3748,13 @@ pub fn create_git_diff_panel(
                         // Close tabs after the kept page first
                         while notebook_for_close_others.n_pages() > keep_page + 1 {
                             let last_page = notebook_for_close_others.n_pages() - 1;
+                            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                             file_manager_for_close_others.borrow_mut().remove(&(last_page as u32));
                             notebook_for_close_others.remove_page(Some(last_page));
                         }
                         // Close tabs before the kept page
                         while keep_page > 0 && notebook_for_close_others.n_pages() > 1 {
+                            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                             file_manager_for_close_others.borrow_mut().remove(&0);
                             notebook_for_close_others.remove_page(Some(0));
                         }
@@ -4300,6 +4342,7 @@ pub fn create_git_diff_panel(
 
     // Update when current directory changes (periodic check)
     let current_dir_for_check = current_dir.clone();
+    // RefCell::new creates a container that checks borrowing rules at runtime.
     let last_checked_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     let update_git_status_for_check = update_git_status.clone();
 

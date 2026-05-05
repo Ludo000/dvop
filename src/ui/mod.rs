@@ -91,9 +91,11 @@ type TextViewComponents = (
     gtk4::ScrolledWindow,
     gtk4::TextView,
     gtk4::TextBuffer,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     Rc<RefCell<Option<PathBuf>>>, // file_path
     Label,                        // error_label
     Picture,                      // picture for images
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     Rc<RefCell<PathBuf>>,         // current_dir
     Notebook,                     // editor_notebook
     GtkBox,                       // tab_widget for the initial tab
@@ -225,6 +227,7 @@ mod imp {
     }
 
     #[glib::object_subclass]
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl ObjectSubclass for DvopWindow {
         const NAME: &'static str = "DvopWindow";
         type Type = super::DvopWindow;
@@ -239,7 +242,9 @@ mod imp {
         }
     }
 
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl ObjectImpl for DvopWindow {}
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl WidgetImpl for DvopWindow {
         fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
             const RESPONSIVE_HEADER_BREAKPOINT: i32 = 950;
@@ -271,6 +276,7 @@ mod imp {
             }
         }
     }
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl WindowImpl for DvopWindow {}
     impl ApplicationWindowImpl for DvopWindow {}
 }
@@ -283,6 +289,7 @@ glib::wrapper! {
 }
 
 impl DvopWindow {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new(app: &Application) -> Self {
         // Apply CSS before creating the window
         css::apply_custom_css();
@@ -323,6 +330,7 @@ impl DvopWindow {
         window
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn update_responsive_layout(&self) {
         let imp = self.imp();
         let width = self.width();
@@ -395,6 +403,7 @@ impl DvopWindow {
         }
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn imp(&self) -> &imp::DvopWindow {
         imp::DvopWindow::from_obj(self)
     }
@@ -505,6 +514,7 @@ pub fn create_text_view(
 
     // Set current directory to the last used folder from settings, or fallback to home directory
     let last_folder = crate::settings::get_settings().get_last_folder();
+    // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
     let current_dir = Rc::new(RefCell::new(
         if last_folder.exists() && last_folder.is_dir() {
             last_folder
@@ -662,10 +672,13 @@ pub fn setup_tab_right_click(
     tab_box: &GtkBox,
     notebook: &Notebook,
     window: &ApplicationWindow,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     new_tab_deps: Option<crate::handlers::NewTabDependencies>,
 ) {
     use gtk4::prelude::*;
@@ -736,6 +749,7 @@ pub fn setup_tab_right_click(
         let window_for_close_right = window_clone.clone();
         let file_path_manager_for_close_right = file_path_manager_clone.clone();
         
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         close_to_right_button.connect_clicked(move |_| {
             crate::status_log::log_info("Closing tabs to the right...");
             
@@ -793,6 +807,7 @@ pub fn setup_tab_right_click(
                     dialog.set_default_response(gtk4::ResponseType::Cancel);
                     
                     let notebook_clone = notebook_for_close_right.clone();
+                    // The "move" keyword forces the closure to take ownership of the variables it uses.
                     dialog.connect_response(move |d, response| {
                         if response == gtk4::ResponseType::Yes {
                             // User confirmed - close tabs to the right without saving
@@ -842,6 +857,7 @@ pub fn setup_tab_right_click(
         let window_for_close_left = window_clone.clone();
         let file_path_manager_for_close_left = file_path_manager_clone.clone();
         
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         close_to_left_button.connect_clicked(move |_| {
             crate::status_log::log_info("Closing tabs to the left...");
             
@@ -904,6 +920,7 @@ pub fn setup_tab_right_click(
                     
                     let notebook_clone = notebook_for_close_left.clone();
                     let tabs_to_close = keep_page; // Capture the number of tabs to close
+                    // The "move" keyword forces the closure to take ownership of the variables it uses.
                     dialog.connect_response(move |d, response| {
                         if response == gtk4::ResponseType::Yes {
                             // User confirmed - close tabs to the left without saving
@@ -1256,6 +1273,7 @@ pub fn create_status_bar(window: &DvopWindow) -> (GtkBox, Label, GtkBox, Label) 
 /// Updates the visibility of the volume control based on active tab content
 pub fn update_volume_control_visibility_for_tab(
     volume_control_box: &GtkBox,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     active_tab_path: &Option<std::path::PathBuf>,
 ) {
     let is_media_tab = active_tab_path
@@ -1274,6 +1292,7 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
 
     // Create the dialog window as an ApplicationWindow for full window controls
     let app_window: &gtk4::ApplicationWindow = parent_window.upcast_ref();
+    // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
     let dialog = gtk4::ApplicationWindow::new(app_window.application().as_ref().unwrap());
     dialog.set_title(Some("Log History"));
     // Don't set as transient or modal to allow minimize/maximize
@@ -1361,6 +1380,7 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
                     })
                     .unwrap_or_else(|_| "just now".to_string());
 
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match log_message.timestamp.duration_since(std::time::UNIX_EPOCH) {
                     Ok(duration) => {
                         let secs = duration.as_secs() as i64;
@@ -1405,6 +1425,7 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
 
             let level_label = Label::new(Some(&format!(
                 "[{}]",
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match log_message.level {
                     status_log::LogLevel::Info => "INFO",
                     status_log::LogLevel::Warning => "WARN",
@@ -1413,6 +1434,7 @@ pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>)
                 }
             )));
 
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             let level_css_class = match log_message.level {
                 status_log::LogLevel::Info => "log-level-info",
                 status_log::LogLevel::Warning => "log-level-warning",

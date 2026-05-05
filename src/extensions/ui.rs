@@ -50,6 +50,7 @@ pub fn populate_extensions_panel(panel: &gtk4::Box) {
     install_button.add_css_class("flat");
     let panel_weak = glib::object::WeakRef::new();
     panel_weak.set(Some(panel));
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     install_button.connect_clicked(move |btn| {
         let panel_ref = panel_weak.clone();
         show_install_dialog(btn, panel_ref);
@@ -63,6 +64,7 @@ pub fn populate_extensions_panel(panel: &gtk4::Box) {
     disable_all_button.add_css_class("flat");
     let panel_weak2 = glib::object::WeakRef::new();
     panel_weak2.set(Some(panel));
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     disable_all_button.connect_clicked(move |_| {
         disable_all_extensions();
         if let Some(panel) = panel_weak2.upgrade() {
@@ -87,6 +89,7 @@ pub fn populate_extensions_panel(panel: &gtk4::Box) {
     scrolled.set_vexpand(true);
     scrolled.set_hscrollbar_policy(gtk4::PolicyType::Never);
 
+    // Box::new(...) allocates the data on the heap rather than the stack.
     let list_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     list_box.add_css_class("extension-list");
 
@@ -113,6 +116,7 @@ pub fn populate_extensions_panel(panel: &gtk4::Box) {
 
     // Wire search filtering
     let list_box_clone = list_box.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     search_entry.connect_search_changed(move |entry| {
         let query = entry.text().to_lowercase();
         let mut child = list_box_clone.first_child();
@@ -170,10 +174,12 @@ fn show_install_dialog(
     filter.add_pattern("*.tar.gz");
     dialog.add_filter(&filter);
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     dialog.connect_response(move |dialog, response| {
         if response == gtk4::ResponseType::Accept {
             if let Some(file) = dialog.file() {
                 if let Some(path) = file.path() {
+                    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                     match super::manager::install_from_archive(&path) {
                         Ok(name) => {
                             crate::status_log::log_success(&format!(
@@ -240,6 +246,7 @@ fn card_matches_query(card: &gtk4::Box, query: &str) -> bool {
 
 /// Builds a single extension card widget
 fn build_extension_card(ext: &Extension, panel: &gtk4::Box) -> gtk4::Box {
+    // Box::new(...) allocates the data on the heap rather than the stack.
     let card = gtk4::Box::new(gtk4::Orientation::Vertical, 4);
     card.add_css_class("extension-card");
     card.set_margin_start(8);
@@ -256,6 +263,7 @@ fn build_extension_card(ext: &Extension, panel: &gtk4::Box) -> gtk4::Box {
     icon.add_css_class("extension-icon");
     top_row.append(&icon);
 
+    // Box::new(...) allocates the data on the heap rather than the stack.
     let name_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     name_box.set_hexpand(true);
 
@@ -373,6 +381,7 @@ fn collect_badges(contribs: &super::ExtensionContributions) -> Vec<&'static str>
 /// Show the detail view for a single extension with vertical tabs
 fn show_extension_detail(panel: &gtk4::Box, ext_id: &str) {
     let mgr = super::manager::get_manager();
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     let ext = match mgr.get_all_extensions().iter().find(|e| e.manifest.id == ext_id) {
         Some(e) => e.clone(),
         None => return,
@@ -452,6 +461,7 @@ fn show_extension_detail(panel: &gtk4::Box, ext_id: &str) {
 
 /// Build a custom vertical tab bar for the detail stack
 fn build_vertical_tab_bar(stack: &gtk4::Stack, has_controls: bool) -> gtk4::Box {
+    // Box::new(...) allocates the data on the heap rather than the stack.
     let bar = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     bar.add_css_class("ext-detail-tab-bar");
     bar.set_size_request(90, -1);
@@ -469,6 +479,7 @@ fn build_vertical_tab_bar(stack: &gtk4::Stack, has_controls: bool) -> gtk4::Box 
 
     let stack_ref = stack.clone();
     let buttons: Vec<gtk4::ToggleButton> = Vec::new();
+    // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
     let buttons_rc = std::rc::Rc::new(std::cell::RefCell::new(buttons));
 
     for (i, (name, label, icon_name)) in tabs.iter().enumerate() {
@@ -497,6 +508,7 @@ fn build_vertical_tab_bar(stack: &gtk4::Stack, has_controls: bool) -> gtk4::Box 
         btn.connect_toggled(move |b| {
             if b.is_active() {
                 stack_clone.set_visible_child_name(&page_name);
+                // borrow() gets read-only access to the data inside a RefCell.
                 let btns = buttons_clone.borrow();
                 for other in btns.iter() {
                     if other != b {
@@ -507,6 +519,7 @@ fn build_vertical_tab_bar(stack: &gtk4::Stack, has_controls: bool) -> gtk4::Box 
         });
 
         bar.append(&btn);
+        // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
         buttons_rc.borrow_mut().push(btn);
     }
 
@@ -642,6 +655,7 @@ fn build_overview_tab(ext: &Extension, panel: &gtk4::Box) -> gtk4::ScrolledWindo
         panel_weak.set(Some(panel));
         uninstall_btn.connect_clicked(move |_| {
             let mut mgr = super::manager::get_manager();
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match mgr.remove_extension(&ext_id_rm) {
                 Ok(name) => {
                     crate::status_log::log_success(&format!("Uninstalled {}", name));
@@ -833,9 +847,11 @@ fn build_controls_tab(ext: &Extension) -> gtk4::ScrolledWindow {
             run_btn.connect_clicked(move |_| {
                 let script_path = ext_path.join(&script);
                 let file_path = super::hooks::ACTIVE_FILE_PATH.with(|fp| {
+                    // borrow() gets read-only access to the data inside a RefCell.
                     fp.borrow().as_ref().map(|p| p.to_string_lossy().into_owned())
                 });
                 let fp = file_path.as_deref().unwrap_or("");
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match super::runner::run_script(&script_path, &[fp, ""], None) {
                     Ok(output) => {
                         if output.is_empty() {
@@ -890,6 +906,7 @@ fn build_controls_tab(ext: &Extension) -> gtk4::ScrolledWindow {
             run_btn.connect_clicked(move |_| {
                 // Get current selection from active editor
                 let result = super::hooks::ACTIVE_NOTEBOOK.with(|nb_cell| {
+                    // borrow() gets read-only access to the data inside a RefCell.
                     let nb_opt = nb_cell.borrow();
                     let nb = nb_opt.as_ref()?;
                     let page_num = nb.current_page()?;
@@ -906,6 +923,7 @@ fn build_controls_tab(ext: &Extension) -> gtk4::ScrolledWindow {
                     let script_path = ext_path.join(&script);
                     let fp = super::hooks::ACTIVE_FILE_PATH
                         .with(|f| {
+                            // borrow() gets read-only access to the data inside a RefCell.
                             f.borrow()
                                 .as_ref()
                                 .map(|p| p.to_string_lossy().into_owned())

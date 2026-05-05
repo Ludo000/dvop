@@ -45,12 +45,16 @@ type DiagnosticCallback = Arc<Mutex<Option<Box<dyn Fn(Uri, Vec<Diagnostic>) + Se
 struct JsonRpcMessage {
     jsonrpc: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     id: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     method: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     params: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     result: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<serde_json::Value>,
@@ -63,12 +67,15 @@ struct JsonRpcMessage {
 /// the process’s stdout on a background thread while the main thread writes
 /// to stdin.
 pub struct LspClient {
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     process: Arc<Mutex<Option<Child>>>,
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     next_id: Arc<Mutex<i32>>,
     diagnostic_callback: DiagnosticCallback,
     workspace_root: PathBuf,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl LspClient {
     /// Spawns the language server and returns a connected `LspClient`.
     ///
@@ -91,6 +98,7 @@ impl LspClient {
 
         // Capture stderr in a separate thread for debugging
         if let Some(stderr) = process.stderr.take() {
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             std::thread::spawn(move || {
                 let reader = BufReader::new(stderr);
                 for line in reader.lines().flatten() {
@@ -100,8 +108,11 @@ impl LspClient {
         }
 
         Ok(Self {
+            // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
             process: Arc::new(Mutex::new(Some(process))),
+            // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
             next_id: Arc::new(Mutex::new(1)),
+            // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
             diagnostic_callback: Arc::new(Mutex::new(None)),
             workspace_root,
         })
@@ -193,6 +204,7 @@ impl LspClient {
 
         // Send shutdown request (no params needed)
         let id = {
+            // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let mut next_id = self.next_id.lock().unwrap();
             let current_id = *next_id;
             *next_id += 1;
@@ -240,6 +252,7 @@ impl LspClient {
         R::Params: Serialize,
     {
         let id = {
+            // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let mut next_id = self.next_id.lock().unwrap();
             let current_id = *next_id;
             *next_id += 1;
@@ -281,6 +294,7 @@ impl LspClient {
         let json = serde_json::to_string(message).map_err(|e| e.to_string())?;
         let content = format!("Content-Length: {}\r\n\r\n{}", json.len(), json);
 
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut process = self.process.lock().unwrap();
         if let Some(ref mut child) = *process {
             if let Some(ref mut stdin) = child.stdin {
@@ -307,6 +321,7 @@ impl LspClient {
         language_id: String,
         version: i32,
         text: String,
+    // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
     ) -> Result<(), String> {
         let params = DidOpenTextDocumentParams {
             text_document: TextDocumentItem {
@@ -349,6 +364,7 @@ impl LspClient {
     where
         F: Fn(Uri, Vec<Diagnostic>) + Send + 'static,
     {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut cb = self.diagnostic_callback.lock().unwrap();
         *cb = Some(Box::new(callback));
     }
@@ -358,7 +374,9 @@ impl LspClient {
         let process = self.process.clone();
         let diagnostic_callback = self.diagnostic_callback.clone();
 
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         std::thread::spawn(move || {
+            // lock() acquires the Mutex lock. It blocks until the lock is available.
             let mut process_guard = process.lock().unwrap();
             if let Some(ref mut child) = *process_guard {
                 if let Some(stdout) = child.stdout.take() {
@@ -432,6 +450,7 @@ impl LspClient {
                             diag_params.uri.as_str()
                         );
 
+                        // lock() acquires the Mutex lock. It blocks until the lock is available.
                         let cb = diagnostic_callback.lock().unwrap();
                         if let Some(ref callback) = *cb {
                             callback(diag_params.uri, diag_params.diagnostics);
@@ -443,8 +462,10 @@ impl LspClient {
     }
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl Drop for LspClient {
     fn drop(&mut self) {
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let mut process = self.process.lock().unwrap();
         if let Some(mut child) = process.take() {
             let _ = child.kill();

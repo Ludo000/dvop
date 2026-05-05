@@ -22,6 +22,7 @@ use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, ListBox, MenuButton, 
 mod imp {
     use super::*;
 
+    // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/example/Dvop/git_diff_panel.ui")]
     pub struct GitDiffPanel {
@@ -54,6 +55,7 @@ mod imp {
     }
 
     #[glib::object_subclass]
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl ObjectSubclass for GitDiffPanel {
         const NAME: &'static str = "DvopGitDiffPanel";
         type Type = super::GitDiffPanel;
@@ -68,8 +70,11 @@ mod imp {
         }
     }
 
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl ObjectImpl for GitDiffPanel {}
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl WidgetImpl for GitDiffPanel {}
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl BoxImpl for GitDiffPanel {}
 }
 
@@ -86,18 +91,22 @@ impl Default for GitDiffPanel {
 }
 
 impl GitDiffPanel {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new() -> Self {
         glib::Object::builder().build()
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn branch_button(&self) -> MenuButton {
         self.imp().branch_button.get()
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn git_menu_button(&self) -> MenuButton {
         self.imp().git_menu_button.get()
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn revert_all_button(&self) -> Button {
         self.imp().revert_all_button.get()
     }

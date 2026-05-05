@@ -60,6 +60,7 @@ pub struct FileClipboard {
 
 // Global file clipboard state - using thread-local storage for safety
 thread_local! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static FILE_CLIPBOARD: RefCell<Option<FileClipboard>> = const { RefCell::new(None) };
 }
 
@@ -106,6 +107,7 @@ pub fn cut_file_to_clipboard(file_path: &PathBuf) {
 /// Check if a specific file is currently cut (not copied) in the clipboard
 pub fn is_file_cut(file_path: &PathBuf) -> bool {
     FILE_CLIPBOARD.with(|clipboard| {
+        // borrow() gets read-only access to the data inside a RefCell.
         if let Some(ref clipboard_content) = *clipboard.borrow() {
             clipboard_content.operation == ClipboardOperation::Cut
                 && clipboard_content.file_path == *file_path
@@ -174,7 +176,9 @@ pub fn paste_file_from_clipboard(
     target_dir: &PathBuf,
     window: &gtk4::ApplicationWindow,
     file_list_box: &ListBox,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     current_dir: &Rc<RefCell<PathBuf>>,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
     let clipboard_content = get_clipboard_content();
@@ -197,6 +201,7 @@ pub fn paste_file_from_clipboard(
         let mut target_path = target_dir.clone();
         target_path.push(&filename);
 
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match clipboard.operation {
             ClipboardOperation::Copy => {
                 // For copy operations, handle name conflicts by generating unique names
@@ -221,7 +226,9 @@ pub fn paste_file_from_clipboard(
                         // Refresh file list
                         crate::utils::update_file_list(
                             file_list_box,
+                            // borrow() gets read-only access to the data inside a RefCell.
                             &current_dir.borrow(),
+                            // borrow() gets read-only access to the data inside a RefCell.
                             &active_tab_path.borrow(),
                             crate::utils::FileSelectionSource::TabSwitch,
                         );
@@ -248,6 +255,7 @@ pub fn paste_file_from_clipboard(
                     // Refresh file list to remove cut styling
                     crate::utils::update_file_list(
                         file_list_box,
+                        // borrow() gets read-only access to the data inside a RefCell.
                         &current_dir.borrow(),
                         &active_tab_path.borrow(),
                         crate::utils::FileSelectionSource::TabSwitch,
@@ -465,6 +473,7 @@ fn parse_gnome_clipboard_format(content: &str) -> Option<FileClipboard> {
         let operation_str = lines[0];
         let file_uri = lines[1];
 
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         let operation = match operation_str {
             "copy" => ClipboardOperation::Copy,
             "cut" => ClipboardOperation::Cut,
@@ -567,11 +576,14 @@ fn uri_to_path(uri: &str) -> Option<PathBuf> {
 
 /// Fast synchronous get text from clipboard with short timeout
 fn get_clipboard_text_fast(clipboard: &gdk::Clipboard) -> Option<String> {
+    // mpsc::channel creates a multi-producer, single-consumer queue for passing messages between threads.
     let (sender, receiver) = std::sync::mpsc::channel();
 
     clipboard.read_text_async(
         None::<&gtk4::gio::Cancellable>,
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         move |result: Result<Option<glib::GString>, glib::Error>| {
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             let text_result = match result {
                 Ok(text) => text.map(|s| s.to_string()),
                 Err(_) => None,
@@ -604,6 +616,7 @@ fn show_error_dialog(window: &gtk4::ApplicationWindow, message: &str) {
         message,
     );
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     dialog.connect_response(move |d, _| {
         d.close();
     });
@@ -636,6 +649,7 @@ pub fn setup_drag_drop_for_row(
 
     // Prepare drag data - we'll send the full file path as text
     let file_path_for_drag = file_path_clone.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     drag_source.connect_prepare(move |_, _x, _y| {
         let file_path_str = file_path_for_drag.to_string_lossy().to_string();
         let content_provider = gdk::ContentProvider::for_value(&glib::Value::from(&file_path_str));
@@ -665,6 +679,7 @@ pub fn setup_drag_drop_for_row(
             gdk::DragAction::MOVE
         });
 
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         drop_target.connect_leave(move |target| {
             if let Some(widget) = target.widget() {
                 widget.remove_css_class("drop-target");

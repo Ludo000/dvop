@@ -39,7 +39,9 @@ lazy_static::lazy_static! {
 
 pub struct RustCompletionExtension;
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl RustCompletionExtension {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new() -> Self {
         let enabled = load_enabled_state();
         ENABLED.store(enabled, Ordering::SeqCst);
@@ -47,6 +49,7 @@ impl RustCompletionExtension {
     }
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl NativeExtension for RustCompletionExtension {
     fn id(&self) -> &str {
         "rust-completion"
@@ -92,6 +95,7 @@ impl NativeExtension for RustCompletionExtension {
 
 /// Register the Rust completion extension. Call once during app init.
 pub fn register() {
+    // Box::new(...) allocates the data on the heap rather than the stack.
     super::native::register(Box::new(RustCompletionExtension::new()));
 }
 
@@ -294,6 +298,7 @@ fn dirs_config() -> PathBuf {
     PathBuf::from("/tmp")
 }
 
+// Option<T> is an enum that represents an optional value: either Some(T) or None.
 fn load_cache(toolchain: &str, version: &str) -> Option<LanguageCompletionData> {
     if toolchain.is_empty() || version.is_empty() {
         return None;
@@ -386,6 +391,7 @@ struct AllHtmlItem {
 }
 
 fn parse_all_html(path: &Path) -> HashMap<String, Vec<AllHtmlItem>> {
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     let html = match fs::read_to_string(path) {
         Ok(h) => h,
         Err(_) => return HashMap::new(),
@@ -396,8 +402,10 @@ fn parse_all_html(path: &Path) -> HashMap<String, Vec<AllHtmlItem>> {
     let section_re = Regex::new(
         r#"id="(\w+)">[^<]+</h3><ul class="all-items">(.*?)</ul>"#,
     )
+    // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
     .unwrap();
 
+    // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
     let item_re = Regex::new(r#"<a href="[^"]+">([^<]+)</a>"#).unwrap();
 
     for section in section_re.captures_iter(&html) {
@@ -424,6 +432,7 @@ fn parse_all_html(path: &Path) -> HashMap<String, Vec<AllHtmlItem>> {
 }
 
 fn category_to_type(section_id: &str) -> &'static str {
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match section_id {
         "structs" => "type",
         "enums" => "type",
@@ -441,6 +450,7 @@ fn category_to_type(section_id: &str) -> &'static str {
 }
 
 fn category_to_keyword_category(section_id: &str) -> &'static str {
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match section_id {
         "structs" => "std_types",
         "enums" => "std_types",
@@ -477,6 +487,7 @@ fn parse_sidebar_recursive(
         return;
     }
 
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     let sidebar_data = match read_sidebar_items(dir) {
         Some(data) => data,
         None => return,
@@ -574,6 +585,7 @@ fn parse_sidebar_recursive(
     }
 }
 
+// Option<T> is an enum that represents an optional value: either Some(T) or None.
 fn read_sidebar_items(dir: &Path) -> Option<HashMap<String, Vec<String>>> {
     let entries = fs::read_dir(dir).ok()?;
     let sidebar_file = entries
@@ -600,6 +612,7 @@ fn read_sidebar_items(dir: &Path) -> Option<HashMap<String, Vec<String>>> {
 fn rust_keywords() -> Vec<KeywordData> {
     let kws: &[(&str, &str, &str, &str)] = &[
         ("as", "Performs type casting or renames imports. Converts values between types or creates aliases.", "let x = 65u8 as char;", "keyword"),
+        // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
         ("async", "Marks a function or block as asynchronous, returning a Future instead of blocking.", "async fn fetch() -> Result<String, Error> { Ok(String::new()) }", "async"),
         ("await", "Suspends execution until a Future completes, yielding its result.", "let data = fetch().await?;", "async"),
         ("become", "Reserved for future use (tail calls).", "// reserved keyword", "keyword"),
@@ -620,9 +633,12 @@ fn rust_keywords() -> Vec<KeywordData> {
         ("let", "Creates a new variable binding. Variables are immutable by default.", "let name = \"Alice\"; let mut count = 0;", "variable_declaration"),
         ("loop", "Creates an infinite loop that runs until explicitly broken.", "loop { if should_stop() { break; } process(); }", "control_flow"),
         ("match", "Compares a value against patterns and executes the matching arm.", "match result { Ok(v) => use_value(v), Err(e) => handle(e) }", "control_flow"),
+        // pub makes this function public, allowing it to be used from outside this module.
         ("mod", "Declares a module, grouping related code together.", "mod utils { pub fn helper() {} }", "module_system"),
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         ("move", "Forces a closure to take ownership of captured variables.", "let name = String::from(\"Alice\"); let greet = move || println!(\"{}\", name);", "keyword"),
         ("mut", "Makes a variable binding mutable so its value can be changed.", "let mut score = 0; score += 10;", "variable_declaration"),
+        // pub makes this function public, allowing it to be used from outside this module.
         ("pub", "Makes items accessible from outside their module.", "pub fn public_api() {}", "visibility"),
         ("ref", "Binds by reference in pattern matching.", "let ref x = value; // x is &value", "keyword"),
         ("return", "Exits the current function early with a value.", "fn check(x: i32) -> bool { if x > 0 { return true; } false }", "control_flow"),
@@ -633,6 +649,7 @@ fn rust_keywords() -> Vec<KeywordData> {
         ("super", "Refers to the parent module in paths.", "use super::helper;", "module_system"),
         ("trait", "Defines shared behavior that types can implement.", "trait Drawable { fn draw(&self); }", "trait_declaration"),
         ("true", "Boolean literal representing the true value.", "let ready = true;", "literal_values"),
+        // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
         ("type", "Creates a type alias for an existing type.", "type Result<T> = std::result::Result<T, MyError>;", "type_declaration"),
         ("union", "Defines a union type where all fields share the same memory.", "union IntOrFloat { i: i32, f: f32 }", "type_declaration"),
         ("unsafe", "Marks code that bypasses Rust's safety guarantees.", "unsafe { *raw_ptr = 42; }", "keyword"),
@@ -665,24 +682,28 @@ fn rust_snippets() -> Vec<SnippetData> {
         SnippetData {
             trigger: "pfn".to_string(),
             description: "Public function definition".to_string(),
+            // pub makes this function public, allowing it to be used from outside this module.
             content: "pub fn ${1:name}(${2:}) -> ${3:ReturnType} {\n\t${4:todo!()}\n}".to_string(),
             category: "function".to_string(),
         },
         SnippetData {
             trigger: "afn".to_string(),
             description: "Async function definition".to_string(),
+            // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
             content: "async fn ${1:name}(${2:}) -> ${3:Result<()>} {\n\t${4:todo!()}\n}".to_string(),
             category: "function".to_string(),
         },
         SnippetData {
             trigger: "struct".to_string(),
             description: "Struct definition with derives".to_string(),
+            // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
             content: "#[derive(${1:Debug, Clone})]\nstruct ${2:Name} {\n\t${3:field}: ${4:Type},\n}".to_string(),
             category: "type".to_string(),
         },
         SnippetData {
             trigger: "enum".to_string(),
             description: "Enum definition with derives".to_string(),
+            // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
             content: "#[derive(${1:Debug, Clone})]\nenum ${2:Name} {\n\t${3:Variant},\n}".to_string(),
             category: "type".to_string(),
         },
@@ -749,6 +770,7 @@ fn rust_snippets() -> Vec<SnippetData> {
         SnippetData {
             trigger: "derive".to_string(),
             description: "Derive attribute".to_string(),
+            // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
             content: "#[derive(${1:Debug, Clone, PartialEq})]".to_string(),
             category: "attribute".to_string(),
         },
@@ -833,6 +855,7 @@ fn rust_snippets() -> Vec<SnippetData> {
         SnippetData {
             trigger: "main_result".to_string(),
             description: "Main function with Result".to_string(),
+            // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
             content: "fn main() -> Result<(), Box<dyn std::error::Error>> {\n\t${1:}\n\tOk(())\n}".to_string(),
             category: "function".to_string(),
         },
@@ -898,6 +921,7 @@ mod tests {
         </html>"#;
 
         let tmp = std::env::temp_dir().join("rust_completion_ext_test_all.html");
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         fs::write(&tmp, sample).unwrap();
         let items = parse_all_html(&tmp);
         let _ = fs::remove_file(&tmp);
@@ -920,6 +944,7 @@ mod tests {
         let _ = fs::create_dir_all(&tmp_dir);
         let sidebar_content =
             r#"window.SIDEBAR_ITEMS = {"struct":["HashMap","HashSet"],"fn":["new"],"mod":["hash_map"]};"#;
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         fs::write(tmp_dir.join("sidebar-items1.91.1.js"), sidebar_content).unwrap();
 
         let data = read_sidebar_items(&tmp_dir);

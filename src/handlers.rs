@@ -136,6 +136,7 @@ pub fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView,
 pub fn get_text_view_and_buffer_for_page(
     notebook: &Notebook,
     page_num: u32,
+// Option<T> is an enum that represents an optional value: either Some(T) or None.
 ) -> Option<(TextView, TextBuffer)> {
     // Get the page widget for the specified page number
     notebook.nth_page(Some(page_num)).and_then(|page_widget| {
@@ -309,6 +310,7 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
 
     // Get immutable references to avoid unnecessary clones
     let current_dir_ref = deps.current_dir.borrow();
+    // borrow() gets read-only access to the data inside a RefCell.
     let active_path_ref = deps.active_tab_path.borrow();
 
     // Update the file browser to reflect the current state
@@ -344,6 +346,7 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     // Connect dirty tracking for the new "Untitled" tab's label
     // Use weak reference to prevent memory leaks from circular references
     let tab_actual_label_weak = tab_actual_label.downgrade();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     new_text_buffer.connect_changed(move |buffer| {
         // Mark text editor as active when user actually types/modifies content
         LAST_ACTIVE_AREA.with(|area| {
@@ -367,6 +370,7 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     // Connect close button for this new tab
     let deps_clone_for_close = deps.clone();
     let new_scrolled_window_clone = new_scrolled_window.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     tab_close_button.connect_clicked(move |_| {
         // Find the current page number of this tab using the correct widget reference
         if let Some(current_idx_for_this_tab) = deps_clone_for_close
@@ -395,6 +399,7 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
 pub fn update_tab_label_after_save(
     notebook: &Notebook,
     page_num: u32,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     new_name_opt: Option<&str>,
     is_now_dirty: bool,
 ) {
@@ -429,19 +434,25 @@ pub fn update_tab_label_after_save(
     }
 }
 
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn handle_close_tab_request(
     notebook: &Notebook,
     page_num_to_close: u32,
     window: &impl IsA<ApplicationWindow>,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     current_dir: &Rc<RefCell<PathBuf>>,       // New
     file_list_box: &ListBox,                  // New
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     new_tab_deps: Option<NewTabDependencies>, // Dependencies to create a new tab if the last one is closed
 ) {
     if let Some(page_widget) = notebook.nth_page(Some(page_num_to_close)) {
         // Get file name for logging
         let filename = file_path_manager
+            // borrow() gets read-only access to the data inside a RefCell.
             .borrow()
             .get(&page_num_to_close)
             .and_then(|path| path.file_name())
@@ -478,6 +489,7 @@ pub fn handle_close_tab_request(
             // Is dirty, show confirmation dialog
             // Use more efficient string handling to avoid temporary borrow issues
             let filename_str = {
+                // borrow() gets read-only access to the data inside a RefCell.
                 let manager = file_path_manager.borrow();
                 manager
                     .get(&page_num_to_close)
@@ -508,7 +520,9 @@ pub fn handle_close_tab_request(
             let current_dir_clone = current_dir.clone();
             let file_list_box_clone = file_list_box.clone();
 
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             dialog.connect_response(move |d, response| {
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match response {
                     ResponseType::Yes => {
                         // User chose "Save"
@@ -516,6 +530,7 @@ pub fn handle_close_tab_request(
                             get_text_view_and_buffer_for_page(&notebook_clone, page_num_to_close)
                         {
                             let path_opt = file_path_manager_clone
+                                // borrow() gets read-only access to the data inside a RefCell.
                                 .borrow()
                                 .get(&page_num_to_close)
                                 .cloned();
@@ -523,6 +538,7 @@ pub fn handle_close_tab_request(
                                 // Existing file
                                 let text =
                                     buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
+                                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                                 match File::create(&path) {
                                     Ok(mut file) => {
                                         if file.write_all(text.as_bytes()).is_ok() {
@@ -587,6 +603,7 @@ pub fn handle_close_tab_request(
                                 // Explicitly type annotation for gio_file_result and wrap the call in Ok()
                                 let gio_file_result: Result<gtk4::gio::File, glib::Error> =
                                     Ok(gtk4::gio::File::for_path(&current_dialog_dir_path));
+                                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                                 match gio_file_result {
                                     Ok(gfile) => {
                                         if current_dialog_dir_path.is_dir() {
@@ -614,6 +631,7 @@ pub fn handle_close_tab_request(
                                 let cd_save_as = current_dir_clone.clone();
                                 let flb_save_as = file_list_box_clone.clone();
 
+                                // The "move" keyword forces the closure to take ownership of the variables it uses.
                                 save_as_dialog.connect_response(move |d_sa, resp_sa| {
                                     if resp_sa == gtk4::ResponseType::Accept {
                                         if let Some(file_to_save) =
@@ -624,12 +642,14 @@ pub fn handle_close_tab_request(
                                                 &buffer_clone_for_save_as.end_iter(),
                                                 false,
                                             );
+                                            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                                             match File::create(&file_to_save) {
                                                 Ok(mut f_obj) => {
                                                     if f_obj
                                                         .write_all(text_to_save.as_bytes())
                                                         .is_ok()
                                                     {
+                                                        // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                                                         fpm_save_as.borrow_mut().insert(
                                                             page_num_to_close,
                                                             file_to_save.clone(),
@@ -731,7 +751,9 @@ pub fn handle_close_tab_request(
 fn actually_close_tab(
     notebook: &Notebook,
     page_num_to_close: u32,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     file_path_manager_rc: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     active_tab_path_rc: &Rc<RefCell<Option<PathBuf>>>,
     new_tab_deps: Option<&NewTabDependencies>,
 ) {
@@ -774,6 +796,7 @@ fn actually_close_tab(
 
     // Efficiently handle HashMap index updates
     {
+        // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
         let mut manager = file_path_manager_rc.borrow_mut();
         println!("=== Closing tab {} ===", page_num_to_close);
         println!("Before close:");
@@ -1475,6 +1498,7 @@ pub fn open_or_focus_tab(
             // Update state BEFORE set_current_page so switch-page sees the path
             println!("Adding SVG file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
             file_path_manager
+                // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                 .borrow_mut()
                 .insert(new_page_num, file_to_open.clone());
             *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
@@ -1557,6 +1581,7 @@ pub fn open_or_focus_tab(
             // Update state BEFORE set_current_page so switch-page sees the path
             println!("Adding Markdown file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
             file_path_manager
+                // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                 .borrow_mut()
                 .insert(new_page_num, file_to_open.clone());
             *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
@@ -1653,6 +1678,7 @@ pub fn open_or_focus_tab(
                         )));
                         info_label.add_css_class("dim-label");
 
+                        // Box::new(...) allocates the data on the heap rather than the stack.
                         let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 5);
                         vbox.set_margin_top(10);
                         vbox.set_margin_bottom(10);
@@ -1723,6 +1749,7 @@ pub fn open_or_focus_tab(
 
                                     let picture_anim = picture.clone();
                                     let iter = animation.iter(None);
+                                    // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
                                     let iter_rc = Rc::new(RefCell::new(iter));
 
                                     // Use GIF's native delay, capped at 60fps
@@ -2093,6 +2120,7 @@ pub fn open_or_focus_tab(
         }
     }
 }
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn setup_button_handlers(
     new_button: &Button,
     open_button: &Button,
@@ -2544,6 +2572,7 @@ fn setup_save_button_handler(
                 crate::status_log::log_error("No active tab found");
                 return;
             }
+            // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let current_page_num = current_page_num_opt.unwrap();
 
             let path_to_save_opt = file_path_manager.borrow().get(&current_page_num).cloned();
@@ -2640,6 +2669,7 @@ fn setup_save_button_handler(
 
                 // Set current folder to match the file manager's current directory
                 let current_dialog_dir_path = current_dir.borrow().clone();
+                // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
                 let gio_file_result: Result<gtk4::gio::File, glib::Error> =
                     Ok(gtk4::gio::File::for_path(&current_dialog_dir_path));
                 match gio_file_result {
@@ -2784,6 +2814,7 @@ fn setup_save_as_button_handler(
                 crate::status_log::log_error("No active tab found");
                 return;
             }
+            // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let current_page_num = current_page_num_opt.unwrap();
 
             let dialog = gtk4::FileChooserDialog::new(
@@ -2946,6 +2977,7 @@ pub enum LastActiveArea {
 
 // Global state to track the last active area
 thread_local! {
+    // RefCell::new creates a container that checks borrowing rules at runtime.
     pub static LAST_ACTIVE_AREA: RefCell<LastActiveArea> = const { RefCell::new(LastActiveArea::TextEditor) };
 }
 

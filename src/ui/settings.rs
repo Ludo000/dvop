@@ -111,6 +111,7 @@ pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
     // Connect light theme dropdown change handler
     let available_schemes_light = available_schemes.clone();
     let parent_window_light = parent_window.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     light_theme_dropdown.connect_selected_notify(move |dropdown| {
         let position = dropdown.selected() as usize;
         if position < available_schemes_light.len() {
@@ -133,6 +134,7 @@ pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
     // Connect dark theme dropdown change handler
     let available_schemes_dark = available_schemes.clone();
     let parent_window_dark = parent_window.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     dark_theme_dropdown.connect_selected_notify(move |dropdown| {
         let position = dropdown.selected() as usize;
         if position < available_schemes_dark.len() {
@@ -170,6 +172,7 @@ pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
 
     // Connect terminal font size change handler (currently just saves, not applied)
     let parent_window_terminal = parent_window.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     terminal_font_size_spin.connect_value_changed(move |spin| {
         let font_size = spin.value() as u32;
         println!("Terminal font size changed to: {}", font_size);

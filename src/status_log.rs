@@ -34,6 +34,10 @@
 
 use gtk4::prelude::*;
 use gtk4::Label;
+
+// VecDeque: Short for "Vector Double-Ended Queue". We use it as a "Circular Buffer".
+// It's like a pipe: you push new logs in the back, and when it gets too full (100+), 
+// it efficiently pops the oldest one off the front.
 use std::collections::VecDeque;
 use std::fs;
 use std::path::PathBuf;
@@ -50,14 +54,19 @@ pub struct LogMessage {
     pub level: LogLevel,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl LogMessage {
     /// Serialize log message to a string for file storage
+    
+    // "Serialization" is just a fancy word for turning a struct/object into a 
+    // single line of text so we can save it to a file. We use '|' as a separator.
     pub fn to_string(&self) -> String {
         let timestamp = self
             .timestamp
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or(std::time::Duration::from_secs(0))
             .as_secs();
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         let level_str = match self.level {
             LogLevel::Info => "INFO",
             LogLevel::Warning => "WARNING",
@@ -68,6 +77,9 @@ impl LogMessage {
     }
 
     /// Deserialize log message from a string
+    
+    // This turns a line of text back into a LogMessage struct. 
+    // 'Option' means it returns 'None' if the line is broken or formatted wrong.
     pub fn from_string(s: &str) -> Option<LogMessage> {
         let parts: Vec<&str> = s.splitn(3, '|').collect();
         if parts.len() != 3 {
@@ -75,6 +87,7 @@ impl LogMessage {
         }
 
         let timestamp_secs: u64 = parts[0].parse().ok()?;
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         let level = match parts[1] {
             "INFO" => LogLevel::Info,
             "WARNING" => LogLevel::Warning,
@@ -121,7 +134,11 @@ pub enum LogLevel {
 /// `Arc<Mutex<VecDeque<...>>>` for thread-safe, bounded storage.
 /// `VecDeque` is a double-ended queue that efficiently supports both push-back
 /// and pop-front operations (needed for the circular buffer behavior).
+
+// Mutex ensures that even if two things try to log at the exact same millisecond, 
+// they take turns and don't corrupt the history list.
 static STATUS_HISTORY: once_cell::sync::Lazy<Arc<Mutex<VecDeque<LogMessage>>>> =
+    // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(VecDeque::new())));
 
 /// Get the log file path
@@ -145,8 +162,10 @@ pub fn load_log_history() {
         }
     }
 
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match fs::read_to_string(&log_file) {
         Ok(contents) => {
+            // lock() acquires the Mutex lock. It blocks until the lock is available.
             if let Ok(mut history) = STATUS_HISTORY.lock() {
                 history.clear();
 
@@ -179,6 +198,7 @@ pub fn load_log_history() {
 fn save_log_history() {
     let log_file = get_log_file_path();
 
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(history) = STATUS_HISTORY.lock() {
         let mut contents = String::new();
         for message in history.iter() {
@@ -193,7 +213,11 @@ fn save_log_history() {
 }
 
 // Store a reference to the current secondary status label (if any)
+
+// thread_local! is a way to have a "Global" variable that is safe. 
+// RefCell allows us to swap the Label in and out even though it's technically immutable.
 thread_local! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static CURRENT_SECONDARY_STATUS_LABEL: std::cell::RefCell<Option<Label>> = const { std::cell::RefCell::new(None) };
 }
 
@@ -206,6 +230,7 @@ pub fn set_secondary_status_label(label: &Label) {
 
 // Store a reference to the current status label (if any)
 thread_local! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static CURRENT_STATUS_LABEL: std::cell::RefCell<Option<Label>> = const { std::cell::RefCell::new(None) };
 }
 
@@ -219,16 +244,19 @@ pub fn set_status_label(label: &Label) {
 /// Update status label with a log message
 fn update_status_label(log_message: &LogMessage) {
     CURRENT_STATUS_LABEL.with(|l| {
+        // borrow() gets read-only access to the data inside a RefCell.
         if let Some(ref label) = *l.borrow() {
             // Update the label text
             label.set_text(&log_message.message);
 
             // Set appropriate CSS class based on log level
+            // We remove all possible classes first so colors don't stack/conflict.
             label.remove_css_class("status-log-info");
             label.remove_css_class("status-log-warning");
             label.remove_css_class("status-log-error");
             label.remove_css_class("status-log-success");
 
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             let css_class = match log_message.level {
                 LogLevel::Info => "status-log-info",
                 LogLevel::Warning => "status-log-warning",
@@ -324,8 +352,12 @@ pub fn log_success(message: &str) {
 }
 
 /// Get the complete message history
+
+// This is used if we ever want to open a "Log Viewer" window. 
+// It copies everything from the RAM storage into a simple Vector.
 pub fn get_log_history() -> Vec<LogMessage> {
     STATUS_HISTORY
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         .lock()
         .map(|history| history.iter().cloned().collect())
         .unwrap_or_default()
@@ -333,6 +365,7 @@ pub fn get_log_history() -> Vec<LogMessage> {
 
 /// Clear the log history
 pub fn clear_log_history() {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(mut history) = STATUS_HISTORY.lock() {
         history.clear();
     }
@@ -349,6 +382,8 @@ pub fn clear_log_history() {
 
 #[cfg(test)]
 mod tests {
+    // Tests are standard Rust practice to ensure the serialization 
+    // and history logic doesn't break if someone changes a line of code.
     use super::*;
 
     #[test]
@@ -369,6 +404,7 @@ mod tests {
         let timestamp = 1700000000u64;
         let serialized = format!("{}|INFO|Test message", timestamp);
         
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let msg = LogMessage::from_string(&serialized).unwrap();
         assert_eq!(msg.message, "Test message");
         assert_eq!(msg.level, LogLevel::Info);
@@ -383,6 +419,7 @@ mod tests {
         };
 
         let serialized = original.to_string();
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let deserialized = LogMessage::from_string(&serialized).unwrap();
 
         assert_eq!(deserialized.message, original.message);
@@ -432,6 +469,7 @@ mod tests {
     fn test_log_file_path() {
         let log_path = get_log_file_path();
         assert!(log_path.is_absolute());
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         assert!(log_path.to_str().unwrap().ends_with("log_history.txt"));
     }
 

@@ -56,24 +56,28 @@ pub fn initialize_completion() {
 
 /// Get keywords as owned strings from JSON data
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_language_keywords_owned(language: &str) -> Vec<String> {
     get_json_keywords(language)
 }
 
 /// Get snippets as owned strings from JSON data
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_language_snippets_owned(language: &str) -> Vec<(String, String)> {
     get_json_snippets(language)
 }
 
 /// Get documentation for a specific keyword using JSON data
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_keyword_documentation(language: &str, keyword: &str) -> String {
     get_json_keyword_documentation(language, keyword)
 }
 
 /// Get documentation for a specific snippet using JSON data
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_snippet_documentation(language: &str, trigger: &str) -> String {
     get_json_snippet_documentation(language, trigger)
 }
@@ -87,6 +91,7 @@ pub fn get_supported_languages() -> Vec<String> {
     SUPPORTED_LANGUAGES
         .get_or_init(|| {
             let mut manager = json_provider::get_completion_manager();
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match manager.load_all_languages() {
                 Ok(languages) => languages,
                 Err(_) => {

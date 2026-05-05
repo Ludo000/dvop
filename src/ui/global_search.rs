@@ -40,9 +40,11 @@ use super::search_panel_template::SearchPanel;
 
 // Thread-local storage for the global search dialog to maintain state
 thread_local! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static GLOBAL_SEARCH_DIALOG: RefCell<Option<gtk::Dialog>> = const { RefCell::new(None) };
 }
 
+// #[derive(...)] asks the compiler to automatically generate basic trait implementations.
 #[derive(Clone, Debug)]
 struct SearchResult {
     path: PathBuf,
@@ -388,6 +390,7 @@ fn walk_dir_recursive(root: &Path, files_out: &mut Vec<PathBuf>, max_files: usiz
 /// Replace text in an open buffer (without saving to disk)
 fn replace_in_buffer(
     editor_notebook: &gtk::Notebook,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
     path: &Path,
     line: usize,
@@ -395,9 +398,11 @@ fn replace_in_buffer(
     needle: &str,
     replace_text: &str,
     case_sensitive: bool,
+// Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<(), String> {
     // Find the tab with this file
     let file_path_map = file_path_manager.borrow();
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     let mut target_page_num: Option<u32> = None;
 
     for (page_num, tab_path) in file_path_map.iter() {
@@ -549,11 +554,15 @@ fn replace_in_buffer(
     Err("Widget is neither TextView nor SourceView".to_string())
 }
 
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn show_global_search_dialog(
     parent_window: &impl IsA<gtk::ApplicationWindow>,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     current_dir: &Rc<RefCell<PathBuf>>,
     editor_notebook: &gtk::Notebook,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
     save_button: &gtk::Button,
     save_as_button: &gtk::Button,
@@ -699,8 +708,11 @@ pub fn show_global_search_dialog(
 
     // Channel for results - will be recreated for each search
     let sender_rc: Rc<RefCell<Option<std::sync::mpsc::Sender<Option<SearchResult>>>>> =
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(RefCell::new(None));
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     let receiver_rc: Rc<RefCell<Option<std::sync::mpsc::Receiver<Option<SearchResult>>>>> =
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(RefCell::new(None));
 
     // Open result handler (row activation)
@@ -714,6 +726,7 @@ pub fn show_global_search_dialog(
     let current_dir_c = current_dir.clone();
     let dialog_close = dialog.clone();
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     results_list.connect_row_activated(move |_list, row| {
         if let Some(child) = row.child() {
             if let Some(vbox) = child.downcast_ref::<GtkBox>() {
@@ -762,6 +775,7 @@ pub fn show_global_search_dialog(
                                             crate::utils::update_file_list(
                                                 &file_list_box_c,
                                                 &parent_buf,
+                                                // borrow() gets read-only access to the data inside a RefCell.
                                                 &active_tab_path_c.borrow(),
                                                 crate::utils::FileSelectionSource::TabSwitch
                                             );
@@ -776,6 +790,7 @@ pub fn show_global_search_dialog(
                                         // After opening, jump to position and select matching text (delay to ensure buffer ready)
                                         let editor_notebook_for_jump = editor_notebook_c.clone();
                                         let needle_clone = needle.clone();
+                                        // The "move" keyword forces the closure to take ownership of the variables it uses.
                                         glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
                                             if let Some((text_view, buffer)) = crate::handlers::get_active_text_view_and_buffer(&editor_notebook_for_jump) {
                                                 // Get start position
@@ -838,6 +853,7 @@ pub fn show_global_search_dialog(
                                         crate::utils::update_file_list(
                                             &file_list_box_c,
                                             &parent_buf,
+                                            // borrow() gets read-only access to the data inside a RefCell.
                                             &active_tab_path_c.borrow(),
                                             crate::utils::FileSelectionSource::TabSwitch
                                         );
@@ -872,7 +888,9 @@ pub fn show_global_search_dialog(
         let current_dir_clone = current_dir.clone();
         let editor_notebook_clone = editor_notebook.clone();
         let file_path_manager_clone = file_path_manager.clone();
+        // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             move |query: String, case_sensitive: bool, whole_word: bool| {
                 // Clear previous results
                 while let Some(child) = results_list.first_child() {
@@ -887,11 +905,13 @@ pub fn show_global_search_dialog(
                 *sender_rc_clone.borrow_mut() = Some(sender.clone());
                 *receiver_rc_clone.borrow_mut() = Some(receiver);
 
+                // borrow() gets read-only access to the data inside a RefCell.
                 let root = current_dir_clone.borrow().clone();
 
                 // Get open file buffers content (must be done in main thread)
                 let mut open_files_content: std::collections::HashMap<PathBuf, String> =
                     std::collections::HashMap::new();
+                // borrow() gets read-only access to the data inside a RefCell.
                 let file_path_map = file_path_manager_clone.borrow();
                 for (page_num, path) in file_path_map.iter() {
                     if let Some(page) = editor_notebook_clone.nth_page(Some(*page_num)) {
@@ -956,12 +976,14 @@ pub fn show_global_search_dialog(
                 let receiver_rc_c = receiver_rc_clone.clone();
                 let result_count_c = result_count_clone.clone();
                 let max_results = 500usize; // Limit displayed results to prevent UI slowdown
+                // The "move" keyword forces the closure to take ownership of the variables it uses.
                 glib::timeout_add_local(std::time::Duration::from_millis(30), move || {
                     let mut finished = false;
                     let mut processed = 0usize;
                     let current_count = *result_count_c.borrow();
                     if let Some(rx) = receiver_rc_c.borrow().as_ref() {
                         while processed < 50 && current_count + processed < max_results {
+                            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                             match rx.try_recv() {
                                 Ok(Some(sr)) => {
                                     let row = ListBoxRow::new();
@@ -1441,6 +1463,7 @@ pub fn show_global_search_dialog(
             // Process replacements on main thread
             let total_replaced = Rc::new(RefCell::new(0usize));
             let total_replaced_clone = total_replaced.clone();
+            // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
             let thread_done = Rc::new(RefCell::new(false));
             let thread_done_clone = thread_done.clone();
 
@@ -1454,6 +1477,7 @@ pub fn show_global_search_dialog(
                 // Process a batch of file replacements
                 let mut processed = 0;
                 while processed < 5 {
+                    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                     match rx.try_recv() {
                         Ok((path, mut matches)) => {
                             println!(
@@ -1604,6 +1628,7 @@ pub fn create_global_search_panel(
     current_dir: &Rc<RefCell<PathBuf>>,
     editor_notebook: &gtk::Notebook,
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
     save_button: &gtk::Button,
     save_as_button: &gtk::Button,
@@ -1626,8 +1651,10 @@ pub fn create_global_search_panel(
 
     // Add responsive behavior: walk up widget tree to find the resizable container
     let buttons_box_for_responsive = buttons_box.clone();
+    // RefCell::new creates a container that checks borrowing rules at runtime.
     let last_width: Rc<RefCell<i32>> = Rc::new(RefCell::new(-1)); // -1 means not initialized
     let last_log_time: Rc<RefCell<std::time::Instant>> =
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         Rc::new(RefCell::new(std::time::Instant::now()));
 
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
@@ -1645,6 +1672,7 @@ pub fn create_global_search_panel(
 
         if let Some(container) = resizable_widget {
             let current_width = container.allocated_width();
+            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
             let mut last_w = last_width.borrow_mut();
 
             // Debug output every second
@@ -1711,8 +1739,10 @@ pub fn create_global_search_panel(
 
     // Channel for results - will be recreated for each search
     let sender_rc: Rc<RefCell<Option<std::sync::mpsc::Sender<Option<SearchResult>>>>> =
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         Rc::new(RefCell::new(None));
     let receiver_rc: Rc<RefCell<Option<std::sync::mpsc::Receiver<Option<SearchResult>>>>> =
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         Rc::new(RefCell::new(None));
 
     // Clone status label before it's moved into closures
@@ -1932,6 +1962,7 @@ pub fn create_global_search_panel(
                 let current_count = *result_count_c.borrow();
                 if let Some(rx) = receiver_rc_c.borrow().as_ref() {
                     while processed < 50 && current_count + processed < max_results {
+                        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                         match rx.try_recv() {
                             Ok(Some(sr)) => {
                                 let row = ListBoxRow::new();
@@ -2430,6 +2461,7 @@ pub fn create_global_search_panel(
                 // Process a batch of file replacements
                 let mut processed = 0;
                 while processed < 5 {
+                    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                     match rx.try_recv() {
                         Ok((path, mut matches)) => {
                             println!(
@@ -2528,6 +2560,7 @@ pub fn create_global_search_panel(
                     let case_toggle_inner = case_toggle_timeout.clone();
                     let whole_word_toggle_inner = whole_word_toggle_timeout.clone();
                     let start_search_inner = start_search_timeout.clone();
+                    // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
                     glib::idle_add_local_once(move || {
                         let search_text = search_buffer_inner
                             .text(
@@ -2570,6 +2603,7 @@ pub fn create_global_search_panel(
     let buffer_for_save = search_buffer.clone();
     search_buffer.connect_changed(move |_| {
         let buffer_clone = buffer_for_save.clone();
+        // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
         glib::idle_add_local_once(move || {
             let text = buffer_clone
                 .text(&buffer_clone.start_iter(), &buffer_clone.end_iter(), false)

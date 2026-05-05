@@ -32,7 +32,9 @@ const SCRIPT_TIMEOUT: Duration = Duration::from_secs(5);
 pub fn run_script(
     script_path: &Path,
     args: &[&str],
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     stdin_data: Option<&str>,
+// Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<String, String> {
     if !script_path.exists() {
         return Err(format!("Script not found: {}", script_path.display()));
@@ -64,12 +66,14 @@ pub fn run_script(
     // Wait with timeout using a thread
     let (tx, rx) = std::sync::mpsc::channel();
     let thread_handle = {
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         std::thread::spawn(move || {
             let result = child.wait_with_output();
             let _ = tx.send(result);
         })
     };
 
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match rx.recv_timeout(SCRIPT_TIMEOUT) {
         Ok(Ok(output)) => {
             if output.status.success() {
@@ -92,6 +96,7 @@ pub fn run_script(
 pub fn run_script_json<T: serde::de::DeserializeOwned>(
     script_path: &Path,
     args: &[&str],
+// Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<T, String> {
     let output = run_script(script_path, args, None)?;
     serde_json::from_str(&output)
@@ -108,6 +113,7 @@ pub fn run_script_fire_and_forget(script_path: &Path, args: &[&str]) {
     let script_path = script_path.to_path_buf();
     let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     std::thread::spawn(move || {
         let mut cmd = Command::new("bash");
         cmd.arg(&script_path);
@@ -118,14 +124,17 @@ pub fn run_script_fire_and_forget(script_path: &Path, args: &[&str]) {
         cmd.stdout(Stdio::null());
         cmd.stderr(Stdio::piped());
 
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match cmd.spawn() {
             Ok(child) => {
                 // Wait with timeout
                 let (tx, rx) = std::sync::mpsc::channel();
+                // The "move" keyword forces the closure to take ownership of the variables it uses.
                 std::thread::spawn(move || {
                     let result = child.wait_with_output();
                     let _ = tx.send(result);
                 });
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 match rx.recv_timeout(SCRIPT_TIMEOUT) {
                     Ok(Ok(output)) => {
                         if !output.status.success() {

@@ -21,6 +21,7 @@ use gtk4::{
 mod imp {
     use super::*;
 
+    // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/example/Dvop/search_panel.ui")]
     pub struct SearchPanel {
@@ -47,6 +48,7 @@ mod imp {
     }
 
     #[glib::object_subclass]
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl ObjectSubclass for SearchPanel {
         const NAME: &'static str = "DvopSearchPanel";
         type Type = super::SearchPanel;
@@ -61,8 +63,11 @@ mod imp {
         }
     }
 
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl ObjectImpl for SearchPanel {}
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl WidgetImpl for SearchPanel {}
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl BoxImpl for SearchPanel {}
 }
 
@@ -79,18 +84,22 @@ impl Default for SearchPanel {
 }
 
 impl SearchPanel {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new() -> Self {
         glib::Object::builder().build()
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn search_buffer(&self) -> TextBuffer {
         self.imp().search_text_view.buffer()
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn replace_buffer(&self) -> TextBuffer {
         self.imp().replace_text_view.buffer()
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn case_toggle(&self) -> gtk4::ToggleButton {
         self.imp().case_toggle.get()
     }

@@ -83,6 +83,7 @@ pub struct LanguageCompletionData {
     pub description: String,
     pub keywords: Vec<KeywordData>,
     pub snippets: Vec<SnippetData>,
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub imports: Option<ModuleHierarchy>, // Import data for the language
 }
 
@@ -92,6 +93,7 @@ pub struct JsonCompletionProvider {
     keyword_map: HashMap<String, KeywordData>,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl JsonCompletionProvider {
     /// Load completion data from a JSON file
     pub fn from_file(file_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
@@ -220,6 +222,7 @@ pub struct CompletionDataManager {
     blocked: HashSet<String>,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl CompletionDataManager {
     /// Create a new manager with a data directory
     pub fn new(data_directory: impl Into<String>) -> Self {
@@ -277,6 +280,7 @@ impl CompletionDataManager {
 
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 if let Some(filename) = path.file_stem().and_then(|s| s.to_str()) {
+                    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                     match self.load_language(filename) {
                         Ok(_) => {
                             loaded_languages.push(filename.to_string());
@@ -380,17 +384,20 @@ lazy_static::lazy_static! {
             .to_string();
 
         println!("Using completion data directory: {}", data_dir);
+        // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         std::sync::Mutex::new(CompletionDataManager::new(data_dir))
     };
 }
 
 /// Get global completion data manager instance
 pub fn get_completion_manager() -> std::sync::MutexGuard<'static, CompletionDataManager> {
+    // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
     COMPLETION_MANAGER.lock().unwrap()
 }
 
 /// Convenience function to get keywords for a language using JSON data
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_json_keywords(language: &str) -> Vec<String> {
     let mut manager = get_completion_manager();
 
@@ -407,6 +414,7 @@ pub fn get_json_keywords(language: &str) -> Vec<String> {
 
 /// Convenience function to get snippets for a language using JSON data
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_json_snippets(language: &str) -> Vec<(String, String)> {
     let mut manager = get_completion_manager();
 
@@ -423,6 +431,7 @@ pub fn get_json_snippets(language: &str) -> Vec<(String, String)> {
 
 /// Convenience function to get keyword documentation using JSON data
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_json_keyword_documentation(language: &str, keyword: &str) -> String {
     let mut manager = get_completion_manager();
 
@@ -438,6 +447,7 @@ pub fn get_json_keyword_documentation(language: &str, keyword: &str) -> String {
 
 /// Convenience function to get snippet documentation using JSON data
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn get_json_snippet_documentation(language: &str, trigger: &str) -> String {
     let mut manager = get_completion_manager();
 

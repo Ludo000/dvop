@@ -47,12 +47,14 @@ static COMPLETION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 // Track the current popover so we can clean it up before creating a new one.
 // Without this, old popovers accumulate in the GTK widget tree causing hangs.
 thread_local! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static CURRENT_POPOVER: RefCell<Option<Popover>> = RefCell::new(None);
 }
 
 /// Dismiss and unparent any existing completion popover.
 fn dismiss_current_popover() {
     CURRENT_POPOVER.with(|cell| {
+        // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
         if let Some(old) = cell.borrow_mut().take() {
             // popdown() triggers the `closed` signal whose handler calls unparent().
             // Do NOT call unparent() here — that would double-unparent.
@@ -177,6 +179,7 @@ fn fuzzy_match_score(query: &str, candidate: &str) -> Option<i32> {
     // Subsequence / fuzzy match  — every query char must appear in order
     let mut score: i32 = 60;
     let mut c_iter = c_lower.chars().enumerate().peekable();
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     let mut prev_match_idx: Option<usize> = None;
     let mut consecutive = 0;
 
@@ -218,13 +221,16 @@ fn fuzzy_match_score(query: &str, candidate: &str) -> Option<i32> {
 
 /// Context-aware bonus applied after the base fuzzy score.
 fn context_bonus(item: &CompletionItem, ctx: CursorContext, keyword_type: Option<&str>, keyword_category: Option<&str>) -> i32 {
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match ctx {
         CursorContext::TypePosition => {
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match item {
                 CompletionItem::Keyword(_) => {
                     // Boost type-related keywords in type position
                     match keyword_type {
                         Some("type") | Some("primitive") | Some("trait") => 30,
+                        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                         _ => match keyword_category {
                             Some("type_declaration") | Some("primitive_types") => 25,
                             _ => -10, // demote non-type keywords
@@ -232,6 +238,7 @@ fn context_bonus(item: &CompletionItem, ctx: CursorContext, keyword_type: Option
                     }
                 }
                 CompletionItem::ImportItem(i) => {
+                    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                     match i.item_type.as_str() {
                         "struct" | "enum" | "trait" => 25,
                         _ => 0,
@@ -956,6 +963,7 @@ fn create_completion_popup(
     let suggestions_clone = suggestions_with_content.to_vec();
     let popover_for_close = popover.clone();
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     list_box.connect_row_activated(move |_, row| {
         let index = row.index() as usize;
         if let Some((_display_text, completion_item)) = suggestions_clone.get(index) {
@@ -998,6 +1006,7 @@ fn create_completion_popup(
     // Unparent popover when it closes so it doesn't leak in the widget tree
     popover.connect_closed(move |p| {
         CURRENT_POPOVER.with(|cell| {
+            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
             cell.borrow_mut().take();
         });
         p.unparent();
@@ -1050,6 +1059,7 @@ fn create_completion_popup(
     let list_box_clone = list_box.clone();
     let scrolled_clone = scrolled.clone();
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     key_controller.connect_key_pressed(move |_, keyval, _, _| {
         completion_debug!("Popover key pressed: {:?}", keyval);
         match keyval {
@@ -1162,6 +1172,7 @@ pub fn setup_completion_shortcuts(source_view: &View) {
     key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
 
     let source_view_clone = source_view.clone();
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     key_controller.connect_key_pressed(move |_controller, keyval, _keycode, state| {
         // Debug key press
         completion_debug!("Key pressed: {:?}, state: {:?}", keyval, state);
@@ -1172,6 +1183,7 @@ pub fn setup_completion_shortcuts(source_view: &View) {
 
             // Use timeout to ensure the key event is fully processed first
             let sv = source_view_clone.clone();
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             glib::idle_add_local_once(move || {
                 trigger_completion(&sv);
             });
@@ -1183,6 +1195,7 @@ pub fn setup_completion_shortcuts(source_view: &View) {
         if keyval == gdk::Key::F1 {
             completion_debug!("*** F1 detected! Triggering test completion ***");
             let sv = source_view_clone.clone();
+            // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
             glib::idle_add_local_once(move || {
                 trigger_completion(&sv);
             });
@@ -1310,6 +1323,7 @@ fn extract_import_path(context: &str) -> Option<String> {
         if let Some(from_pos) = current_line_trimmed.rfind("from") {
             let after_from = &current_line_trimmed[from_pos + 4..].trim();
             if let Some(quote_start) = after_from.find(['\'', '"']) {
+                // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
                 let quote_char = after_from.chars().nth(quote_start).unwrap();
                 let module_part = &after_from[quote_start + 1..];
                 if let Some(quote_end) = module_part.find(quote_char) {
@@ -1323,6 +1337,7 @@ fn extract_import_path(context: &str) -> Option<String> {
     if let Some(require_pos) = current_line_trimmed.find("require(") {
         let after_require = &current_line_trimmed[require_pos + 8..];
         if let Some(quote_start) = after_require.find(['\'', '"']) {
+            // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let quote_char = after_require.chars().nth(quote_start).unwrap();
             let module_part = &after_require[quote_start + 1..];
             if let Some(quote_end) = module_part.find(quote_char) {
@@ -1363,12 +1378,14 @@ mod tests {
 
     #[test]
     fn test_exact_match_scores_highest() {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let score = fuzzy_match_score("let", "let").unwrap();
         assert_eq!(score, 100);
     }
 
     #[test]
     fn test_exact_match_case_insensitive() {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let score = fuzzy_match_score("Let", "let").unwrap();
         assert_eq!(score, 100);
     }

@@ -58,10 +58,12 @@ pub trait NativeExtension: Send + Sync {
 
 // Global registry of native extensions
 static NATIVE_REGISTRY: Lazy<Mutex<Vec<Box<dyn NativeExtension>>>> =
+    // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     Lazy::new(|| Mutex::new(Vec::new()));
 
 /// Register a native extension. Call during app initialization.
 pub fn register(ext: Box<dyn NativeExtension>) {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(mut registry) = NATIVE_REGISTRY.lock() {
         println!("Registered native extension: {}", ext.id());
         registry.push(ext);
@@ -71,6 +73,7 @@ pub fn register(ext: Box<dyn NativeExtension>) {
 /// Get manifests for all native extensions (for UI display).
 pub fn get_native_manifests() -> Vec<super::ExtensionManifest> {
     NATIVE_REGISTRY
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         .lock()
         .ok()
         .map(|registry| registry.iter().map(|e| e.manifest()).collect())
@@ -80,6 +83,7 @@ pub fn get_native_manifests() -> Vec<super::ExtensionManifest> {
 /// Check if a given extension ID is a native extension.
 pub fn is_native_extension(id: &str) -> bool {
     NATIVE_REGISTRY
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         .lock()
         .ok()
         .map(|registry| registry.iter().any(|e| e.id() == id))
@@ -88,6 +92,7 @@ pub fn is_native_extension(id: &str) -> bool {
 
 /// Set enabled state for a native extension by ID.
 pub fn set_native_enabled(id: &str, enabled: bool) {
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(mut registry) = NATIVE_REGISTRY.lock() {
         if let Some(ext) = registry.iter_mut().find(|e| e.id() == id) {
             ext.set_enabled(enabled);

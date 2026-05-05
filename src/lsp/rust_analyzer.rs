@@ -29,18 +29,23 @@ use std::sync::{Arc, Mutex};
 /// Uses `Arc<Mutex<HashMap<PathBuf, Arc<LspClient>>>>` so the manager can
 /// be shared safely between the extension system and the linter UI thread.
 pub struct RustAnalyzerManager {
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     clients: Arc<Mutex<HashMap<PathBuf, Arc<LspClient>>>>,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl RustAnalyzerManager {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new() -> Self {
         Self {
+            // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
             clients: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     /// Shutdown all rust-analyzer clients
     pub fn shutdown(&self) {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut clients = self.clients.lock().unwrap();
         for (workspace, client) in clients.drain() {
             println!(
@@ -53,6 +58,7 @@ impl RustAnalyzerManager {
 
     /// Get or create a rust-analyzer client for the given workspace
     pub fn get_client(&self, workspace_root: PathBuf) -> Result<Arc<LspClient>, String> {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut clients = self.clients.lock().unwrap();
 
         if let Some(client) = clients.get(&workspace_root) {
@@ -90,6 +96,7 @@ impl RustAnalyzerManager {
     }
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl Default for RustAnalyzerManager {
     fn default() -> Self {
         Self::new()
@@ -103,6 +110,7 @@ mod tests {
     #[test]
     fn test_rust_analyzer_manager_creation() {
         let manager = RustAnalyzerManager::new();
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let clients = manager.clients.lock().unwrap();
         assert_eq!(clients.len(), 0);
     }
@@ -110,6 +118,7 @@ mod tests {
     #[test]
     fn test_rust_analyzer_manager_default() {
         let manager = RustAnalyzerManager::default();
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let clients = manager.clients.lock().unwrap();
         assert_eq!(clients.len(), 0);
     }
@@ -121,6 +130,7 @@ mod tests {
         // Should not panic when shutting down with no clients
         manager.shutdown();
         
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let clients = manager.clients.lock().unwrap();
         assert_eq!(clients.len(), 0);
     }

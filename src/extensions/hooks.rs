@@ -103,6 +103,7 @@ pub fn refresh_extension(ext_id: &str, enabled: bool) {
         return;
     }
 
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     let ext = match mgr.get_extensions().iter().find(|e| e.manifest.id == ext_id) {
         Some(e) => e.clone(),
         None => return,
@@ -118,6 +119,7 @@ pub fn refresh_extension(ext_id: &str, enabled: bool) {
     // Status bar: force refresh the cached text and re-render the label
     if contribs.status_bar.is_some() {
         ACTIVE_FILE_PATH.with(|fp| {
+            // borrow() gets read-only access to the data inside a RefCell.
             if let Some(ref path) = *fp.borrow() {
                 super::manager::update_status_bar_text(path);
             }
@@ -128,6 +130,7 @@ pub fn refresh_extension(ext_id: &str, enabled: bool) {
     // Keybindings: toggle action enabled state
     if !contribs.keybindings.is_empty() {
         ACTIVE_NOTEBOOK.with(|nb_cell| {
+            // borrow() gets read-only access to the data inside a RefCell.
             let nb_opt = nb_cell.borrow();
             if let Some(ref notebook) = *nb_opt {
                 if let Some(window) = notebook.root().and_then(|r| r.downcast::<gtk4::ApplicationWindow>().ok()) {
@@ -140,6 +143,7 @@ pub fn refresh_extension(ext_id: &str, enabled: bool) {
     // Editor context menus: toggle action enabled state + rebuild menus on open tabs
     if contribs.context_menus.as_ref().map_or(false, |c| !c.editor.is_empty()) {
         ACTIVE_NOTEBOOK.with(|nb_cell| {
+            // borrow() gets read-only access to the data inside a RefCell.
             let nb_opt = nb_cell.borrow();
             if let Some(ref notebook) = *nb_opt {
                 if let Some(window) = notebook.root().and_then(|r| r.downcast::<gtk4::ApplicationWindow>().ok()) {
@@ -174,6 +178,7 @@ pub fn refresh_extension(ext_id: &str, enabled: bool) {
     // Sidebar panels: toggle visibility of the activity bar button
     if !contribs.sidebar_panels.is_empty() {
         ACTIVE_NOTEBOOK.with(|nb_cell| {
+            // borrow() gets read-only access to the data inside a RefCell.
             let nb_opt = nb_cell.borrow();
             if let Some(ref notebook) = *nb_opt {
                 if let Some(root) = notebook.root() {
@@ -229,10 +234,12 @@ pub fn run_extension_linters(file_path: &Path) -> Vec<crate::linter::Diagnostic>
             }
 
             let script_path = ext.path.join(&linter.script);
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match runner::run_script_json::<Vec<ExtLintDiagnostic>>(&script_path, &[&path_str]) {
                 Ok(diags) => {
                     for d in diags {
                         all_diagnostics.push(crate::linter::Diagnostic {
+                            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                             severity: match d.severity.as_str() {
                                 "error" => crate::linter::DiagnosticSeverity::Error,
                                 "warning" => crate::linter::DiagnosticSeverity::Warning,
@@ -269,10 +276,13 @@ struct ExtLintDiagnostic {
     line: usize,
     column: usize,
     #[serde(default)]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     end_line: Option<usize>,
     #[serde(default)]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     end_column: Option<usize>,
     #[serde(default)]
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     rule: Option<String>,
 }
 
@@ -292,6 +302,7 @@ pub fn register_extension_keybindings(window: &gtk4::ApplicationWindow, app: &gt
             let action = gtk4::gio::SimpleAction::new(&action_name, None);
             action.set_enabled(ext.manifest.enabled);
             let sp = script_path.clone();
+            // The "move" keyword forces the closure to take ownership of the variables it uses.
             action.connect_activate(move |_, _| {
                 run_extension_command_on_active_editor(&sp);
             });
@@ -335,6 +346,7 @@ fn key_string_to_gtk_accel(key: &str) -> String {
     let mut accel = String::new();
     for part in &parts {
         let trimmed = part.trim();
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match trimmed.to_lowercase().as_str() {
             "ctrl" | "control" => accel.push_str("<Control>"),
             "shift" => accel.push_str("<Shift>"),
@@ -479,14 +491,19 @@ fn replace_active_editor_selection(text: &str) {
 
 // Thread-local references set during app init for hook access
 thread_local! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub static ACTIVE_NOTEBOOK: std::cell::RefCell<Option<gtk4::Notebook>> =
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         const { std::cell::RefCell::new(None) };
     pub static ACTIVE_FILE_PATH: std::cell::RefCell<Option<std::path::PathBuf>> =
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         const { std::cell::RefCell::new(None) };
     pub static STATUS_LABEL: std::cell::RefCell<Option<gtk4::Label>> =
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         const { std::cell::RefCell::new(None) };
     /// Stores (ext_id, panel_id, TextView) for each sidebar panel so we can refresh them.
     static SIDEBAR_PANEL_VIEWS: std::cell::RefCell<Vec<(String, String, gtk4::TextView)>> =
+        // RefCell::new creates a container that checks borrowing rules at runtime.
         const { std::cell::RefCell::new(Vec::new()) };
 }
 
@@ -514,6 +531,7 @@ pub fn set_status_label(label: &gtk4::Label) {
 /// Register a sidebar panel's TextView for later refresh. Call during init for each panel.
 pub fn register_sidebar_panel_view(ext_id: &str, panel_id: &str, text_view: &gtk4::TextView) {
     SIDEBAR_PANEL_VIEWS.with(|views| {
+        // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
         views.borrow_mut().push((
             ext_id.to_string(),
             panel_id.to_string(),

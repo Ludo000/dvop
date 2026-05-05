@@ -18,10 +18,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 static EXTENSION_MANAGER: once_cell::sync::Lazy<Mutex<ExtensionManager>> =
+    // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     once_cell::sync::Lazy::new(|| Mutex::new(ExtensionManager::new()));
 
 /// Cached status bar text produced by extension scripts
 static EXTENSION_STATUS_TEXT: once_cell::sync::Lazy<Mutex<String>> =
+    // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     once_cell::sync::Lazy::new(|| Mutex::new(String::new()));
 
 /// Manages the lifecycle of all extensions
@@ -30,6 +32,7 @@ pub struct ExtensionManager {
     extensions_dir: PathBuf,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl ExtensionManager {
     fn new() -> Self {
         let extensions_dir = get_extensions_dir();
@@ -50,6 +53,7 @@ impl ExtensionManager {
             }
         }
 
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         let entries = match std::fs::read_dir(&self.extensions_dir) {
             Ok(entries) => entries,
             Err(e) => {
@@ -69,7 +73,9 @@ impl ExtensionManager {
                 continue;
             }
 
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match std::fs::read_to_string(&manifest_path) {
+                // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                 Ok(content) => match serde_json::from_str::<ExtensionManifest>(&content) {
                     Ok(manifest) => {
                         println!("Loaded extension: {} v{}", manifest.name, manifest.version);
@@ -317,6 +323,7 @@ pub fn update_status_bar_text(file_path: &Path) {
     let mgr = get_manager();
     let text = mgr.run_status_bar_scripts(file_path);
     drop(mgr);
+    // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(mut cached) = EXTENSION_STATUS_TEXT.lock() {
         *cached = text;
     }
@@ -325,6 +332,7 @@ pub fn update_status_bar_text(file_path: &Path) {
 /// Get the cached extension status bar text
 pub fn get_status_bar_text() -> String {
     EXTENSION_STATUS_TEXT
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         .lock()
         .map(|s| s.clone())
         .unwrap_or_default()
@@ -341,6 +349,7 @@ pub fn get_extensions_dir() -> PathBuf {
 
 /// Access the global extension manager (locked)
 pub fn get_manager() -> std::sync::MutexGuard<'static, ExtensionManager> {
+    // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
     EXTENSION_MANAGER.lock().unwrap()
 }
 

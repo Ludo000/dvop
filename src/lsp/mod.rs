@@ -40,6 +40,7 @@ use lsp_types::{Diagnostic as LspDiagnostic, DiagnosticSeverity as LspSeverity};
 pub fn convert_lsp_diagnostic(lsp_diag: &LspDiagnostic) -> crate::linter::Diagnostic {
     use crate::linter::{Diagnostic, DiagnosticSeverity};
 
+    // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     let severity = match lsp_diag.severity {
         Some(LspSeverity::ERROR) => DiagnosticSeverity::Error,
         Some(LspSeverity::WARNING) => DiagnosticSeverity::Warning,
@@ -56,6 +57,7 @@ pub fn convert_lsp_diagnostic(lsp_diag: &LspDiagnostic) -> crate::linter::Diagno
     let rule = lsp_diag
         .code
         .as_ref()
+        // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         .map(|c| match c {
             lsp_types::NumberOrString::Number(n) => n.to_string(),
             lsp_types::NumberOrString::String(s) => s.clone(),
@@ -82,7 +84,9 @@ pub struct LanguageServerConfig {
     pub file_extensions: Vec<String>,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl LanguageServerConfig {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn rust_analyzer() -> Self {
         Self {
             name: "rust-analyzer".to_string(),

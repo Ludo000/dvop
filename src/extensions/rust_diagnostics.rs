@@ -30,16 +30,24 @@ use std::sync::{Arc, Mutex};
 // ── State ────────────────────────────────────────────────────────
 
 lazy_static::lazy_static! {
+    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static ref RUST_ANALYZER: Arc<Mutex<Option<crate::lsp::rust_analyzer::RustAnalyzerManager>>> =
+        // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         Arc::new(Mutex::new(None));
 
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     static ref INITIAL_DIAGNOSTICS_RECEIVED: Arc<Mutex<HashMap<String, bool>>> =
+        // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         Arc::new(Mutex::new(HashMap::new()));
 
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     static ref DOCUMENT_VERSIONS: Arc<Mutex<HashMap<String, i32>>> =
+        // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         Arc::new(Mutex::new(HashMap::new()));
 
+    // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     static ref AWAITING_SAVE_DIAGNOSTICS: Arc<Mutex<HashMap<String, bool>>> =
+        // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         Arc::new(Mutex::new(HashMap::new()));
 
     static ref ENABLED: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
@@ -49,7 +57,9 @@ lazy_static::lazy_static! {
 
 pub struct RustDiagnosticsExtension;
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl RustDiagnosticsExtension {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new() -> Self {
         // Restore persisted enabled state
         let enabled = load_enabled_state();
@@ -58,6 +68,7 @@ impl RustDiagnosticsExtension {
     }
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl NativeExtension for RustDiagnosticsExtension {
     fn id(&self) -> &str {
         "rust-diagnostics"
@@ -155,6 +166,7 @@ impl NativeExtension for RustDiagnosticsExtension {
 
 /// Register the Rust diagnostics extension. Call once during app init.
 pub fn register() {
+    // Box::new(...) allocates the data on the heap rather than the stack.
     super::native::register(Box::new(RustDiagnosticsExtension::new()));
 }
 
@@ -201,6 +213,7 @@ pub fn check_and_update_rust_ui(dir: &Path) {
     let has_rust = is_rust_project(dir);
 
     glib::idle_add_once({
+        // The "move" keyword forces the closure to take ownership of the variables it uses.
         move || {
             let has_diagnostics = crate::linter::ui::has_any_diagnostics();
 
@@ -225,6 +238,7 @@ fn initialize_rust_analyzer() {
     if !ENABLED.load(Ordering::SeqCst) {
         return;
     }
+    // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
     let mut manager_guard = RUST_ANALYZER.lock().unwrap();
     if manager_guard.is_none() {
         *manager_guard = Some(crate::lsp::rust_analyzer::RustAnalyzerManager::new());
@@ -234,20 +248,24 @@ fn initialize_rust_analyzer() {
 
 /// Shutdown rust-analyzer and clear diagnostics
 fn shutdown_rust_analyzer() {
+    // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
     let mut manager_guard = RUST_ANALYZER.lock().unwrap();
     if let Some(ref manager) = *manager_guard {
         manager.shutdown();
 
         crate::linter::ui::clear_all_diagnostics_store();
 
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut initial = INITIAL_DIAGNOSTICS_RECEIVED.lock().unwrap();
         initial.clear();
         drop(initial);
 
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut versions = DOCUMENT_VERSIONS.lock().unwrap();
         versions.clear();
         drop(versions);
 
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let mut awaiting = AWAITING_SAVE_DIAGNOSTICS.lock().unwrap();
         awaiting.clear();
         drop(awaiting);
@@ -286,12 +304,15 @@ fn setup_lsp_for_file(file_path: &Path) {
 
     let file_path_buf = file_path.to_path_buf();
 
+    // The "move" keyword forces the closure to take ownership of the variables it uses.
     std::thread::spawn(move || {
         println!("LSP thread started");
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let manager_guard = RUST_ANALYZER.lock().unwrap();
         println!("Acquired RUST_ANALYZER lock");
         if let Some(ref manager) = *manager_guard {
             println!("Manager exists, getting client...");
+            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match manager.get_client(workspace_root.clone()) {
                 Ok(client) => {
                     println!(
@@ -302,6 +323,7 @@ fn setup_lsp_for_file(file_path: &Path) {
 
                     let initial_received = INITIAL_DIAGNOSTICS_RECEIVED.clone();
                     println!("Setting diagnostic callback...");
+                    // The "move" keyword forces the closure to take ownership of the variables it uses.
                     client.set_diagnostic_callback(move |uri, lsp_diagnostics| {
                         // Ignore diagnostics if the extension was disabled
                         if !ENABLED.load(Ordering::SeqCst) {
@@ -334,6 +356,7 @@ fn setup_lsp_for_file(file_path: &Path) {
 
                         println!("📊 Refreshing diagnostics panel");
                         let uri_for_underlines = uri_str.clone();
+                        // The "move" keyword forces the closure to take ownership of the variables it uses.
                         glib::source::idle_add(move || {
                             crate::linter::ui::refresh_diagnostics_panel();
                             crate::linter::ui::update_diagnostics_count();
@@ -403,7 +426,9 @@ fn notify_file_saved(file_path: &Path) {
     let workspace_root = find_workspace_root(file_path);
     let file_path_buf = file_path.to_path_buf();
 
+    // thread::spawn creates a new background thread to run operations without blocking the main UI.
     std::thread::spawn(move || {
+        // lock() acquires the Mutex lock. It blocks until the lock is available.
         let manager_guard = RUST_ANALYZER.lock().unwrap();
         if let Some(ref manager) = *manager_guard {
             if let Ok(client) = manager.get_client(workspace_root) {
@@ -413,6 +438,7 @@ fn notify_file_saved(file_path: &Path) {
                             let uri_str = uri.to_string();
 
                             {
+                                // lock() acquires the Mutex lock. It blocks until the lock is available.
                                 let mut awaiting = AWAITING_SAVE_DIAGNOSTICS.lock().unwrap();
                                 awaiting.insert(uri_str.clone(), true);
                             }

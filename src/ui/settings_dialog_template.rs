@@ -15,6 +15,7 @@ use gtk4::{gio, glib, CompositeTemplate, Dialog, DropDown, Label, SpinButton};
 mod imp {
     use super::*;
 
+    // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/example/Dvop/settings_dialog.ui")]
     pub struct SettingsDialog {
@@ -31,6 +32,7 @@ mod imp {
     }
 
     #[glib::object_subclass]
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl ObjectSubclass for SettingsDialog {
         const NAME: &'static str = "DvopSettingsDialog";
         type Type = super::SettingsDialog;
@@ -45,8 +47,11 @@ mod imp {
         }
     }
 
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl ObjectImpl for SettingsDialog {}
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl WidgetImpl for SettingsDialog {}
+    // "impl" blocks define methods and behavior for a struct or enum.
     impl WindowImpl for SettingsDialog {}
     impl DialogImpl for SettingsDialog {}
 }
@@ -59,6 +64,7 @@ glib::wrapper! {
 }
 
 impl SettingsDialog {
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn new<P: IsA<gtk4::ApplicationWindow>>(parent: &P) -> Self {
         glib::Object::builder()
             .property(
@@ -68,14 +74,17 @@ impl SettingsDialog {
             .build()
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn theme_info(&self) -> Label {
         self.imp().theme_info.get()
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn light_theme_dropdown(&self) -> DropDown {
         self.imp().light_theme_dropdown.get()
     }
 
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn dark_theme_dropdown(&self) -> DropDown {
         self.imp().dark_theme_dropdown.get()
     }

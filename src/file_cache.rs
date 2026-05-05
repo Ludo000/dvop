@@ -30,9 +30,13 @@
 // File content caching system to optimize repeated file operations
 // This module provides caching for file contents to avoid repeated disk I/O
 
+
+// HashMap: Think of this as a Dictionary or an Object where we map a File Path to its text.
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+// Arc & Mutex: These are the "bodyguards" that make it safe for multiple background tasks 
+// to read/write to the same cache at the same time without crashing the app.
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
@@ -62,10 +66,12 @@ pub struct FileCache {
     cache_duration: Duration,
 }
 
+// "impl" blocks define methods and behavior for a struct or enum.
 impl FileCache {
     /// Create a new file cache with the specified cache duration
     pub fn new(cache_duration: Duration) -> Self {
         Self {
+            // Arc::new(Mutex::new(...)) is a standard Rust pattern for shared, mutable state.
             cache: Arc::new(Mutex::new(HashMap::new())),
             cache_duration,
         }
@@ -77,13 +83,21 @@ impl FileCache {
     }
 
     /// Get file content from cache or load from disk if not cached or expired
+    
+    // <P: AsRef<Path>> is a "Generic". It just means you can pass in a String, 
+    // a &str, or a Path object and it will work.
     pub fn get_file_content<P: AsRef<Path>>(&self, path: P) -> Result<String, std::io::Error> {
         let path = path.as_ref().to_path_buf();
 
         // Get file metadata
+        // The '?' at the end means: "If this fails (e.g. file not found), 
+        // exit the function early and return the error."
         let metadata = fs::metadata(&path)?;
         let file_modified_time = metadata.modified()?;
 
+        // .lock().unwrap() grants us exclusive access to the cache map.
+        // The variable 'cache' acts like a key; when it goes out of scope at the 
+        // end of this function, the lock is automatically released.
         let mut cache = self.cache.lock().unwrap();
 
         // Check if we have a valid cached entry
@@ -95,6 +109,8 @@ impl FileCache {
 
             // Return cached content if it's still valid and file hasn't been modified
             if cache_age < self.cache_duration && cached_file.last_modified >= file_modified_time {
+                // We use .clone() because the cache "owns" the string. 
+                // We're giving the caller their own copy to play with.
                 return Ok(cached_file.content.clone());
             }
         }
@@ -109,30 +125,38 @@ impl FileCache {
             cached_at: SystemTime::now(),
         };
 
+        // Put the new data into the map
         cache.insert(path, cached_file);
         Ok(content)
     }
 
     /// Remove a specific file from the cache
     #[allow(dead_code)]
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn invalidate<P: AsRef<Path>>(&self, path: P) {
         let path = path.as_ref().to_path_buf();
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut cache = self.cache.lock().unwrap();
         cache.remove(&path);
     }
 
     /// Get the number of cached files
     #[allow(dead_code)]
+    // pub makes this function public, allowing it to be used from outside this module.
     pub fn len(&self) -> usize {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let cache = self.cache.lock().unwrap();
         cache.len()
     }
 
     /// Remove expired entries from the cache
     pub fn cleanup_expired(&self) {
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut cache = self.cache.lock().unwrap();
         let now = SystemTime::now();
 
+        // .retain is a high-performance way to filter the map. 
+        // It keeps items that return 'true' and drops the 'false' ones.
         cache.retain(|_, cached_file| {
             let cache_age = now
                 .duration_since(cached_file.cached_at)
@@ -143,6 +167,9 @@ impl FileCache {
 }
 
 // Global file cache instance
+
+// In Rust, global variables are tricky. lazy_static makes sure GLOBAL_FILE_CACHE
+// is only created the very first time someone tries to use it.
 lazy_static::lazy_static! {
     static ref GLOBAL_FILE_CACHE: FileCache = FileCache::with_default_duration();
 }
@@ -154,6 +181,7 @@ pub fn get_cached_file_content(path: &std::path::Path) -> std::io::Result<String
 
 /// Invalidate a specific file in the global cache
 #[allow(dead_code)]
+// pub makes this function public, allowing it to be used from outside this module.
 pub fn invalidate_file_cache<P: AsRef<Path>>(path: P) {
     GLOBAL_FILE_CACHE.invalidate(path);
 }
@@ -175,6 +203,7 @@ mod tests {
 
         // Create a temporary file
         let mut temp_file = NamedTempFile::new().unwrap();
+        // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         writeln!(temp_file, "Hello, World!").unwrap();
         temp_file.flush().unwrap();
 
