@@ -11,8 +11,8 @@
 //! - `show_global_search_dialog()` — opens a floating dialog (legacy)
 //! - `create_global_search_panel()` — creates the sidebar panel (current)
 //!
-//! The search runs **asynchronously in a background thread** with tokio for
-//! non-blocking I/O operations, keeping the UI responsive even for large directories.
+//! The search runs **synchronously on the main thread** to keep the code
+//! simple; very large directories may briefly block the UI.
 //!
 //! ## Key Private Types
 //!
@@ -32,10 +32,11 @@ use gtk4::{
 };
 use std::cell::RefCell;
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use tokio;
 use tokio::fs as async_fs;
-use tokio::io::AsyncBufReadExt;
 
 use super::search_panel_template::SearchPanel;
 
@@ -115,7 +116,7 @@ fn search_in_content(
     results
 }
 
-async fn search_file_async(
+fn search_file(
     path: &Path,
     needle: &str,
     case_sensitive: bool,
@@ -123,7 +124,7 @@ async fn search_file_async(
     max_file_size_bytes: u64,
 ) -> Vec<SearchResult> {
     // Skip very large files to avoid UI stalls
-    if let Ok(meta) = async_fs::metadata(path).await {
+    if let Ok(meta) = fs::metadata(path) {
         if meta.len() > max_file_size_bytes {
             return Vec::new();
         }
@@ -143,7 +144,7 @@ async fn search_file_async(
     // Check if needle contains newlines (multi-line search)
     if needle.contains('\n') {
         // Multi-line search: read entire file and search
-        if let Ok(content) = async_fs::read_to_string(path).await {
+        if let Ok(content) = fs::read_to_string(path) {
             let search_content = if case_sensitive {
                 content.clone()
             } else {
@@ -253,11 +254,10 @@ async fn search_file_async(
         }
     } else {
         // Single-line search: line-by-line for better performance
-        if let Ok(file) = async_fs::File::open(path).await {
-            let reader = tokio::io::BufReader::new(file);
-            let mut lines = reader.lines();
+        if let Ok(file) = fs::File::open(path) {
+            let reader = BufReader::new(file);
             let mut line_no = 0usize;
-            while let Ok(Some(line)) = lines.next_line().await {
+            for line in reader.lines().flatten() {
                 line_no += 1;
                 if case_sensitive {
                     let mut search_pos = 0;
@@ -352,51 +352,39 @@ async fn search_file_async(
     results
 }
 
-async fn walk_dir_async(root: PathBuf, max_files: usize, file_sender: std::sync::mpsc::Sender<PathBuf>) {
-    let mut dirs_to_visit = vec![root];
-    let mut files_found = 0;
-
-    while let Some(current_dir) = dirs_to_visit.pop() {
-        if files_found >= max_files {
-            break;
-        }
-
-        // Yield control periodically to avoid blocking
-        tokio::task::yield_now().await;
-
-        match async_fs::read_dir(&current_dir).await {
-            Ok(mut read_dir) => {
-                while let Ok(Some(entry)) = read_dir.next_entry().await {
-                    if files_found >= max_files {
-                        break;
-                    }
-
-                    let path = entry.path();
-
-                    // Skip hidden files/dirs
-                    if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-                        if name.starts_with('.') {
-                            continue;
-                        }
-                        // Skip target directory by convention
-                        if name == "target" {
-                            continue;
-                        }
-                        // Skip node_modules if present
-                        if name == "node_modules" {
-                            continue;
-                        }
-                    }
-
-                    if path.is_dir() {
-                        dirs_to_visit.push(path);
-                    } else if path.is_file() {
-                        let _ = file_sender.send(path);
-                        files_found += 1;
-                    }
+fn walk_dir_recursive(root: &Path, files_out: &mut Vec<PathBuf>, max_files: usize) {
+    if files_out.len() >= max_files {
+        return;
+    }
+    if let Ok(read) = fs::read_dir(root) {
+        for entry in read.flatten() {
+            let p = entry.path();
+            // Skip hidden files/dirs
+            if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
+                if name.starts_with('.') {
+                    continue;
+                }
+                // Skip target directory by convention
+                if name == "target" {
+                    continue;
+                }
+                // Skip node_modules if present
+                if name == "node_modules" {
+                    continue;
                 }
             }
-            Err(_) => continue,
+
+            if p.is_dir() {
+                walk_dir_recursive(&p, files_out, max_files);
+                if files_out.len() >= max_files {
+                    return;
+                }
+            } else if p.is_file() {
+                files_out.push(p);
+                if files_out.len() >= max_files {
+                    return;
+                }
+            }
         }
     }
 }
@@ -760,7 +748,14 @@ pub fn show_global_search_dialog(
                                 // Open (or focus) the file
                                 let mime = mime_guess::from_path(&path).first_or_octet_stream();
                                 let content_opt = if crate::utils::is_allowed_mime_type(&mime) {
-                                    fs::read_to_string(&path).ok()
+                                    // Read file asynchronously to avoid blocking UI
+                                    let path_clone = path.clone();
+                                    std::thread::spawn(move || {
+                                        let rt = tokio::runtime::Runtime::new().unwrap();
+                                        rt.block_on(async {
+                                            async_fs::read_to_string(&path_clone).await.ok()
+                                        })
+                                    }).join().unwrap_or(None)
                                 } else { None };
 
                                 if crate::utils::is_allowed_mime_type(&mime) {
@@ -955,57 +950,33 @@ pub fn show_global_search_dialog(
                 }
                 drop(file_path_map);
 
-                // Start search in background thread with tokio runtime
+                // Start search in background thread
                 std::thread::spawn(move || {
-                    // Create a tokio runtime for async operations
-                    let rt = tokio::runtime::Runtime::new().unwrap();
-                    rt.block_on(async {
-                        let (file_sender, file_receiver) = std::sync::mpsc::channel::<PathBuf>();
+                    let mut files = Vec::with_capacity(2048);
+                    walk_dir_recursive(&root, &mut files, 20000);
+                    let mut found = 0usize;
+                    for p in files {
+                        // Check if we have buffer content for this file
+                        let results = if let Some(content) = open_files_content.get(&p) {
+                            // Search in buffer content
+                            search_in_content(&p, content, &query, case_sensitive, whole_word)
+                        } else {
+                            // Search in file on disk
+                            search_file(&p, &query, case_sensitive, whole_word, 5 * 1024 * 1024)
+                        };
 
-                        // Start directory walking in background
-                        let root_clone = root.clone();
-                        let sender_clone = sender.clone();
-                        let query_clone = query.clone();
-                        let open_files_content_clone = open_files_content.clone();
-                        tokio::spawn(async move {
-                            walk_dir_async(root_clone, 20000, file_sender).await;
-                        });
-
-                        let mut found = 0usize;
-                        let mut processed_files = 0usize;
-
-                        // Process files as they are discovered
-                        while let Ok(path) = file_receiver.recv() {
-                            processed_files += 1;
-
-                            // Yield control every 100 files to stay responsive
-                            if processed_files % 100 == 0 {
-                                tokio::task::yield_now().await;
-                            }
-
-                            // Check if we have buffer content for this file
-                            let results = if let Some(content) = open_files_content_clone.get(&path) {
-                                // Search in buffer content
-                                search_in_content(&path, content, &query_clone, case_sensitive, whole_word)
-                            } else {
-                                // Search in file on disk
-                                search_file_async(&path, &query_clone, case_sensitive, whole_word, 5 * 1024 * 1024).await
-                            };
-
-                            for r in results {
-                                found += 1;
-                                let _ = sender_clone.send(Some(r));
-                                if found >= 10000 {
-                                    break;
-                                }
-                            }
+                        for r in results {
+                            found += 1;
+                            let _ = sender.send(Some(r));
                             if found >= 10000 {
                                 break;
                             }
                         }
-
-                        let _ = sender.send(None);
-                    });
+                        if found >= 10000 {
+                            break;
+                        }
+                    }
+                    let _ = sender.send(None);
                 });
 
                 // Start polling timer to receive results
@@ -1815,7 +1786,14 @@ pub fn create_global_search_panel(
                                 // Open (or focus) the file
                                 let mime = mime_guess::from_path(&path).first_or_octet_stream();
                                 let content_opt = if crate::utils::is_allowed_mime_type(&mime) {
-                                    fs::read_to_string(&path).ok()
+                                    // Read file asynchronously to avoid blocking UI
+                                    let path_clone = path.clone();
+                                    std::thread::spawn(move || {
+                                        let rt = tokio::runtime::Runtime::new().unwrap();
+                                        rt.block_on(async {
+                                            async_fs::read_to_string(&path_clone).await.ok()
+                                        })
+                                    }).join().unwrap_or(None)
                                 } else { None };
 
                                 if crate::utils::is_allowed_mime_type(&mime) {
@@ -1965,41 +1943,26 @@ pub fn create_global_search_panel(
             }
             drop(file_path_map);
 
-            // Spawn search thread with tokio runtime
+            // Spawn search thread
             std::thread::spawn(move || {
-                // Create a tokio runtime for async operations
-                let rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(async {
-                    let (file_sender, file_receiver) = std::sync::mpsc::channel::<PathBuf>();
+                let mut files = Vec::new();
+                walk_dir_recursive(&folder_to_search, &mut files, 10000);
 
-                    // Start directory walking in background
-                    let folder_clone = folder_to_search.clone();
-                    let sender_clone = sender.clone();
-                    let needle_clone = needle.clone();
-                    let case_sensitive_clone = case_sensitive;
-                    let whole_word_clone = whole_word;
-                    let open_files_content_clone = open_files_content.clone();
-                    tokio::spawn(async move {
-                        walk_dir_async(folder_clone, 10000, file_sender).await;
-                    });
+                for file_path in files {
+                    // Check if we have buffer content for this file
+                    let results = if let Some(content) = open_files_content.get(&file_path) {
+                        // Search in buffer content
+                        search_in_content(&file_path, content, &needle, case_sensitive, whole_word)
+                    } else {
+                        // Search in file on disk
+                        search_file(&file_path, &needle, case_sensitive, whole_word, 1_000_000)
+                    };
 
-                    // Process files as they are discovered
-                    while let Ok(file_path) = file_receiver.recv() {
-                        // Check if we have buffer content for this file
-                        let results = if let Some(content) = open_files_content_clone.get(&file_path) {
-                            // Search in buffer content
-                            search_in_content(&file_path, content, &needle_clone, case_sensitive_clone, whole_word_clone)
-                        } else {
-                            // Search in file on disk
-                            search_file_async(&file_path, &needle_clone, case_sensitive_clone, whole_word_clone, 1_000_000).await
-                        };
-
-                        for sr in results {
-                            let _ = sender_clone.send(Some(sr));
-                        }
+                    for sr in results {
+                        let _ = sender.send(Some(sr));
                     }
-                    let _ = sender.send(None); // Signal completion
-                });
+                }
+                let _ = sender.send(None); // Signal completion
             });
 
             // Set up UI update timer
