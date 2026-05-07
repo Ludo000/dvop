@@ -72,6 +72,8 @@ use std::collections::HashMap;
 use std::io::Write;       // Trait for writing bytes to files (used in save operations)
 use std::path::PathBuf;   // Owned, heap-allocated file system path
 use std::rc::Rc;          // Single-threaded reference counting pointer
+use tokio;
+use tokio::fs as async_fs;
 
 /// A single entry in the command palette (the searchable menu at the top of the window).
 ///
@@ -2903,6 +2905,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // from the main thread. The receiver runs in a `glib::idle_add_local` loop.
     {
         let (sender, receiver) = std::sync::mpsc::channel::<(PathBuf, usize, usize)>();
+        let (file_content_sender, file_content_receiver) = std::sync::mpsc::channel::<(PathBuf, Result<String, std::io::Error>, usize, usize)>();
 
         // Set up the receiver to handle file open requests on the main thread
         let notebook_clone = editor_notebook.clone();
@@ -2913,6 +2916,68 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let window_clone = window.clone();
         let file_list_box_clone = file_list_box.clone();
         let current_dir_clone = current_dir.clone();
+
+        // Handle file content results
+        let notebook_for_content = notebook_clone.clone();
+        let file_path_manager_for_content = file_path_manager_clone.clone();
+        let active_tab_path_for_content = active_tab_path_clone.clone();
+        let save_button_for_content = save_button_clone.clone();
+        let save_as_button_for_content = save_as_button_clone.clone();
+        let window_for_content = window_clone.clone();
+        let file_list_box_for_content = file_list_box_clone.clone();
+        let current_dir_for_content = current_dir_clone.clone();
+
+        glib::idle_add_local(move || {
+            // Process file content results
+            while let Ok((file_path, content_result, line, column)) = file_content_receiver.try_recv() {
+                match content_result {
+                    Ok(content) => {
+                        let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+
+                        handlers::open_or_focus_tab(
+                            &notebook_for_content,
+                            &file_path,
+                            &content,
+                            &active_tab_path_for_content,
+                            &file_path_manager_for_content,
+                            &save_button_for_content,
+                            &save_as_button_for_content,
+                            &mime_type,
+                            &window_for_content,
+                            &file_list_box_for_content,
+                            &current_dir_for_content,
+                            None,
+                        );
+
+                        // After opening, jump to the line
+                        let current_page = notebook_for_content.current_page().unwrap_or(0);
+                        if let Some(page) = notebook_for_content.nth_page(Some(current_page)) {
+                            if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
+                                if let Some(source_view) = scrolled
+                                    .child()
+                                    .and_then(|c| c.downcast::<sourceview5::View>().ok())
+                                {
+                                    // Use idle_add to ensure the view is fully loaded before jumping
+                                    let source_view_clone = source_view.clone();
+                                    glib::idle_add_local_once(move || {
+                                        handlers::jump_to_line_and_column(
+                                            &source_view_clone,
+                                            line,
+                                            column,
+                                        );
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error reading file {:?}: {}", file_path, e);
+                    }
+                }
+            }
+
+            glib::ControlFlow::Continue
+        });
 
         // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
         glib::idle_add_local(move || {
@@ -2958,47 +3023,19 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                         }
                     }
                 } else {
-                    // File not open - open it first, then jump
-                    if let Ok(content) = std::fs::read_to_string(&file_path) {
-                        let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                    // File not open - read it asynchronously
+                    let file_path_clone = file_path.clone();
+                    let file_content_sender_clone = file_content_sender.clone();
+                    let line_for_async = line;
+                    let column_for_async = column;
 
-                        handlers::open_or_focus_tab(
-                            &notebook_clone,
-                            &file_path,
-                            &content,
-                            &active_tab_path_clone,
-                            &file_path_manager_clone,
-                            &save_button_clone,
-                            &save_as_button_clone,
-                            &mime_type,
-                            &window_clone,
-                            &file_list_box_clone,
-                            &current_dir_clone,
-                            None,
-                        );
-
-                        // After opening, jump to the line
-                        let current_page = notebook_clone.current_page().unwrap_or(0);
-                        if let Some(page) = notebook_clone.nth_page(Some(current_page)) {
-                            if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
-                                if let Some(source_view) = scrolled
-                                    .child()
-                                    .and_then(|c| c.downcast::<sourceview5::View>().ok())
-                                {
-                                    // Use idle_add to ensure the view is fully loaded before jumping
-                                    let source_view_clone = source_view.clone();
-                                    // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
-                                    glib::idle_add_local_once(move || {
-                                        handlers::jump_to_line_and_column(
-                                            &source_view_clone,
-                                            line,
-                                            column,
-                                        );
-                                    });
-                                }
-                            }
-                        }
-                    }
+                    std::thread::spawn(move || {
+                        let rt = tokio::runtime::Runtime::new().unwrap();
+                        let content_result = rt.block_on(async {
+                            async_fs::read_to_string(&file_path_clone).await
+                        });
+                        let _ = file_content_sender_clone.send((file_path_clone, content_result, line_for_async, column_for_async));
+                    });
                 }
             }
 
