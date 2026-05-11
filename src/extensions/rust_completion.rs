@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use gtk4::glib;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -87,7 +88,10 @@ impl NativeExtension for RustCompletionExtension {
         if !self.is_enabled() {
             return;
         }
-        load_and_register();
+        // Defer rustup doc parse / cache load so the first window can appear immediately.
+        glib::idle_add_local_once(move || {
+            load_and_register();
+        });
     }
 }
 
@@ -125,7 +129,7 @@ pub fn load_and_register() {
 
     let mut manager = crate::completion::json_provider::get_completion_manager();
 
-    // Check if rust.json was already loaded by initialize_completion_data
+    // Merge static rust.json if it was already loaded (eager preload or first get_provider).
     let json_data = manager
         .get_provider("rust")
         .map(|p| p.language_data().clone());

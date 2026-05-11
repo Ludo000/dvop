@@ -1,6 +1,6 @@
 //! # JSON Completion Provider — Data Loader & Cache
 //!
-//! Reads `completion_data/*.json` files at startup and caches them in memory.
+//! Reads `completion_data/*.json` files on demand and caches them in memory.
 //! Each JSON file follows the `LanguageCompletionData` schema (keywords,
 //! snippets, imports). A global `CompletionDataManager` (behind a `Mutex`)
 //! holds all loaded providers.
@@ -9,8 +9,9 @@
 //!
 //! 1. Create `completion_data/<lang>.json` following the schema (see
 //!    `completion_data/README.md` and existing files for examples).
-//! 2. Call `initialize_completion_data()` at startup — it auto-discovers
-//!    every `.json` file in the `completion_data/` directory.
+//! 2. Data loads automatically on first use for that language via
+//!    `get_provider()`, or call `initialize_completion_data()` / `load_all_languages()`
+//!    when you need everything in memory at once (e.g. tests).
 //!
 //! See FEATURES.md: Feature #111 — Code Completion
 //! See FEATURES.md: Feature #112 — Multi-Language Completion Data
@@ -265,7 +266,28 @@ impl CompletionDataManager {
         self.providers.get(language)
     }
 
-    /// Load all available language files in the data directory
+    /// Language IDs that have a `.json` file in the data directory (filesystem only; no parsing).
+    pub fn list_available_languages(&self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let data_dir = Path::new(&self.data_directory);
+        if !data_dir.exists() {
+            return Err(format!("Data directory does not exist: {:?}", data_dir).into());
+        }
+
+        let mut langs = Vec::new();
+        for entry in fs::read_dir(data_dir)? {
+            let path = entry?.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                    langs.push(stem.to_string());
+                }
+            }
+        }
+        langs.sort();
+        Ok(langs)
+    }
+
+    /// Load all available language files in the data directory (eager preload; tests / tooling).
+    #[allow(dead_code)]
     pub fn load_all_languages(&mut self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let data_dir = Path::new(&self.data_directory);
         let mut loaded_languages = Vec::new();
@@ -378,12 +400,11 @@ lazy_static::lazy_static! {
             "./completion_data",
         ];
 
-        let data_dir = possible_paths.iter()
+        let data_dir = possible_paths
+            .iter()
             .find(|path| Path::new(path).exists())
             .unwrap_or(&"completion_data")
             .to_string();
-
-        println!("Using completion data directory: {}", data_dir);
         // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         std::sync::Mutex::new(CompletionDataManager::new(data_dir))
     };
@@ -461,7 +482,8 @@ pub fn get_json_snippet_documentation(language: &str, trigger: &str) -> String {
     }
 }
 
-/// Initialize and load all available completion data
+/// Initialize and load all available completion data (optional eager preload).
+#[allow(dead_code)]
 pub fn initialize_completion_data() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut manager = get_completion_manager();
     manager.load_all_languages()

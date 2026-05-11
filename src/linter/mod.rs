@@ -125,8 +125,34 @@ pub fn lint_by_language(language: &str, _content: &str) -> Vec<Diagnostic> {
 }
 
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use once_cell::sync::Lazy;
+
+/// Paths for which we have applied diagnostic underline tags (skip full-buffer tag clears when empty).
+static FILES_WITH_APPLIED_UNDERLINE_TAGS: Lazy<Mutex<HashSet<String>>> =
+    Lazy::new(|| Mutex::new(HashSet::new()));
+
+fn underline_debug(msg: impl AsRef<str>) {
+    if std::env::var("DVOP_DEBUG_UNDERLINES").ok().as_deref() == Some("1") {
+        println!("{}", msg.as_ref());
+    }
+}
+
+/// Call when a tab/file is closed so underline fast-path tracking does not leak.
+pub fn forget_diagnostic_underline_tracking_for_path(file_path: &str) {
+    if let Ok(mut s) = FILES_WITH_APPLIED_UNDERLINE_TAGS.lock() {
+        s.remove(file_path);
+    }
+}
+
+/// Whether we previously applied underline tags for this path (used to skip redundant passes).
+pub fn has_applied_diagnostic_underlines_for_path(file_path: &str) -> bool {
+    FILES_WITH_APPLIED_UNDERLINE_TAGS
+        .lock()
+        .ok()
+        .map(|s| s.contains(file_path))
+        .unwrap_or(false)
+}
 
 // Type alias for diagnostics storage
 type DiagnosticsMap = Arc<Mutex<HashMap<String, Vec<Diagnostic>>>>;
@@ -161,15 +187,44 @@ pub fn get_file_diagnostics(file_path: &str) -> Vec<Diagnostic> {
 /// Apply diagnostic underlines to a source buffer
 pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str) {
     let mut diagnostics = get_file_diagnostics(file_path);
-    
-    println!("🖊️  apply_diagnostic_underlines for {}: {} diagnostics", file_path, diagnostics.len());
-    
+
+    underline_debug(format!(
+        "🖊️  apply_diagnostic_underlines for {}: {} diagnostics",
+        file_path,
+        diagnostics.len()
+    ));
+
     let tag_table = buffer.tag_table();
-    
-    // Clear all existing diagnostic tags first
     let start_iter = buffer.start_iter();
     let end_iter = buffer.end_iter();
-    
+
+    if diagnostics.is_empty() {
+        let had_underlines = FILES_WITH_APPLIED_UNDERLINE_TAGS
+            .lock()
+            .ok()
+            .map(|s| s.contains(file_path))
+            .unwrap_or(false);
+        if !had_underlines {
+            underline_debug("(skip underline clear: nothing was previously applied for this path)");
+            return;
+        }
+        if let Some(tag) = tag_table.lookup("diagnostic-info-underline") {
+            buffer.remove_tag(&tag, &start_iter, &end_iter);
+        }
+        if let Some(tag) = tag_table.lookup("diagnostic-warning-underline") {
+            buffer.remove_tag(&tag, &start_iter, &end_iter);
+        }
+        if let Some(tag) = tag_table.lookup("diagnostic-error-underline") {
+            buffer.remove_tag(&tag, &start_iter, &end_iter);
+        }
+        if let Ok(mut s) = FILES_WITH_APPLIED_UNDERLINE_TAGS.lock() {
+            s.remove(file_path);
+        }
+        underline_debug("✓ Cleared diagnostic tags (had previous underlines)");
+        return;
+    }
+
+    // Clear stale diagnostic tags before applying a new non-empty set
     if let Some(tag) = tag_table.lookup("diagnostic-info-underline") {
         buffer.remove_tag(&tag, &start_iter, &end_iter);
     }
@@ -179,14 +234,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
     if let Some(tag) = tag_table.lookup("diagnostic-error-underline") {
         buffer.remove_tag(&tag, &start_iter, &end_iter);
     }
-    
-    println!("✓ Cleared all diagnostic tags");
-    
-    if diagnostics.is_empty() {
-        println!("✓ No diagnostics to apply, returning");
-        return;
-    }
-    
+
     // Sort diagnostics by severity (Info > Warning > Error) so more severe ones are applied last and take precedence
     diagnostics.sort_by(|a, b| {
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
@@ -197,9 +245,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
         };
         severity_value(&a.severity).cmp(&severity_value(&b.severity))
     });
-    
-    let tag_table = buffer.tag_table();
-    
+
     // Create or get tags for each severity level with proper priorities
     let info_tag = if let Some(tag) = tag_table.lookup("diagnostic-info-underline") {
         tag
@@ -236,7 +282,9 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
         tag.set_priority(tag_table.size() - 1); // Set priority after adding (highest)
         tag
     };
-    
+
+    let mut applied_any = false;
+
     // Apply tags for each diagnostic (sorted by severity, so errors override warnings/info)
     for diag in diagnostics {
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
@@ -284,6 +332,13 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
             };
             
             buffer.apply_tag(tag, &start_iter, &end_iter);
+            applied_any = true;
+        }
+    }
+
+    if applied_any {
+        if let Ok(mut s) = FILES_WITH_APPLIED_UNDERLINE_TAGS.lock() {
+            s.insert(file_path.to_string());
         }
     }
 }

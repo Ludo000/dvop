@@ -33,8 +33,9 @@ use json_provider::{
     get_json_snippets, initialize_completion_data,
 };
 
-/// Initialize completion system - loads JSON data files for all languages.
-/// Rust completions are loaded separately by the `rust-completion` native extension.
+/// Preload every JSON completion file (integration tests, e2e, or callers that want no first-use hitch).
+/// Normal app startup relies on lazy loading via [`json_provider::CompletionDataManager::get_provider`].
+#[allow(dead_code)]
 pub fn initialize_completion() {
     println!("Initializing completion system...");
 
@@ -83,19 +84,17 @@ pub fn get_snippet_documentation(language: &str, trigger: &str) -> String {
 }
 
 /// Get all supported languages based on available JSON files
-/// Cached to avoid repeated filesystem operations
+/// Cached to avoid repeated filesystem operations (directory scan only — no JSON parsing).
 pub fn get_supported_languages() -> Vec<String> {
     use std::sync::OnceLock;
     static SUPPORTED_LANGUAGES: OnceLock<Vec<String>> = OnceLock::new();
 
     SUPPORTED_LANGUAGES
         .get_or_init(|| {
-            let mut manager = json_provider::get_completion_manager();
-            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
-            match manager.load_all_languages() {
-                Ok(languages) => languages,
-                Err(_) => {
-                    // Return default list if loading fails
+            let manager = json_provider::get_completion_manager();
+            match manager.list_available_languages() {
+                Ok(languages) if !languages.is_empty() => languages,
+                _ => {
                     vec![
                         "rust".to_owned(),
                         "javascript".to_owned(),

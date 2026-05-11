@@ -27,9 +27,19 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use super::{lint_by_language, Diagnostic, DiagnosticSeverity};
+
+/// Coalesce many refresh requests (session restore, tab churn) into one idle repaint.
+static DIAGNOSTICS_PANEL_REFRESH_QUEUED: AtomicBool = AtomicBool::new(false);
+
+fn diagnostics_panel_debug(msg: impl AsRef<str>) {
+    if std::env::var("DVOP_DEBUG_DIAGNOSTICS").ok().as_deref() == Some("1") {
+        println!("{}", msg.as_ref());
+    }
+}
 
 // Type alias for complex callback types
 type VisibilityCallback = RefCell<Option<Rc<dyn Fn(bool)>>>;
@@ -274,7 +284,10 @@ pub fn update_diagnostics_count() {
 /// Language-specific setup (e.g. Rust LSP) is handled by native extensions
 /// via on_file_open hooks.
 pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
-    println!("🔧 setup_linting called with file_path: {:?}", file_path);
+    diagnostics_panel_debug(format!(
+        "🔧 setup_linting called with file_path: {:?}",
+        file_path
+    ));
     let buffer = source_view.buffer();
 
     // Create a clone for the signal handler
@@ -314,8 +327,8 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
 
     // Run initial lint if we have a file path
     if let Some(path) = file_path {
-        println!("📁 File path exists: {:?}", path);
-        println!("📎 File extension: {:?}", path.extension());
+        diagnostics_panel_debug(format!("📁 File path exists: {:?}", path));
+        diagnostics_panel_debug(format!("📎 File extension: {:?}", path.extension()));
 
         // Fire native extension hooks (e.g. Rust diagnostics LSP init)
         crate::extensions::native::fire_on_file_open(path);
@@ -326,7 +339,7 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
         // Show diagnostics panel if we have diagnostics
         show_diagnostics_panel();
     } else {
-        println!("⚠️  No file path provided to setup_linting");
+        diagnostics_panel_debug("⚠️  No file path provided to setup_linting");
     }
 }
 
@@ -334,10 +347,21 @@ pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
 /// Built-in linters run synchronously (fast); extension linters run in a
 /// background thread to avoid blocking the GTK main loop.
 fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_path: Option<&Path>) {
-    // Get buffer content
-    let start = buffer.start_iter();
-    let end = buffer.end_iter();
-    let content = buffer.text(&start, &end, true).to_string();
+    let path_is_rust = file_path.is_some_and(|p| {
+        p.extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| e.eq_ignore_ascii_case("rs"))
+    });
+
+    // Rust uses rust-analyzer (LSP), not the built-in/extension script linters — skip scanning the
+    // entire buffer when opening `.rs` tabs (large crates matter during session restore).
+    let content = if path_is_rust {
+        String::new()
+    } else {
+        let start = buffer.start_iter();
+        let end = buffer.end_iter();
+        buffer.text(&start, &end, true).to_string()
+    };
 
     // ── Phase 1: fast built-in linters (main thread) ──────────────
     let builtin_diagnostics = if let Some(path) = file_path {
@@ -361,7 +385,11 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
     }
 
     // ── Phase 2: extension linters (background thread) ────────────
+    // Native `rs` linters use LSP; `run_extension_linters` only runs non-native script linters.
     if let Some(path) = file_path {
+        if path_is_rust {
+            return;
+        }
         let path_buf = path.to_path_buf();
 
         // The "move" keyword forces the closure to take ownership of the variables it uses.
@@ -370,8 +398,8 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
             if ext_diags.is_empty() {
                 return;
             }
-            // Marshal results back to the GTK main thread
-            glib::idle_add_local_once(move || {
+            // `idle_add_local_*` must run on the GTK thread; extension linters run in a worker thread.
+            glib::MainContext::default().invoke(move || {
                 let file_uri = format!("file://{}", path_buf.display());
                 let file_path_str = path_buf.to_string_lossy().to_string();
 
@@ -382,15 +410,43 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
 
                 crate::linter::store_file_diagnostics(&file_path_str, ext_diags);
 
-                // Re-apply underlines using the buffer registry
                 reapply_diagnostic_underlines(&file_uri);
 
-                // Refresh UI
                 update_diagnostics_count();
                 refresh_diagnostics_panel();
             });
         });
     }
+}
+
+fn flush_diagnostics_panel_from_store() {
+    diagnostics_panel_debug("🔄 Refreshing diagnostics panel (flush)…");
+
+    crate::linter::diagnostics_panel::clear_diagnostics();
+
+    let store = DIAGNOSTICS_STORE.lock().unwrap();
+
+    let mut total_errors = 0;
+    let mut total_warnings = 0;
+    let mut total_infos = 0;
+
+    for (file_uri, diagnostics) in store.iter() {
+        for diag in diagnostics {
+            match diag.severity {
+                crate::linter::DiagnosticSeverity::Error => total_errors += 1,
+                crate::linter::DiagnosticSeverity::Warning => total_warnings += 1,
+                crate::linter::DiagnosticSeverity::Info => total_infos += 1,
+            }
+        }
+        crate::linter::diagnostics_panel::display_file_diagnostics(file_uri, diagnostics);
+    }
+
+    crate::linter::diagnostics_panel::update_summary(total_errors, total_warnings, total_infos);
+
+    diagnostics_panel_debug(format!(
+        "✅ Diagnostics panel refreshed with {} files",
+        store.len()
+    ));
 }
 
 /// Helper: store diagnostics and update the UI widgets (main-thread only).
@@ -401,23 +457,37 @@ fn apply_diagnostics_to_ui(
 ) {
     let file_uri = format!("file://{}", path.display());
 
-    // Display diagnostics in console
+    // Built-in linter intentionally returns nothing for `.rs`; rust-analyzer owns the store.
+    // Do not clear LSP diagnostics when the built-in pass is empty.
+    if diagnostics.is_empty()
+        && path
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| e.eq_ignore_ascii_case("rs"))
+        && crate::extensions::rust_diagnostics::is_enabled()
+    {
+        return;
+    }
+
+    // Display diagnostics in console (debug only — avoids spamming startup/session restore).
     if !diagnostics.is_empty() {
-        println!("🔍 Linter found {} diagnostic(s)", diagnostics.len());
+        diagnostics_panel_debug(format!(
+            "🔍 Linter found {} diagnostic(s)",
+            diagnostics.len()
+        ));
         for diag in diagnostics {
-            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             let severity_str = match diag.severity {
                 DiagnosticSeverity::Error => "ERROR",
                 DiagnosticSeverity::Warning => "WARNING",
                 DiagnosticSeverity::Info => "INFO",
             };
-            println!(
+            diagnostics_panel_debug(format!(
                 "  [{}] Line {}: {} ({})",
                 severity_str, diag.line, diag.message, diag.rule
-            );
+            ));
         }
     } else {
-        println!("✅ Linter found no issues");
+        diagnostics_panel_debug("✅ Linter found no issues");
     }
 
     // Store in DIAGNOSTICS_STORE
@@ -435,9 +505,14 @@ fn apply_diagnostics_to_ui(
     // Also store in the global file diagnostics (for underlines)
     crate::linter::store_file_diagnostics(&path.to_string_lossy(), diagnostics.to_vec());
 
-    // Apply underlines if we have a source buffer
+    // Apply underlines if we have a source buffer (skip no-op when empty and never applied tags).
     if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
-        crate::linter::apply_diagnostic_underlines(source_buffer, &path.to_string_lossy());
+        let path_str = path.to_string_lossy();
+        let empty_no_prior_underlines = diagnostics.is_empty()
+            && !crate::linter::has_applied_diagnostic_underlines_for_path(path_str.as_ref());
+        if !empty_no_prior_underlines {
+            crate::linter::apply_diagnostic_underlines(source_buffer, path_str.as_ref());
+        }
     }
 
     // Show linter status widget if we have any diagnostics
@@ -450,45 +525,22 @@ fn apply_diagnostics_to_ui(
         });
     }
 
-    // Refresh the diagnostics panel
-    glib::idle_add_local_once(|| {
-        refresh_diagnostics_panel();
-    });
+    refresh_diagnostics_panel();
 }
 
-/// Refresh the diagnostics panel with all stored diagnostics
-/// This should be called when switching tabs or opening files
+/// Rebuild the diagnostics panel from `DIAGNOSTICS_STORE`. Requests are **coalesced**: many calls
+/// before the next GTK idle result in a single UI update (important during session restore).
 pub fn refresh_diagnostics_panel() {
-    println!("🔄 Refreshing diagnostics panel...");
-
-    // Clear the panel first
-    crate::linter::diagnostics_panel::clear_diagnostics();
-
-    // Get all stored diagnostics
-    let store = DIAGNOSTICS_STORE.lock().unwrap();
-
-    // Calculate total counts across all files
-    let mut total_errors = 0;
-    let mut total_warnings = 0;
-    let mut total_infos = 0;
-
-    // Display each file's diagnostics and count totals
-    for (file_uri, diagnostics) in store.iter() {
-        for diag in diagnostics {
-            // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
-            match diag.severity {
-                crate::linter::DiagnosticSeverity::Error => total_errors += 1,
-                crate::linter::DiagnosticSeverity::Warning => total_warnings += 1,
-                crate::linter::DiagnosticSeverity::Info => total_infos += 1,
-            }
-        }
-        crate::linter::diagnostics_panel::display_file_diagnostics(file_uri, diagnostics);
+    if DIAGNOSTICS_PANEL_REFRESH_QUEUED
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return;
     }
-
-    // Update the summary header
-    crate::linter::diagnostics_panel::update_summary(total_errors, total_warnings, total_infos);
-
-    println!("✅ Diagnostics panel refreshed with {} files", store.len());
+    glib::idle_add_local_once(|| {
+        DIAGNOSTICS_PANEL_REFRESH_QUEUED.store(false, Ordering::SeqCst);
+        flush_diagnostics_panel_from_store();
+    });
 }
 
 /// Notify native extensions that a file was saved.
@@ -499,40 +551,45 @@ pub fn notify_file_saved(file_path: &Path) {
 
 /// Reapply diagnostic underlines to the currently open file
 pub fn reapply_diagnostic_underlines(file_uri: &str) {
-    println!("🎨 Attempting to reapply diagnostic underlines for {}", file_uri);
-    
-    // Extract file path from URI
+    diagnostics_panel_debug(format!(
+        "🎨 Attempting to reapply diagnostic underlines for {}",
+        file_uri
+    ));
+
     let file_path = file_uri.strip_prefix("file://").unwrap_or(file_uri);
-    
-    // Try to get the buffer from the thread-local registry
+
     BUFFER_REGISTRY.with(|registry| {
         let registry = registry.borrow();
-        println!("📋 Registry has {} entries", registry.len());
-        
-        // Debug: print all registered URIs
+        diagnostics_panel_debug(format!("📋 Registry has {} entries", registry.len()));
+
         for (uri, _) in registry.iter() {
-            println!("  - Registered: {}", uri);
+            diagnostics_panel_debug(format!("  - Registered: {}", uri));
         }
-        
+
         if let Some(weak_buffer) = registry.get(file_uri) {
             if let Some(buffer) = weak_buffer.upgrade() {
-                println!("✓ Found buffer for {}, reapplying underlines", file_uri);
+                diagnostics_panel_debug(format!(
+                    "✓ Found buffer for {}, reapplying underlines",
+                    file_uri
+                ));
                 crate::linter::apply_diagnostic_underlines(&buffer, file_path);
-                
-                // Force the view to redraw to show changes immediately
+
                 VIEW_REGISTRY.with(|view_registry| {
                     if let Some(weak_view) = view_registry.borrow().get(file_uri) {
                         if let Some(view) = weak_view.upgrade() {
                             view.queue_draw();
-                            println!("✓ Queued redraw of source view");
+                            diagnostics_panel_debug("✓ Queued redraw of source view");
                         }
                     }
                 });
             } else {
-                println!("⚠️  Buffer reference is no longer valid for {}", file_uri);
+                diagnostics_panel_debug(format!(
+                    "⚠️  Buffer reference is no longer valid for {}",
+                    file_uri
+                ));
             }
         } else {
-            println!("⚠️  No buffer registered for {}", file_uri);
+            diagnostics_panel_debug(format!("⚠️  No buffer registered for {}", file_uri));
         }
     });
 }
@@ -541,7 +598,10 @@ pub fn reapply_diagnostic_underlines(file_uri: &str) {
 pub fn register_buffer_for_diagnostics(file_path: &Path, buffer: &sourceview5::Buffer, view: &sourceview5::View) {
     if let Ok(url) = url::Url::from_file_path(file_path) {
         let uri = url.to_string();
-        println!("📝 Registering buffer and view for diagnostics: {}", uri);
+        diagnostics_panel_debug(format!(
+            "📝 Registering buffer and view for diagnostics: {}",
+            uri
+        ));
         
         BUFFER_REGISTRY.with(|registry| {
             // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
@@ -585,7 +645,7 @@ pub fn trigger_lint_refresh() {
     ACTIVE_VIEW_INFO.with(|cell| {
         if let Some((weak_view, file_path)) = &*cell.borrow() {
             if let Some(view) = weak_view.upgrade() {
-                println!("🔄 Refreshing lint for: {:?}", file_path);
+                diagnostics_panel_debug(format!("🔄 Refreshing lint for: {:?}", file_path));
                 let buffer = view.buffer();
                 run_linter(&view, &buffer, Some(&file_path));
                 show_diagnostics_panel();

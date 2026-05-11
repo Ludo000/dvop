@@ -79,11 +79,71 @@ use gtk4::{
 
 // Standard library imports
 use std::cell::RefCell; // Interior mutability pattern
-use std::collections::HashMap; // For efficient mapping and compatibility
+use std::collections::{HashMap, HashSet}; // For efficient mapping and compatibility
 use std::fs::File; // File operations
 use std::io::Write;
-use std::path::PathBuf; // File system path representation
+use std::path::{Path, PathBuf}; // File system path representation
 use std::rc::Rc; // Reference counting for shared ownership // File writing capabilities
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
+
+/// Session restore opens many tabs; skip lint/completion/LSP hooks until the user (or focus) visits each tab.
+static BULK_SESSION_RESTORE: AtomicBool = AtomicBool::new(false);
+
+lazy_static::lazy_static! {
+    static ref PENDING_HEAVY_TAB_SETUP: Mutex<HashSet<PathBuf>> = Mutex::new(HashSet::new());
+}
+
+/// Enable lightweight tab creation (session restore only). Call [`ensure_tab_heavy_setup_if_pending`] when a tab is shown.
+pub fn set_bulk_session_restore(active: bool) {
+    BULK_SESSION_RESTORE.store(active, Ordering::SeqCst);
+}
+
+pub(crate) fn bulk_session_restore_active() -> bool {
+    BULK_SESSION_RESTORE.load(Ordering::SeqCst)
+}
+
+fn remove_pending_heavy_setup(path: &Path) {
+    if let Ok(mut s) = PENDING_HEAVY_TAB_SETUP.lock() {
+        s.remove(path);
+    }
+}
+
+/// Finish deferred per-tab work after [`set_bulk_session_restore`] opens with a lightweight editor shell only.
+pub fn ensure_tab_heavy_setup_if_pending(
+    notebook: &Notebook,
+    page_num: u32,
+    file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
+) {
+    let Some(path) = file_path_manager.borrow().get(&page_num).cloned() else {
+        return;
+    };
+    {
+        let mut pending = PENDING_HEAVY_TAB_SETUP.lock().unwrap();
+        if !pending.remove(&path) {
+            return;
+        }
+    }
+
+    let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, page_num) else {
+        return;
+    };
+    let Ok(source_view) = text_view.clone().downcast::<sourceview5::View>() else {
+        return;
+    };
+    let Some(source_buffer) = get_source_buffer_from_text_view(&text_view) else {
+        return;
+    };
+
+    crate::extensions::hooks::fire_on_file_open(&path);
+
+    // Underlines: `setup_linting` → `run_linter` → `apply_diagnostics_to_ui` applies them once.
+    crate::linter::ui::register_buffer_for_diagnostics(&path, &source_buffer, &source_view);
+    crate::completion::setup_completion_for_file(&source_view, Some(path.as_path()));
+    crate::completion::setup_completion_shortcuts(&source_view);
+    crate::linter::ui::setup_linting(&source_view, Some(path.as_path()));
+    crate::linter::ui::set_active_view_for_refresh(Some(path.as_path()), Some(&source_view));
+}
 
 // Internal imports
 use crate::utils; // Utility functions
@@ -788,6 +848,10 @@ fn actually_close_tab(
         }
         // Fire extension on_file_close hooks
         crate::extensions::hooks::fire_on_file_close(file_path);
+        remove_pending_heavy_setup(file_path);
+        crate::linter::forget_diagnostic_underline_tracking_for_path(
+            &file_path.to_string_lossy(),
+        );
     }
 
     notebook.remove_page(Some(page_num_to_close));
@@ -1398,10 +1462,14 @@ pub fn open_or_focus_tab(
         .unwrap_or_else(|| "file".to_string());
 
     // Log opening operation
-    crate::status_log::log_info(&format!("Opening {}...", filename));
+    if !bulk_session_restore_active() {
+        crate::status_log::log_info(&format!("Opening {}...", filename));
+    }
 
-    // Fire extension on_file_open hooks
-    crate::extensions::hooks::fire_on_file_open(file_to_open);
+    // Extension hooks (may spawn scripts); deferred per tab during bulk session restore — see ensure_tab_heavy_setup_if_pending.
+    if !bulk_session_restore_active() {
+        crate::extensions::hooks::fire_on_file_open(file_to_open);
+    }
 
     // Check if file is already open
     let mut page_to_focus = None;
@@ -1418,9 +1486,6 @@ pub fn open_or_focus_tab(
     if let Some(page_num) = page_to_focus {
         notebook.set_current_page(Some(page_num));
         *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
-
-        // Refresh diagnostics panel when focusing a file
-        crate::linter::ui::refresh_diagnostics_panel();
 
         // Focus the text area of the existing tab
         if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, page_num) {
@@ -1950,23 +2015,30 @@ pub fn open_or_focus_tab(
                 // Apply syntax highlighting based on file extension
                 crate::syntax::set_language_for_file(&source_buffer, file_to_open);
 
-                // Apply diagnostic underlines if there are any stored for this file
-                crate::linter::apply_diagnostic_underlines(&source_buffer, &file_to_open.to_string_lossy());
+                if bulk_session_restore_active() {
+                    if let Ok(mut s) = PENDING_HEAVY_TAB_SETUP.lock() {
+                        s.insert(file_to_open.clone());
+                    }
+                } else {
+                    // Register buffer and view for future diagnostic updates
+                    crate::linter::ui::register_buffer_for_diagnostics(
+                        file_to_open,
+                        &source_buffer,
+                        &source_view,
+                    );
 
-                // Register buffer and view for future diagnostic updates
-                crate::linter::ui::register_buffer_for_diagnostics(file_to_open, &source_buffer, &source_view);
+                    // Setup completion for the specific file type
+                    crate::completion::setup_completion_for_file(&source_view, Some(file_to_open));
 
-                // Setup completion for the specific file type
-                crate::completion::setup_completion_for_file(&source_view, Some(file_to_open));
+                    // Setup keyboard shortcuts for completion
+                    crate::completion::setup_completion_shortcuts(&source_view);
 
-                // Setup keyboard shortcuts for completion
-                crate::completion::setup_completion_shortcuts(&source_view);
+                    // Setup linting for the file
+                    crate::linter::ui::setup_linting(&source_view, Some(file_to_open));
 
-                // Setup linting for the file
-                crate::linter::ui::setup_linting(&source_view, Some(file_to_open));
-
-                // Set the active view for the refresh button
-                crate::linter::ui::set_active_view_for_refresh(Some(file_to_open), Some(&source_view));
+                    // Set the active view for the refresh button
+                    crate::linter::ui::set_active_view_for_refresh(Some(file_to_open), Some(&source_view));
+                }
             }
 
             // Ctrl+Click on an underlined diagnostic focuses corresponding entry in diagnostics panel
@@ -2051,7 +2123,6 @@ pub fn open_or_focus_tab(
         let new_page_num = notebook.append_page(&new_scrolled_window, Some(&tab_widget));
 
         // Update state BEFORE set_current_page so switch-page sees the path
-        println!("Adding text file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
         file_path_manager
             .borrow_mut()
             .insert(new_page_num, file_to_open.clone());
@@ -2072,8 +2143,7 @@ pub fn open_or_focus_tab(
         // Log successful opening
         crate::status_log::log_success(&format!("Opened {}", filename));
 
-        // Refresh diagnostics panel when opening a file
-        crate::linter::ui::refresh_diagnostics_panel();
+        // Panel refresh: `setup_linting` → `run_linter` → `apply_diagnostics_to_ui` already schedules one.
 
         // Connect close button
         let notebook_clone = notebook.clone();

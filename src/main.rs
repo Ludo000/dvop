@@ -704,8 +704,7 @@ fn main() {
             }
         }
 
-        // Initialize completion system with JSON data loading
-        completion::initialize_completion();
+        // Completion JSON loads on first use per language (see `CompletionDataManager::get_provider`).
     });
 
     // Add application-level quit action
@@ -971,9 +970,10 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         add_file_button,          // Button for adding new file tabs
     ) = ui::create_text_view(&window);
 
-    // Debug theme detection at startup
-    println!("=== Theme Detection at Startup ===");
-    syntax::debug_theme_detection();
+    if std::env::var("DVOP_DEBUG_THEME").ok().as_deref() == Some("1") {
+        println!("=== Theme Detection at Startup ===");
+        syntax::debug_theme_detection();
+    }
 
     // Ensure the initial buffer gets the correct theme based on dark mode setting
     if let Some(source_buffer) = initial_text_buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
@@ -1138,14 +1138,13 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
-    // Register and start native extensions
+    // Allow the first main-loop iteration to paint before the rest of build_ui finishes wiring.
+    window.show();
+
+    // Register native extension objects (lightweight). Lifecycle hooks and script extensions run from an idle callback later.
     extensions::rust_diagnostics::register();
     extensions::code_completion::register();
     extensions::rust_completion::register();
-    extensions::native::fire_on_app_start();
-
-    // Let native extensions check the current directory (shows linter UI for Rust projects, etc.)
-    extensions::native::fire_on_directory_open(&current_dir.borrow());
 
     // If the rust diagnostics extension is disabled, ensure the diagnostics tab
     // and linter status bar stay hidden on startup.
@@ -1448,99 +1447,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
-    // Initialize the extension system
-    crate::extensions::sample::ensure_sample_archives();
-    crate::extensions::manager::init();
-
-    // Set up hook context and fire on_app_start
-    crate::extensions::hooks::set_active_notebook(&editor_notebook);
-    crate::extensions::hooks::set_status_label(&secondary_status_label);
-    crate::extensions::hooks::fire_on_app_start();
-
-    // Register extension keybindings on the window
-    crate::extensions::hooks::register_extension_keybindings(window.upcast_ref::<gtk4::ApplicationWindow>(), app);
-
-    // Populate the extensions panel UI
-    let extensions_panel = imp.extensions_panel.get();
-    crate::extensions::ui::populate_extensions_panel(&extensions_panel);
-
-    // Add extension sidebar panels
-    {
-        let panels = crate::extensions::manager::get_manager().get_extension_sidebar_panels();
-        for (ext_id, panel, enabled) in panels {
-            let panel_id = panel.id.clone();
-            let panel_name = format!("ext-{}-{}", ext_id, panel_id);
-
-            // Create a scrolled text view for the panel content
-            let scroll = gtk4::ScrolledWindow::new();
-            let text_view = gtk4::TextView::new();
-            text_view.set_editable(false);
-            text_view.set_wrap_mode(gtk4::WrapMode::Word);
-            text_view.set_monospace(true);
-            text_view.set_margin_start(8);
-            text_view.set_margin_end(8);
-            text_view.set_margin_top(8);
-            text_view.set_margin_bottom(8);
-            scroll.set_child(Some(&text_view));
-
-            // Populate with initial content if enabled
-            if enabled {
-                let content = crate::extensions::hooks::get_sidebar_panel_content(
-                    &ext_id, &panel_id, "init",
-                );
-                text_view.buffer().set_text(&content);
-            }
-
-            // Register for refresh on tab switch
-            crate::extensions::hooks::register_sidebar_panel_view(&ext_id, &panel_id, &text_view);
-
-            sidebar_stack.add_named(&scroll, Some(&panel_name));
-
-            // Add a toggle button to the activity bar
-            let btn = gtk4::ToggleButton::new();
-            btn.set_icon_name(&panel.icon);
-            btn.set_tooltip_text(Some(&panel.title));
-            btn.add_css_class("flat");
-            btn.add_css_class("activity-bar-button");
-            btn.set_visible(enabled); // Hidden if extension is disabled
-
-            let sidebar_stack_for_panel = sidebar_stack.clone();
-            let paned_for_panel = paned.clone();
-            let explorer_btn = explorer_button.clone();
-            let search_btn = search_button.clone();
-            let git_btn = git_diff_button.clone();
-            let ext_btn = extensions_button.clone();
-            let ext_panel_btns = ext_panel_buttons.clone();
-            let pn = panel_name.clone();
-            let btn_self = btn.clone();
-            btn.connect_toggled(move |button| {
-                if button.is_active() {
-                    explorer_btn.set_active(false);
-                    search_btn.set_active(false);
-                    git_btn.set_active(false);
-                    ext_btn.set_active(false);
-                    // Deactivate other extension panel buttons
-                    for b in ext_panel_btns.borrow().iter() {
-                        if b != &btn_self {
-                            b.set_active(false);
-                        }
-                    }
-                    sidebar_stack_for_panel.set_visible_child_name(&pn);
-                    if let Some(start_child) = paned_for_panel.start_child() {
-                        start_child.set_visible(true);
-                        let settings = crate::settings::get_settings();
-                        let width = settings.get_file_panel_width();
-                        paned_for_panel.set_position(width);
-                    }
-                }
-            });
-
-            // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
-            ext_panel_buttons.borrow_mut().push(btn.clone());
-            let activity_bar_ref = imp.activity_bar.get();
-            activity_bar_ref.append(&btn);
-        }
-    }
+    // Extension manager, script hooks, and sidebar panels are scheduled at end of build_ui (idle) — see below.
 
     // See FEATURES.md: Feature #114 — Sidebar Drag to Open/Close
     // Add drag gesture to activity bar to allow dragging sidebar open
@@ -2332,8 +2239,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         *current_selection_source_clone_for_switch.borrow_mut() =
             utils::FileSelectionSource::TabSwitch;
 
-        // Refresh diagnostics panel when switching tabs
-        crate::linter::ui::refresh_diagnostics_panel();
+        handlers::ensure_tab_heavy_setup_if_pending(
+            notebook,
+            page_num,
+            &file_path_manager_clone_for_switch,
+        );
 
         // Retrieve the file path associated with the newly selected tab
         let new_active_path = {
@@ -2754,149 +2664,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         handlers::create_new_empty_tab(&deps_for_new_tab_creation);
     });
 
-    // Handle file opening from command line arguments
-    println!("Checking file_to_open: {:?}", file_to_open);
-    if let Some(ref file_path) = file_to_open {
-        println!("Processing file argument: {:?}", file_path);
-        // Check if the file exists and is readable
-        if file_path.exists() {
-            if file_path.is_file() {
-                // Close any empty untitled tabs before opening the file
-                handlers::close_empty_untitled_tabs(&editor_notebook, &file_path_manager);
-
-                let mut mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
-
-                // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
-                // but should be treated as TypeScript files (text/plain)
-                if let Some(ext) = file_path.extension() {
-                    if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
-                        // Override MIME type for TypeScript files
-                        mime_type = mime_guess::mime::TEXT_PLAIN;
-                    }
-                }
-
-                if utils::is_allowed_mime_type(&mime_type) {
-                    // Try to read the file content
-                    match std::fs::read_to_string(file_path) {
-                        Ok(content) => {
-                            // Open the file in a new tab
-                            handlers::open_or_focus_tab(
-                                &editor_notebook,
-                                file_path,
-                                &content,
-                                &active_tab_path,
-                                &file_path_manager,
-                                &save_button,
-                                &save_as_button,
-                                &mime_type,
-                                &window,
-                                &file_list_box,
-                                &current_dir,
-                                Some(&save_menu_button),
-                            );
-
-                            // Update current directory to the file's parent directory
-                            if let Some(parent) = file_path.parent() {
-                                *current_dir.borrow_mut() = parent.to_path_buf();
-                                utils::update_file_list(
-                                    &file_list_box,
-                                    &current_dir.borrow(),
-                                    &active_tab_path.borrow(),
-                                    utils::FileSelectionSource::TabSwitch,
-                                );
-                                utils::update_path_buttons(
-                                    &path_box,
-                                    &current_dir,
-                                    &file_list_box,
-                                    &active_tab_path,
-                                );
-                            }
-
-                            println!("Successfully opened file: {:?}", file_path);
-                        }
-                        Err(e) => {
-                            eprintln!("Error reading file {:?}: {}", file_path, e);
-                            // Could show an error dialog here in the future
-                        }
-                    }
-                } else if mime_type.type_() == "image" {
-                    // Handle image files
-                    handlers::open_or_focus_tab(
-                        &editor_notebook,
-                        file_path,
-                        "", // Empty content for images
-                        &active_tab_path,
-                        &file_path_manager,
-                        &save_button,
-                        &save_as_button,
-                        &mime_type,
-                        &window,
-                        &file_list_box,
-                        &current_dir,
-                        Some(&save_menu_button),
-                    );
-
-                    // Update current directory to the file's parent directory
-                    if let Some(parent) = file_path.parent() {
-                        *current_dir.borrow_mut() = parent.to_path_buf();
-                        utils::update_file_list(
-                            &file_list_box,
-                            &current_dir.borrow(),
-                            &active_tab_path.borrow(),
-                            utils::FileSelectionSource::TabSwitch,
-                        );
-                        utils::update_path_buttons(
-                            &path_box,
-                            &current_dir,
-                            &file_list_box,
-                            &active_tab_path,
-                        );
-                    }
-
-                    println!("Successfully opened image file: {:?}", file_path);
-                } else {
-                    // Handle unsupported file types by opening them with empty content
-                    handlers::open_or_focus_tab(
-                        &editor_notebook,
-                        file_path,
-                        "", // Empty content for unsupported files
-                        &active_tab_path,
-                        &file_path_manager,
-                        &save_button,
-                        &save_as_button,
-                        &mime_type,
-                        &window,
-                        &file_list_box,
-                        &current_dir,
-                        Some(&save_menu_button),
-                    );
-
-                    // Update current directory to the file's parent directory
-                    if let Some(parent) = file_path.parent() {
-                        *current_dir.borrow_mut() = parent.to_path_buf();
-                        utils::update_file_list(
-                            &file_list_box,
-                            &current_dir.borrow(),
-                            &active_tab_path.borrow(),
-                            utils::FileSelectionSource::TabSwitch,
-                        );
-                        utils::update_path_buttons(
-                            &path_box,
-                            &current_dir,
-                            &file_list_box,
-                            &active_tab_path,
-                        );
-                    }
-
-                    println!("Opened unsupported file type: {:?}", file_path);
-                }
-            } else {
-                eprintln!("Error: {:?} is not a file", file_path);
-            }
-        } else {
-            eprintln!("Error: File {:?} does not exist", file_path);
-        }
-    }
+    // CLI file open runs from a startup idle callback (after build_ui returns) — see deferred startup below.
 
     // See FEATURES.md: Feature #189 — Open File Callback System
     // Set up the callback for opening files from diagnostics panel using a channel
@@ -3058,167 +2826,393 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         glib::ControlFlow::Continue
     });
 
-    // Show the main window to display the application
-    window.show();
+    // ── Deferred startup (runs after build_ui returns so GTK can paint the empty shell first) ──
+    let application = app.clone();
+    let window_extensions = window.clone();
+    let editor_notebook_ext = editor_notebook.clone();
+    let secondary_status_ext = secondary_status_label.clone();
+    let sidebar_stack_ext = sidebar_stack.clone();
+    let paned_ext = paned.clone();
+    let explorer_button_ext = explorer_button.clone();
+    let search_button_ext = search_button.clone();
+    let git_diff_button_ext = git_diff_button.clone();
+    let extensions_button_ext = extensions_button.clone();
+    let ext_panel_buttons_ext = ext_panel_buttons.clone();
+    let current_dir_ext_idle = current_dir.clone();
 
-    // Apply responsive layout once the window is visible and allocated.
+    glib::idle_add_local_once(move || {
+        extensions::native::fire_on_app_start();
+        extensions::native::fire_on_directory_open(current_dir_ext_idle.borrow().as_path());
+
+        crate::extensions::sample::ensure_sample_archives();
+        crate::extensions::manager::init();
+
+        crate::extensions::hooks::set_active_notebook(&editor_notebook_ext);
+        crate::extensions::hooks::set_status_label(&secondary_status_ext);
+        crate::extensions::hooks::fire_on_app_start();
+
+        crate::extensions::hooks::register_extension_keybindings(
+            window_extensions.upcast_ref::<gtk4::ApplicationWindow>(),
+            &application,
+        );
+
+        let imp = window_extensions.imp();
+        let extensions_panel = imp.extensions_panel.get();
+        crate::extensions::ui::populate_extensions_panel(&extensions_panel);
+
+        let panels = crate::extensions::manager::get_manager().get_extension_sidebar_panels();
+        for (ext_id, panel, enabled) in panels {
+            let panel_id = panel.id.clone();
+            let panel_name = format!("ext-{}-{}", ext_id, panel_id);
+
+            let scroll = gtk4::ScrolledWindow::new();
+            let text_view = gtk4::TextView::new();
+            text_view.set_editable(false);
+            text_view.set_wrap_mode(gtk4::WrapMode::Word);
+            text_view.set_monospace(true);
+            text_view.set_margin_start(8);
+            text_view.set_margin_end(8);
+            text_view.set_margin_top(8);
+            text_view.set_margin_bottom(8);
+            scroll.set_child(Some(&text_view));
+
+            if enabled {
+                let content = crate::extensions::hooks::get_sidebar_panel_content(
+                    &ext_id, &panel_id, "init",
+                );
+                text_view.buffer().set_text(&content);
+            }
+
+            crate::extensions::hooks::register_sidebar_panel_view(&ext_id, &panel_id, &text_view);
+
+            sidebar_stack_ext.add_named(&scroll, Some(&panel_name));
+
+            let btn = gtk4::ToggleButton::new();
+            btn.set_icon_name(&panel.icon);
+            btn.set_tooltip_text(Some(&panel.title));
+            btn.add_css_class("flat");
+            btn.add_css_class("activity-bar-button");
+            btn.set_visible(enabled);
+
+            let sidebar_stack_for_panel = sidebar_stack_ext.clone();
+            let paned_for_panel = paned_ext.clone();
+            let explorer_btn = explorer_button_ext.clone();
+            let search_btn = search_button_ext.clone();
+            let git_btn = git_diff_button_ext.clone();
+            let ext_btn = extensions_button_ext.clone();
+            let ext_panel_btns = ext_panel_buttons_ext.clone();
+            let pn = panel_name.clone();
+            let btn_self = btn.clone();
+            btn.connect_toggled(move |button| {
+                if button.is_active() {
+                    explorer_btn.set_active(false);
+                    search_btn.set_active(false);
+                    git_btn.set_active(false);
+                    ext_btn.set_active(false);
+                    for b in ext_panel_btns.borrow().iter() {
+                        if b != &btn_self {
+                            b.set_active(false);
+                        }
+                    }
+                    sidebar_stack_for_panel.set_visible_child_name(&pn);
+                    if let Some(start_child) = paned_for_panel.start_child() {
+                        start_child.set_visible(true);
+                        let settings = crate::settings::get_settings();
+                        let width = settings.get_file_panel_width();
+                        paned_for_panel.set_position(width);
+                    }
+                }
+            });
+
+            ext_panel_buttons_ext.borrow_mut().push(btn.clone());
+            let activity_bar_ref = imp.activity_bar.get();
+            activity_bar_ref.append(&btn);
+        }
+    });
+
+    let file_arg = file_to_open.clone();
+    let editor_nb = editor_notebook.clone();
+    let file_path_manager_deferred = file_path_manager.clone();
+    let active_tab_path_def = active_tab_path.clone();
+    let save_button_def = save_button.clone();
+    let save_as_button_def = save_as_button.clone();
+    let window_def = window.clone();
+    let file_list_box_def = file_list_box.clone();
+    let current_dir_def = current_dir.clone();
+    let save_menu_button_def = save_menu_button.clone();
+    let path_box_def = path_box.clone();
+
+    glib::idle_add_local_once(move || {
+        println!("Checking file_to_open (deferred): {:?}", file_arg);
+
+        if let Some(ref file_path) = file_arg {
+            println!("Processing file argument (deferred): {:?}", file_path);
+            if file_path.exists() && file_path.is_file() {
+                handlers::close_empty_untitled_tabs(&editor_nb, &file_path_manager_deferred);
+
+                let mut mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
+                if let Some(ext) = file_path.extension() {
+                    if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                        mime_type = mime_guess::mime::TEXT_PLAIN;
+                    }
+                }
+
+                if utils::is_allowed_mime_type(&mime_type) {
+                    match std::fs::read_to_string(file_path) {
+                        Ok(content) => {
+                            handlers::open_or_focus_tab(
+                                &editor_nb,
+                                file_path,
+                                &content,
+                                &active_tab_path_def,
+                                &file_path_manager_deferred,
+                                &save_button_def,
+                                &save_as_button_def,
+                                &mime_type,
+                                &window_def,
+                                &file_list_box_def,
+                                &current_dir_def,
+                                Some(&save_menu_button_def),
+                            );
+                            if let Some(parent) = file_path.parent() {
+                                *current_dir_def.borrow_mut() = parent.to_path_buf();
+                                utils::update_file_list(
+                                    &file_list_box_def,
+                                    &current_dir_def.borrow(),
+                                    &active_tab_path_def.borrow(),
+                                    utils::FileSelectionSource::TabSwitch,
+                                );
+                                utils::update_path_buttons(
+                                    &path_box_def,
+                                    &current_dir_def,
+                                    &file_list_box_def,
+                                    &active_tab_path_def,
+                                );
+                            }
+                            println!("Successfully opened file: {:?}", file_path);
+                        }
+                        Err(e) => eprintln!("Error reading file {:?}: {}", file_path, e),
+                    }
+                } else if mime_type.type_() == "image" {
+                    handlers::open_or_focus_tab(
+                        &editor_nb,
+                        file_path,
+                        "",
+                        &active_tab_path_def,
+                        &file_path_manager_deferred,
+                        &save_button_def,
+                        &save_as_button_def,
+                        &mime_type,
+                        &window_def,
+                        &file_list_box_def,
+                        &current_dir_def,
+                        Some(&save_menu_button_def),
+                    );
+                    if let Some(parent) = file_path.parent() {
+                        *current_dir_def.borrow_mut() = parent.to_path_buf();
+                        utils::update_file_list(
+                            &file_list_box_def,
+                            &current_dir_def.borrow(),
+                            &active_tab_path_def.borrow(),
+                            utils::FileSelectionSource::TabSwitch,
+                        );
+                        utils::update_path_buttons(
+                            &path_box_def,
+                            &current_dir_def,
+                            &file_list_box_def,
+                            &active_tab_path_def,
+                        );
+                    }
+                    println!("Successfully opened image file: {:?}", file_path);
+                } else {
+                    handlers::open_or_focus_tab(
+                        &editor_nb,
+                        file_path,
+                        "",
+                        &active_tab_path_def,
+                        &file_path_manager_deferred,
+                        &save_button_def,
+                        &save_as_button_def,
+                        &mime_type,
+                        &window_def,
+                        &file_list_box_def,
+                        &current_dir_def,
+                        Some(&save_menu_button_def),
+                    );
+                    if let Some(parent) = file_path.parent() {
+                        *current_dir_def.borrow_mut() = parent.to_path_buf();
+                        utils::update_file_list(
+                            &file_list_box_def,
+                            &current_dir_def.borrow(),
+                            &active_tab_path_def.borrow(),
+                            utils::FileSelectionSource::TabSwitch,
+                        );
+                        utils::update_path_buttons(
+                            &path_box_def,
+                            &current_dir_def,
+                            &file_list_box_def,
+                            &active_tab_path_def,
+                        );
+                    }
+                    println!("Opened unsupported file type: {:?}", file_path);
+                }
+            } else if !file_path.exists() {
+                eprintln!("Error: File {:?} does not exist", file_path);
+            } else {
+                eprintln!("Error: {:?} is not a file", file_path);
+            }
+        }
+
+        let saved_files = settings::get_settings().get_opened_files();
+        println!("=== Restoring session (deferred) ===");
+        println!("Found {} saved file(s)", saved_files.len());
+
+        if !saved_files.is_empty() {
+            println!("Restoring {} previously opened file(s)", saved_files.len());
+            extensions::rust_diagnostics::set_defer_rust_lsp_opens(true);
+            handlers::close_empty_untitled_tabs(&editor_nb, &file_path_manager_deferred);
+
+            handlers::set_bulk_session_restore(true);
+            for file_path in saved_files {
+                if file_path.exists() && file_path.is_file() {
+                    let mut mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+                    if let Some(ext) = file_path.extension() {
+                        if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
+                            mime_type = mime_guess::mime::TEXT_PLAIN;
+                        }
+                    }
+
+                    if mime_type.type_() == "video" {
+                        println!("Restoring video file: {}", file_path.display());
+                        handlers::open_or_focus_tab(
+                            &editor_nb,
+                            &file_path,
+                            "",
+                            &active_tab_path_def,
+                            &file_path_manager_deferred,
+                            &save_button_def,
+                            &save_as_button_def,
+                            &mime_type,
+                            &window_def,
+                            &file_list_box_def,
+                            &current_dir_def,
+                            Some(&save_menu_button_def),
+                        );
+                    } else if mime_type.type_() == "audio" {
+                        println!("Restoring audio file: {}", file_path.display());
+                        handlers::open_or_focus_tab(
+                            &editor_nb,
+                            &file_path,
+                            "",
+                            &active_tab_path_def,
+                            &file_path_manager_deferred,
+                            &save_button_def,
+                            &save_as_button_def,
+                            &mime_type,
+                            &window_def,
+                            &file_list_box_def,
+                            &current_dir_def,
+                            Some(&save_menu_button_def),
+                        );
+                    } else if mime_type.type_() == "image" {
+                        let is_svg = file_path
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            .map(|s| s.to_lowercase() == "svg")
+                            .unwrap_or(false);
+
+                        if is_svg {
+                            if let Ok(content) = std::fs::read_to_string(&file_path) {
+                                println!("Restoring SVG file: {}", file_path.display());
+                                handlers::open_or_focus_tab(
+                                    &editor_nb,
+                                    &file_path,
+                                    &content,
+                                    &active_tab_path_def,
+                                    &file_path_manager_deferred,
+                                    &save_button_def,
+                                    &save_as_button_def,
+                                    &mime_type,
+                                    &window_def,
+                                    &file_list_box_def,
+                                    &current_dir_def,
+                                    Some(&save_menu_button_def),
+                                );
+                            }
+                        } else {
+                            println!("Restoring image file: {}", file_path.display());
+                            handlers::open_or_focus_tab(
+                                &editor_nb,
+                                &file_path,
+                                "",
+                                &active_tab_path_def,
+                                &file_path_manager_deferred,
+                                &save_button_def,
+                                &save_as_button_def,
+                                &mime_type,
+                                &window_def,
+                                &file_list_box_def,
+                                &current_dir_def,
+                                Some(&save_menu_button_def),
+                            );
+                        }
+                    } else if let Ok(content) = std::fs::read_to_string(&file_path) {
+                        println!("Restoring text file: {}", file_path.display());
+                        handlers::open_or_focus_tab(
+                            &editor_nb,
+                            &file_path,
+                            &content,
+                            &active_tab_path_def,
+                            &file_path_manager_deferred,
+                            &save_button_def,
+                            &save_as_button_def,
+                            &mime_type,
+                            &window_def,
+                            &file_list_box_def,
+                            &current_dir_def,
+                            Some(&save_menu_button_def),
+                        );
+                    }
+                }
+            }
+
+            handlers::set_bulk_session_restore(false);
+            if let Some(cp) = editor_nb.current_page() {
+                handlers::ensure_tab_heavy_setup_if_pending(
+                    &editor_nb,
+                    cp,
+                    &file_path_manager_deferred,
+                );
+            }
+
+            extensions::rust_diagnostics::set_defer_rust_lsp_opens(false);
+        }
+
+        extensions::rust_diagnostics::flush_deferred_rust_lsp_opens();
+
+        if let Some(ref focus_path) = file_arg {
+            let num_pages = editor_nb.n_pages();
+            for i in 0..num_pages {
+                if let Some(path) = file_path_manager_deferred.borrow().get(&i) {
+                    if path == focus_path {
+                        editor_nb.set_current_page(Some(i));
+                        if let Some((text_view, _)) =
+                            handlers::get_text_view_and_buffer_for_page(&editor_nb, i)
+                        {
+                            text_view.grab_focus();
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    });
+
     let responsive_window = window.clone();
     glib::idle_add_local_once(move || {
         responsive_window.update_responsive_layout();
     });
 
-    // See FEATURES.md: Feature #136 — Session Restoration
-    // Restore previously opened files from settings (after window is shown)
-    let saved_files = settings::get_settings().get_opened_files();
-    println!("=== Restoring session ===");
-    println!("Found {} saved file(s)", saved_files.len());
-    for (i, file) in saved_files.iter().enumerate() {
-        println!("  {}: {:?}", i, file);
-    }
-    println!("=== End restoration info ===");
-    
-    if !saved_files.is_empty() {
-        println!("Restoring {} previously opened file(s)", saved_files.len());
-        
-        // Close any empty untitled tabs before restoring the session
-        handlers::close_empty_untitled_tabs(&editor_notebook, &file_path_manager);
-        
-        for file_path in saved_files {
-            if file_path.exists() && file_path.is_file() {
-                let mut mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
-
-                // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
-                // but should be treated as TypeScript files (text/plain)
-                if let Some(ext) = file_path.extension() {
-                    if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
-                        // Override MIME type for TypeScript files
-                        mime_type = mime_guess::mime::TEXT_PLAIN;
-                    }
-                }
-
-                // Handle different file types appropriately
-                if mime_type.type_() == "video" {
-                    // For video files, open with empty content (don't try to read as text)
-                    println!("Restoring video file: {}", file_path.display());
-                    handlers::open_or_focus_tab(
-                        &editor_notebook,
-                        &file_path,
-                        "", // Empty content for video
-                        &active_tab_path,
-                        &file_path_manager,
-                        &save_button,
-                        &save_as_button,
-                        &mime_type,
-                        &window,
-                        &file_list_box,
-                        &current_dir,
-                        Some(&save_menu_button),
-                    );
-                } else if mime_type.type_() == "audio" {
-                    // For audio files, open with empty content
-                    println!("Restoring audio file: {}", file_path.display());
-                    handlers::open_or_focus_tab(
-                        &editor_notebook,
-                        &file_path,
-                        "", // Empty content for audio
-                        &active_tab_path,
-                        &file_path_manager,
-                        &save_button,
-                        &save_as_button,
-                        &mime_type,
-                        &window,
-                        &file_list_box,
-                        &current_dir,
-                        Some(&save_menu_button),
-                    );
-                } else if mime_type.type_() == "image" {
-                    // Check if it's an SVG file (which needs content for split view)
-                    let is_svg = file_path
-                        .extension()
-                        .and_then(|e| e.to_str())
-                        .map(|s| s.to_lowercase() == "svg")
-                        .unwrap_or(false);
-
-                    if is_svg {
-                        // SVG files need content for the code editor
-                        if let Ok(content) = std::fs::read_to_string(&file_path) {
-                            println!("Restoring SVG file: {}", file_path.display());
-                            handlers::open_or_focus_tab(
-                                &editor_notebook,
-                                &file_path,
-                                &content,
-                                &active_tab_path,
-                                &file_path_manager,
-                                &save_button,
-                                &save_as_button,
-                                &mime_type,
-                                &window,
-                                &file_list_box,
-                                &current_dir,
-                                Some(&save_menu_button),
-                            );
-                        }
-                    } else {
-                        // For other image files, open with empty content
-                        println!("Restoring image file: {}", file_path.display());
-                        handlers::open_or_focus_tab(
-                            &editor_notebook,
-                            &file_path,
-                            "", // Empty content for images
-                            &active_tab_path,
-                            &file_path_manager,
-                            &save_button,
-                            &save_as_button,
-                            &mime_type,
-                            &window,
-                            &file_list_box,
-                            &current_dir,
-                            Some(&save_menu_button),
-                        );
-                    }
-                } else if let Ok(content) = std::fs::read_to_string(&file_path) {
-                    // For text files, read the content
-                    println!("Restoring text file: {}", file_path.display());
-                    handlers::open_or_focus_tab(
-                        &editor_notebook,
-                        &file_path,
-                        &content,
-                        &active_tab_path,
-                        &file_path_manager,
-                        &save_button,
-                        &save_as_button,
-                        &mime_type,
-                        &window,
-                        &file_list_box,
-                        &current_dir,
-                        Some(&save_menu_button),
-                    );
-                }
-            }
-        }
-    }
-
-    // After session restoration, re-focus the file that was requested via "Open with" / command line
-    // Session restoration opens all previously saved files, which overrides the current page.
-    if let Some(ref file_path) = file_to_open {
-        let num_pages = editor_notebook.n_pages();
-        for i in 0..num_pages {
-            if let Some(path) = file_path_manager.borrow().get(&i) {
-                if path == file_path {
-                    editor_notebook.set_current_page(Some(i));
-                    if let Some((text_view, _)) =
-                        handlers::get_text_view_and_buffer_for_page(&editor_notebook, i)
-                    {
-                        text_view.grab_focus();
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    // After session restoration, file_path_manager is now populated.
-    // Re-run the status update for the active tab so the file size is shown.
     {
         let notebook_clone = editor_notebook.clone();
         let file_path_manager_clone = file_path_manager.clone();
@@ -3226,7 +3220,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         glib::idle_add_local_once(move || {
             if let Some(page_num) = notebook_clone.current_page() {
                 if let Some(file_path) = file_path_manager_clone.borrow().get(&page_num).cloned() {
-                    // Update extension status bar text first
                     extensions::manager::update_status_bar_text(&file_path);
                     if let Some((text_view, _)) =
                         handlers::get_text_view_and_buffer_for_page(&notebook_clone, page_num)

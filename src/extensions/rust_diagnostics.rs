@@ -22,14 +22,22 @@
 use super::native::NativeExtension;
 use crate::linter::Diagnostic;
 use gtk4::glib;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
+/// When true, Rust `didOpen` / LSP setup is queued instead of running (session bulk-restore).
+static DEFER_RUST_LSP_OPENS: AtomicBool = AtomicBool::new(false);
+
+static PENDING_RUST_LSP_OPENS: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
+
 // ── State ────────────────────────────────────────────────────────
 
 lazy_static::lazy_static! {
+    /// Successful `textDocument/didOpen` paths — avoids re-running LSP setup when switching tabs
+    /// (e.g. session restore already opened all files in [`flush_deferred_rust_lsp_opens`]).
+    static ref LSP_DID_OPEN_PATHS: Mutex<HashSet<PathBuf>> = Mutex::new(HashSet::new());
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static ref RUST_ANALYZER: Arc<Mutex<Option<crate::lsp::rust_analyzer::RustAnalyzerManager>>> =
         // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
@@ -129,7 +137,13 @@ impl NativeExtension for RustDiagnosticsExtension {
     }
 
     fn on_app_start(&self) {
-        initialize_rust_analyzer();
+        if !self.is_enabled() {
+            return;
+        }
+        // Don't block first frame; manager is created before first real LSP work.
+        glib::idle_add_local_once(|| {
+            initialize_rust_analyzer();
+        });
     }
 
     fn on_directory_open(&self, dir: &Path) {
@@ -143,11 +157,19 @@ impl NativeExtension for RustDiagnosticsExtension {
         if !ENABLED.load(Ordering::SeqCst) {
             return;
         }
-        if file_path.extension().and_then(|e| e.to_str()) == Some("rs") {
-            println!("🦀 [Rust Diagnostics Extension] Detected Rust file, initializing rust-analyzer");
-            initialize_rust_analyzer();
-            setup_lsp_for_file(file_path);
+        if file_path.extension().and_then(|e| e.to_str()) != Some("rs") {
+            return;
         }
+        if DEFER_RUST_LSP_OPENS.load(Ordering::SeqCst) {
+            if let Ok(mut q) = PENDING_RUST_LSP_OPENS.lock() {
+                if !q.iter().any(|p| p == file_path) {
+                    q.push(file_path.to_path_buf());
+                }
+            }
+            return;
+        }
+        initialize_rust_analyzer();
+        setup_lsp_for_file(file_path);
     }
 
     fn on_file_save(&self, file_path: &Path) {
@@ -173,6 +195,41 @@ pub fn register() {
 /// Check if the Rust diagnostics extension is currently enabled.
 pub fn is_enabled() -> bool {
     ENABLED.load(Ordering::SeqCst)
+}
+
+/// Defer rust-analyzer `didOpen` until [`flush_deferred_rust_lsp_opens`] runs (e.g. session restore).
+pub fn set_defer_rust_lsp_opens(defer: bool) {
+    DEFER_RUST_LSP_OPENS.store(defer, Ordering::SeqCst);
+}
+
+/// Run queued LSP opens on the GTK main thread after the window has had a chance to load.
+pub fn flush_deferred_rust_lsp_opens() {
+    if !ENABLED.load(Ordering::SeqCst) {
+        if let Ok(mut q) = PENDING_RUST_LSP_OPENS.lock() {
+            q.clear();
+        }
+        return;
+    }
+
+    let paths: Vec<PathBuf> = {
+        let Ok(mut q) = PENDING_RUST_LSP_OPENS.lock() else {
+            return;
+        };
+        std::mem::take(&mut *q)
+    };
+
+    if paths.is_empty() {
+        return;
+    }
+
+    println!(
+        "📎 rust-analyzer: opening {} restored Rust file(s) (deferred until after UI startup)",
+        paths.len()
+    );
+    initialize_rust_analyzer();
+    for path in paths {
+        setup_lsp_for_file(&path);
+    }
 }
 
 // ── Rust-analyzer lifecycle ─────────────────────────────────────
@@ -253,6 +310,10 @@ fn shutdown_rust_analyzer() {
     if let Some(ref manager) = *manager_guard {
         manager.shutdown();
 
+        if let Ok(mut open) = LSP_DID_OPEN_PATHS.lock() {
+            open.clear();
+        }
+
         crate::linter::ui::clear_all_diagnostics_store();
 
         // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
@@ -296,13 +357,28 @@ fn setup_lsp_for_file(file_path: &Path) {
     if !ENABLED.load(Ordering::SeqCst) {
         return;
     }
+    if DEFER_RUST_LSP_OPENS.load(Ordering::SeqCst) {
+        if let Ok(mut q) = PENDING_RUST_LSP_OPENS.lock() {
+            if !q.iter().any(|p| p == file_path) {
+                q.push(file_path.to_path_buf());
+            }
+        }
+        return;
+    }
+
+    let canonical_path =
+        std::fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
+    {
+        let open = LSP_DID_OPEN_PATHS.lock().unwrap();
+        if open.contains(&canonical_path) {
+            return;
+        }
+    }
+
     let workspace_root = find_workspace_root(file_path);
 
-    println!("=== LSP SETUP START ===");
-    println!("Setting up LSP for file: {:?}", file_path);
-    println!("Workspace root: {:?}", workspace_root);
-
     let file_path_buf = file_path.to_path_buf();
+    let dedupe_key = canonical_path.clone();
 
     // The "move" keyword forces the closure to take ownership of the variables it uses.
     std::thread::spawn(move || {
@@ -356,16 +432,13 @@ fn setup_lsp_for_file(file_path: &Path) {
 
                         println!("📊 Refreshing diagnostics panel");
                         let uri_for_underlines = uri_str.clone();
-                        // The "move" keyword forces the closure to take ownership of the variables it uses.
-                        glib::source::idle_add(move || {
+                        // Must marshal to the UI thread without acquiring the main context from this
+                        // worker thread (`idle_add` / `idle_add_local` panic cross-thread).
+                        glib::MainContext::default().invoke(move || {
                             crate::linter::ui::refresh_diagnostics_panel();
                             crate::linter::ui::update_diagnostics_count();
                             crate::linter::ui::show_diagnostics_panel_on_main_thread();
-
-                            // Reapply underlines to currently visible buffer
                             crate::linter::ui::reapply_diagnostic_underlines(&uri_for_underlines);
-
-                            glib::ControlFlow::Break
                         });
 
                         println!(
@@ -388,6 +461,9 @@ fn setup_lsp_for_file(file_path: &Path) {
                                     println!("❌ Failed to send didOpen: {}", e);
                                 } else {
                                     println!("✓ Sent didOpen for file: {:?}", file_path_buf);
+                                    if let Ok(mut open) = LSP_DID_OPEN_PATHS.lock() {
+                                        open.insert(dedupe_key);
+                                    }
                                 }
                             } else {
                                 println!("❌ Failed to read file content");
