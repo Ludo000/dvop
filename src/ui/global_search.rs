@@ -13,6 +13,7 @@
 //!
 //! The search runs **synchronously on the main thread** to keep the code
 //! simple; very large directories may briefly block the UI.
+//! Individual result opens may spawn short-lived threads for disk reads — see row-activate handler notes below.
 //!
 //! ## Key Private Types
 //!
@@ -36,13 +37,13 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use tokio;
-use tokio::fs as async_fs;
+use tokio::fs as async_fs; // used where we offload disk reads without blocking the GTK loop for long
 
 use super::search_panel_template::SearchPanel;
 
-// Thread-local storage for the global search dialog to maintain state
+// Legacy floating dialog path — sidebar panel is preferred today; kept for compatibility/tests.
 thread_local! {
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Legacy modal dialog handle — sidebar search panel is primary; this stays for older call sites/tests.
     static GLOBAL_SEARCH_DIALOG: RefCell<Option<gtk::Dialog>> = const { RefCell::new(None) };
 }
 
@@ -53,16 +54,18 @@ struct SearchResult {
     line: usize, // 1-based
     col: usize,  // 1-based
     preview: String,
-    needle: String,
+    needle: String, // query text at match time — replace / re-highlight paths compare against this
     case_sensitive: bool,
 }
 
 fn is_text_file(path: &Path) -> bool {
+    // Delegate to `utils::is_allowed_mime_type` so global search skips the same binaries/media the file browser would not open as text.
     let mime = mime_guess::from_path(path).first_or_octet_stream();
     crate::utils::is_allowed_mime_type(&mime)
 }
 
 /// Search in string content (for open buffer content)
+// Used when text is already in memory — keeps parity with `search_file` matching rules (case/whole-word).
 fn search_in_content(
     path: &Path,
     content: &str,
@@ -88,6 +91,7 @@ fn search_in_content(
 
             // Check whole word if needed
             if whole_word {
+                // ASCII-only byte boundaries on `search_line` (folded for case-insensitive) — `search_file` uses Unicode + `_` on the original line, so edge cases can differ between in-buffer vs disk search.
                 let before_ok = actual_pos == 0
                     || !search_line.as_bytes()[actual_pos - 1].is_ascii_alphanumeric();
                 let after_idx = actual_pos + search_query.len();
@@ -103,6 +107,7 @@ fn search_in_content(
             results.push(SearchResult {
                 path: path.to_path_buf(),
                 line: line_num + 1,
+                // 1-based column for jump-to-line — Unicode scalar count from line start (not UTF-8 byte offset).
                 col: search_line[..actual_pos].chars().count() + 1,
                 preview: line.to_string(),
                 needle: query.to_string(),
@@ -123,7 +128,7 @@ fn search_file(
     whole_word: bool,
     max_file_size_bytes: u64,
 ) -> Vec<SearchResult> {
-    // Skip very large files to avoid UI stalls
+    // Skip very large files to avoid UI stalls — each call site passes its own `max_file_size_bytes` (e.g. wide repo walk vs lighter search) to trade completeness for GTK responsiveness.
     if let Ok(meta) = fs::metadata(path) {
         if meta.len() > max_file_size_bytes {
             return Vec::new();
@@ -141,6 +146,7 @@ fn search_file(
 
     let mut results = Vec::new();
 
+    // Multi-line needles need the whole buffer in RAM; single-line path uses `BufReader` line streaming below.
     // Check if needle contains newlines (multi-line search)
     if needle.contains('\n') {
         // Multi-line search: read entire file and search
@@ -185,6 +191,7 @@ fn search_file(
                 let before_match = &content[..abs_pos];
                 let line_no = before_match.matches('\n').count() + 1;
                 let last_newline = before_match.rfind('\n').map(|p| p + 1).unwrap_or(0);
+                // Start column on the match's first line — Unicode scalar count from that line's start.
                 let col = content[last_newline..abs_pos].chars().count() + 1;
 
                 // Get preview for multi-line match - show multiple lines from the file
@@ -254,6 +261,7 @@ fn search_file(
         }
     } else {
         // Single-line search: line-by-line for better performance
+        // Streams through disk instead of slurping whole file — keeps UI responsive on huge logs when needle has no `\n`.
         if let Ok(file) = fs::File::open(path) {
             let reader = BufReader::new(file);
             let mut line_no = 0usize;
@@ -352,9 +360,11 @@ fn search_file(
     results
 }
 
+/// Depth-first collect up to `max_files` paths — skips dot-directories and common bulky folders (`target/`, `node_modules/`).
+/// Does **not** parse repository `.gitignore` yet; the module banner describes the longer-term goal.
 fn walk_dir_recursive(root: &Path, files_out: &mut Vec<PathBuf>, max_files: usize) {
     if files_out.len() >= max_files {
-        return;
+        return; // Caller-selectable cap (10k–20k) — abort walk early on huge trees so the GTK thread can finish.
     }
     if let Ok(read) = fs::read_dir(root) {
         for entry in read.flatten() {
@@ -400,11 +410,11 @@ fn replace_in_buffer(
     needle: &str,
     replace_text: &str,
     case_sensitive: bool,
-// Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<(), String> {
+    // In-memory edit only — disk reflects changes after user saves the tab (same as typing in the editor).
     // Find the tab with this file
     let file_path_map = file_path_manager.borrow();
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Gtk notebook page that currently hosts `path`, if any — replace only works for open tabs.
     let mut target_page_num: Option<u32> = None;
 
     for (page_num, tab_path) in file_path_map.iter() {
@@ -560,6 +570,7 @@ fn replace_in_buffer(
 pub fn show_global_search_dialog(
     parent_window: &impl IsA<gtk::ApplicationWindow>,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // Session handles — mirror `create_global_search_panel` so dialog and sidebar search share navigation semantics.
     current_dir: &Rc<RefCell<PathBuf>>,
     editor_notebook: &gtk::Notebook,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
@@ -570,11 +581,13 @@ pub fn show_global_search_dialog(
     save_as_button: &gtk::Button,
     file_list_box: &gtk::ListBox,
 ) {
+    // Floating dialog path — sidebar embedding uses `create_global_search_panel`; search/replace logic is shared between both UIs.
     // Check if dialog already exists
     let existing_dialog = GLOBAL_SEARCH_DIALOG.with(|d| d.borrow().clone());
 
     if let Some(dialog) = existing_dialog {
         // Dialog exists, just show it
+        // `thread_local!` keeps one modal — avoids stacking duplicate global-search windows on repeated palette invocations.
         dialog.present();
         return;
     }
@@ -709,10 +722,11 @@ pub fn show_global_search_dialog(
     content.append(&vbox);
 
     // Channel for results - will be recreated for each search
+    // Pair is rebuilt per query so a new producer cannot enqueue into a drained receiver from an older search.
     let sender_rc: Rc<RefCell<Option<std::sync::mpsc::Sender<Option<SearchResult>>>>> =
         // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(RefCell::new(None));
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Filled when a search starts — worker sends `Some(result)` or `None` as end-of-stream marker per query.
     let receiver_rc: Rc<RefCell<Option<std::sync::mpsc::Receiver<Option<SearchResult>>>>> =
         // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(RefCell::new(None));
@@ -728,6 +742,7 @@ pub fn show_global_search_dialog(
     let current_dir_c = current_dir.clone();
     let dialog_close = dialog.clone();
 
+    // Row widgets stash `path|line|col|needle|case` on a hidden label’s tooltip — cheap transport without custom `ListBoxRow` subclasses or GObject qdata.
     // The "move" keyword forces the closure to take ownership of the variables it uses.
     results_list.connect_row_activated(move |_list, row| {
         if let Some(child) = row.child() {
@@ -749,6 +764,7 @@ pub fn show_global_search_dialog(
                                 let mime = mime_guess::from_path(&path).first_or_octet_stream();
                                 let content_opt = if crate::utils::is_allowed_mime_type(&mime) {
                                     // Read file asynchronously to avoid blocking UI
+                                    // `join` waits on GTK thread — acceptable here because only one path opens per double-click.
                                     let path_clone = path.clone();
                                     std::thread::spawn(move || {
                                         let rt = tokio::runtime::Runtime::new().unwrap();
@@ -956,6 +972,7 @@ pub fn show_global_search_dialog(
                     walk_dir_recursive(&root, &mut files, 20000);
                     let mut found = 0usize;
                     for p in files {
+                        // Prefer in-memory text when the file is already open — matches unsaved buffer state; otherwise read from disk.
                         // Check if we have buffer content for this file
                         let results = if let Some(content) = open_files_content.get(&p) {
                             // Search in buffer content
@@ -1164,6 +1181,7 @@ pub fn show_global_search_dialog(
     };
 
     // Debounced search on text change
+    // Monotonic counter invalidates older scheduled searches — last keystroke wins after quiet period.
     let search_counter: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
     let cb_clone_text_change = start_search.clone();
     let case_toggle_weak = case_toggle.downgrade();
@@ -1445,7 +1463,7 @@ pub fn show_global_search_dialog(
                 std::sync::mpsc::channel::<(PathBuf, Vec<(usize, usize, String, bool)>)>();
             let (done_tx, done_rx) = std::sync::mpsc::channel::<usize>();
 
-            // Spawn thread to group replacements and read file contents
+            // Group hits per path off the UI thread — disk reads and `open_or_focus_tab` happen in the Gtk timeout loop below, not here.
             std::thread::spawn(move || {
                 let mut files_map: std::collections::HashMap<
                     PathBuf,
@@ -1476,6 +1494,7 @@ pub fn show_global_search_dialog(
             let thread_done = Rc::new(RefCell::new(false));
             let thread_done_clone = thread_done.clone();
 
+            // Background thread only groups paths and reads bytes; this timer drains `mpsc` into Gtk-safe edits a few files at a time so the loop stays responsive.
             glib::timeout_add_local(std::time::Duration::from_millis(10), move || {
                 // Check if thread signaled completion (only once)
                 if !*thread_done_clone.borrow() && done_rx.try_recv().is_ok() {
@@ -1496,6 +1515,7 @@ pub fn show_global_search_dialog(
                             );
 
                             // Sort matches in reverse order (bottom to top) to preserve positions
+                            // Same rationale as single-file replace: earlier line edits must not invalidate later coordinates.
                             matches.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1)));
 
                             // Open file if not already open
@@ -1637,13 +1657,15 @@ pub fn create_global_search_panel(
     current_dir: &Rc<RefCell<PathBuf>>,
     editor_notebook: &gtk::Notebook,
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Same “which file is active” handle as the main editor — used to open hits in the right tab context.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
     save_button: &gtk::Button,
     save_as_button: &gtk::Button,
     file_list_box: &gtk::ListBox,
 ) -> GtkBox {
+    // Preferred UX: activity-bar “Search” adds this `GtkBox` to `sidebar_stack` — returns the root so callers register visibility/stack names.
     // Create the template-based panel
+    // Widget IDs + layout live in `search_panel_template.rs` — this function only wires behavior and state.
     let panel = SearchPanel::new();
 
     // Get references to widgets
@@ -1666,6 +1688,7 @@ pub fn create_global_search_panel(
         // RefCell::new creates a container that checks borrowing rules at runtime.
         Rc::new(RefCell::new(std::time::Instant::now()));
 
+    // Responsive controls — below ~250px allocated width the search/replace button row stacks vertically (narrow sidebar).
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
         // Walk up the widget tree to find the actual resizable container (GtkScrolledWindow or GtkPaned)
         let mut resizable_widget: Option<gtk4::Widget> =
@@ -1747,6 +1770,7 @@ pub fn create_global_search_panel(
     }
 
     // Channel for results - will be recreated for each search
+    // Pair is rebuilt per query so a new producer cannot enqueue into a drained receiver from an older search.
     let sender_rc: Rc<RefCell<Option<std::sync::mpsc::Sender<Option<SearchResult>>>>> =
         // RefCell::new creates a container that checks borrowing rules at runtime.
         Rc::new(RefCell::new(None));
@@ -1767,6 +1791,7 @@ pub fn create_global_search_panel(
     let file_list_box_c = file_list_box.clone();
     let current_dir_c = current_dir.clone();
 
+    // Same tooltip-on-hidden-label trick as the legacy dialog — see `connect_row_activated` above.
     results_list.connect_row_activated(move |_list, row| {
         if let Some(child) = row.child() {
             if let Some(vbox) = child.downcast_ref::<GtkBox>() {
@@ -1787,6 +1812,7 @@ pub fn create_global_search_panel(
                                 let mime = mime_guess::from_path(&path).first_or_octet_stream();
                                 let content_opt = if crate::utils::is_allowed_mime_type(&mime) {
                                     // Read file asynchronously to avoid blocking UI
+                                    // `join` waits on GTK thread — acceptable here because only one path opens per double-click.
                                     let path_clone = path.clone();
                                     std::thread::spawn(move || {
                                         let rt = tokio::runtime::Runtime::new().unwrap();
@@ -2146,6 +2172,7 @@ pub fn create_global_search_panel(
     };
 
     // Debounced search on text change
+    // Monotonic counter invalidates older scheduled searches — last keystroke wins after quiet period.
     let search_counter: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
     let cb_clone_text_change = start_search.clone();
     let case_toggle_weak = case_toggle.downgrade();
@@ -2431,7 +2458,7 @@ pub fn create_global_search_panel(
                 std::sync::mpsc::channel::<(PathBuf, Vec<(usize, usize, String, bool)>)>();
             let (done_tx, done_rx) = std::sync::mpsc::channel::<usize>();
 
-            // Spawn thread to group replacements and read file contents
+            // Group hits per path off the UI thread — disk reads and `open_or_focus_tab` happen in the Gtk timeout loop below, not here.
             std::thread::spawn(move || {
                 let mut files_map: std::collections::HashMap<
                     PathBuf,
@@ -2467,6 +2494,7 @@ pub fn create_global_search_panel(
             let whole_word_toggle_timeout = whole_word_toggle_for_replace_all.clone();
             let start_search_timeout = start_search_for_replace_all.clone();
 
+            // Same batched main-thread drain as the dialog Replace All path — keeps the sidebar responsive during multi-file writes.
             glib::timeout_add_local(std::time::Duration::from_millis(10), move || {
                 // Check if thread signaled completion (only once)
                 if !*thread_done_clone.borrow() && done_rx.try_recv().is_ok() {
@@ -2487,6 +2515,7 @@ pub fn create_global_search_panel(
                             );
 
                             // Sort matches in reverse order (bottom to top) to preserve positions
+                            // Same rationale as single-file replace: earlier line edits must not invalidate later coordinates.
                             matches.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1)));
 
                             // Open file if not already open

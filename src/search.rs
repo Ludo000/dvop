@@ -224,6 +224,7 @@ impl SearchState {
                         let total = Self::count_matches(context);
                         Self::highlight_first_match(context);
                         // If more than one match, advance immediately so first Enter goes to 2nd
+                        // If several hits exist, advance once so the first Enter already moves forward (avoids “nothing happened” when match #1 was already under the cursor).
                         if total > 1 {
                             Self::find_next(context);
                         }
@@ -296,6 +297,7 @@ impl SearchState {
         });
 
         // Handle close button
+        // Handle close button — hides the revealer (same idea as Esc below). `hide_search()` is what also clears `search_context` and GtkSource highlights; wire that if you need a full dismiss path.
         let search_bar_clone = search_bar.clone();
         let revealer_clone = revealer.clone();
         close_button.connect_clicked(move |_| {
@@ -338,6 +340,7 @@ impl SearchState {
         // Option<T> is an enum that represents an optional value: either Some(T) or None.
         source_view: Option<&sourceview5::View>,
     ) {
+        // `false` keeps replace controls hidden (Ctrl+F strip); `show_search` passes `true` for find+replace.
         self.show_search_internal(text_buffer, source_view, false);
     }
 
@@ -348,6 +351,7 @@ impl SearchState {
         source_view: Option<&sourceview5::View>,
         show_replace: bool,
     ) {
+        // Toggle replace row vs find-only strip; both paths still attach a `SearchContext` when a buffer is passed.
         // Show or hide replace controls
         println!("DEBUG: Setting replace_box visibility to: {}", show_replace);
         self.replace_box.set_visible(show_replace);
@@ -396,8 +400,11 @@ impl SearchState {
         buffer: &sourceview5::Buffer,
         source_view: Option<&sourceview5::View>,
     ) {
+        // Notebook `switch-page` calls this when the search bar is still revealed — one global `SearchState`, many buffers over time.
+        // Replace `SearchContext` wholesale — GtkSource ties highlights/marks to the context object, not globally.
         let settings = SearchSettings::new();
         let context = SearchContext::new(buffer, Some(&settings));
+        // Fresh `SearchSettings` resets highlight-all until the user turns it back on in the bar; if the entry still has text we at least move/select the first hit via `highlight_first_match`.
         context.set_highlight(false);
         let existing_text = self.search_entry.text();
         if !existing_text.is_empty() {
@@ -424,6 +431,7 @@ impl SearchState {
         self.revealer.set_reveal_child(false);
 
         // Clear search context
+        // Dropping `SearchContext` tears down GtkSource match highlights tied to the previous buffer.
         *self.search_context.borrow_mut() = None;
 
         println!("Search bar hidden");
@@ -459,6 +467,7 @@ impl SearchState {
         let mut start_iter = buffer.start_iter();
         let mut count = 0;
 
+        // `forward` walks non-overlapping hits in buffer order — same contract as Find Next / the “n of m” label.
         while let Some((_, match_end, _wrapped)) = context.forward(&start_iter) {
             count += 1;
             start_iter = match_end;
@@ -469,6 +478,7 @@ impl SearchState {
 
     /// Gets the current match position (1-based)
     fn get_current_match_position(context: &SearchContext) -> i32 {
+        // Maps the insert mark to “k of n” for the label — counts forward matches until the caret, then adjusts if the caret sits inside a match (`backward` check below).
         let buffer = context.buffer();
 
         // Get current cursor position using the buffer's insert mark
@@ -503,6 +513,7 @@ impl SearchState {
 
     /// Highlights the first match in the buffer
     fn highlight_first_match(context: &SearchContext) {
+        // E.g. reopening find with text already in the entry — surfaces one hit immediately instead of a “0 matches” feel.
         let buffer = context.buffer();
         let start_iter = buffer.start_iter();
 
@@ -528,6 +539,7 @@ impl SearchState {
         if buffer.has_selection() {
             // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let (_start, end) = buffer.selection_bounds().unwrap();
+            // Begin **after** the current selection so “next” does not land on the same span again.
             start_iter = end;
         }
 
@@ -555,6 +567,7 @@ impl SearchState {
         if buffer.has_selection() {
             // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
             let (start, _end) = buffer.selection_bounds().unwrap();
+            // Begin **before** the selection so “previous” leaves the highlighted match.
             end_iter = start;
         }
 
@@ -607,6 +620,7 @@ impl SearchState {
                 return; // safety guard
             }
             // Perform replacement (robust approach maintaining iter validity)
+            // Wrap delete+insert in one user action so a single Undo reverts the replace.
             buffer.begin_user_action();
             let insert_offset = start.offset();
             let mut del_start = start;
@@ -627,6 +641,7 @@ impl SearchState {
 
     /// Replaces all matches in the buffer
     fn replace_all(context: &SearchContext, replace_text: &str) {
+        // Loop issues N separate buffer edits — undo stack gets N steps unless this is later wrapped in one `begin_user_action` / user_action block.
         let buffer = context.buffer();
         let mut start_iter = buffer.start_iter();
         let mut replacements = 0;
@@ -639,6 +654,7 @@ impl SearchState {
         }
 
         // Replace all matches from end to beginning to maintain offsets
+        // Offsets stay valid until we edit — walk **reverse** so each `delete` doesn’t shift text before still-pending earlier offsets.
         for (start_offset, end_offset) in matches.iter().rev() {
             let mut start_iter = buffer.iter_at_offset(*start_offset);
             let mut end_iter = buffer.iter_at_offset(*end_offset);
@@ -667,6 +683,8 @@ static mut SEARCH_STATE: Option<SearchState> = None;
 // pub makes this function public, allowing it to be used from outside this module.
 pub fn get_search_state() -> &'static SearchState {
     unsafe {
+        // `static mut` is only sound because every call site runs on the GTK main thread — never access from worker threads.
+        // First call builds Gtk widgets — typically first Ctrl+F / Ctrl+H; avoids paying construction cost at cold startup.
         if SEARCH_STATE.is_none() {
             SEARCH_STATE = Some(SearchState::new());
         }
@@ -680,6 +698,7 @@ pub fn show_search_for_buffer(
     buffer: Option<&sourceview5::Buffer>,
     source_view: Option<&sourceview5::View>,
 ) {
+    // Tab switches and Ctrl+H call this — attaches the active SourceBuffer to the process-wide `SearchState` (find + replace).
     let search_state = get_search_state();
     search_state.show_search(buffer, source_view);
 }

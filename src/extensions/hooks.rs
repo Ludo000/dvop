@@ -26,6 +26,7 @@ use std::path::Path;
 
 /// Fire all enabled extensions' on_app_start hooks (fire-and-forget).
 pub fn fire_on_app_start() {
+    // Script hooks from `manifest.json` only — native `on_app_start` implementations run via `native::fire_on_app_start` (main orders native first, then this).
     let mgr = super::manager::get_manager();
     for ext in mgr.get_extensions() {
         if !ext.manifest.enabled {
@@ -44,6 +45,7 @@ pub fn fire_on_app_start() {
 pub fn fire_on_file_open(file_path: &Path) {
     let path_str = file_path.to_string_lossy().to_string();
     let mgr = super::manager::get_manager();
+    // Script extensions only — native extensions receive open events via `native::fire_on_file_open`.
     for ext in mgr.get_extensions() {
         if !ext.manifest.enabled {
             continue;
@@ -59,6 +61,7 @@ pub fn fire_on_file_open(file_path: &Path) {
 
 /// Fire all enabled extensions' on_file_save hooks (fire-and-forget).
 pub fn fire_on_file_save(file_path: &Path) {
+    // Script manifests only — compiled/native extensions listen via separate code paths tied to save handlers.
     let path_str = file_path.to_string_lossy().to_string();
     let mgr = super::manager::get_manager();
     for ext in mgr.get_extensions() {
@@ -76,6 +79,7 @@ pub fn fire_on_file_save(file_path: &Path) {
 
 /// Fire all enabled extensions' on_file_close hooks (fire-and-forget).
 pub fn fire_on_file_close(file_path: &Path) {
+    // Manifest `.sh` hooks only — `NativeExtension` has no `on_file_close`; native teardown is `shutdown()` / per-extension logic.
     let path_str = file_path.to_string_lossy().to_string();
     let mgr = super::manager::get_manager();
     for ext in mgr.get_extensions() {
@@ -96,6 +100,7 @@ pub fn fire_on_file_close(file_path: &Path) {
 /// Refresh all runtime contributions for a single extension after enable/disable toggle.
 /// This only updates what the extension actually contributes.
 pub fn refresh_extension(ext_id: &str, enabled: bool) {
+    // Extensions UI toggle — mutates CSS/actions/menus without restart; native IDs delegate to `native::set_native_enabled` and return early.
     let mgr = super::manager::get_manager();
     // Handle native extensions separately
     if super::native::is_native_extension(ext_id) {
@@ -108,6 +113,7 @@ pub fn refresh_extension(ext_id: &str, enabled: bool) {
         Some(e) => e.clone(),
         None => return,
     };
+    // `apply_custom_css` / status refresh / keybinding helpers call `get_manager()` again — must not nest the same mutex (would deadlock).
     drop(mgr);
     let contribs = &ext.manifest.contributions;
 
@@ -161,7 +167,7 @@ pub fn refresh_extension(ext_id: &str, enabled: bool) {
                             }
                         }
                     }
-                    // Rebuild the extra_menu on all open source views
+                    // Rebuild the extra_menu on all open source views — scans every tab; only runs when an extension is toggled, not continuously.
                     let n_pages = notebook.n_pages();
                     for i in 0..n_pages {
                         if let Some((text_view, _)) = crate::handlers::get_text_view_and_buffer_for_page(notebook, i) {
@@ -211,6 +217,7 @@ pub fn refresh_extension(ext_id: &str, enabled: bool) {
 /// Run all extension linters that match the given file extension.
 /// Returns a vec of diagnostics from all matching linter scripts.
 pub fn run_extension_linters(file_path: &Path) -> Vec<crate::linter::Diagnostic> {
+    // `lint_file` runs builtins first, then extends with this — each linter script prints a JSON array (`ExtLintDiagnostic`); `is_native` manifests skip the `runner` path.
     let file_ext = file_path
         .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
@@ -233,6 +240,7 @@ pub fn run_extension_linters(file_path: &Path) -> Vec<crate::linter::Diagnostic>
                 continue;
             }
 
+            // Each hit uses `runner::run_script_json` (bounded timeout) — scripts must print a JSON diagnostic array on stdout.
             let script_path = ext.path.join(&linter.script);
             // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match runner::run_script_json::<Vec<ExtLintDiagnostic>>(&script_path, &[&path_str]) {
@@ -275,6 +283,7 @@ struct ExtLintDiagnostic {
     message: String,
     line: usize,
     column: usize,
+    // Optional LSP-style range end; omitted in JSON for point diagnostics at (line, column).
     #[serde(default)]
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
     end_line: Option<usize>,
@@ -294,6 +303,7 @@ pub fn register_extension_keybindings(window: &gtk4::ApplicationWindow, app: &gt
     let mgr = super::manager::get_manager();
     let mut accels: Vec<(String, String)> = Vec::new();
 
+    // Each keybinding becomes a `win.ext-*` `SimpleAction` plus an app-level accel — keeps shortcuts working even when a GtkEntry has focus inside the window.
     for ext in mgr.get_extensions() {
         for kb in &ext.manifest.contributions.keybindings {
             let action_name = format!("ext-{}-{}", ext.manifest.id, sanitize_action_name(&kb.title));
@@ -323,6 +333,7 @@ pub fn register_extension_keybindings(window: &gtk4::ApplicationWindow, app: &gt
 
 /// Update enabled state of keybinding actions for a specific extension.
 pub fn refresh_extension_keybindings(window: &gtk4::ApplicationWindow, ext_id: &str, enabled: bool) {
+    // Toggle only — accels were registered once in `register_extension_keybindings`; this avoids duplicate `set_accels_for_action` entries.
     let mgr = super::manager::get_manager();
     for ext in mgr.get_extensions() {
         if ext.manifest.id != ext_id {
@@ -342,6 +353,7 @@ pub fn refresh_extension_keybindings(window: &gtk4::ApplicationWindow, ext_id: &
 
 /// Convert a user-friendly key string (e.g. "Ctrl+Shift+L") to GTK accel format ("<Control><Shift>l")
 fn key_string_to_gtk_accel(key: &str) -> String {
+    // Split manifest strings on `+`; GTK expects modifier tags plus the key (letter keys are usually lowercase in accel tables).
     let parts: Vec<&str> = key.split('+').collect();
     let mut accel = String::new();
     for part in &parts {
@@ -376,6 +388,7 @@ pub fn run_extension_command_on_active_editor(script_path: &std::path::Path) {
     let file_str = file_path.unwrap_or_default();
     let sel_str = selection.unwrap_or_default();
 
+    // Command palette / keybinding — `runner` passes `$1`=`file`, `$2`=`selection` per manifest; stdout replaces selection when non-empty.
     match runner::run_script(script_path, &[&file_str, &sel_str], None) {
         Ok(output) => {
             if !output.is_empty() {
@@ -394,6 +407,7 @@ pub fn run_text_transform_on_active_editor(script_path: &std::path::Path) {
     let file_str = file_path.unwrap_or_default();
     let sel_str = selection.unwrap_or_default();
 
+    // Transform pipeline: selected text on **stdin**, only `$1`=path on argv — differs from `run_extension_command_on_active_editor`.
     match runner::run_script(script_path, &[&file_str], Some(&sel_str)) {
         Ok(output) => {
             if !output.is_empty() {
@@ -417,6 +431,7 @@ pub fn run_editor_context_menu_script(
     let line_str = line.to_string();
     let col_str = col.to_string();
 
+    // `$1`..`$4` match `ExtensionManifest` docs; trim stdout replaces the active selection when non-empty.
     match runner::run_script(script_path, &[file_path, selection, &line_str, &col_str], None) {
         Ok(output) => {
             if !output.is_empty() {
@@ -431,6 +446,7 @@ pub fn run_editor_context_menu_script(
 
 /// Run a file explorer context menu script (side-effects only).
 pub fn run_file_explorer_context_menu_script(script_path: &std::path::Path, file_path: &str) {
+    // Sidebar row action — `$1` only; no selection; async so a slow script does not block DnD/list refreshes.
     runner::run_script_fire_and_forget(script_path, &[file_path]);
 }
 
@@ -438,6 +454,7 @@ pub fn run_file_explorer_context_menu_script(script_path: &std::path::Path, file
 
 /// Get the file path and selection text of the active editor.
 fn get_active_editor_info() -> (Option<String>, Option<String>) {
+    // Centralizes “what is the focused tab?” for extension scripts — uses `ACTIVE_FILE_PATH` + current page buffer instead of plumbing `PathBuf` through every action.
     ACTIVE_NOTEBOOK.with(|nb_cell| {
         let nb_opt = nb_cell.borrow();
         if let Some(ref notebook) = *nb_opt {
@@ -451,6 +468,7 @@ fn get_active_editor_info() -> (Option<String>, Option<String>) {
                             let iter = buffer.iter_at_offset(0);
                             (iter.clone(), iter)
                         });
+                        // `false` — strip Gtk embedded control chars so shell scripts see the same bytes users would save to disk.
                         Some(buffer.text(&start, &end, false).to_string())
                     } else {
                         None
@@ -471,6 +489,8 @@ fn get_active_editor_info() -> (Option<String>, Option<String>) {
 
 /// Replace the current selection in the active editor, or insert at cursor if no selection.
 fn replace_active_editor_selection(text: &str) {
+    // Palette/transform/context-menu scripts target the **current notebook page** — same `ACTIVE_NOTEBOOK` snapshot as other hooks.
+    // No selection → `insert_at_cursor` only; with selection → delete highlighted range first, then insert replacement text.
     ACTIVE_NOTEBOOK.with(|nb_cell| {
         let nb_opt = nb_cell.borrow();
         if let Some(ref notebook) = *nb_opt {
@@ -492,6 +512,7 @@ fn replace_active_editor_selection(text: &str) {
 // Thread-local references set during app init for hook access
 thread_local! {
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Filled at startup so scripts can resolve the editor notebook without threading `Notebook` through every API.
     pub static ACTIVE_NOTEBOOK: std::cell::RefCell<Option<gtk4::Notebook>> =
         // RefCell::new creates a container that checks borrowing rules at runtime.
         const { std::cell::RefCell::new(None) };
@@ -509,6 +530,7 @@ thread_local! {
 
 /// Set the notebook reference for hooks to access. Call once during init.
 pub fn set_active_notebook(notebook: &gtk4::Notebook) {
+    // Main editor `Notebook` (source tabs) — not the bottom terminal `Notebook`; panel/keybinding refresh walks this widget tree.
     ACTIVE_NOTEBOOK.with(|nb| {
         *nb.borrow_mut() = Some(notebook.clone());
     });
@@ -516,6 +538,7 @@ pub fn set_active_notebook(notebook: &gtk4::Notebook) {
 
 /// Update the active file path (call on tab switch).
 pub fn set_active_file_path(path: Option<std::path::PathBuf>) {
+    // Wired from `main` on `switch-page` — status-bar scripts and editor context menus pull `$1` via `ACTIVE_FILE_PATH` without threading `PathBuf` through every handler.
     ACTIVE_FILE_PATH.with(|fp| {
         *fp.borrow_mut() = path;
     });
@@ -621,6 +644,7 @@ fn force_status_label_refresh() {
 
 /// Get content for an extension sidebar panel by running its script.
 pub fn get_sidebar_panel_content(ext_id: &str, panel_id: &str, action: &str) -> String {
+    // Panel scripts get argv `[action, active_file_or_empty]` — stdout is shown as panel body (often lightweight HTML).
     let mgr = super::manager::get_manager();
     for ext in mgr.get_extensions() {
         if ext.manifest.id != ext_id || !ext.manifest.enabled {

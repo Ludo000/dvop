@@ -60,6 +60,7 @@ impl GlobalVideoManager {
         let mut players = self.active_players.lock().unwrap();
 
         // Clean up any pipelines that have been set to NULL state (destroyed)
+        // Drop finished pipelines so the list doesn’t grow forever when tabs close.
         let original_count = players.len();
         players.retain(|(p, _)| p.current_state() != gstreamer::State::Null);
         let cleaned_count = original_count - players.len();
@@ -98,6 +99,7 @@ impl GlobalVideoManager {
 
     /// Stop all other video players except the one that's starting to play
     fn stop_other_players(&self, current_pipeline: &gstreamer::Pipeline, current_player_id: &str) {
+        // Pauses other `Playing` pipelines so only one tab decodes audio/video — keeps laptops cool when switching clips.
         // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut players = self.active_players.lock().unwrap();
         // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
@@ -212,6 +214,7 @@ impl GlobalVideoManager {
             }
 
             // Check if this player is associated with the file being closed
+            // `player_id` is `player_<ms>_<basename>` at registration — basename match is enough for tab-close cleanup (same-named files in different dirs are rare).
             if player_id.contains(file_name) {
                 println!(
                     "Video: Stopping player for closed file: {} (ID: {})",
@@ -271,12 +274,14 @@ pub fn is_video_file(path: &std::path::Path) -> bool {
 
 /// Public function to stop all video players associated with a specific file path
 pub fn stop_video_for_file(file_path: &std::path::Path) {
+    // Tab close (`handlers`) pauses pipelines for this path before the notebook page is removed.
     GLOBAL_VIDEO_MANAGER.stop_players_for_file(file_path);
 }
 
 /// Public function to stop all currently playing video players
 /// This should be called when an audio player starts playing
 pub fn stop_all_video_players() {
+    // Audio startup (`audio.rs`) calls here — keeps one primary media output path instead of overlapping decode graphs.
     // lock() acquires the Mutex lock. It blocks until the lock is available.
     let players = GLOBAL_VIDEO_MANAGER.active_players.lock().unwrap();
     let mut notifications = GLOBAL_VIDEO_MANAGER.stopped_notifications.lock().unwrap();
@@ -306,6 +311,7 @@ fn enter_fullscreen<W: IsA<gtk4::Window>>(
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     current_position: &Rc<RefCell<u64>>,
 ) {
+    // Same `Rc<RefCell>` cells as the tab’s inline player — fullscreen window reuses them so sliders/timers stay consistent.
     // Store the original parent so we can restore it later
     let original_parent = video_picture.parent();
 

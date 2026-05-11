@@ -150,6 +150,7 @@ fn get_log_file_path() -> PathBuf {
 
 /// Load log history from file
 pub fn load_log_history() {
+    // Primes `STATUS_HISTORY` from `log_history.txt` so “show log” can display the previous session before new messages arrive.
     let log_file = get_log_file_path();
 
     // Create the config directory if it doesn't exist
@@ -196,6 +197,7 @@ pub fn load_log_history() {
 
 /// Save log history to file
 fn save_log_history() {
+    // Rewrites `log_history.txt` from the in-memory ring buffer — invoked after each new entry; I/O errors are logged but don’t panic.
     let log_file = get_log_file_path();
 
     // lock() acquires the Mutex lock. It blocks until the lock is available.
@@ -218,6 +220,7 @@ fn save_log_history() {
 // RefCell allows us to swap the Label in and out even though it's technically immutable.
 thread_local! {
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Right-hand status strip (e.g. extension text) — `None` until `set_secondary_status_label` runs during window build.
     static CURRENT_SECONDARY_STATUS_LABEL: std::cell::RefCell<Option<Label>> = const { std::cell::RefCell::new(None) };
 }
 
@@ -231,6 +234,7 @@ pub fn set_secondary_status_label(label: &Label) {
 // Store a reference to the current status label (if any)
 thread_local! {
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Primary status bar label target for `log_*` helpers on the GTK main thread.
     static CURRENT_STATUS_LABEL: std::cell::RefCell<Option<Label>> = const { std::cell::RefCell::new(None) };
 }
 
@@ -304,6 +308,7 @@ fn add_message_to_log(message: String, level: LogLevel) {
     }
 
     // Save to file asynchronously
+    // Full deque rewrite each call — cheap at MAX_LOG_HISTORY=100; caller-heavy loops would want batching instead.
     save_log_history();
 
     // Update the current status label
@@ -316,6 +321,7 @@ fn add_message_to_log(message: String, level: LogLevel) {
 /// are stored in `thread_local!` storage so `log_info()` / `log_error()` etc. can
 /// update them without needing a reference to the window.
 pub fn register_status_labels(status_label: &Label, secondary_label: &Label) {
+    // `thread_local!` targets stay unset until here — earlier `log_*` calls still append history + stderr/stdout, but won’t refresh the bar labels.
     set_status_label(status_label);
     set_secondary_status_label(secondary_label);
 

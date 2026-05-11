@@ -42,12 +42,16 @@ macro_rules! completion_debug {
 use super::json_provider::ImportItem;
 
 // Static flag to prevent recursive completion triggering
+// Inserting completion text fires buffer signals — guard avoids nested `trigger_completion` calls.
 static COMPLETION_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 
 // Track the current popover so we can clean it up before creating a new one.
 // Without this, old popovers accumulate in the GTK widget tree causing hangs.
+// One popover per UI thread; stash it so Esc / new completion can dismiss the previous overlay safely.
+// Popovers are not `Send` — thread-local storage matches GTK’s single main-thread rule without a mutex.
 thread_local! {
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // At most one completion popover on the main thread — reused so a new Ctrl+Space dismisses the previous overlay.
     static CURRENT_POPOVER: RefCell<Option<Popover>> = RefCell::new(None);
 }
 
@@ -99,6 +103,7 @@ enum CursorContext {
 
 /// Analyse the text immediately before the cursor to determine context.
 fn analyse_cursor_context(context_before_word: &str) -> CursorContext {
+    // Lightweight heuristic (not a full parser) — steers keyword lists/snippets toward plausible Rust syntactic roles.
     // Get the text before the current word, trimmed
     let trimmed = context_before_word.trim_end();
 
@@ -158,8 +163,9 @@ fn analyse_cursor_context(context_before_word: &str) -> CursorContext {
 ///   +20   case-sensitive prefix bonus
 ///   -1    per gap between matched characters (fuzzy penalty)
 fn fuzzy_match_score(query: &str, candidate: &str) -> Option<i32> {
+    // Scores are merged with context/proximity weighting in `trigger_completion` — higher is better, `None` means no match.
     if query.is_empty() {
-        return Some(0);
+        return Some(0); // empty query ranks everything equally — caller filters separately
     }
 
     let q_lower = query.to_lowercase();
@@ -177,6 +183,8 @@ fn fuzzy_match_score(query: &str, candidate: &str) -> Option<i32> {
     }
 
     // Subsequence / fuzzy match  — every query char must appear in order
+    // Subsequence scan: "sc" matches "Struct" — chars must appear left-to-right (not necessarily adjacent).
+    // Walk candidate once per query char — O(n·m) but fine for short IDE-token lengths.
     let mut score: i32 = 60;
     let mut c_iter = c_lower.chars().enumerate().peekable();
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
@@ -220,8 +228,10 @@ fn fuzzy_match_score(query: &str, candidate: &str) -> Option<i32> {
 }
 
 /// Context-aware bonus applied after the base fuzzy score.
+/// Extra points after fuzzy score — steers “fn” vs “Vec” depending on whether cursor is in type vs stmt position.
 fn context_bonus(item: &CompletionItem, ctx: CursorContext, keyword_type: Option<&str>, keyword_category: Option<&str>) -> i32 {
     // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
+    // Provider metadata augments raw fuzzy_match_score — keeps tokens like `fn` ahead of type names at line start, etc.
     match ctx {
         CursorContext::TypePosition => {
             // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
@@ -306,6 +316,7 @@ fn get_buffer_language(buffer: &Buffer) -> String {
 
     if let Some(language) = buffer.language() {
         let lang_id = language.id().to_string();
+        // GtkSource IDs → JSON bundle keys — TypeScript reuses the JavaScript keyword/snippet pack until TS-specific data exists.
         let detected_lang = match lang_id.as_str() {
             "rust" => "rust".to_string(),
             "javascript" | "js" => "javascript".to_string(),
@@ -316,6 +327,7 @@ fn get_buffer_language(buffer: &Buffer) -> String {
             "java" => "java".to_string(),
             "html" => "html".to_string(),
             "css" => "css".to_string(),
+            // Fallback when GtkSource reports an id we don’t map — `rust` JSON usually exists; odd ids still get filtered by `supported_languages` next.
             _ => "rust".to_string(), // Default to rust instead of generic
         };
 
@@ -346,6 +358,7 @@ pub fn setup_completion(source_view: &View) {
     completion_debug!("=== SETTING UP MANUAL COMPLETION ONLY ===");
     let buffer = source_view.buffer();
 
+    // Keybindings and popover logic live in `setup_completion_shortcuts` / `trigger_completion` — this entry point only validates the buffer type for API symmetry with older call sites.
     // Cast buffer to SourceView Buffer
     if let Some(_source_buffer) = buffer.downcast_ref::<Buffer>() {
         // Manual completion via Ctrl+Space will be available
@@ -360,6 +373,7 @@ pub fn setup_completion(source_view: &View) {
 /// Currently both paths use the same manual-only completion; this function
 /// exists to allow per-language customisation in the future.
 pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
+    // Today only forwards to `setup_completion` + debug classification — reserved for language-specific completion wiring later.
     setup_completion(source_view);
 
     if let Some(path) = file_path {
@@ -369,6 +383,7 @@ pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
         // Note: Only manual completion (Ctrl+Space) is available
         // No automatic completion providers are configured
 
+        // Today this only influences debug classification — reserved for wiring language-specific providers later.
         match extension {
             "rs" => {
                 completion_debug!("Manual Rust completion enabled");
@@ -409,6 +424,7 @@ pub fn setup_completion_for_file(source_view: &View, file_path: Option<&Path>) {
 pub fn trigger_completion(source_view: &View) {
     let code_completion_on = crate::extensions::code_completion::is_enabled();
     let rust_completion_on = crate::extensions::rust_completion::is_enabled();
+    // Two toggles: generic JSON completion extension vs rustup-powered Rust — both can be off in Settings.
 
     // Determine if this is a Rust file
     let is_rust = {
@@ -447,6 +463,7 @@ pub fn trigger_completion(source_view: &View) {
     let mut start_iter = cursor_iter;
     for _ in 0..50 {
         // Look back further for import context
+        // 50 chars is enough for `use std::collections::` style prefixes without scanning whole file.
         if start_iter.is_start() {
             break;
         }
@@ -531,6 +548,7 @@ pub fn trigger_completion(source_view: &View) {
     completion_debug!("Language detected: {}", language);
 
     // Maximum number of suggestions to display
+    // Keeps popover cheap to lay out; candidates are sorted so the tail is usually noise anyway.
     const MAX_SUGGESTIONS: usize = 20;
 
     // ── Gather & score candidates ────────────────────────────────
@@ -786,6 +804,7 @@ fn create_completion_popup(
     };
 
     // Dismiss any previous popover before creating a new one
+    // Avoid stacking overlays — old popover would steal keyboard focus from the new list.
     dismiss_current_popover();
 
     // Create popover
@@ -793,10 +812,12 @@ fn create_completion_popup(
 
     popover.set_parent(source_view);
 
+    // Outside clicks hide the popover — `connect_closed` below clears TLS + unparents the widget.
     popover.set_autohide(true);
 
     // Get screen size to calculate appropriate popup dimensions
     let display = gdk::Display::default().expect("Failed to get display");
+    // First connected monitor — only used to scale max popover width/height; hard caps below keep layouts sane on any screen.
     let monitor = display
         .monitors()
         .item(0)
@@ -891,6 +912,7 @@ fn create_completion_popup(
         }
         cache
     };
+    // MutexGuard from `get_completion_manager` ended with the block above — list construction only touches `doc_cache` (no nested lock while painting rows).
 
     // Add suggestions to list
     for (_i, (display_text, completion_item)) in suggestions_with_content.iter().enumerate() {
@@ -959,6 +981,7 @@ fn create_completion_popup(
     completion_debug!("Popover content set with documentation");
 
     // Handle selection
+    // Row activate (double-click) shares the same insert path as Enter/Tab on the list (`selected_row.activate()`).
     let buffer = source_view.buffer();
     let suggestions_clone = suggestions_with_content.to_vec();
     let popover_for_close = popover.clone();
@@ -989,6 +1012,7 @@ fn create_completion_popup(
             };
 
             // Replace the prefix with the selected suggestion/snippet
+            // Delete exactly the partial token `[word_start, cursor)` — leaves surrounding code untouched.
             let mut start_iter = buffer.iter_at_offset(word_start_offset);
             let mut end_iter = buffer.iter_at_offset(cursor_offset);
 
@@ -1013,6 +1037,7 @@ fn create_completion_popup(
     });
 
     // Calculate cursor position for better popover positioning
+    // Rectangle is in widget coords — GtkPopover flips above/below near monitor edges automatically.
     let buffer = source_view.buffer();
     let cursor_mark = buffer.get_insert();
     let cursor_iter = buffer.iter_at_mark(&cursor_mark);
@@ -1040,6 +1065,7 @@ fn create_completion_popup(
     );
 
     // Position the popover below the cursor
+    // Thin horizontal band under the glyph — popover anchor snaps here; `max(1)` avoids a zero-width rect when the caret has no advance width.
     let pointing_rect = gdk::Rectangle::new(
         widget_x,
         widget_y + cursor_rect.height(),
@@ -1054,6 +1080,7 @@ fn create_completion_popup(
     );
 
     // Handle keyboard navigation in the popover
+    // Controller targets `list_box` (see `grab_focus` below) so arrows adjust selection without touching the SourceView buffer.
     let key_controller = gtk4::EventControllerKey::new();
     let popover_clone = popover.clone();
     let list_box_clone = list_box.clone();
@@ -1121,6 +1148,7 @@ fn create_completion_popup(
 
 /// Helper function to scroll to a specific row in the scrolled window
 fn scroll_to_row(scrolled: &ScrolledWindow, row: &gtk4::ListBoxRow) {
+    // Adjust viewport only when the row lands outside the visible band — keeps arrow navigation stable.
     // Get the row's allocation (position and size)
     let row_allocation = row.allocation();
     let row_height = row_allocation.height() as f64;
@@ -1151,6 +1179,7 @@ fn scroll_to_row(scrolled: &ScrolledWindow, row: &gtk4::ListBoxRow) {
 
 /// Setup keyboard shortcuts for completion with manual trigger only
 pub fn setup_completion_shortcuts(source_view: &View) {
+    // Non-Rust buffers need the generic `code-completion` toggle; Rust can rely on `rust-completion` alone — matches `trigger_completion`’s gate.
     // Allow shortcuts if code_completion is enabled, or if rust_completion
     // is enabled and this is a Rust file (rust_completion works independently).
     if !crate::extensions::code_completion::is_enabled() {
@@ -1168,6 +1197,7 @@ pub fn setup_completion_shortcuts(source_view: &View) {
     completion_debug!("Setting up completion keyboard shortcuts...");
 
     // Create key controller with high priority to ensure it gets events
+    // Capture phase: run before SourceView default handlers so Ctrl+Space / completion keys win reliably.
     let key_controller = gtk4::EventControllerKey::new();
     key_controller.set_propagation_phase(gtk4::PropagationPhase::Capture);
 
@@ -1182,6 +1212,7 @@ pub fn setup_completion_shortcuts(source_view: &View) {
             completion_debug!("*** Ctrl+Space detected! Triggering manual completion ***");
 
             // Use timeout to ensure the key event is fully processed first
+            // Idle pass lets GTK finish caret motion so word-boundary scans match what the user sees after Ctrl+Space.
             let sv = source_view_clone.clone();
             // The "move" keyword forces the closure to take ownership of the variables it uses.
             glib::idle_add_local_once(move || {
@@ -1217,6 +1248,7 @@ pub fn setup_completion_shortcuts(source_view: &View) {
 /// Expand snippet content by removing placeholders and converting to simple text
 /// For now, this is a basic implementation that removes ${n:placeholder} syntax
 fn expand_snippet_content(content: &str) -> String {
+    // TextMate-style `${index:default}` — emit defaults only; full snippet tab stops are not implemented yet.
     // Use regex to find and replace all snippet placeholders ${n:default_text}
     // For now, we'll use a simple parser since regex is not available
 
@@ -1267,6 +1299,7 @@ fn expand_snippet_content(content: &str) -> String {
 
 /// Detect if we're currently in an import context
 fn detect_import_context(context: &str) -> bool {
+    // Last-line heuristic — enough to swap candidate sources (`use`/`import`/`from`) without a full syntax tree.
     let trimmed = context.trim();
 
     // Find the current line (the last line in the context)
@@ -1297,6 +1330,7 @@ fn detect_import_context(context: &str) -> bool {
 
 /// Extract the module path from import context
 fn extract_import_path(context: &str) -> Option<String> {
+    // Returns provider-facing prefix (Rust `std::fmt`, JS quoted path, etc.) — see `get_import_suggestions`.
     let trimmed = context.trim();
 
     // Get the current line (the last line in the context)

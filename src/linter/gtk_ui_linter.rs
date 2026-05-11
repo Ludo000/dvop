@@ -26,16 +26,18 @@ use std::collections::{HashMap, HashSet};
 struct StackElement {
     tag_name: String,
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // GTK `.ui` `class` attribute on this element, if any — used for duplicate-id / style checks.
     class_name: Option<String>,
 }
 
 /// Lint GTK UI XML file
 pub fn lint_gtk_ui(content: &str) -> Vec<Diagnostic> {
+    // No subprocess — streaming XML only; safe to call directly from GTK idle handlers.
     let mut diagnostics = Vec::new();
     let mut reader = Reader::from_str(content);
-    reader.config_mut().trim_text(true);
+    reader.config_mut().trim_text(true); // ignore indentation whitespace between tags
 
-    let mut buf = Vec::new();
+    let mut buf = Vec::new(); // quick-xml reuses this buffer each event to reduce allocations
     let mut line_number = 1;
     let mut element_stack: Vec<StackElement> = Vec::new();
     let mut object_ids = HashMap::new(); // Track object IDs and their line numbers
@@ -48,6 +50,7 @@ pub fn lint_gtk_ui(content: &str) -> Vec<Diagnostic> {
 
     loop {
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
+        // Streaming parse: one XML event at a time (good for large .ui files vs loading full DOM).
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
                 let tag_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
@@ -102,6 +105,7 @@ pub fn lint_gtk_ui(content: &str) -> Vec<Diagnostic> {
             }
             Ok(Event::Text(_)) => {
                 // Track line numbers by counting newlines up to current position
+                // Track line numbers: `buffer_position` is a byte offset — slice `content[..pos]` then count newline characters for 1-based `line_number`.
                 let pos = reader.buffer_position() as usize;
                 line_number = content[..pos].chars().filter(|&c| c == '\n').count() + 1;
             }
@@ -145,6 +149,7 @@ fn validate_object_element(
     object_ids: &mut HashMap<String, usize>,
     duplicate_ids: &mut HashSet<String>,
 ) {
+    // Static tables approximate GtkBuilder rules — typos/duplicate ids surface here instead of mysterious load failures.
     let mut has_class = false;
     let mut _class_name = String::new();
     let mut _id_value = None;

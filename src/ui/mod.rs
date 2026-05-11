@@ -41,6 +41,9 @@ pub mod settings;
 pub mod settings_dialog_template;
 pub mod terminal;
 
+// Quick map: `css` = global stylesheet; `file_manager` = file list DnD/clipboard; `git_diff` = git CLI UI;
+// `global_search` = repo-wide search; `*_template` = `CompositeTemplate` bindings to `resources/*.ui`; `terminal` = VTE.
+
 use gtk4::prelude::*;
 use gtk4::{
     gio,
@@ -80,6 +83,7 @@ use std::path::PathBuf; // For file paths
 use std::rc::Rc; // For shared ownership // For file path manager
 
 const RESPONSIVE_HEADER_BREAKPOINT: i32 = 950;
+// Window width at/narrower than this triggers compact header chrome — see `DvopWindow::update_responsive_layout` + idle hook in `main.rs`.
 
 /// Type alias for the 12-element tuple returned by `create_text_view()`.
 ///
@@ -332,8 +336,10 @@ impl DvopWindow {
 
     // pub makes this function public, allowing it to be used from outside this module.
     pub fn update_responsive_layout(&self) {
+        // Collapse header to hamburger below `RESPONSIVE_HEADER_BREAKPOINT`; first real call is deferred in `main` until after initial allocation.
         let imp = self.imp();
         let width = self.width();
+        // `width` is 0 until the window has a real allocation — skipping avoids toggling chrome off mid-configure.
         if width <= 0 {
             return;
         }
@@ -411,6 +417,7 @@ impl DvopWindow {
 
 /// Creates the main application window with default settings
 pub fn create_window(app: &Application) -> DvopWindow {
+    // Widget tree loads from `resources/window.ui` via `DvopWindow` — this is only GObject construction + app attachment.
     DvopWindow::new(app)
 }
 
@@ -423,6 +430,7 @@ pub fn create_header(
 ) -> (Button, Button, Button, MenuButton, Button, Button, Button) {
     let imp = window.imp();
 
+    // Hidden clones keep older call sites / test shims that `emit_clicked` working while the visible chrome comes from `window.ui` template children.
     // Create hidden buttons for backward compatibility
     let new_button = Button::new();
     new_button.set_visible(false);
@@ -471,6 +479,7 @@ pub fn create_header(
 pub fn create_text_view(
     window: &DvopWindow,
 ) -> TextViewComponents {
+    // First notebook page + shared `Rc` state — `main::build_ui` attaches handlers, path bar, and session restore after this returns.
     let imp = window.imp();
     let editor_notebook = imp.editor_notebook.get();
 
@@ -566,6 +575,7 @@ pub fn create_paned(
     let imp = window.imp();
 
     // Create dummy box for backward compatibility (not used in template approach)
+    // Real layout comes from `resources/window.ui` via `TemplateChild` — tuple keeps older `create_paned` call shapes compiling.
     let dummy_box = GtkBox::new(Orientation::Horizontal, 0);
 
     (
@@ -590,6 +600,7 @@ pub fn create_paned(
 /// - Label: Text label displaying the filename
 /// - Button: Close button to close the tab
 pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
+    // Notebook tab row only — editors/previews/media attach as the **page** child, not inside this `GtkBox`.
     // Create horizontal container for tab contents with comfortable spacing
     let tab_box = GtkBox::new(Orientation::Horizontal, 4);
 
@@ -644,6 +655,7 @@ pub fn create_tab_widget(tab_title: &str) -> (GtkBox, Label, Button) {
 pub fn setup_tab_middle_click(tab_box: &GtkBox, close_button: &Button) {
     use gtk4::prelude::*;
 
+    // Middle-click = same as clicking the tab X — reuses `close_button` pipeline (unsaved prompts, `actually_close_tab`, etc.).
     // Create a gesture click controller that responds to middle mouse button clicks
     let middle_click_gesture = gtk4::GestureClick::new();
     middle_click_gesture.set_button(2); // Middle mouse button
@@ -672,13 +684,11 @@ pub fn setup_tab_right_click(
     tab_box: &GtkBox,
     notebook: &Notebook,
     window: &ApplicationWindow,
-    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // Shared tab state — same handles as `handlers::handle_close_tab_request` / `NewTabDependencies`.
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
-    // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     new_tab_deps: Option<crate::handlers::NewTabDependencies>,
 ) {
     use gtk4::prelude::*;
@@ -723,6 +733,7 @@ pub fn setup_tab_right_click(
         // Create a box to hold the menu items
         let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
         menu_box.add_css_class("menu");
+        // "Close to …" / "Close others" actions below use fast `remove_page` loops — not `handle_close_tab_request` (no per-tab save prompt, `actually_close_tab` cleanup, or `file_path_manager` fix-up like the X button).
         
         // Create "Close to the Right" button
         let close_to_right_button = Button::with_label("Close to the Right");
@@ -1273,7 +1284,7 @@ pub fn create_status_bar(window: &DvopWindow) -> (GtkBox, Label, GtkBox, Label) 
 /// Updates the visibility of the volume control based on active tab content
 pub fn update_volume_control_visibility_for_tab(
     volume_control_box: &GtkBox,
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Path for the focused tab — `None` for untitled or non-file tabs; volume chrome shows only for music/video MIME checks.
     active_tab_path: &Option<std::path::PathBuf>,
 ) {
     let is_media_tab = active_tab_path
@@ -1290,6 +1301,7 @@ pub fn update_volume_control_visibility_for_tab(
 pub fn show_log_history_popup(parent_window: &impl IsA<gtk4::ApplicationWindow>) {
     use crate::status_log;
 
+    // Intentionally non-modal: user can keep editing while log floats; source is `status_log::get_log_history()` (same deque as the status strip).
     // Create the dialog window as an ApplicationWindow for full window controls
     let app_window: &gtk4::ApplicationWindow = parent_window.upcast_ref();
     // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.

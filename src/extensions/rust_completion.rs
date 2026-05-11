@@ -15,6 +15,13 @@
 //! The enable/disable state is persisted in `~/.config/dvop/native_extensions.json`.
 //!
 //! See FEATURES.md: Feature #111 — Code Completion
+//!
+//! ## Why globals (`lazy_static`, `AtomicBool`) appear here
+//!
+//! Extensions are registered once at startup; enable/disable toggles must affect every future call
+//! without threading a `RustCompletionExtension` struct through the whole app. `AtomicBool` is a
+//! cheap, lock-free “is this on?” flag safe to read from any thread. Heavy completion data still
+//! lives in `completion::json_provider::CompletionDataManager` behind its own `Mutex`.
 
 use super::native::NativeExtension;
 use crate::completion::json_provider::{
@@ -99,6 +106,7 @@ impl NativeExtension for RustCompletionExtension {
 
 /// Register the Rust completion extension. Call once during app init.
 pub fn register() {
+    // Called after `code_completion::register` in startup — doc parser merges into the shared `rust` provider when both are on.
     // Box::new(...) allocates the data on the heap rather than the stack.
     super::native::register(Box::new(RustCompletionExtension::new()));
 }
@@ -116,6 +124,7 @@ fn unregister() {
     let mut manager = crate::completion::json_provider::get_completion_manager();
     manager.remove_provider("rust");
     // Let the manager re-load rust.json from disk on next access (if it exists)
+    // `remove_provider` also blocks auto-reload of `rust.json` until `load_and_register` runs again on re-enable (`add_language_data` clears the block).
     println!("Rust completion extension disabled — removed rustup completions");
 }
 
@@ -125,19 +134,22 @@ pub fn load_and_register() {
     if !is_enabled() {
         return;
     }
-    let rust_data = load_rust_completions();
+    let rust_data = load_rust_completions(); // disk cache → rustup parse → fallback keywords
 
     let mut manager = crate::completion::json_provider::get_completion_manager();
 
     // Merge static rust.json if it was already loaded (eager preload or first get_provider).
+    // Snapshot any hand-authored `completion_data/rust.json` already merged into the manager (may be None).
     let json_data = manager
         .get_provider("rust")
         .map(|p| p.language_data().clone());
 
     // Set the rustup data as the base
+    // Replace/inject the big rustup-derived dataset first.
     manager.add_language_data("rust", rust_data);
 
     // Merge rust.json entries on top if present
+    // If static JSON existed, merge it back so packagers can override or extend individual entries.
     if let Some(extra) = json_data {
         manager.merge_language_data("rust", extra);
         println!("Merged rust.json data into rustup completions");
@@ -190,6 +202,7 @@ pub fn load_rust_completions() -> LanguageCompletionData {
 // ── Persistence helpers ──────────────────────────────────────────
 
 fn config_path() -> PathBuf {
+    // Same `native_extensions.json` map other built-ins use — one bool per extension id (`rust-completion` key).
     if let Some(home) = home::home_dir() {
         home.join(".config").join("dvop").join("native_extensions.json")
     } else {
@@ -209,6 +222,7 @@ fn load_enabled_state() -> bool {
 
 fn persist_enabled_state(enabled: bool) {
     let path = config_path();
+    // Shared `native_extensions.json` — merge so other extensions’ booleans survive this write.
     let mut map: HashMap<String, bool> = if let Ok(data) = std::fs::read_to_string(&path) {
         serde_json::from_str(&data).unwrap_or_default()
     } else {
@@ -239,6 +253,7 @@ fn rustup_docs_path() -> Option<PathBuf> {
 
     let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let path = PathBuf::from(&path_str);
+    // `rustup doc --path` prints a concrete HTML entry point; its parent is the rustdoc tree root (`std/`, `alloc/`, …).
     path.parent().map(|p| p.to_path_buf())
 }
 
@@ -293,6 +308,7 @@ fn cache_file_path() -> PathBuf {
 }
 
 fn dirs_config() -> PathBuf {
+    // Parent of `dvop/` for `rust_completions_cache.json` — mirrors typical `~/.config` layout without pulling in `settings::get_config_dir` (keeps this module’s cache path stable in tests/tools).
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
         return PathBuf::from(xdg);
     }
@@ -302,7 +318,7 @@ fn dirs_config() -> PathBuf {
     PathBuf::from("/tmp")
 }
 
-// Option<T> is an enum that represents an optional value: either Some(T) or None.
+// Disk cache hit only when envelope toolchain + rustc version match the live toolchain (stale caches return None).
 fn load_cache(toolchain: &str, version: &str) -> Option<LanguageCompletionData> {
     if toolchain.is_empty() || version.is_empty() {
         return None;
@@ -310,6 +326,7 @@ fn load_cache(toolchain: &str, version: &str) -> Option<LanguageCompletionData> 
     let path = cache_file_path();
     let content = fs::read_to_string(&path).ok()?;
     let envelope: CacheEnvelope = serde_json::from_str(&content).ok()?;
+    // Toolchain + rustc version must both match — bump either and we re-parse instead of reviving stale symbols.
     if envelope.toolchain == toolchain && envelope.rust_version == version {
         Some(envelope.data)
     } else {
@@ -336,6 +353,7 @@ fn save_cache(toolchain: &str, version: &str, data: &LanguageCompletionData) {
 
 /// Parse the Rust std documentation tree into `LanguageCompletionData`.
 fn parse_docs(docs_root: &Path) -> LanguageCompletionData {
+    // Mirrors rustdoc’s on-disk layout: `std/all.html` indexes symbols; sidebar JS is optional in our parser path.
     let std_dir = docs_root.join("std");
 
     let hardcoded_keywords = rust_keywords();
@@ -590,6 +608,7 @@ fn parse_sidebar_recursive(
 }
 
 // Option<T> is an enum that represents an optional value: either Some(T) or None.
+// Locates rustdoc’s `sidebar-items*.js` beside `all.html` and parses its JSON object into module paths → symbol lists.
 fn read_sidebar_items(dir: &Path) -> Option<HashMap<String, Vec<String>>> {
     let entries = fs::read_dir(dir).ok()?;
     let sidebar_file = entries

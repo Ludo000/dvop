@@ -36,10 +36,12 @@ pub fn run_script(
     stdin_data: Option<&str>,
 // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<String, String> {
+    // `stdin_data` feeds transforms / stdin-driven scripts; `None` keeps stdin closed so hooks that do not read stdin exit cleanly.
     if !script_path.exists() {
         return Err(format!("Script not found: {}", script_path.display()));
     }
 
+    // Run via `bash /path/to/script` so extension authors need not chmod +x or rely on a shebang line.
     let mut cmd = Command::new("bash");
     cmd.arg(script_path);
     for arg in args {
@@ -60,10 +62,13 @@ pub fn run_script(
         if let Some(mut stdin) = child.stdin.take() {
             let _ = stdin.write_all(data.as_bytes());
             // stdin is dropped here, closing the pipe
+            // Dropping `stdin` closes the pipe so the script sees EOF and can finish reading.
         }
     }
 
     // Wait with timeout using a thread
+    // `wait_with_output` blocks indefinitely — run it on a helper thread and block the caller with a timeout.
+    // Sender pushes one `Result` when child exits; receiver blocks until then or until recv_timeout fires.
     let (tx, rx) = std::sync::mpsc::channel();
     let thread_handle = {
         // The "move" keyword forces the closure to take ownership of the variables it uses.
@@ -86,6 +91,7 @@ pub fn run_script(
         Ok(Err(e)) => Err(format!("Script I/O error: {}", e)),
         Err(_) => {
             // Timeout — try to clean up the thread (it will eventually finish)
+            // `recv_timeout` fired — child may still be running; we abandon waiting (UI stays responsive).
             drop(thread_handle);
             Err("Script timed out (5s)".to_string())
         }
@@ -99,6 +105,7 @@ pub fn run_script_json<T: serde::de::DeserializeOwned>(
 // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
 ) -> Result<T, String> {
     let output = run_script(script_path, args, None)?;
+    // Caller chooses `T`; stdout must be a single JSON value with no extra text (structured linters/transforms share this contract).
     serde_json::from_str(&output)
         .map_err(|e| format!("Failed to parse script JSON output: {}", e))
 }
@@ -106,6 +113,7 @@ pub fn run_script_json<T: serde::de::DeserializeOwned>(
 /// Run a script without waiting for output (fire-and-forget).
 /// The script runs in a background thread with a timeout guard.
 pub fn run_script_fire_and_forget(script_path: &Path, args: &[&str]) {
+    // Same `SCRIPT_TIMEOUT` as synchronous runs — a wedged hook cannot hang forever even though GTK never blocks here.
     if !script_path.exists() {
         return;
     }
@@ -123,6 +131,7 @@ pub fn run_script_fire_and_forget(script_path: &Path, args: &[&str]) {
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::null());
         cmd.stderr(Stdio::piped());
+        // Fire-and-forget hooks only need stderr for failures — stdout is discarded so noisy scripts do not flood logs.
 
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match cmd.spawn() {

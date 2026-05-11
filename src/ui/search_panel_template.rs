@@ -21,7 +21,8 @@ use gtk4::{
 mod imp {
     use super::*;
 
-    // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
+    // Same CompositeTemplate pattern as `git_diff_panel_template.rs` — XML lives in GResources (`build.rs`).
+    // Each #[template_child] name matches an `id=` in `resources/search_panel.ui`; mismatches panic at template bind time.
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/example/Dvop/search_panel.ui")]
     pub struct SearchPanel {
@@ -86,6 +87,7 @@ impl Default for SearchPanel {
 impl SearchPanel {
     // pub makes this function public, allowing it to be used from outside this module.
     pub fn new() -> Self {
+        // GObject construction runs `instance_init` → `init_template()`, pulling `search_panel.ui` from the GResource embedded by `build.rs`.
         glib::Object::builder().build()
     }
 

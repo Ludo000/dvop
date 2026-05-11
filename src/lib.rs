@@ -14,6 +14,24 @@
 //! This stub exists solely so that the library crate compiles without pulling in the
 //! binary-only code. Tests that need theme updates should test `syntax::update_buffer_style_scheme`
 //! directly instead.
+//!
+//! ## Suggested reading order (if you are new to Rust or this repo)
+//!
+//! 1. **`Cargo.toml`** — lists crates (dependencies). Rust downloads and compiles them; you rarely
+//!    change this unless you add a library.
+//! 2. **`src/main.rs`** — application startup (`fn main`), GTK `Application`, and `build_ui` which
+//!    wires the window and shortcuts. Most UI wiring lives here or under `src/ui/`.
+//! 3. **`src/handlers.rs`** — tab lifecycle, open/save/close, previews; think “what happens when the
+//!    user edits or switches tabs”.
+//! 4. **`src/extensions/`** — optional plugins; **`native.rs`** registers built-in extensions like
+//!    Rust completion and Rust diagnostics.
+//! 5. **`src/linter/`** — squiggles in the editor + diagnostics panel; pairs with **`src/lsp/`** for
+//!    rust-analyzer.
+//! 6. **`src/completion/`** — Ctrl+Space completion; JSON data lives in `completion_data/`.
+//!
+//! **Rust tip:** `pub mod foo` in this file exposes `dvop::foo` to integration tests. `main.rs` uses
+//! plain `mod foo` for the same files when building the binary; both point at the same `src/foo`
+//! tree.
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Public module re-exports — each one mirrors a `mod` declaration in main.rs
@@ -34,6 +52,8 @@ pub mod lsp;         // Language Server Protocol client (rust-analyzer)
 pub mod extensions;  // Extension system (script-based and native)
 pub mod ui;          // GTK4 UI components and templates
 
+// Integration tests build this library crate; `cargo run` uses `main.rs`, which declares the same `src/*.rs` modules without exporting them — one tree, two roots.
+
 // Re-export specific functions from main that are used by modules
 // Note: In a refactor, these should be moved to appropriate modules
 use gtk4::prelude::*;
@@ -47,7 +67,8 @@ use gtk4::prelude::*;
 /// This pattern — having a stub in `lib.rs` and the real function in `main.rs` — is common
 /// in Rust projects where the binary has functionality that the library doesn't need.
 pub fn update_all_buffer_themes(window: &impl IsA<gtk4::Widget>) {
-    let _ = window;
+    // Integration tests build this library without linking `main.rs`; the binary wires the real theme refresh there.
+    let _ = window; // silence unused — real impl lives in `main.rs` for the binary target only
 }
 
 // Common imports that tests might need

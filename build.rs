@@ -30,7 +30,8 @@ fn main() {
     let status = Command::new("rustup")
         .args(["component", "list", "--installed"])
         .output();
-    
+
+    // Best-effort: build continues even if rustup is missing (user may install analyzer later).
     if let Ok(output) = status {
         let installed = String::from_utf8_lossy(&output.stdout);
         if !installed.contains("rust-analyzer") {
@@ -45,6 +46,7 @@ fn main() {
     // files/directories have changed. Without this, build.rs would run on every build.
     println!("cargo:rerun-if-changed=dvop.svg");
     println!("cargo:rerun-if-changed=resources");
+    // Without `rerun-if-changed`, Cargo would execute this script on every build even when bundled assets are untouched.
 
     // ── Step 3: Compile GTK GResources ───────────────────────────────────────
     // GResources are GTK's way of bundling UI definition files (.ui), icons, and other
@@ -57,6 +59,7 @@ fn main() {
         "resources/resources.gresource.xml",
         "resources.gresource",
     );
+    // Links generated `resources.gresource` into the binary — runtime loads XML/CSS/icons via `resource://` paths from `window.ui` etc.
 
     // ── Step 4: Copy the application logo to the build output directory ──────
     // The `OUT_DIR` environment variable is set by Cargo and points to a build-specific
@@ -76,8 +79,9 @@ fn main() {
         .expect("Could not find target directory");
 
     let binary_dir = target_dir.join(&profile);
-
+    
     // Copy the logo to the binary directory
+    // Keep `dvop.svg` next to the executable — packagers and `env!("DVOP_ICON_PATH")` assume this layout outside `cargo run`.
     let src = Path::new("dvop.svg");
     let dest = binary_dir.join("dvop.svg");
 

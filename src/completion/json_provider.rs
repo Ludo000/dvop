@@ -15,6 +15,17 @@
 //!
 //! See FEATURES.md: Feature #111 — Code Completion
 //! See FEATURES.md: Feature #112 — Multi-Language Completion Data
+//!
+//! ## serde (serialization)
+//!
+//! `#[derive(Serialize, Deserialize)]` on the structs below generates code that reads/writes JSON.
+//! Field `r#type` uses a raw identifier because `type` is a Rust keyword — in JSON the field is still `"type"`.
+//!
+//! ## Global `CompletionDataManager`
+//!
+//! `get_completion_manager()` returns a **`MutexGuard`** — a lock on a global singleton. Callers
+//! hold the lock only while merging or loading data; do not keep it across `await` points or slow I/O
+//! if you extend this code later.
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -85,6 +96,7 @@ pub struct LanguageCompletionData {
     pub keywords: Vec<KeywordData>,
     pub snippets: Vec<SnippetData>,
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // `None` when the JSON has no import/module section — languages without import completion omit this field.
     pub imports: Option<ModuleHierarchy>, // Import data for the language
 }
 
@@ -98,10 +110,12 @@ pub struct JsonCompletionProvider {
 impl JsonCompletionProvider {
     /// Load completion data from a JSON file
     pub fn from_file(file_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+        // The `?` operator means: on error, return it immediately from this function (same as try/catch propagate).
         let json_content = fs::read_to_string(file_path)?;
         let language_data: LanguageCompletionData = serde_json::from_str(&json_content)?;
 
         // Create a HashMap for quick keyword lookups
+        // Duplicate keywords into a map so `get_keyword_documentation` is O(1) instead of scanning the whole vec.
         let mut keyword_map = HashMap::new();
         for keyword_data in &language_data.keywords {
             keyword_map.insert(keyword_data.keyword.clone(), keyword_data.clone());
@@ -176,6 +190,7 @@ impl JsonCompletionProvider {
 
     /// Get import suggestions for a given module path
     pub fn get_import_suggestions(&self, module_path: &str) -> Vec<ImportItem> {
+        // Linear scan on the small curated JSON tree — exact `module.path` match after `extract_import_path` normalizes the prefix.
         if let Some(imports) = &self.language_data.imports {
             for module in &imports.modules {
                 if module.path == module_path {
@@ -188,6 +203,7 @@ impl JsonCompletionProvider {
 
     /// Get available submodules for a given module path
     pub fn get_submodules(&self, module_path: &str) -> Vec<String> {
+        // Returns `submodules` from the JSON node whose `path` equals `module_path` (e.g. next segment choices after `use std::`).
         if let Some(imports) = &self.language_data.imports {
             for module in &imports.modules {
                 if module.path == module_path {
@@ -201,6 +217,7 @@ impl JsonCompletionProvider {
     /// Find best matching module path for partial import
     pub fn find_matching_modules(&self, partial_path: &str) -> Vec<String> {
         if let Some(imports) = &self.language_data.imports {
+            // Prefix filter only (`starts_with`) — not ranked “best”; UI may narrow again as the user types more of `foo::bar`.
             return imports
                 .modules
                 .iter()
@@ -253,11 +270,13 @@ impl CompletionDataManager {
     /// Returns `None` for languages that were explicitly blocked via `remove_provider`.
     pub fn get_provider(&mut self, language: &str) -> Option<&JsonCompletionProvider> {
         // A blocked language was explicitly removed — do not auto-load from disk.
+        // When user disables e.g. rust-completion extension we “block” the key so `rust.json` is not re-read from disk.
         if self.blocked.contains(language) {
             return None;
         }
         // Try to load if not already loaded
         if !self.providers.contains_key(language) {
+            // Missing file or bad JSON → no provider for this language (caller treats as empty suggestions).
             if let Err(_) = self.load_language(language) {
                 return None;
             }
@@ -278,6 +297,7 @@ impl CompletionDataManager {
             let path = entry?.path();
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                    // Basename (e.g. `rust`) is the language id — must match GtkSource `Language` ids and extension manifest language tags.
                     langs.push(stem.to_string());
                 }
             }
@@ -324,6 +344,7 @@ impl CompletionDataManager {
     pub fn merge_language_data(&mut self, language: &str, extra: LanguageCompletionData) {
         if let Some(provider) = self.providers.get_mut(language) {
             // Merge keywords (skip duplicates by keyword name)
+            // rust_completion merges static JSON on top of rustup — first writer wins for duplicates.
             for kw in extra.keywords {
                 if !provider.keyword_map.contains_key(&kw.keyword) {
                     provider.keyword_map.insert(kw.keyword.clone(), kw.clone());
@@ -368,6 +389,7 @@ impl CompletionDataManager {
     /// Remove a language provider entirely and block auto-reload from disk.
     /// Use `add_language_data` to re-add and unblock.
     pub fn remove_provider(&mut self, language: &str) {
+        // `rust-completion` (and similar) call this on disable so `get_provider("rust")` stays `None` until `add_language_data` removes the block entry.
         self.providers.remove(language);
         self.blocked.insert(language.to_string());
     }
@@ -375,6 +397,7 @@ impl CompletionDataManager {
     /// Add pre-built language data directly (used by rust_completion extension).
     /// Also unblocks the language if it was previously removed.
     pub fn add_language_data(&mut self, language: &str, data: LanguageCompletionData) {
+        // `remove_provider` stashes the id in `blocked` — new data + this line let `get_provider` load `*.json` again if needed.
         self.blocked.remove(language);
         let mut keyword_map = HashMap::new();
         for keyword_data in &data.keywords {
@@ -388,9 +411,11 @@ impl CompletionDataManager {
     }
 }
 
-// Global completion data manager instance
+// Global completion data manager — one process-wide cache shared by every editor tab.
+// `lazy_static!` initializes this the first time something asks for the manager (startup path may differ when running from `cargo run` vs an installed binary, hence the multiple candidate paths).
 lazy_static::lazy_static! {
     static ref COMPLETION_MANAGER: std::sync::Mutex<CompletionDataManager> = {
+        // First match wins — different cwd when developing (`./completion_data` vs `../completion_data` from `target/debug`).
         // Try to find the completion_data directory relative to the executable or current directory
         let possible_paths = [
             "completion_data",
@@ -413,6 +438,8 @@ lazy_static::lazy_static! {
 /// Get global completion data manager instance
 pub fn get_completion_manager() -> std::sync::MutexGuard<'static, CompletionDataManager> {
     // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
+    // Callers doing multiple lookups should hold this guard once — repeated `get_completion_manager()` from helpers re-locks for each keyword/snippet query.
+    // Poisoned mutex (another thread panicked while holding the lock) would panic here — extremely rare.
     COMPLETION_MANAGER.lock().unwrap()
 }
 
@@ -485,6 +512,7 @@ pub fn get_json_snippet_documentation(language: &str, trigger: &str) -> String {
 /// Initialize and load all available completion data (optional eager preload).
 #[allow(dead_code)]
 pub fn initialize_completion_data() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    // Optional bulk preload — normal editing loads each language lazily on first Ctrl+Space via `get_provider`.
     let mut manager = get_completion_manager();
     manager.load_all_languages()
 }

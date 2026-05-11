@@ -45,6 +45,7 @@ impl RustAnalyzerManager {
 
     /// Shutdown all rust-analyzer clients
     pub fn shutdown(&self) {
+        // App quit path — tear down every pooled workspace subprocess so nothing outlives the GTK teardown.
         // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut clients = self.clients.lock().unwrap();
         for (workspace, client) in clients.drain() {
@@ -62,7 +63,8 @@ impl RustAnalyzerManager {
         let mut clients = self.clients.lock().unwrap();
 
         if let Some(client) = clients.get(&workspace_root) {
-            return Ok(client.clone());
+            // Same Cargo workspace → one RA process — new files under that root only add `did_open` traffic, not another child.
+            return Ok(client.clone()); // `Arc` clone is cheap — shares the existing LSP process
         }
 
         // Check if rust-analyzer is available
@@ -77,16 +79,18 @@ impl RustAnalyzerManager {
         client.initialize()?;
 
         // Start message loop
+        // Spawns stdout reader thread — pairs with blocking `initialize()` handshake on this caller thread.
         client.start_message_loop();
 
         let client_arc = Arc::new(client);
         clients.insert(workspace_root, client_arc.clone());
 
-        Ok(client_arc)
+        Ok(client_arc) // one subprocess per unique Cargo workspace root
     }
 
     /// Check if rust-analyzer is available in PATH
     fn is_rust_analyzer_available() -> bool {
+        // Cheap `PATH` probe — `get_client` returns a clear error instead of a failed spawn deep in `LspClient::new`.
         std::process::Command::new("rust-analyzer")
             .arg("--version")
             .stdout(std::process::Stdio::null())

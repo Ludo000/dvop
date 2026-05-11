@@ -20,6 +20,7 @@ use std::sync::Arc;
 // ── State ────────────────────────────────────────────────────────
 
 lazy_static::lazy_static! {
+    // Mirrors other native extensions: toggle without threading `self` through every completion call site.
     static ref ENABLED: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
 }
 
@@ -71,6 +72,7 @@ impl NativeExtension for CodeCompletionExtension {
 
 /// Register the code completion extension. Call once during app init.
 pub fn register() {
+    // Gates JSON keyword/snippet providers (`completion/ui` checks `is_enabled`) — independent of `rust-completion` for stdlib/doc-derived Rust lists.
     // Box::new(...) allocates the data on the heap rather than the stack.
     super::native::register(Box::new(CodeCompletionExtension::new()));
 }
@@ -82,6 +84,7 @@ pub fn is_enabled() -> bool {
 
 // ── Persistence helpers ──────────────────────────────────────────
 
+// Shared `native_extensions.json` with other built-ins — toggles keyed by extension id (`code-completion`).
 fn config_path() -> PathBuf {
     if let Some(home) = home::home_dir() {
         home.join(".config").join("dvop").join("native_extensions.json")
@@ -102,6 +105,7 @@ fn load_enabled_state() -> bool {
 
 fn persist_enabled_state(enabled: bool) {
     let path = config_path();
+    // One shared JSON map for all built-in natives — parse existing keys so toggling completion doesn’t erase rust-diagnostics / etc.
     let mut map: HashMap<String, bool> = if let Ok(data) = std::fs::read_to_string(&path) {
         serde_json::from_str(&data).unwrap_or_default()
     } else {

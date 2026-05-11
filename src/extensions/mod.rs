@@ -6,8 +6,8 @@
 //!    a `manifest.json` (schema: `ExtensionManifest`) plus shell scripts. Scripts
 //!    are executed via `runner::run_script()` with a 5-second timeout.
 //! 2. **Native extensions** — Rust code compiled into the binary that implements
-//!    the `NativeExtension` trait (see `native.rs`). Currently only
-//!    `RustDiagnosticsExtension` exists.
+//!    the `NativeExtension` trait (see `native.rs`). Built-in examples: **`RustDiagnosticsExtension`**
+//!    (`rust_diagnostics.rs`) and **`RustCompletionExtension`** (`rust_completion.rs`).
 //!
 //! Both kinds share the same `ExtensionManifest` schema and appear in the
 //! Extensions panel where they can be enabled/disabled.
@@ -26,6 +26,7 @@
 //!
 //! See FEATURES.md: Feature #87–#109 — Extension System
 
+// Generic completion extension (shortcuts + JSON engine). `rust_completion` is a separate native that injects rustup doc data.
 pub mod code_completion;
 pub mod hooks;
 pub mod manager;
@@ -33,7 +34,7 @@ pub mod native;
 pub mod runner;
 pub mod rust_completion;
 pub mod rust_diagnostics;
-pub mod sample;
+pub mod sample; // Bundled demo archives + `ensure_sample_archives` placeholder — see `sample.rs`; loading real extensions is `manager`’s job.
 pub mod ui;
 
 use serde::{Deserialize, Serialize};
@@ -49,7 +50,6 @@ pub struct ExtensionManifest {
     #[serde(default)]
     pub enabled: bool,
     #[serde(default)]
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub icon: Option<String>,
     /// If true, this extension is a built-in native extension (code compiled in, no scripts).
     #[serde(default)]
@@ -64,12 +64,10 @@ pub struct ExtensionContributions {
     /// Script whose stdout is shown in the status bar.
     /// Called with the current file path as $1.
     #[serde(default)]
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub status_bar: Option<StatusBarContribution>,
 
     /// CSS file to inject into the app (overrides default styles).
     #[serde(default)]
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub css: Option<CssContribution>,
 
     /// Keyboard shortcuts bound to scripts.
@@ -82,7 +80,6 @@ pub struct ExtensionContributions {
 
     /// Context menu entries for editor and file explorer.
     #[serde(default)]
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     pub context_menus: Option<ContextMenuContributions>,
 
     /// Linter scripts invoked per-language.
@@ -236,6 +233,7 @@ pub struct Extension {
 impl Extension {
     // pub makes this function public, allowing it to be used from outside this module.
     pub fn new(manifest: ExtensionManifest, path: std::path::PathBuf) -> Self {
+        // Script extensions: `path` is the install folder (manifest + scripts). Native: empty `path` — see `ExtensionManager::get_all_extensions`.
         Self { manifest, path }
     }
 }

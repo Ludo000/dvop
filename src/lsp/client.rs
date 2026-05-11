@@ -40,21 +40,19 @@ use std::sync::{Arc, Mutex};
 // Type alias for diagnostic callback
 type DiagnosticCallback = Arc<Mutex<Option<Box<dyn Fn(Uri, Vec<Diagnostic>) + Send + 'static>>>>;
 
-/// JSON-RPC message structure
+/// One envelope for both requests and responses — see JSON-RPC 2.0 spec (`method`+`params` vs `result`/`error`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct JsonRpcMessage {
     jsonrpc: String,
+    // Outbound requests use `id`+`method`+`params`; inbound responses use `id`+`result` or `id`+`error`; notifications omit `id` (or use null per spec).
     #[serde(skip_serializing_if = "Option::is_none")]
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
     id: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     method: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     params: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     result: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<serde_json::Value>,
@@ -86,6 +84,7 @@ impl LspClient {
         println!("🚀 Starting LSP process: {} with args: {:?}", command, args);
         println!("Workspace root: {:?}", workspace_root);
 
+        // Pipe all three std streams: we write requests to stdin, read replies from stdout, log stderr separately.
         let mut process = Command::new(command)
             .args(args)
             .stdin(Stdio::piped())
@@ -120,6 +119,7 @@ impl LspClient {
 
     /// Initialize the language server
     pub fn initialize(&self) -> Result<(), String> {
+        // Modern LSP uses `workspaceFolders`; deprecated `root_uri`/`root_path` stay unset below.
         let workspace_url = url::Url::from_file_path(&self.workspace_root)
             .map_err(|_| "Failed to create workspace URL")?;
         let workspace_uri = workspace_url
@@ -170,6 +170,7 @@ impl LspClient {
                 ..Default::default()
             },
             trace: Some(TraceValue::Off),
+            // Single folder — matches how we resolve one `Cargo.toml` root per client in `RustAnalyzerManager::get_client`.
             workspace_folders: Some(vec![WorkspaceFolder {
                 uri: workspace_uri,
                 name: self
@@ -189,6 +190,7 @@ impl LspClient {
             },
         };
 
+        // Writes framed JSON to stdin only — initialize **response** frames are read on the stdout thread (`read_messages`).
         let id = self.send_request::<Initialize>(init_params)?;
         println!("Sent initialize request with id: {}", id);
 
@@ -200,6 +202,7 @@ impl LspClient {
 
     /// Shutdown the language server gracefully
     pub fn shutdown(&self) -> Result<(), String> {
+        // Spec: `shutdown` request, then `exit` notification; we also `kill`+`wait` so a stuck server cannot outlive the editor.
         println!("🛑 Sending shutdown request to language server");
 
         // Send shutdown request (no params needed)
@@ -210,6 +213,7 @@ impl LspClient {
             *next_id += 1;
             current_id
         };
+        // Monotonic JSON-RPC id — server echoes it on response; we only use sync request/response for initialize/shutdown.
 
         let message = JsonRpcMessage {
             jsonrpc: "2.0".to_string(),
@@ -269,6 +273,7 @@ impl LspClient {
         };
 
         self.send_message(&message)?;
+        // JSON-RPC id for correlation only — responses/notifications are consumed on the stdout reader thread, not here.
         Ok(id)
     }
 
@@ -277,6 +282,7 @@ impl LspClient {
     where
         N::Params: Serialize,
     {
+        // JSON-RPC notifications omit `id` — unlike requests, the client does not read a matching response frame on stdout for these.
         let message = JsonRpcMessage {
             jsonrpc: "2.0".to_string(),
             id: None,
@@ -292,6 +298,7 @@ impl LspClient {
     /// Send a JSON-RPC message to the language server
     fn send_message(&self, message: &JsonRpcMessage) -> Result<(), String> {
         let json = serde_json::to_string(message).map_err(|e| e.to_string())?;
+        // LSP over stdio uses HTTP-like framing — server reads until blank line, then `len` raw bytes.
         let content = format!("Content-Length: {}\r\n\r\n{}", json.len(), json);
 
         // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
@@ -323,6 +330,7 @@ impl LspClient {
         text: String,
     // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
     ) -> Result<(), String> {
+        // First time the server sees this URI — register full text before any `did_change` / diagnostic traffic.
         let params = DidOpenTextDocumentParams {
             text_document: TextDocumentItem {
                 uri,
@@ -339,6 +347,7 @@ impl LspClient {
     pub fn did_change(&self, uri: Uri, version: i32, text: String) -> Result<(), String> {
         let params = DidChangeTextDocumentParams {
             text_document: VersionedTextDocumentIdentifier { uri, version },
+            // `range: None` — whole-document replacement (matches rust_diagnostics full-buffer save path).
             content_changes: vec![TextDocumentContentChangeEvent {
                 range: None,
                 range_length: None,
@@ -351,6 +360,7 @@ impl LspClient {
 
     /// Notify the server that a document was saved
     pub fn did_save(&self, uri: Uri, text: Option<String>) -> Result<(), String> {
+        // `text` is optional in LSP — pass `None` when only “saved on disk” matters; `Some` can help servers that don’t watch files.
         let params = DidSaveTextDocumentParams {
             text_document: TextDocumentIdentifier { uri },
             text,
@@ -364,6 +374,7 @@ impl LspClient {
     where
         F: Fn(Uri, Vec<Diagnostic>) + Send + 'static,
     {
+        // Callback runs on the stdout reader thread — use `glib::idle_add` / main-context if you mutate GTK widgets inside it.
         // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut cb = self.diagnostic_callback.lock().unwrap();
         *cb = Some(Box::new(callback));
@@ -375,11 +386,13 @@ impl LspClient {
         let diagnostic_callback = self.diagnostic_callback.clone();
 
         // The "move" keyword forces the closure to take ownership of the variables it uses.
+        // Dedicated reader thread: blocking read on stdout must never run on GTK main thread.
         std::thread::spawn(move || {
             // lock() acquires the Mutex lock. It blocks until the lock is available.
             let mut process_guard = process.lock().unwrap();
             if let Some(ref mut child) = *process_guard {
                 if let Some(stdout) = child.stdout.take() {
+                    // Holding Mutex across `read_messages` would stall writers (`did_*`) — release ASAP.
                     drop(process_guard); // Release lock before long-running loop
 
                     let reader = BufReader::new(stdout);
@@ -394,25 +407,26 @@ impl LspClient {
         mut reader: R,
         diagnostic_callback: DiagnosticCallback,
     ) {
+        // Same framing as `send_message`: `Content-Length: N`, blank line, then N bytes of JSON per message.
         loop {
             // Read Content-Length header
             let mut header_line = String::new();
             if reader.read_line(&mut header_line).is_err() {
-                break;
+                break; // EOF or pipe broken — server exited
             }
 
             if header_line.trim().is_empty() {
-                continue;
+                continue; // spurious blank line between frames
             }
 
             let content_length: usize =
                 if let Some(len_str) = header_line.strip_prefix("Content-Length: ") {
                     len_str.trim().parse().unwrap_or(0)
                 } else {
-                    continue;
+                    continue; // ignore stray log lines some servers print on stderr only — stdout should be framed
                 };
 
-            // Read empty line
+            // CRLF blank line ends headers (same as HTTP).
             let mut empty_line = String::new();
             if reader.read_line(&mut empty_line).is_err() {
                 break;
@@ -426,7 +440,7 @@ impl LspClient {
 
             let content_str = String::from_utf8_lossy(&content);
 
-            // Parse JSON-RPC message
+            // Responses may batch — each iteration is one JSON value (notification vs response sharing stream).
             if let Ok(message) = serde_json::from_str::<JsonRpcMessage>(&content_str) {
                 Self::handle_message(message, &diagnostic_callback);
             }
@@ -438,6 +452,7 @@ impl LspClient {
         message: JsonRpcMessage,
         diagnostic_callback: &DiagnosticCallback,
     ) {
+        // We only wire diagnostics today — extend here for hover/completion responses (`message.result`).
         if let Some(method) = &message.method {
             if method == PublishDiagnostics::METHOD {
                 if let Some(params) = message.params {
@@ -453,6 +468,7 @@ impl LspClient {
                         // lock() acquires the Mutex lock. It blocks until the lock is available.
                         let cb = diagnostic_callback.lock().unwrap();
                         if let Some(ref callback) = *cb {
+                            // Still on the stdout reader thread — callback must hop to the GTK main loop before mutating widgets (rust_diagnostics does this).
                             callback(diag_params.uri, diag_params.diagnostics);
                         }
                     }
@@ -465,6 +481,7 @@ impl LspClient {
 // "impl" blocks define methods and behavior for a struct or enum.
 impl Drop for LspClient {
     fn drop(&mut self) {
+        // Belt-and-suspenders: `shutdown()` should exit the server first; this catches panics/abrupt teardown so no stray rust-analyzer child is left behind.
         // lock() acquires the Mutex lock. It blocks until the lock is available.
         let mut process = self.process.lock().unwrap();
         if let Some(mut child) = process.take() {

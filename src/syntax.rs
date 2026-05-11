@@ -44,6 +44,7 @@ use std::path::Path;
 /// have expensive features (syntax highlighting, completion, linting) disabled
 /// to keep the editor responsive.
 pub const LARGE_FILE_THRESHOLD: usize = 10_485_760; // 10 MB
+// Handlers consult this when opening paths — skipping SourceView language/highlight work avoids multi-second stalls on giant logs.
 
 /// Determines whether the system is using a dark color scheme.
 ///
@@ -105,6 +106,7 @@ pub fn is_dark_mode_enabled() -> bool {
         }
 
         // Legacy method: Try gsettings command
+        // Fallback when GIO `Settings::new` failed earlier — subprocess works if CLI exists even when schemas are missing/broken.
         
         // std::process::Command literally runs a command in your terminal 
         // and reads the text output back into Rust.
@@ -212,6 +214,7 @@ use std::cell::Cell;
 
 // Track if we're currently getting the preferred style scheme to avoid recursive calls
 thread_local! {
+    // Re-entrancy guard: `refresh_settings` can call back into theme detection — flag avoids infinite mutual recursion.
     static GETTING_STYLE: Cell<bool> = const { Cell::new(false) };
 }
 
@@ -276,6 +279,7 @@ pub fn get_preferred_style_scheme() -> String {
 /// See FEATURES.md: Feature #2 — Syntax Highlighting
 /// See FEATURES.md: Feature #14 — Line Numbers
 pub fn create_source_view() -> (View, Buffer) {
+    // Default editor shell — language (`Buffer::set_language`) is applied once a path/MIME is known in open/save handlers.
     // Create the buffer first with syntax highlighting
     let buffer = Buffer::new(None);
 
@@ -336,6 +340,7 @@ pub fn create_source_view() -> (View, Buffer) {
 /// highlight-current-line to reduce per-frame work.  The caller is expected to
 /// also skip syntax highlighting, linting and completion registration.
 pub fn create_source_view_for_large_file() -> (View, Buffer) {
+    // Reduced-cost widget — callers must also skip language tagging, lint, and completion (see `LARGE_FILE_THRESHOLD`).
     let buffer = Buffer::new(None);
 
     // Apply colour scheme (cheap, and keeps the editor looking consistent)
@@ -375,6 +380,7 @@ pub fn create_source_view_for_large_file() -> (View, Buffer) {
 /// the syntax highlighting style scheme accordingly
 pub fn update_buffer_style_scheme(buffer: &Buffer) {
     // Force refresh of settings to pick up any theme changes
+    // Reload `settings.conf` so `get_preferred_style_scheme` sees theme picks saved from the settings dialog / external edits.
     crate::settings::refresh_settings();
 
     let scheme_manager = StyleSchemeManager::new();
@@ -417,6 +423,7 @@ pub fn update_buffer_style_scheme(buffer: &Buffer) {
 /// See FEATURES.md: Feature #3 — Multi-Language Support
 pub fn set_language_for_file(buffer: &Buffer, file_path: &Path) -> bool {
     let language_manager = LanguageManager::new();
+    // Prefer GtkSource `guess_language` (handles Makefile/Dockerfile/etc.); fall through to extension map when it returns nothing useful.
 
     // Get the file extension
     let extension = file_path
@@ -482,6 +489,7 @@ pub fn set_language_for_file(buffer: &Buffer, file_path: &Path) -> bool {
 /// This function creates a scrollable container for the sourceview,
 /// similar to how the regular TextView is wrapped.
 pub fn create_source_view_scrolled(source_view: &View) -> ScrolledWindow {
+    // Shared wrapper for every editor tab — keeps mouse wheel / touchpad scrolling behavior consistent across normal and split-view layouts.
     gtk4::ScrolledWindow::builder()
         .hscrollbar_policy(gtk4::PolicyType::Automatic)
         .vscrollbar_policy(gtk4::PolicyType::Automatic)
@@ -652,6 +660,7 @@ fn apply_font_size_to_all_views(font_size: u32) {
 
 /// Applies font size globally by finding all SourceView widgets in the application
 pub fn apply_font_size_globally(font_size: u32) {
+    // Settings dialog + zoom shortcuts: refresh CSS template then walk every `ApplicationWindow` so already-open tabs pick up the new point size immediately.
     // First apply the global CSS for new views
     apply_font_size_to_all_views(font_size);
 

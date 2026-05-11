@@ -24,6 +24,16 @@
 //! See FEATURES.md: Feature #111 — Code Completion
 //! See FEATURES.md: Feature #113 — Snippet Expansion
 //! See FEATURES.md: Feature #114 — Import Suggestions
+//!
+//! ## Rust notes for maintainers
+//!
+//! - **`pub use ui::...`** — Re-exports names from the `ui` submodule so other code can write
+//!   `dvop::completion::setup_completion` instead of `dvop::completion::ui::setup_completion`.
+//! - **`OnceLock` (in `get_supported_languages`)** — Initializes the language list exactly once,
+//!   the first time the function is called; later calls reuse the cached `Vec` (cheaper than
+//!   scanning the directory every time).
+//! - **`#[cfg(test)]`** — The `tests` module at the bottom is compiled only when you run
+//!   `cargo test`, not in normal `cargo build`.
 
 pub mod json_provider;
 pub mod ui;
@@ -38,8 +48,9 @@ use json_provider::{
 #[allow(dead_code)]
 pub fn initialize_completion() {
     println!("Initializing completion system...");
+    // Tests and specialist callers may invoke this eagerly; the GUI path loads JSON lazily on first Ctrl+Space per language.
 
-    // Load all languages from JSON files
+    // `match` must handle both success and failure — Rust has no exceptions; errors are explicit values.
     match initialize_completion_data() {
         Ok(languages) => {
             println!(
@@ -49,6 +60,7 @@ pub fn initialize_completion() {
             );
         }
         Err(e) => {
+            // Non-fatal: the editor still runs; languages load lazily on first Ctrl+Space per language.
             println!("Warning: Failed to load some completion data: {}", e);
             println!("Make sure completion_data directory exists with JSON files");
         }
@@ -86,6 +98,7 @@ pub fn get_snippet_documentation(language: &str, trigger: &str) -> String {
 /// Get all supported languages based on available JSON files
 /// Cached to avoid repeated filesystem operations (directory scan only — no JSON parsing).
 pub fn get_supported_languages() -> Vec<String> {
+    // `OnceLock` freezes the directory listing after first use — fallback IDs keep prefs/tests happy without `completion_data/` checked out.
     use std::sync::OnceLock;
     static SUPPORTED_LANGUAGES: OnceLock<Vec<String>> = OnceLock::new();
 
@@ -95,6 +108,7 @@ pub fn get_supported_languages() -> Vec<String> {
             match manager.list_available_languages() {
                 Ok(languages) if !languages.is_empty() => languages,
                 _ => {
+                    // Dev checkout without `completion_data/`: don’t return empty — UI/tests still expect common IDs.
                     vec![
                         "rust".to_owned(),
                         "javascript".to_owned(),
@@ -105,11 +119,12 @@ pub fn get_supported_languages() -> Vec<String> {
                 }
             }
         })
+        // `get_or_init` gives `&Vec`; callers need an owned copy to mutate or pass around freely.
         .clone()
 }
 
 // Re-export functions for external use
-pub use ui::{setup_completion, setup_completion_for_file, setup_completion_shortcuts};
+pub use ui::{setup_completion, setup_completion_for_file, setup_completion_shortcuts}; // stable names for `crate::completion::setup_*`
 
 #[cfg(test)]
 mod tests {

@@ -13,6 +13,9 @@
 //!   from anywhere in the codebase via `get_settings()` / `get_settings_mut()`.
 //! - **Persistence**: Settings are auto-saved to disk on every change, and loaded from
 //!   disk on startup. The file cache is invalidated after each save to ensure fresh reads.
+//!//! - **Persistence**: Call `EditorSettings::save()` after mutating through `get_settings_mut()`
+//!   (typed setters only update the in-memory map). On startup, `EditorSettings::new()` loads
+//!   from disk over defaults; each `save()` invalidates the file cache entry for `settings.conf`.
 //!
 //! ## What Gets Saved
 //!
@@ -97,13 +100,14 @@ impl EditorSettings {
         settings.set_defaults();
 
         // Try to load existing settings
-        let _ = settings.load_from_file();
+        let _ = settings.load_from_file(); // overlay disk keys on top of `set_defaults` — missing keys keep defaults
 
         settings
     }
 
     /// Sets up default values for all settings
     fn set_defaults(&mut self) {
+        // Baseline map before `load_from_file` merges disk — missing keys in `settings.conf` keep these fallbacks.
         // Detect OS default themes on first startup
         let (default_light, default_dark) = detect_os_default_themes();
         self.values.insert("light_theme".to_owned(), default_light);
@@ -157,6 +161,7 @@ impl EditorSettings {
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match crate::file_cache::get_cached_file_content(&self.config_path) {
             Ok(content) => {
+                // Same read path as other modules — benefits from `file_cache` TTL/mtime when settings are touched often.
                 // Parse the content line by line
                 for line in content.lines() {
                     if let Some(eq_pos) = line.find('=') {
@@ -178,6 +183,7 @@ impl EditorSettings {
 
     /// Saves current settings to the config file
     pub fn save(&self) -> Result<(), std::io::Error> {
+        // Rewrites the entire file each time — fine for small maps; `invalidate_file_cache` keeps readers coherent afterward.
         let mut contents = String::new();
         contents.push_str("# Text Editor Settings\n");
         contents.push_str("# Automatically generated - you can edit manually\n\n");
@@ -201,6 +207,7 @@ impl EditorSettings {
 
     /// Sets a setting value
     pub fn set(&mut self, key: &str, value: &str) {
+        // Updates the in-memory map only — persist with `save()` on the same `MutexGuard` from `get_settings_mut()` (or changes vanish on exit).
         self.values.insert(key.to_string(), value.to_string());
     }
 
@@ -419,6 +426,7 @@ impl EditorSettings {
 
     /// Gets the list of opened files (pipe-separated paths)
     pub fn get_opened_files(&self) -> Vec<PathBuf> {
+        // Mirrors `set_opened_files` — order in the string is tab order for session restore; paths must not contain `|`.
         self.get("opened_files")
             .map(|s| {
                 if s.is_empty() {
@@ -435,6 +443,7 @@ impl EditorSettings {
 
     /// Sets the list of opened files
     pub fn set_opened_files(&mut self, files: &[PathBuf]) {
+        // Single `opened_files=` line in `settings.conf` — `|` is the delimiter (not OS path separators).
         let files_str = files
             .iter()
             .map(|p| p.to_string_lossy().to_string())
@@ -474,11 +483,13 @@ fn get_config_dir() -> PathBuf {
     }
 
     // Last resort: use the current directory
+    // No `XDG_CONFIG_HOME` and no `HOME` (some containers/CI) — relative fallback avoids panicking; real installs should set XDG or HOME.
     PathBuf::from("./config")
 }
 
 /// Returns the configuration directory path (public function)
 pub fn get_config_dir_public() -> PathBuf {
+    // Single `~/.config/dvop` resolver for crates that shouldn’t import private `get_config_dir` helpers (logs, extensions, caches).
     get_config_dir()
 }
 
@@ -486,6 +497,7 @@ use once_cell::sync::Lazy;
 use std::sync::{Mutex, Once};
 
 // Global settings instance using thread-safe patterns
+// Mutex protects against rare concurrent access (helpers/threads); GTK hot path usually `clone()`s via `get_settings()` and releases quickly.
 static SETTINGS_INSTANCE: Lazy<Mutex<EditorSettings>> =
     // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     Lazy::new(|| Mutex::new(EditorSettings::new()));
@@ -498,6 +510,7 @@ static INIT: Once = Once::new();
 /// by the `Lazy` wrapper around `SETTINGS_INSTANCE`.
 pub fn initialize_settings() {
     // This ensures initialization happens only once
+    // `SETTINGS_INSTANCE` is a `Lazy` — first touch runs `EditorSettings::new()`; `Once` lets concurrent callers block until that completes exactly once.
     INIT.call_once(|| {
         // The initialization happens in the Lazy::new above
         // We just need to ensure it's called
@@ -549,7 +562,7 @@ thread_local! {
 ///
 /// This function should be called after settings have been changed and saved
 pub fn refresh_settings() {
-    // Prevent recursive calls
+    // Prevent recursive calls — e.g. a GSettings callback might save, which triggers listeners that call `refresh_settings` again.
     if REFRESHING.with(|flag| flag.get()) {
         return;
     }
@@ -561,6 +574,7 @@ pub fn refresh_settings() {
 
     // Reload settings from disk
     let _ = settings.load_from_file();
+    // The process-wide `EditorSettings` singleton now matches `settings.conf`; callers that `get_settings()` again see fresh values (older clones may still hold stale fields until dropped).
 
     // Print some debugging info about the current themes
     println!("Settings refreshed:");

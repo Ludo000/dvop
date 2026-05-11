@@ -32,6 +32,13 @@
 //!   iteration. Used to defer UI updates until the current operation completes.
 //!
 //! See FEATURES.md for the complete list of 201+ features implemented across this codebase.
+//!
+//! ## Navigating this file (`main.rs` is long on purpose)
+//!
+//! Rough order top-to-bottom: command palette helpers → `fn main` (GTK bootstrap) → `build_ui` (full
+//! window + actions) → theme/session helpers. Use your editor’s symbol/outline search for **`fn`**
+//! **`build_ui`** as the main UI entry. Shared state is mostly `Rc<RefCell<…>>` inside `build_ui` and
+//! passed into closures.
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Module declarations — each `mod` statement brings in a sub-module from its own file.
@@ -122,6 +129,7 @@ impl ExtCommand {
         self.label().to_lowercase().contains(query)
     }
     fn execute(&self) {
+        // Palette / search match — `Command` runs the extension’s full editor script; `Transform` feeds selection through `run_text_transform_on_active_editor`.
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match self {
             ExtCommand::Command { script_path, .. } => {
@@ -142,6 +150,7 @@ impl ExtCommand {
 ///
 /// See FEATURES.md: Feature #197 — Extension Manager
 fn get_extension_palette_commands() -> Vec<ExtCommand> {
+    // Scans enabled manifests — results merge with `get_menu_commands()` when the palette opens (no persistent merge list stored).
     let mgr = extensions::manager::get_manager();
     let mut cmds = Vec::new();
     for (path, cmd) in mgr.get_extension_commands() {
@@ -276,12 +285,14 @@ fn get_menu_commands() -> Vec<MenuCommand> {
 ///
 /// See FEATURES.md: Feature #63 — Command Palette
 fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindow) {
+    // Combines `get_menu_commands` with extension-contributed entries — keyword overlap is OK; labels stay distinct in practice.
     // Get the shared list of menu commands
     let menu_commands = get_menu_commands();
 
     // Create a popover for showing search results
     let popover = gtk4::Popover::new();
     popover.set_parent(search_entry);
+    // Don’t auto-dismiss on incidental focus moves — we `popdown` on empty query / no hits; keeps the result list stable while moving keyboard focus between entry and list.
     popover.set_autohide(false);
     popover.set_can_focus(false);
     popover.set_size_request(600, -1); // Set popover width to match search entry
@@ -358,6 +369,7 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
             for cmd in &commands_clone {
                 if cmd.label == text.as_str() {
                     if let Some(window) = window_weak_for_activate.upgrade() {
+                        // Same GIO namespaces as header buttons — `app.*` vs `win.*` must match `Application::add_action` / `Window::add_action` in `build_ui`.
                         if cmd.action.starts_with("app.") {
                             if let Some(app) = window.application() {
                                 app.activate_action(&cmd.action[4..], None);
@@ -428,6 +440,7 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
             let mut found_any = false;
             for cmd in &commands_for_search {
                 let name_lower = cmd.label.to_lowercase();
+                // Simple substring over label + `keywords` — fast for a small static list; extension rows use the same query string with `ExtCommand::matches`.
                 let matches = name_lower.contains(&search_text_debounced)
                     || cmd.keywords.iter().any(|k| k.contains(&search_text_debounced));
 
@@ -491,6 +504,7 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
             // Clear the stored timeout ID since it has now run
             debounce_id_for_timeout.borrow_mut().take();
 
+            // `Break` — this `timeout_add_local` closure runs once per scheduled debounce tick, not a repeating timer.
             glib::ControlFlow::Break
         });
 
@@ -503,6 +517,7 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
     let listbox_for_activate = listbox.clone();
     let commands_for_enter = menu_commands.clone();
     let window_weak_for_enter = window_weak.clone();
+    // Enter should match a click on the highlighted row: same extension vs built-in action split as `connect_row_activated` above.
     search_entry.connect_activate(move |entry| {
         // Get the selected row, or use first row if none selected
         let selected_row = listbox_for_activate.selected_row()
@@ -670,7 +685,14 @@ fn setup_menu_search(search_entry: &gtk4::SearchEntry, window: &ApplicationWindo
 ///
 /// See FEATURES.md: Feature #120 — Dark Mode Detection
 /// See FEATURES.md: Feature #136 — Session Restoration
+///
+/// ## What happens in plain terms
+///
+/// Nothing graphical runs until `app.run()` at the bottom — that call enters GTK’s event loop (mouse,
+/// keyboard, redraw). Before that, we only register **callbacks**: `connect_startup`, `connect_activate`,
+/// `connect_open`. GTK invokes them when the user launches the app or opens files from the shell.
 fn main() {
+    // `initialize_settings` touches the global `EditorSettings` (creates `~/.config/dvop/` on first run); `load_log_history` then fills `STATUS_HISTORY` from `log_history.txt`.
     // Initialize user settings first
     settings::initialize_settings();
 
@@ -679,8 +701,10 @@ fn main() {
 
     // Create the main GTK application with a unique application ID
     // Set flags to handle file opening
+    // Application id is the stable D-Bus / `.desktop` identity — changing it breaks session integration until users get a new launcher entry.
     let app = Application::builder()
         .application_id("com.example.Dvop")
+        // Without this flag GTK may not deliver `connect_open` when the OS passes files on the command line.
         .flags(gio::ApplicationFlags::HANDLES_OPEN)
         .build();
 
@@ -716,12 +740,15 @@ fn main() {
     app.add_action(&quit_action);
 
     // Connect the activate signal to the build_ui function
+    // “Activate” = user launched the app with **no** files (e.g. clicked the icon). Single-instance apps may also
+    // emit this when focusing an existing window — platform-dependent.
     app.connect_activate(move |app| {
         println!("activate signal called!");
         build_ui(app, None);
     });
 
     // Connect the open signal to handle file opening from command line
+    // “Open” = launched **with** file paths (shell: `dvop foo.rs`, or “Open with…” from a file manager).
     app.connect_open(move |app, files, _hint| {
         println!("open signal called with {} files", files.len());
         if let Some(file) = files.first() {
@@ -739,11 +766,13 @@ fn main() {
     });
 
     // Add startup signal for debugging
+    // Second `connect_startup` — only for printf debugging order; both closures run on startup.
     app.connect_startup(|_| {
         println!("startup signal called!");
     });
 
     // Start the GTK main loop
+    // Blocks until the user quits — this is why nothing after `app.run()` runs during normal use.
     println!("Starting app.run()");
     app.run();
 }
@@ -908,6 +937,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     println!("build_ui called with file_to_open: {:?}", file_to_open);
 
     // Create the main application window using the template
+    // `ui::create_window` inflates `DvopWindow` from GResource XML — most widgets are `imp().field.get()` below.
     let window = ui::create_window(app);
 
     // Get references to the header bar action buttons
@@ -922,7 +952,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     ) = ui::create_header(&window);
 
     // Get references to UI components from the template
-    let imp = window.imp();
+    let imp = window.imp(); // private GObject impl — holds every `TemplateChild` wired in `window.ui`
     let menu_search_entry = imp.menu_search_entry.get();
     let terminal_button = imp.terminal_button.get();
     let up_button = imp.up_button.get();
@@ -970,12 +1000,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         add_file_button,          // Button for adding new file tabs
     ) = ui::create_text_view(&window);
 
+    // Opt-in verbose logging — leave unset in production (startup stays quiet).
     if std::env::var("DVOP_DEBUG_THEME").ok().as_deref() == Some("1") {
         println!("=== Theme Detection at Startup ===");
         syntax::debug_theme_detection();
     }
 
     // Ensure the initial buffer gets the correct theme based on dark mode setting
+    // First notebook page uses the template buffer — theme must match before user sees the window.
     if let Some(source_buffer) = initial_text_buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
         syntax::update_buffer_style_scheme(source_buffer);
         println!("Applied initial theme to first tab buffer");
@@ -1010,9 +1042,10 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let volume_icon_clone = volume_icon.clone();
     let volume_label_clone = volume_label.clone();
     global_volume_scale.connect_value_changed(move |scale| {
-        let volume = scale.value();
+        let volume = scale.value(); // 0.0 ..= 1.0 from GtkScale
 
         // Update global volume via audio module
+        // Keeps every playing audio tab in sync + persists for next session inside audio module.
         crate::audio::set_global_volume(volume);
 
         // Update percentage label
@@ -1035,11 +1068,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Set up periodic checking for volume control visibility
     let volume_control_clone = volume_control_box.clone();
     let active_tab_path_for_volume = active_tab_path.clone();
+    // Poll: MIME-based visibility can’t piggyback on every signal — cheap 2 Hz poll avoids wiring every tab switch twice.
     glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
         // borrow() gets read-only access to the data inside a RefCell.
         let current_path = active_tab_path_for_volume.borrow().clone();
         ui::update_volume_control_visibility_for_tab(&volume_control_clone, &current_path);
-        glib::ControlFlow::Continue
+        glib::ControlFlow::Continue // never unregister — volume strip hides/shows as tabs change
     });
 
     // Set up click handler for the status label to show log history
@@ -1082,22 +1116,26 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Add diagnostics panel as the first tab in the terminal area
     let diagnostics_panel = linter::diagnostics_panel::create_diagnostics_panel();
     let diagnostics_label = Label::new(Some("Diagnostics"));
+    // Page 0 = diagnostics list; later indices are real shells (see `add_terminal_tab_with_toggle`).
     terminal_notebook_template.prepend_page(&diagnostics_panel, Some(&diagnostics_label));
 
     // Create the first terminal tab directly in the template notebook with paned support
     ui::terminal::add_terminal_tab_with_toggle(&terminal_notebook_template, None, &editor_paned);
 
     // Make linter status widget clickable to open diagnostics panel
+    // Click status-bar lint summary → reveal bottom pane + switch notebook to diagnostics tab
     let editor_paned_for_linter = editor_paned.clone();
     let terminal_notebook_for_linter = terminal_notebook_template.clone();
     let linter_gesture = gtk4::GestureClick::new();
     linter_gesture.set_button(1); // Left click only
     linter_gesture.connect_pressed(move |_, _, _, _| {
         // Show terminal if hidden
+        // `editor_paned`: top = editor stack, bottom = terminal/diagnostics stack — end_child is the bottom strip.
         if let Some(end_child) = editor_paned_for_linter.end_child() {
             if !end_child.is_visible() {
                 end_child.set_visible(true);
                 let max_pos = editor_paned_for_linter.allocation().height();
+                // ~60% of height for editor, ~40% for terminal area — heuristic so diagnostics aren’t a sliver.
                 editor_paned_for_linter.set_position((max_pos as f64 * 0.6) as i32);
                 // Save terminal visible state
                 let mut settings = crate::settings::get_settings_mut();
@@ -1126,6 +1164,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 
     // Set up callback for the refresh button in the diagnostics panel
+    // Diagnostics panel toolbar “refresh” — delegates to `trigger_lint_refresh` so we don’t embed `Notebook` plumbing inside `diagnostics_panel.rs`.
     linter::diagnostics_panel::set_refresh_callback(|| {
         crate::linter::ui::trigger_lint_refresh();
     });
@@ -1139,9 +1178,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 
     // Allow the first main-loop iteration to paint before the rest of build_ui finishes wiring.
+    // Early `show()` lets GTK measure allocations (paned positions, terminal height) before we attach more handlers.
     window.show();
 
     // Register native extension objects (lightweight). Lifecycle hooks and script extensions run from an idle callback later.
+    // Only registers structs + reads JSON flags — heavy work (rustup parse, LSP) defers to idle callbacks inside each extension.
+    // Registration sequence is stable (`native::register` order); avoid reordering without checking each extension’s `on_app_start` / idle hooks.
     extensions::rust_diagnostics::register();
     extensions::code_completion::register();
     extensions::rust_completion::register();
@@ -1160,6 +1202,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         if let Some(end_child) = editor_paned.end_child() {
             end_child.set_visible(false);
             let max_pos = editor_paned.allocation().height();
+            // Collapse bottom pane fully: drag handle to bottom so editor uses full height.
             editor_paned.set_position(max_pos);
         }
     }
@@ -1181,6 +1224,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     if let Some(settings) = gtk4::Settings::default() {
         // Don't override the system preference - let GTK handle it naturally
         // This allows the app to respond to system theme changes automatically
+        // Multiple `notify` hooks = different desktops flip different keys when user toggles light/dark.
 
         // Clone references to update editor views when theme changes
         let window_clone = window.clone();
@@ -1263,6 +1307,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
 
+    // Activity bar: exactly one primary sidebar mode active — programmatically unset peer toggle buttons.
     // See FEATURES.md: Feature #19 — Three-Panel Sidebar System
     // See FEATURES.md: Feature #113 — Activity Bar (Sidebar Buttons)
     // Setup explorer and search button toggle behavior.
@@ -1451,6 +1496,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // See FEATURES.md: Feature #114 — Sidebar Drag to Open/Close
     // Add drag gesture to activity bar to allow dragging sidebar open
+    // Drag left/right on activity bar resizes sidebar — alternative to toggle buttons for muscle memory users.
     let activity_bar = imp.activity_bar.get();
     let drag_gesture = gtk4::GestureDrag::new();
     drag_gesture.set_propagation_phase(gtk4::PropagationPhase::Capture);
@@ -1460,12 +1506,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let git_diff_button_for_drag = git_diff_button.clone();
     let paned_for_drag = paned.clone();
     let sidebar_stack_for_drag = sidebar_stack.clone();
-    
-    // Track the initial state
-    let drag_start_width = Rc::new(RefCell::new(0i32));
+
+    // Track the initial state    
+    let drag_start_width = Rc::new(RefCell::new(0i32)); // paned splitter position at gesture start
+    let drag_was_visible = Rc::new(RefCell::new(false)); // sidebar visible before drag — restore buttons on drag-end
+
     // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
-    let drag_was_visible = Rc::new(RefCell::new(false));
-    
     let drag_start_width_clone = drag_start_width.clone();
     let drag_was_visible_clone = drag_was_visible.clone();
     let paned_for_drag_start = paned_for_drag.clone();
@@ -1490,8 +1536,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let paned_for_drag_update = paned_for_drag.clone();
     
     drag_gesture.connect_drag_update(move |_, offset_x, _offset_y| {
-        // Update paned position based on drag offset
         let start_width = *drag_start_width_clone2.borrow();
+        // Update paned position based on drag offset
+        // Clamp keeps sidebar usable — prevents throwing splitter off-screen on wide monitors.
         let new_width = (start_width as f64 + offset_x).max(0.0).min(400.0) as i32;
         paned_for_drag_update.set_position(new_width);
     });
@@ -1504,6 +1551,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let was_visible = *drag_was_visible_clone2.borrow();
         
         // Determine what to do based on final position
+        // Snap shut threshold — matches `position_notify` monitor below for consistent UX.
         if final_width < 50 {
             // If dragged to less than 50px, hide it
             if let Some(start_child) = paned_for_drag_end.start_child() {
@@ -1519,6 +1567,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             let _ = settings.save();
         } else {
             // If dragged to more than 50px, keep it open and activate appropriate button
+            // Opening fresh drag vs tweaking width: small positive offset avoids flashing wrong panel.
             if !was_visible || offset_x > 10.0 {
                 // Determine which button to activate based on current visible child
                 let visible_child_name = sidebar_stack_for_drag.visible_child_name();
@@ -1559,6 +1608,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     activity_bar.add_controller(drag_gesture);
 
     // Monitor paned position and auto-hide when width goes below 50px
+    // Programmatic resize (e.g. window shrink) can collapse sidebar — sync toggle buttons when crossing threshold.
     let explorer_button_for_monitor = explorer_button.clone();
     let search_button_for_monitor = search_button.clone();
     let git_diff_button_for_monitor = git_diff_button.clone();
@@ -1576,11 +1626,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 
     // Monitor editor_paned position and auto-hide terminal when height goes below 50px
+    // Vertical split: `position` pixels go to start_child (editor stack); remainder is terminal/diagnostics stack.
     editor_paned.connect_position_notify(move |p| {
         let position = p.position();
         let total_height = p.allocation().height();
         let terminal_height = total_height - position;
-        
+
         // Only act if terminal is currently visible and its height is being reduced below 50px
         if let Some(end_child) = p.end_child() {
             if end_child.is_visible() && terminal_height < 50 && terminal_height > 0 {
@@ -1597,6 +1648,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // See FEATURES.md: Feature #60 — Global Search (Ctrl+Shift+F)
     // Get the search panel from the sidebar stack and populate it with global search UI
+    // Sidebar stack children are placeholders from template XML — swap in programmatically built panels here.
     if let Some(search_panel_widget) = sidebar_stack.child_by_name("search") {
         if let Some(search_panel_box) = search_panel_widget.downcast_ref::<gtk4::Box>() {
             // Create the full global search panel
@@ -1665,6 +1717,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         Some(&terminal_notebook_template),
     );
 
+    // First notebook page shares the same dirty-indicator logic as tabs created via `create_new_empty_tab`.
     // See FEATURES.md: Feature #17 — Modification Tracking
     // Set up modification tracking for the initial tab
     // This adds a "*" indicator to the tab label when content has been modified
@@ -1674,6 +1727,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Connect to the buffer's changed signal to detect modifications
     initial_text_buffer.connect_changed(move |_buffer| {
         // Mark text editor as active when user actually types/modifies content
+        // LAST_ACTIVE_AREA lets the file explorer know whether to dim rows when editor has focus.
         handlers::LAST_ACTIVE_AREA.with(|area| {
             *area.borrow_mut() = handlers::LastActiveArea::TextEditor;
         });
@@ -1689,6 +1743,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let label_text = initial_tab_actual_label_clone.text();
 
         // If the file was previously unmodified and now has content, mark as modified
+        // Mirrors other tabs: leading '*' means unsaved — here only Untitled→*Untitled transitions.
         if label_text == "Untitled" && !text_content.is_empty() {
             initial_tab_actual_label_clone.set_text("*Untitled");
         }
@@ -1703,12 +1758,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // See FEATURES.md: Feature #4 — Cursor Position Tracking
     // Set up cursor position tracking for the initial tab
+    // Secondary status bar: line:col — same hooks as other tabs (`cursor-position` + mark-set for IME safety).
     if let Some(text_view) = _initial_text_view.downcast_ref::<sourceview5::View>() {
         let text_view_clone = text_view.clone();
         let secondary_status_clone = secondary_status_label.clone();
 
         // Connect to buffer's cursor position changed signal
         let buffer = text_view.buffer();
+        // GtkTextBuffer property notify — fires on caret moves for many but not all input methods.
         buffer.connect_notify_local(Some("cursor-position"), move |_, _| {
             update_cursor_position_status(
                 &text_view_clone,
@@ -1721,9 +1778,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         // Also connect to mark-set signal which fires when cursor moves
         let text_view_clone_2 = text_view.clone();
         let secondary_status_clone_2 = secondary_status_label.clone();
+        // mark-set catches programmatic moves and some IME paths where cursor-position alone is quiet.
         buffer.connect_mark_set(move |_, _, mark| {
             if mark.name().as_deref() == Some("insert") {
-                // "insert" is the cursor mark
                 update_cursor_position_status(
                     &text_view_clone_2,
                     &secondary_status_clone_2,
@@ -1740,6 +1797,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Prepare dependencies needed for creating a new tab
     // This structure holds references to all components needed when creating or managing tabs
     // It's particularly used when closing tabs to ensure a new one is created if the last tab is closed
+    // Passed into `handle_close_tab_request` when user closes the last tab — recreates empty editor shell.
     let deps_for_new_tab_creation = handlers::NewTabDependencies {
         editor_notebook: editor_notebook.clone(), // The main tabbed container
         active_tab_path: active_tab_path.clone(), // Currently active file path
@@ -1753,6 +1811,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     };
 
     // Now that dependencies are available, set up right-click menu for the initial tab
+    // Context menu: close others / copy path / reveal — needs same deps as dynamically added tabs.
     ui::setup_tab_right_click(
         &_initial_tab_widget,
         &editor_notebook,
@@ -1763,7 +1822,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         &file_list_box,
         Some(deps_for_new_tab_creation.clone()),
     );
-
+    
     // Set up the close button handler for the initial tab
     // Clone all necessary references for the closure
     let initial_tab_close_button_clone = initial_tab_close_button.clone();
@@ -1778,6 +1837,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Connect to the close button's clicked signal
     initial_tab_close_button_clone.connect_clicked(move |_| {
         // Find the current page number of this tab dynamically (it may have changed due to other tabs closing)
+        // page_num maps widget→index — survives reorder if GTK ever reorders pages (rare).
         if let Some(current_idx_for_this_tab) = editor_notebook_clone_for_initial_close.page_num(&initial_scrolled_window_for_close) {
             // Handle the tab close request with proper cleanup and potential new tab creation
             handlers::handle_close_tab_request(
@@ -1795,13 +1855,18 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Track the current file selection source for click-outside detection
     let current_selection_source = Rc::new(RefCell::new(utils::FileSelectionSource::TabSwitch));
-
+    
     // Note: Removed click-outside detection as it was interfering with normal file selection
     // The file manager highlighting will revert naturally when tabs are switched
 
     // The main container, paned content, and status bar are now part of the template, no need to append them
 
     // Define GIO actions for save operations to be used by the menu
+    
+    // Passed into file list helpers so row highlight style differs TabSwitch vs DirectClick.
+
+    // --- GIO actions: keyboard shortcuts & menu items activate these (`win.save`, etc.) ----------
+    // Actions are registered on the window later — emitting the hidden primary `save_button` keeps one implementation for header + shortcuts + command palette.
     let save_action = gio::SimpleAction::new("save", None);
     let save_as_action = gio::SimpleAction::new("save-as", None);
 
@@ -1866,8 +1931,10 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 
     // Connect close tab action
+    // Connect close tab action (`win.close-tab` — palette / app menu; not the same as the tab-row close button).
     close_tab_action.connect_activate(move |_, _| {
         if let Some(current_page) = editor_notebook_clone_for_close.current_page() {
+            // Fast path: drop map entry + Gtk page only — skips `handlers::handle_close_tab_request` (no unsaved-changes dialog, no `actually_close_tab` cleanup — use tab chrome for the safe path).
             // Remove from file path manager
             file_path_manager_clone_for_close
                 // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
@@ -1881,6 +1948,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Connect close all tabs action
     close_all_tabs_action.connect_activate(move |_, _| {
         let num_pages = editor_notebook_clone_for_close_all.n_pages();
+        // Bulk shortcut — no per-tab save prompts; intended as emergency reset more than safe shutdown.
         // Close all tabs from last to first to avoid index issues
         for _ in 0..num_pages {
             if editor_notebook_clone_for_close_all.n_pages() > 0 {
@@ -1899,6 +1967,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Connect find action - opens in-file find (without replace)
     let editor_notebook_for_find = editor_notebook.clone();
     find_action.connect_activate(move |_, _| {
+        // Image/binary tabs yield None — SearchBar would be meaningless; API accepts None gracefully.
         if let Some((text_view, text_buffer)) =
             handlers::get_active_text_view_and_buffer(&editor_notebook_for_find)
         {
@@ -1922,6 +1991,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // Connect find and replace action - opens in-file find/replace (same as find now)
     let editor_notebook_for_replace = editor_notebook.clone();
     find_replace_action.connect_activate(move |_, _| {
+        // Replace UI needs SourceView when possible so SearchContext binds to the live buffer.
         if let Some((text_view, text_buffer)) =
             handlers::get_active_text_view_and_buffer(&editor_notebook_for_replace)
         {
@@ -1979,6 +2049,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             }
         }
         // Add a new terminal tab
+        // VTE tab appended after diagnostics tab — notebook selects newest page inside helper.
         ui::terminal::add_terminal_tab_with_toggle(
             &terminal_notebook_clone_for_new_terminal,
             None,
@@ -2006,6 +2077,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 let max_pos = editor_paned_for_toggle.allocation().height();
                 editor_paned_for_toggle.set_position((max_pos as f64 * 0.6) as i32);
                 // If there are no terminals, create one
+                // Defensive: bottom `Notebook` should already include the diagnostics page — `n_pages() == 0` means something removed every tab; add a shell so the user never sees an empty strip.
                 if terminal_notebook_for_toggle.n_pages() == 0 {
                     ui::terminal::add_terminal_tab_with_toggle(
                         &terminal_notebook_for_toggle,
@@ -2022,6 +2094,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 
     // Connect show diagnostics action
+    // Command palette / menu: same UX as clicking linter status — reveal bottom stack + select Problems tab.
     let terminal_notebook_for_diagnostics = terminal_notebook_template.clone();
     let editor_paned_for_diagnostics = editor_paned.clone();
     show_diagnostics_action.connect_activate(move |_, _| {
@@ -2043,6 +2116,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 
     // Connect about action
+    // Standard GtkAboutDialog — links, license, and transient parent keep it modal to main window.
     about_action.connect_activate(move |_, _| {
         let about_dialog = gtk4::AboutDialog::builder()
             .program_name("Dvop")
@@ -2060,6 +2134,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // Register the actions with the application window (upcast first)
     // This makes them available to be triggered by menu items
+    // Action names here become `win.*` in menus when the group is set on the window in .ui / code.
     let window_as_app_window: &ApplicationWindow = window.upcast_ref();
     window_as_app_window.add_action(&save_action);
     window_as_app_window.add_action(&save_as_action);
@@ -2100,6 +2175,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         crate::status_log::log_info("Saving file...");
 
         // Implementation of the save functionality
+        // Primary save path: overwrite disk file named by `file_path_manager` for current notebook index.
         if let Some((_active_text_view, active_buffer)) =
             handlers::get_active_text_view_and_buffer(&editor_notebook_clone)
         {
@@ -2123,8 +2199,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 let mut mime_type = mime_guess::from_path(&path_to_save).first_or_octet_stream();
 
                 // See FEATURES.md: Feature #192 — TypeScript File Override
-    // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
+                // Special case: .ts files are detected as video/mp2t (MPEG transport stream)
                 // but should be treated as TypeScript files (text/plain)
+                // Keep in sync with `handlers::open_or_focus_tab` — same MIME quirk from `mime_guess`.
                 if let Some(ext) = path_to_save.extension() {
                     if ext.to_str() == Some("ts") || ext.to_str() == Some("tsx") {
                         // Override MIME type for TypeScript files
@@ -2147,6 +2224,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                             match file.write_all(text.as_bytes()) {
                                 Ok(_) => {
                                     // Update tab label to remove the modified indicator (*)
+                                    // `write_all` is atomic enough for small docs — no explicit flush beyond drop.
                                     handlers::update_tab_label_after_save(
                                         &editor_notebook_clone,
                                         current_page_num,
@@ -2167,6 +2245,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                                     // Refresh extension status bar (e.g. word count changed)
                                     extensions::manager::update_status_bar_text(&path_to_save);
                                     // Fire extension on_file_save hooks
+                                    // Close-tab save in `handlers.rs` also calls `linter::notify_file_saved` — header Save uses `fire_on_file_save` plus rust-analyzer’s file watching where enabled.
                                     extensions::hooks::fire_on_file_save(&path_to_save);
                                 }
                                 Err(e) => {
@@ -2187,6 +2266,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             } else {
                 // If no path is associated with this tab (new unsaved file),
                 // redirect to the Save As functionality
+                // Re-emitting Save As avoids duplicating file-chooser wiring from `save_as_button`.
                 crate::status_log::log_info("Opening Save As dialog...");
                 save_as_button_clone.emit_clicked();
             }
@@ -2233,6 +2313,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let volume_control_clone_for_switch = volume_control_box.clone();
 
     // Connect to the notebook's switch-page signal
+    // Fires after GTK selects the page — `page_num` is the new index (not old).
     editor_notebook.connect_switch_page(move |notebook, _page, page_num| {
         // Reset selection source to TabSwitch when switching tabs
         // This ensures file manager highlighting reverts to subtle style
@@ -2244,6 +2325,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             page_num,
             &file_path_manager_clone_for_switch,
         );
+        // Session restore may have skipped LSP/completion until tab is visited — above completes deferred setup.
 
         // Retrieve the file path associated with the newly selected tab
         let new_active_path = {
@@ -2288,6 +2370,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     );
 
                     // Set up cursor position tracking for this tab
+                    // Per-tab handlers: each switch reconnects so status bar tracks the visible buffer only.
                     let secondary_status_clone = secondary_status_label_clone.clone();
                     let filename_clone = filename.clone();
                     let file_path_clone = file_path.clone();
@@ -2381,6 +2464,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
 
         // If the focused tab has a file, update current directory to match the file's directory
+        // Keeps explorer aligned when user jumps across folders via tabs (e.g. opens file from another project).
         if let Some(file_path) = &new_active_path {
             if let Some(parent_dir) = file_path.parent() {
                 let parent_path = parent_dir.to_path_buf();
@@ -2413,6 +2497,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
 
         // Rebind global search context to the new tab's buffer if search UI is currently visible
+        // Avoids searching stale buffer after tab switch while sidebar search bar stays open.
         {
             let search_state = crate::search::get_search_state();
             if search_state.search_bar.is_search_mode() {
@@ -2439,6 +2524,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         );
 
         // Determine the MIME type from the file path
+        // Drives save button visibility — images hide save; text shows save (see branches below).
         let mut mime_type = new_active_path
             .as_ref()
             .map(|p| mime_guess::from_path(p).first_or_octet_stream())
@@ -2456,6 +2542,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
 
         // Check if the current tab has a text view (editable content) or is an image tab
+        // Paned tabs (SVG/MD) still expose a TextView on the left — this branch treats them as savable text.
         if let Some((_, _)) = handlers::get_text_view_and_buffer_for_page(notebook, page_num) {
             // This is a text tab - enable save functionality
             utils::update_save_buttons_visibility(
@@ -2518,6 +2605,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 
     // Set up all button event handlers and their associated functionality
+    // Centralizes Open/New/Save-as/up-dir logic — keeps `build_ui` below ~this point mostly declarative wiring.
     handlers::setup_button_handlers(
         &new_button,               // New file button
         &open_button,              // Open file button
@@ -2540,6 +2628,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     );
 
     // Set up file list refresh callback for drag and drop operations
+    // Drag-drop in `file_manager` cannot hold `ListBox` refs — closure reruns list populate after OS move.
     let file_list_box_for_refresh = file_list_box.clone();
     let current_dir_for_refresh = current_dir.clone();
     let active_tab_path_for_refresh = active_tab_path.clone();
@@ -2558,6 +2647,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let editor_notebook_for_path_update = editor_notebook.clone();
     utils::set_tab_path_update_callback(move |old_path: &PathBuf, new_path: &PathBuf| {
         // Update file_path_manager entries that match the old path
+        // Invoked after successful rename/move so open tabs point at new filesystem location.
         let mut manager = file_path_manager_for_path_update.borrow_mut();
         let mut updated_entries = Vec::new();
 
@@ -2674,6 +2764,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     {
         let (sender, receiver) = std::sync::mpsc::channel::<(PathBuf, usize, usize)>();
         let (file_content_sender, file_content_receiver) = std::sync::mpsc::channel::<(PathBuf, Result<String, std::io::Error>, usize, usize)>();
+        // Request channel carries only path + jump coords; file bodies arrive on the second channel after a worker-thread `read_to_string` so the GTK idle pump never blocks on large files.
 
         // Set up the receiver to handle file open requests on the main thread
         let notebook_clone = editor_notebook.clone();
@@ -2695,8 +2786,11 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let file_list_box_for_content = file_list_box_clone.clone();
         let current_dir_for_content = current_dir_clone.clone();
 
+        // Idle source A: background Tokio read finishes → `file_content_sender` → this loop opens the tab + schedules jump.
         glib::idle_add_local(move || {
             // Process file content results
+            // Worker thread reads disk — Gtk open happens here where buffers/widgets are safe.
+            // `try_recv` never blocks — empty channel simply skips the `while` body; we still return `Continue` below so this idle source stays registered.
             while let Ok((file_path, content_result, line, column)) = file_content_receiver.try_recv() {
                 match content_result {
                     Ok(content) => {
@@ -2718,6 +2812,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                         );
 
                         // After opening, jump to the line
+                        // Diagnostics panel passes line/col — must match tab we just focused (usually last page).
                         let current_page = notebook_for_content.current_page().unwrap_or(0);
                         if let Some(page) = notebook_for_content.nth_page(Some(current_page)) {
                             if let Some(scrolled) = page.downcast_ref::<gtk4::ScrolledWindow>() {
@@ -2726,6 +2821,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                                     .and_then(|c| c.downcast::<sourceview5::View>().ok())
                                 {
                                     // Use idle_add to ensure the view is fully loaded before jumping
+                                    // Notebook just appended page — single idle tick lets GtkSourceView finish layout/marks.
                                     let source_view_clone = source_view.clone();
                                     glib::idle_add_local_once(move || {
                                         handlers::jump_to_line_and_column(
@@ -2744,12 +2840,15 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 }
             }
 
+            // `Continue` keeps this callback on the idle queue — same persistent “pump” pattern as source B below.
             glib::ControlFlow::Continue
         });
 
         // idle_add_local schedules a task to run on the main GTK UI thread when it is idle. Safe for UI updates.
+        // Idle source B: `OPEN_FILE_CALLBACK` / diagnostics sends path+line → this loop focuses or spawns the Tokio read thread (which feeds idle source A).
         glib::idle_add_local(move || {
             // Process all pending file open requests
+            // Focus+jump path assumes a plain `ScrolledWindow` → `SourceView` page (same as the post-open branch in source A — split/preview tabs may need the Paned walk used elsewhere).
             while let Ok((file_path, line, column)) = receiver.try_recv() {
                 println!(
                     "Opening file from diagnostics: {} at {}:{}",
@@ -2792,12 +2891,15 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     }
                 } else {
                     // File not open - read it asynchronously
+                    // Open-tab path only — already-focused tabs above never spawn this thread (no redundant disk read when jumping inside an existing buffer).
+                    // Blocking read would stall GTK — tokio async_fs runs on runtime inside worker thread.
                     let file_path_clone = file_path.clone();
                     let file_content_sender_clone = file_content_sender.clone();
                     let line_for_async = line;
                     let column_for_async = column;
 
                     std::thread::spawn(move || {
+                        // Ephemeral Tokio runtime per background open — avoids a process-wide runtime while still using async disk I/O.
                         let rt = tokio::runtime::Runtime::new().unwrap();
                         let content_result = rt.block_on(async {
                             async_fs::read_to_string(&file_path_clone).await
@@ -2807,10 +2909,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 }
             }
 
+            // Persistent drain for `OPEN_FILE_CALLBACK` sends — matches source A’s `Continue` semantics.
             glib::ControlFlow::Continue
         });
 
         // Store the sender in the global callback
+        // Diagnostics/LSP threads invoke this; channel bridges to main-loop idle handler above.
         *handlers::OPEN_FILE_CALLBACK.lock().unwrap() = Some(Box::new(
             move |file_path: PathBuf, line: usize, column: usize| {
                 let _ = sender.send((file_path, line, column));
@@ -2820,6 +2924,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     // See FEATURES.md: Feature #178 — Periodic Cache Cleanup
     // Set up periodic cleanup of file cache to prevent memory bloat
+    // 300s TTL aligns with FileCache default age — sweeps entries past expiry without restarting app.
+    // Bounded map still benefits from `.retain` — drops paths user stopped revisiting so RSS stays predictable on huge sessions.
     glib::timeout_add_seconds_local(300, || {
         // Every 5 minutes
         file_cache::cleanup_file_cache();
@@ -2841,9 +2947,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let current_dir_ext_idle = current_dir.clone();
 
     glib::idle_add_local_once(move || {
+        // Heavy extension scanning after first paint — user sees window chrome immediately.
+        // Order: native hooks → optional sample archives → load `~/.config/dvop/extensions` → set hook globals → script `fire_on_app_start` (shell manifests) last so the tree is on disk and registered.
         extensions::native::fire_on_app_start();
         extensions::native::fire_on_directory_open(current_dir_ext_idle.borrow().as_path());
 
+        // No runtime unpacking — sample `.tar.gz` files live under `extensions/` in the repo for manual "Install from file" demos.
         crate::extensions::sample::ensure_sample_archives();
         crate::extensions::manager::init();
 
@@ -2861,6 +2970,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         crate::extensions::ui::populate_extensions_panel(&extensions_panel);
 
         let panels = crate::extensions::manager::get_manager().get_extension_sidebar_panels();
+        // Each contributed panel gets a Stack page + activity-bar toggle — namespaced id avoids clashes.
         for (ext_id, panel, enabled) in panels {
             let panel_id = panel.id.clone();
             let panel_name = format!("ext-{}-{}", ext_id, panel_id);
@@ -2905,6 +3015,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             let btn_self = btn.clone();
             btn.connect_toggled(move |button| {
                 if button.is_active() {
+                    // One sidebar “mode” at a time — same pattern as the built-in explorer/search/git/ext toggles wired above.
                     explorer_btn.set_active(false);
                     search_btn.set_active(false);
                     git_btn.set_active(false);
@@ -2942,12 +3053,15 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let save_menu_button_def = save_menu_button.clone();
     let path_box_def = path_box.clone();
 
+    // CLI / `open` signal may pass a path before template wiring finishes — run after first idle so notebook exists.
+    // Schedules after the extension idle above so keybindings/panels from `register_extension_keybindings` exist before we open the argv file.
     glib::idle_add_local_once(move || {
         println!("Checking file_to_open (deferred): {:?}", file_arg);
 
         if let Some(ref file_path) = file_arg {
             println!("Processing file argument (deferred): {:?}", file_path);
             if file_path.exists() && file_path.is_file() {
+                // Remove placeholder "Untitled" shell so the launched file is not buried behind an empty tab.
                 handlers::close_empty_untitled_tabs(&editor_nb, &file_path_manager_deferred);
 
                 let mut mime_type = mime_guess::from_path(file_path).first_or_octet_stream();
@@ -3025,6 +3139,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     }
                     println!("Successfully opened image file: {:?}", file_path);
                 } else {
+                    // Still open in a tab so user can see we tried — binary/unknown go through `open_or_focus` error UI path.
                     handlers::open_or_focus_tab(
                         &editor_nb,
                         file_path,
@@ -3069,10 +3184,15 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
         if !saved_files.is_empty() {
             println!("Restoring {} previously opened file(s)", saved_files.len());
+            // Queue rust-analyzer didOpen until tabs exist — avoids N simultaneous LSP workspaces during flood-open.
+            // Defer stays true until after the loop — `flush_deferred_rust_lsp_opens` runs once below with paths accumulated in between.
             extensions::rust_diagnostics::set_defer_rust_lsp_opens(true);
             handlers::close_empty_untitled_tabs(&editor_nb, &file_path_manager_deferred);
 
+            // Skips per-tab LSP/completion wiring until user focuses tab (`ensure_tab_heavy_setup_if_pending`).
             handlers::set_bulk_session_restore(true);
+            // Open saved paths one-by-one — predictable memory peak and stable tab order matching the stored list.
+            // `settings.conf` stores paths in user tab order — sequential `open_or_focus_tab` recreates that left-to-right notebook order.
             for file_path in saved_files {
                 if file_path.exists() && file_path.is_file() {
                     let mut mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
@@ -3083,6 +3203,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     }
 
                     if mime_type.type_() == "video" {
+                        // Empty content string — open_or_focus loads via VideoPlayer from path (same as manual open).
                         println!("Restoring video file: {}", file_path.display());
                         handlers::open_or_focus_tab(
                             &editor_nb,
@@ -3099,6 +3220,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                             Some(&save_menu_button_def),
                         );
                     } else if mime_type.type_() == "audio" {
+                        // Audio pipeline reads file internally — no pre-read string needed.
                         println!("Restoring audio file: {}", file_path.display());
                         handlers::open_or_focus_tab(
                             &editor_nb,
@@ -3123,6 +3245,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
                         if is_svg {
                             if let Ok(content) = std::fs::read_to_string(&file_path) {
+                                // SVG split view needs XML source + preview — must pass `content` unlike raster images.
                                 println!("Restoring SVG file: {}", file_path.display());
                                 handlers::open_or_focus_tab(
                                     &editor_nb,
@@ -3177,6 +3300,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             }
 
             handlers::set_bulk_session_restore(false);
+            // Visible tab after restore gets full lint/completion hooks immediately — others on first switch.
             if let Some(cp) = editor_nb.current_page() {
                 handlers::ensure_tab_heavy_setup_if_pending(
                     &editor_nb,
@@ -3188,9 +3312,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             extensions::rust_diagnostics::set_defer_rust_lsp_opens(false);
         }
 
+        // Drain queued `didOpen` paths collected while defer flag was true — runs on GTK thread after tabs exist.
+        // Symmetric single call per startup idle — cheap when the queue stayed empty (no session restore).
         extensions::rust_diagnostics::flush_deferred_rust_lsp_opens();
 
         if let Some(ref focus_path) = file_arg {
+            // After session restore the CLI file may not be front-most — re-select tab matching argv path.
             let num_pages = editor_nb.n_pages();
             for i in 0..num_pages {
                 if let Some(path) = file_path_manager_deferred.borrow().get(&i) {
@@ -3210,6 +3337,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     let responsive_window = window.clone();
     glib::idle_add_local_once(move || {
+        // DvopWindow template — recomputes breakpoints once real allocation is known post-show.
         responsive_window.update_responsive_layout();
     });
 
@@ -3218,6 +3346,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let file_path_manager_clone = file_path_manager.clone();
         let secondary_status_clone = secondary_status_label.clone();
         glib::idle_add_local_once(move || {
+            // Post-restore: status extensions + cursor label may still show old tab until this idle pass.
             if let Some(page_num) = notebook_clone.current_page() {
                 if let Some(file_path) = file_path_manager_clone.borrow().get(&page_num).cloned() {
                     extensions::manager::update_status_bar_text(&file_path);
@@ -3246,6 +3375,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     // See FEATURES.md: Feature #132 — Window Size Memory
     // See FEATURES.md: Feature #133 — Panel Size Memory
     // Set up window close handler to save window size, pane positions, and check for unsaved changes
+    // GTK close-request handlers must own their captures (`'static`) — cloned widgets below move into the closure.
     let paned_for_close = paned.clone();
     let editor_paned_for_close = editor_paned.clone();
     let editor_notebook_for_close = editor_notebook.clone();
@@ -3273,6 +3403,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let mut unsaved_files = Vec::new();
         let num_pages = notebook.n_pages();
         
+        // Dirty buffers mark the tab label with a leading '*' — mirror that here to decide whether we block close.
         for page_num in 0..num_pages {
             if let Some(page_widget) = notebook.nth_page(Some(page_num)) {
                 if let Some(tab_label_widget) = notebook.tab_label(&page_widget) {
@@ -3324,6 +3455,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                     // User chose "Close Anyway" - force quit
                     println!("Closing anyway, quitting application...");
                     app_for_dialog.quit();
+                    // Same pattern as the happy-path quit — brief delay so GTK can tear down before hard `exit`.
                     // thread::spawn creates a new background thread to run operations without blocking the main UI.
                     std::thread::spawn(|| {
                         std::thread::sleep(std::time::Duration::from_millis(300));
@@ -3338,6 +3470,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
 
         // No unsaved changes - proceed with saving session and closing
+        // Writes the same keys startup reads (`set_window_size`, `set_pane_dimensions`, `set_opened_files`).
         println!("No unsaved changes, saving session...");
 
         // Get the current window size - use width() and height() for actual size
@@ -3351,8 +3484,10 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         // Collect all opened file paths from the notebook
         let n_pages = editor_notebook_for_close.n_pages();
         let mut opened_files = Vec::new();
+        // Paths come from `file_path_manager`; Untitled tabs never register — they drop out of next-session restore.
         println!("=== Saving session state ===");
         println!("Total notebook pages: {}", n_pages);
+        // Page indices are Gtk’s contiguous 0..n-1 — must match `file_path_manager` keys (updated whenever tabs close so indices stay compact).
         for i in 0..n_pages {
             if editor_notebook_for_close.nth_page(Some(i)).is_some() {
                 let page_num = i;
@@ -3387,6 +3522,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         app_for_close.quit();
         
         // Force exit after a short delay if app doesn't quit normally
+        // Belt-and-suspenders: some stacks hang between `quit()` and process teardown — `exit` guarantees shutdown.
         std::thread::spawn(|| {
             std::thread::sleep(std::time::Duration::from_millis(500));
             println!("Force exiting application");
@@ -3398,12 +3534,14 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
 
     // Add destroy handler to ensure application exits cleanly
+    // Complements `close_request` — e.g. platform plugin may destroy the shell without a full user close flow.
     let app_for_destroy = app.clone();
     window.connect_destroy(move |_| {
         println!("Window destroyed, quitting application");
         app_for_destroy.quit();
 
         // Force exit after a short delay if app doesn't quit normally
+        // Mirrors the close_request watchdog — destroy may fire on fast platform teardown paths.
         std::thread::spawn(|| {
             std::thread::sleep(std::time::Duration::from_millis(500));
             println!("Force exiting application");
@@ -3421,6 +3559,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let window_ref = window_clone_for_settings.clone();
         dialog.connect_close(move |_| {
             // Apply the new theme settings to all buffers
+            // Modal may change gtksourceview scheme + font — refresh every SourceView under this window.
             update_all_buffer_themes(&window_ref);
         });
 
@@ -3448,6 +3587,7 @@ fn setup_gsettings_monitor(window: &impl IsA<gtk4::Widget>, terminal_notebook: &
     let terminal_notebook_clone = terminal_notebook.clone();
 
     // Monitor the GNOME color-scheme setting which is the primary way Ubuntu switches themes
+    // Schema missing or ctor panic → silent skip so KDE/Xfce/Wayland-only setups still launch.
     match std::panic::catch_unwind(|| gio::Settings::new("org.gnome.desktop.interface")) {
         Ok(settings) => {
             let window_clone_2 = window_clone.clone();
@@ -3535,6 +3675,7 @@ fn update_cursor_position_status(
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
     file_path: Option<&std::path::Path>,
 ) {
+    // `file_path` adds “| size” for saved files on disk; untitled buffers omit it (`None`).
     let buffer = text_view.buffer();
     let cursor_mark = buffer.get_insert();
     let cursor_iter = buffer.iter_at_mark(&cursor_mark);

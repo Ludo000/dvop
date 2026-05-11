@@ -22,7 +22,7 @@ use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, ListBox, MenuButton, 
 mod imp {
     use super::*;
 
-    // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
+    // `CompositeTemplate` expands `init_template()` wiring — fields must match `id`s in the `.ui` XML.
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/example/Dvop/git_diff_panel.ui")]
     pub struct GitDiffPanel {
@@ -93,6 +93,7 @@ impl Default for GitDiffPanel {
 impl GitDiffPanel {
     // pub makes this function public, allowing it to be used from outside this module.
     pub fn new() -> Self {
+        // Template inflate — `git_diff_panel.ui` ships inside GResources; accessors below read `#[template_child]` widgets by XML id.
         glib::Object::builder().build()
     }
 

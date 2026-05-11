@@ -7,6 +7,8 @@
 //!
 //! Currently the only native extension is `RustDiagnosticsExtension` (see
 //! `rust_diagnostics.rs`), which wraps rust-analyzer.
+//!//! Built-in examples include **`RustDiagnosticsExtension`** (`rust_diagnostics.rs`) and
+//! **`RustCompletionExtension`** (`rust_completion.rs`), among others.
 //!
 //! ## Registration Pattern
 //!
@@ -57,6 +59,7 @@ pub trait NativeExtension: Send + Sync {
 }
 
 // Global registry of native extensions
+// Vec keeps registration order — `fire_on_*` iterates this sequence so init order in startup code matters.
 static NATIVE_REGISTRY: Lazy<Mutex<Vec<Box<dyn NativeExtension>>>> =
     // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     Lazy::new(|| Mutex::new(Vec::new()));
@@ -64,6 +67,7 @@ static NATIVE_REGISTRY: Lazy<Mutex<Vec<Box<dyn NativeExtension>>>> =
 /// Register a native extension. Call during app initialization.
 pub fn register(ext: Box<dyn NativeExtension>) {
     // lock() acquires the Mutex lock. It blocks until the lock is available.
+    // `Box<dyn NativeExtension>` is a **trait object**: one vtable for many concrete extension types.
     if let Ok(mut registry) = NATIVE_REGISTRY.lock() {
         println!("Registered native extension: {}", ext.id());
         registry.push(ext);
@@ -102,6 +106,7 @@ pub fn set_native_enabled(id: &str, enabled: bool) {
 
 /// Fire on_app_start for all enabled native extensions.
 pub fn fire_on_app_start() {
+    // Walk order matches `register()` order — if two natives interact, document startup registration sequence.
     if let Ok(registry) = NATIVE_REGISTRY.lock() {
         for ext in registry.iter() {
             if ext.is_enabled() {
@@ -113,6 +118,7 @@ pub fn fire_on_app_start() {
 
 /// Fire on_directory_open for all enabled native extensions.
 pub fn fire_on_directory_open(dir: &Path) {
+    // Called when the sidebar cwd changes — lets Rust tooling toggle explorer affordances without `hooks` shell scripts (see also `rust_diagnostics::check_and_update_rust_ui`).
     if let Ok(registry) = NATIVE_REGISTRY.lock() {
         for ext in registry.iter() {
             if ext.is_enabled() {
@@ -124,6 +130,7 @@ pub fn fire_on_directory_open(dir: &Path) {
 
 /// Fire on_file_open for all enabled native extensions.
 pub fn fire_on_file_open(file_path: &Path) {
+    // Usually called from `linter::ui::setup_linting` once a tab has a real path — distinct from `hooks::fire_on_file_open` (shell scripts invoked earlier from `handlers::open_or_focus_tab`).
     if let Ok(registry) = NATIVE_REGISTRY.lock() {
         for ext in registry.iter() {
             if ext.is_enabled() {
@@ -135,6 +142,7 @@ pub fn fire_on_file_open(file_path: &Path) {
 
 /// Fire on_file_save for all enabled native extensions.
 pub fn fire_on_file_save(file_path: &Path) {
+    // See `linter::ui::notify_file_saved` — one place fans out saves to compiled extensions (LSP/diagnostics), unlike bash hooks in `hooks::fire_on_file_save`.
     if let Ok(registry) = NATIVE_REGISTRY.lock() {
         for ext in registry.iter() {
             if ext.is_enabled() {
@@ -146,6 +154,7 @@ pub fn fire_on_file_save(file_path: &Path) {
 
 /// Shutdown all native extensions.
 pub fn shutdown_all() {
+    // App teardown — each impl drops subprocesses / UI (e.g. rust-analyzer) before GTK destroys widgets.
     if let Ok(registry) = NATIVE_REGISTRY.lock() {
         for ext in registry.iter() {
             ext.shutdown();

@@ -39,6 +39,20 @@
 //! - **`Weak<T>` references**: Used in closures that reference GTK widgets. If the widget is
 //!   destroyed (e.g., a tab is closed), the weak reference returns `None` instead of keeping
 //!   the widget alive and causing a memory leak.
+//!
+//! ## Where to look when changing behavior
+//!
+//! | Task | Start here |
+//! |------|------------|
+//! | Open/save/close file, new tab | Search this file for `open_file`, `save`, `close_tab` |
+//! | Session restore (many tabs at once) | `set_bulk_session_restore`, `ensure_tab_heavy_setup_if_pending` — heavy work is deferred so startup stays fast |
+//! | Markdown/SVG preview split views | Functions that build `Paned` layouts and attach web views |
+//! | Clicking an error in the diagnostics panel | Navigation helpers near `OPEN_FILE_CALLBACK` |
+//! | “Fire when user opens a file” hooks | Calls into `extensions::hooks` (e.g. `fire_on_file_open`) |
+//!
+//! **Rust tip:** `pub(crate) fn` is visible everywhere inside this crate (`dvop`) but not to
+//! external crates. That keeps helpers usable from `main.rs` and other modules without polluting
+//! the public API.
 
 // GTK imports
 use gtk4::prelude::*;
@@ -83,19 +97,22 @@ use std::collections::{HashMap, HashSet}; // For efficient mapping and compatibi
 use std::fs::File; // File operations
 use std::io::Write;
 use std::path::{Path, PathBuf}; // File system path representation
-use std::rc::Rc; // Reference counting for shared ownership // File writing capabilities
+use std::rc::Rc; // Shared ownership: cloning an `Rc` is cheap (increments a counter, no deep copy)
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 /// Session restore opens many tabs; skip lint/completion/LSP hooks until the user (or focus) visits each tab.
+/// `AtomicBool` lets any thread flip this flag without a mutex — here only the main/GTK thread uses it in practice.
 static BULK_SESSION_RESTORE: AtomicBool = AtomicBool::new(false);
 
 lazy_static::lazy_static! {
+    /// Paths that still need “heavy” setup (completion + lint hooks) after a lightweight tab was created.
     static ref PENDING_HEAVY_TAB_SETUP: Mutex<HashSet<PathBuf>> = Mutex::new(HashSet::new());
 }
 
 /// Enable lightweight tab creation (session restore only). Call [`ensure_tab_heavy_setup_if_pending`] when a tab is shown.
 pub fn set_bulk_session_restore(active: bool) {
+    // `SeqCst` is the strictest ordering — enough for a single bool; avoids subtle reorder bugs across threads.
     BULK_SESSION_RESTORE.store(active, Ordering::SeqCst);
 }
 
@@ -104,6 +121,7 @@ pub(crate) fn bulk_session_restore_active() -> bool {
 }
 
 fn remove_pending_heavy_setup(path: &Path) {
+    // Session restore may have queued deferred lint/completion for this path — drop it when the tab closes so hooks never attach to a dead page.
     if let Ok(mut s) = PENDING_HEAVY_TAB_SETUP.lock() {
         s.remove(path);
     }
@@ -115,11 +133,13 @@ pub fn ensure_tab_heavy_setup_if_pending(
     page_num: u32,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
 ) {
+    // `let Some(...) else { return }` is Rust’s “guard” syntax: exit early unless the tab has a known path.
     let Some(path) = file_path_manager.borrow().get(&page_num).cloned() else {
         return;
     };
     {
         let mut pending = PENDING_HEAVY_TAB_SETUP.lock().unwrap();
+        // Only proceed if this path was marked pending — avoids duplicating hooks when the user switches tabs normally.
         if !pending.remove(&path) {
             return;
         }
@@ -128,6 +148,7 @@ pub fn ensure_tab_heavy_setup_if_pending(
     let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, page_num) else {
         return;
     };
+    // Plain Gtk `TextView` is upgraded to GtkSourceView `View` for syntax highlighting / diagnostics APIs.
     let Ok(source_view) = text_view.clone().downcast::<sourceview5::View>() else {
         return;
     };
@@ -155,9 +176,11 @@ use crate::utils; // Utility functions
 /// (e.g., if it's showing an image instead).
 pub fn get_active_text_view_and_buffer(notebook: &Notebook) -> Option<(TextView, TextBuffer)> {
     // Get the current page number, then use it to find the page widget
+    // `Option::and_then` chains fallible steps without nested `if let` pyramids.
     notebook.current_page().and_then(|page_num| {
         notebook.nth_page(Some(page_num)).and_then(|page_widget| {
             // First, check if the page is a Paned widget (for Markdown/SVG split view)
+            // Preview tabs wrap editor + preview in a horizontal `Paned`; editor is conventionally the **start** child.
             if let Some(paned) = page_widget.downcast_ref::<gtk4::Paned>() {
                 // Get the left child (which contains the code editor)
                 if let Some(left_child) = paned.start_child() {
@@ -198,6 +221,7 @@ pub fn get_text_view_and_buffer_for_page(
     page_num: u32,
 // Option<T> is an enum that represents an optional value: either Some(T) or None.
 ) -> Option<(TextView, TextBuffer)> {
+    // Walk `nth_page(page_num)` like `get_active_text_view_and_buffer` does for the current page — used when callers need a specific index (save-all, batch close, deferred lint). Returns None if the page is not a text editor (media, terminal, unknown layout).
     // Get the page widget for the specified page number
     notebook.nth_page(Some(page_num)).and_then(|page_widget| {
         // First, check if the page is a Paned widget (for SVG split view)
@@ -234,6 +258,7 @@ pub fn get_text_view_and_buffer_for_page(
 /// This is needed because we upcast SourceView to TextView for compatibility,
 /// but syntax highlighting needs the original SourceView buffer
 fn get_source_buffer_from_text_view(text_view: &TextView) -> Option<sourceview5::Buffer> {
+    // Tabs store the generic `TextView` type — walk back to `sourceview5::View` + `Buffer` for language IDs, tags, and LSP plumbing.
     // Try to downcast the TextView back to SourceView
     if let Ok(source_view) = text_view.clone().downcast::<sourceview5::View>() {
         // Get the buffer and try to downcast it to SourceView Buffer
@@ -251,6 +276,7 @@ fn apply_syntax_highlighting_after_save(
     page_num: u32,
     file_path: &std::path::Path,
 ) {
+    // Save As may change basename/extension — re-select GtkSource language from `file_path` so highlighting tracks the new type.
     if let Some((text_view, _)) = get_text_view_and_buffer_for_page(notebook, page_num) {
         if let Some(source_buffer) = get_source_buffer_from_text_view(&text_view) {
             crate::syntax::set_language_for_file(&source_buffer, file_path);
@@ -300,6 +326,8 @@ pub struct NewTabDependencies {
     pub _save_menu_button: Option<MenuButton>,
 }
 
+// Clone-friendly bundle of `Rc` notebook/state/chrome — shared by open/save/close/new-tab helpers instead of huge parameter lists.
+
 /// Creates a new empty tab with the title "Untitled".
 ///
 /// Sets up a complete editor tab with:
@@ -314,6 +342,7 @@ pub struct NewTabDependencies {
 /// See FEATURES.md: Feature #17 — Modification Tracking
 pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     // Log new file creation
+    // Untitled — no `PathBuf` in `file_path_manager` until Save/Save As; path-driven hooks (LSP, `fire_on_file_open`) run later.
     crate::status_log::log_info("Creating new file...");
 
     // Create a new source view with syntax highlighting capabilities
@@ -321,6 +350,7 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     source_buffer.set_text(""); // Start with empty content
 
     // Clone source_view to avoid ownership move - use Rc instead of full clone for efficiency
+    // GtkSourceView subclasses GtkTextView — upcast so generic helpers accept either widget family.
     let new_text_view = source_view.clone().upcast::<TextView>();
     let new_text_buffer = source_buffer.upcast::<TextBuffer>();
 
@@ -365,7 +395,7 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
 
     // Update the active tab path to None (unsaved document)
     *deps.active_tab_path.borrow_mut() = None;
-
+    // `file_path_manager` still maps old indices — no entry for this page until first save assigns a path.
     // Note: We don't update file_path_manager for "Untitled" tabs until they're saved
 
     // Get immutable references to avoid unnecessary clones
@@ -374,6 +404,7 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
     let active_path_ref = deps.active_tab_path.borrow();
 
     // Update the file browser to reflect the current state
+    // Untitled tabs have no `active_tab_path` yet — still refresh sidebar highlight for the current folder context.
     utils::update_file_list(
         &deps.file_list_box,
         &current_dir_ref,
@@ -405,9 +436,11 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
 
     // Connect dirty tracking for the new "Untitled" tab's label
     // Use weak reference to prevent memory leaks from circular references
+    // Weak label ref: buffer outlives tab chrome — avoids `Rc` cycle label↔buffer↔closure.
     let tab_actual_label_weak = tab_actual_label.downgrade();
     // The "move" keyword forces the closure to take ownership of the variables it uses.
     new_text_buffer.connect_changed(move |buffer| {
+        // `changed` is high-churn (every keystroke, paste, undo) — we only flip Untitled ↔ *Untitled when the buffer crosses empty/non-empty.
         // Mark text editor as active when user actually types/modifies content
         LAST_ACTIVE_AREA.with(|area| {
             *area.borrow_mut() = LastActiveArea::TextEditor;
@@ -456,6 +489,7 @@ pub fn create_new_empty_tab(deps: &NewTabDependencies) {
 
 // Helper function to update tab label after save or name change
 // Optimized to reduce string allocations
+// Leading `*` mirrors unsaved-buffer state for quick checks (close dialog, Git reload) without reading the buffer each time.
 pub fn update_tab_label_after_save(
     notebook: &Notebook,
     page_num: u32,
@@ -471,6 +505,7 @@ pub fn update_tab_label_after_save(
                     .and_then(|w| w.downcast::<Label>().ok())
                 {
                     let current_text = label.text();
+                    // After Save/Save As, caller passes new basename — otherwise reuse label text minus optional `*` dirty prefix.
                     let base_name = new_name_opt
                         .unwrap_or_else(|| current_text.strip_prefix('*').unwrap_or(&current_text));
 
@@ -496,17 +531,20 @@ pub fn update_tab_label_after_save(
 
 // pub makes this function public, allowing it to be used from outside this module.
 pub fn handle_close_tab_request(
+    // Single entry point for "close this tab" from chrome, menus, and shortcuts — keeps save/dirty prompts in one place.
     notebook: &Notebook,
     page_num_to_close: u32,
     window: &impl IsA<ApplicationWindow>,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // `Rc<RefCell<…>>` — shared tab/session state updated from many GTK callbacks (same idea as `NewTabDependencies`).
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
-    current_dir: &Rc<RefCell<PathBuf>>,       // New
-    file_list_box: &ListBox,                  // New
+    current_dir: &Rc<RefCell<PathBuf>>,
+    file_list_box: &ListBox,
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // When Some and the notebook would go empty with more than one tab before close, may spawn a replacement empty tab (see `actually_close_tab`).
     new_tab_deps: Option<NewTabDependencies>, // Dependencies to create a new tab if the last one is closed
 ) {
     if let Some(page_widget) = notebook.nth_page(Some(page_num_to_close)) {
@@ -534,6 +572,7 @@ pub fn handle_close_tab_request(
                 }
             }
 
+            // `*` on tab title tracks unsaved edits (`buffer.connect_changed`) — matches confirm-close UX without re-reading buffer bytes.
             if !is_dirty {
                 // Not dirty, close directly
                 actually_close_tab(
@@ -596,11 +635,13 @@ pub fn handle_close_tab_request(
                                 .cloned();
                             if let Some(path) = path_opt {
                                 // Existing file
+                                // `false` — same as toolbar Save: omit Gtk invisible chars from bytes written to disk.
                                 let text =
                                     buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
                                 // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
                                 match File::create(&path) {
                                     Ok(mut file) => {
+                                        // Truncate + rewrite whole buffer — same semantics as header Save action.
                                         if file.write_all(text.as_bytes()).is_ok() {
                                             update_tab_label_after_save(
                                                 &notebook_clone,
@@ -646,6 +687,7 @@ pub fn handle_close_tab_request(
                                 }
                             } else {
                                 // Untitled file, need to "Save As"
+                                // Nested modal — Save As runs atop the “Save before close?” dialog; both must close in order.
                                 let save_as_dialog = gtk4::FileChooserDialog::new(
                                     Some("Save File As"),
                                     Some(window_clone.as_ref().upcast_ref::<gtk4::Window>()),
@@ -697,6 +739,7 @@ pub fn handle_close_tab_request(
                                         if let Some(file_to_save) =
                                             d_sa.file().and_then(|f| f.path())
                                         {
+                                            // Same `false` as other save paths — plain UTF-8 to disk without Gtk hidden characters.
                                             let text_to_save = buffer_clone_for_save_as.text(
                                                 &buffer_clone_for_save_as.start_iter(),
                                                 &buffer_clone_for_save_as.end_iter(),
@@ -786,6 +829,7 @@ pub fn handle_close_tab_request(
                         d.close(); // Close the "Save changes?" dialog
                     }
                     ResponseType::No => {
+                        // Don’t Save — drop in-memory edits; nothing is written; `actually_close_tab` tears down the buffer with the tab.
                         d.close(); // Close the "Save changes?" dialog
                         actually_close_tab(
                             &notebook_clone,
@@ -808,15 +852,20 @@ pub fn handle_close_tab_request(
 }
 
 // Optimized tab closing function - more efficient index management
+// After this runs, `switch-page` in main may refresh chrome — `file_path_manager` keys must already match Gtk page indices.
 fn actually_close_tab(
     notebook: &Notebook,
     page_num_to_close: u32,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // Maps Gtk notebook page index → absolute path; must stay aligned after `remove_page` (reindex loop below).
     file_path_manager_rc: &Rc<RefCell<HashMap<u32, PathBuf>>>,
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Which file the chrome treats as “active”; cleared when the last page is removed.
     active_tab_path_rc: &Rc<RefCell<Option<PathBuf>>>,
     new_tab_deps: Option<&NewTabDependencies>,
 ) {
+    // Shared by the tab X button, “close to the right”, and other flows — `remove_page` renumbers indices, so the `file_path_manager` fix-up below must stay in lockstep.
+    // Tab count before `remove_page` — compared in the empty-notebook branch below and useful in debug logs.
     let n_pages_before_close = notebook.n_pages();
     
     println!("\n=== actually_close_tab called ===");
@@ -837,6 +886,7 @@ fn actually_close_tab(
     
     println!("Closing file: {}", filename);
 
+    // Proactive cleanup while path is still known — LSP + media must release before the page widget is torn down.
     // Stop any audio playback for this file if it's a music file
     if let Some(ref file_path) = file_path_opt {
         if crate::audio::is_music_file(file_path) {
@@ -859,6 +909,7 @@ fn actually_close_tab(
     crate::status_log::log_success(&format!("Closed {}", filename));
 
     // Efficiently handle HashMap index updates
+    // Gtk renumbers notebook pages contiguously — shift stored paths down for tabs that were after the removed index.
     {
         // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
         let mut manager = file_path_manager_rc.borrow_mut();
@@ -1064,6 +1115,7 @@ fn create_svg_split_view(
     tab_actual_label: &Label,
     file_name: &str,
 ) -> gtk4::Paned {
+    // Left: GtkSource with XML grammar; right: `Picture` + `Pixbuf::from_file` (rasterized preview — no embedded WebKit).
     // Create the paned widget for split view
     let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
     paned.set_wide_handle(true);
@@ -1115,6 +1167,7 @@ fn create_svg_split_view(
         }
     });
 
+    // Right-hand preview uses `Pixbuf::from_file` once — unsaved buffer edits won’t change the image until the file is written and we reload (contrast: Markdown preview re-parses in `connect_changed`).
     // RIGHT SIDE: Rendered SVG image
     let right_box = GtkBox::new(Orientation::Vertical, 0);
     right_box.set_vexpand(true);
@@ -1202,6 +1255,7 @@ fn create_markdown_split_view(
     tab_actual_label: &Label,
     file_name: &str,
 ) -> gtk4::Paned {
+    // GtkSource Markdown editor + WebKit HTML preview (`pulldown-cmark`) — same split-tab idea as SVG but renders to HTML.
     // Create the paned widget for split view
     let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
     paned.set_wide_handle(true);
@@ -1260,6 +1314,7 @@ fn create_markdown_split_view(
     let markdown_to_html = |markdown_text: &str| -> String {
         use pulldown_cmark::{html, Options, Parser};
         
+        // Opt-in extensions — strict default parser would treat tables/task lists as ordinary text.
         let mut options = Options::empty();
         options.insert(Options::ENABLE_STRIKETHROUGH);
         options.insert(Options::ENABLE_TABLES);
@@ -1400,6 +1455,7 @@ fn create_markdown_split_view(
     let file_path_clone = file_path.to_path_buf();
     let text_buffer = source_buffer.clone().upcast::<TextBuffer>();
 
+    // No debounce — each edit re-renders the whole doc in WebKit; snappy for small `.md`, potentially heavy for enormous notes.
     text_buffer.connect_changed(move |buffer| {
         LAST_ACTIVE_AREA.with(|area| {
             *area.borrow_mut() = LastActiveArea::TextEditor;
@@ -1442,6 +1498,8 @@ fn create_markdown_split_view(
 }
 
 // Helper function to open a file in a new tab or focus if already open
+/// Open `file_to_open` in a new tab, or focus the tab that already has this path.
+/// `content` is pre-read text for text files; binary/media types may ignore it and load differently.
 pub fn open_or_focus_tab(
     notebook: &Notebook,
     file_to_open: &PathBuf,
@@ -1456,6 +1514,8 @@ pub fn open_or_focus_tab(
     current_dir: &Rc<RefCell<PathBuf>>,
     _save_menu_button: Option<&MenuButton>, // Added save_menu_button parameter
 ) {
+    // `_mime_type` is unused here — every new-tab branch re-sniffs from `file_to_open` (e.g. `.ts` vs `video/mp2t`) so callers can pass a placeholder.
+    // Dispatches to text, preview split, or media tabs based on MIME — keep new branches consistent with `main` CLI open path.
     let filename = file_to_open
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
@@ -1472,6 +1532,7 @@ pub fn open_or_focus_tab(
     }
 
     // Check if file is already open
+    // Linear scan O(tabs) — fine for human-scale tab counts; could use HashMap<Path, page> if needed.
     let mut page_to_focus = None;
     let num_pages = notebook.n_pages();
     for i in 0..num_pages {
@@ -1484,6 +1545,7 @@ pub fn open_or_focus_tab(
     }
 
     if let Some(page_num) = page_to_focus {
+        // Tab already registered in `file_path_manager` — no second append, no duplicate path rows in the notebook.
         notebook.set_current_page(Some(page_num));
         *active_tab_path_ref.borrow_mut() = Some(file_to_open.clone());
 
@@ -1496,6 +1558,7 @@ pub fn open_or_focus_tab(
 
         crate::status_log::log_success(&format!("Focused {}", filename));
     } else {
+        // No existing tab — pick widget by MIME/extension (`content` may be unused for binary/audio/video).
         // Get file MIME type
         let mut mime_type = mime_guess::from_path(file_to_open).first_or_octet_stream();
 
@@ -1515,6 +1578,7 @@ pub fn open_or_focus_tab(
             .to_string();
 
         // Create tab widget regardless of content type
+        // Tab row is shared chrome — the notebook page child becomes editor, preview split, or media widget per branch below.
         let (tab_widget, tab_actual_label, tab_close_button) =
             crate::ui::create_tab_widget(&file_name);
 
@@ -1546,6 +1610,7 @@ pub fn open_or_focus_tab(
         );
 
         // Check if this is an SVG file - handle with split view
+        // Split view keeps XML editable while WebKit (right) renders — see `create_svg_split_view`.
         let is_svg = file_to_open
             .extension()
             .and_then(|e| e.to_str())
@@ -1554,6 +1619,7 @@ pub fn open_or_focus_tab(
 
         if is_svg {
             // Create split view for SVG (code on left, preview on right)
+            // `content` is already read — passed through for instant preview without second disk read.
             let svg_paned =
                 create_svg_split_view(content, file_to_open, &tab_actual_label, &file_name);
 
@@ -1626,6 +1692,7 @@ pub fn open_or_focus_tab(
         }
 
         // Check if this is a Markdown file - handle with split view
+        // Same paned pattern as SVG but right pane is WebKit HTML preview from pulldown-cmark pipeline.
         let is_markdown = file_to_open
             .extension()
             .and_then(|e| e.to_str())
@@ -1712,6 +1779,7 @@ pub fn open_or_focus_tab(
             .vexpand(true)
             .hexpand(true)
             .build();
+        // Plain scrolled host for binary previews — text path uses SourceView wrapper elsewhere.
 
         if mime_type.type_() == "image" {
             // Handle image file - check if it's a GIF animation
@@ -1730,6 +1798,7 @@ pub fn open_or_focus_tab(
                 if file_size > 10 * 1024 * 1024 {
                     // > 10MB
                     // Large GIF - load only first frame to prevent crash
+                    // GdkPixbufAnimation would mmap huge pixel buffers — static Pixbuf is bounded by one frame.
                     if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(file_to_open) {
                         let picture = Picture::new();
                         picture.set_pixbuf(Some(&pixbuf));
@@ -1796,6 +1865,7 @@ pub fn open_or_focus_tab(
                     let new_scrolled_window_clone = new_scrolled_window.clone();
 
                     // Load with idle priority to keep UI responsive
+                    // Defers decode until after current GTK frame — tab shell appears before heavy GIF parse.
                     glib::idle_add_local_once(move || {
                         match gtk4::gdk_pixbuf::PixbufAnimation::from_file(&file_path_clone) {
                             Ok(animation) => {
@@ -1818,6 +1888,7 @@ pub fn open_or_focus_tab(
                                     let iter_rc = Rc::new(RefCell::new(iter));
 
                                     // Use GIF's native delay, capped at 60fps
+                                    // GIF delay is centiseconds in file — gdk exposes as Duration; min 16ms ~= 60fps cap.
                                     let delay_ms: u64 = {
                                         let iter_borrow = iter_rc.borrow();
                                         iter_borrow
@@ -1848,6 +1919,7 @@ pub fn open_or_focus_tab(
                                                 // Advance and display next frame
                                                 use std::time::SystemTime;
                                                 let iter = iter_rc.borrow_mut();
+                                                // GdkPixbufAnimationIter uses wall clock vs GIF timestamps — `advance` picks correct frame.
                                                 iter.advance(SystemTime::now());
                                                 let pixbuf = iter.pixbuf();
                                                 drop(iter);
@@ -1908,6 +1980,7 @@ pub fn open_or_focus_tab(
                 }
             } else {
                 // Load as static image for non-GIF files
+                // PNG/JPEG/WebP: single frame — no animation timer needed.
                 if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_file(file_to_open) {
                     let picture = Picture::new();
                     picture.set_pixbuf(Some(&pixbuf));
@@ -1958,6 +2031,7 @@ pub fn open_or_focus_tab(
             }
         } else if mime_type.type_() == "audio" {
             // Handle audio file
+            // GStreamer-backed widget tree — see `audio.rs` for waveform/spectrogram toggles.
             match crate::audio::AudioPlayer::new(file_to_open) {
                 Ok(audio_player) => {
                     new_scrolled_window.set_child(Some(&audio_player.widget));
@@ -1973,6 +2047,7 @@ pub fn open_or_focus_tab(
             }
         } else if mime_type.type_() == "video" {
             // Handle video file
+            // gtk4paintablesink pipeline — global manager pauses other videos when one plays.
             match crate::video::VideoPlayer::new(file_to_open) {
                 Ok(video_player) => {
                     new_scrolled_window.set_child(Some(&video_player.widget));
@@ -1988,6 +2063,7 @@ pub fn open_or_focus_tab(
             }
         } else if utils::is_allowed_mime_type(&mime_type) {
             // Handle text file - use cached file reading for performance
+            // `content` already read by caller — cache layer avoids duplicate reads on tab revisit elsewhere.
             let is_large_file = content.len() >= crate::syntax::LARGE_FILE_THRESHOLD;
 
             // Create source view – use lightweight variant for large files
@@ -2016,6 +2092,7 @@ pub fn open_or_focus_tab(
                 crate::syntax::set_language_for_file(&source_buffer, file_to_open);
 
                 if bulk_session_restore_active() {
+                    // Queue this path — `ensure_tab_heavy_setup_if_pending` (on tab switch after restore) runs the same register/setup calls once per focused tab instead of N times at startup.
                     if let Ok(mut s) = PENDING_HEAVY_TAB_SETUP.lock() {
                         s.insert(file_to_open.clone());
                     }
@@ -2043,6 +2120,7 @@ pub fn open_or_focus_tab(
 
             // Ctrl+Click on an underlined diagnostic focuses corresponding entry in diagnostics panel
             // (only for normal-sized files that have diagnostics enabled)
+            // Large files skip gesture — no diagnostic tags applied anyway (performance guard).
             if !is_large_file {
                 let source_view_for_gesture = source_view.clone();
                 let file_path_for_gesture = file_to_open.to_string_lossy().to_string();
@@ -2211,6 +2289,7 @@ pub fn setup_button_handlers(
     path_box: Option<&gtk4::Box>,  // Optional path box for status bar
     current_selection_source: &Rc<RefCell<utils::FileSelectionSource>>, // Track selection source for click-outside detection
 ) {
+    // Header/path/file-list actions share `Rc` handles into notebook + managers — keep closure captures aligned when adding buttons.
     setup_new_button_handler(
         new_button,
         editor_notebook,
@@ -2297,6 +2376,7 @@ fn setup_new_button_handler(
     save_as_button: &Button,
     window: &impl IsA<ApplicationWindow>, // Added for NewTabDependencies
 ) {
+    // New tab is immediate — no save prompt; user can have many dirty tabs until they Save/Close individually.
     let editor_notebook_clone = editor_notebook.clone(); // Clone for the main closure
     let active_tab_path_ref_clone = active_tab_path_ref.clone();
     let file_path_manager_clone = file_path_manager.clone();
@@ -2369,6 +2449,7 @@ fn setup_open_button_handler(
             ],
         );
 
+        // Prefer Cancel as default so the dialog’s primary activation does not open a path unless the user explicitly chose Open.
         dialog.set_default_response(gtk4::ResponseType::Cancel);
 
         let current_dialog_dir_path = current_dir.borrow().clone();
@@ -2630,6 +2711,7 @@ fn setup_save_button_handler(
     let current_dir = current_dir.clone();
 
     save_button.connect_clicked(move |_| {
+        // Toolbar Save — requires a mapped tab path; Untitled buffers drop into the no-path branch → Save As flow.
         // Log save operation start
         crate::status_log::log_info("Saving file...");
 
@@ -2667,6 +2749,7 @@ fn setup_save_button_handler(
                 if utils::is_allowed_mime_type(&mime_type) {
                     match File::create(&path_to_save) {
                         Ok(mut file) => {
+                            // Last arg `false` — exclude Gtk hidden control/anchor chars; file bytes are plain UTF-8 for what the user sees.
                             let text = active_buffer.text(
                                 &active_buffer.start_iter(),
                                 &active_buffer.end_iter(),
@@ -2721,6 +2804,7 @@ fn setup_save_button_handler(
                     crate::status_log::log_error("File type not supported for saving");
                 }
             } else {
+                // Notebook page has no `file_path_manager` entry — blank "Untitled" tab; disk write needs a chosen path first.
                 // No path associated, treat as "Save As"
                 // This logic should ideally call a shared "save_as" function
                 crate::status_log::log_info("Opening Save As dialog...");
@@ -2740,6 +2824,7 @@ fn setup_save_button_handler(
                 // Set current folder to match the file manager's current directory
                 let current_dialog_dir_path = current_dir.borrow().clone();
                 // Result<T, E> is an enum used for returning and propagating errors: either Ok(T) or Err(E).
+                // `GFile` for Gtk’s chooser — prefer `current_dir` when it is a directory, else open at its parent (e.g. path pointed at a file).
                 let gio_file_result: Result<gtk4::gio::File, glib::Error> =
                     Ok(gtk4::gio::File::for_path(&current_dialog_dir_path));
                 match gio_file_result {
@@ -2874,6 +2959,7 @@ fn setup_save_as_button_handler(
 
     save_as_button.connect_clicked(move |_| {
         crate::status_log::log_info("Opening Save As dialog...");
+        // Always rewrites the **current** page’s disk path — `insert` on `file_path_manager` + tab label; no extra notebook page (same tab, new `PathBuf`).
 
         if let Some((_active_text_view, active_buffer)) =
             get_active_text_view_and_buffer(&editor_notebook)
@@ -2900,6 +2986,7 @@ fn setup_save_as_button_handler(
             dialog.set_default_response(gtk4::ResponseType::Cancel);
 
             let current_dialog_dir_path = current_dir.borrow().clone();
+            // Gtk’s folder picker wants `gio::File` — open `current_dir` if it’s a directory, else its parent (e.g. cwd was a file path).
             // Explicitly type annotation for gio_file_result and wrap the call in Ok()
             let gio_file_result: Result<gtk4::gio::File, glib::Error> =
                 Ok(gtk4::gio::File::for_path(&current_dialog_dir_path));
@@ -2954,6 +3041,7 @@ fn setup_save_as_button_handler(
                         if utils::is_allowed_mime_type(&mime_type) {
                             match File::create(&file_to_save) {
                                 Ok(mut f_obj) => {
+                                    // Same `false` as toolbar Save — strip Gtk invisible chars from the serialized buffer text.
                                     let text = active_buffer.text(
                                         &active_buffer.start_iter(),
                                         &active_buffer.end_iter(),
@@ -2961,6 +3049,7 @@ fn setup_save_as_button_handler(
                                     );
                                     match f_obj.write_all(text.as_bytes()) {
                                         Ok(_) => {
+                                            // Same tab index, new on-disk path — no new notebook page; mirrors first-save for Untitled.
                                             file_path_manager_clone
                                                 .borrow_mut()
                                                 .insert(current_page_num, file_to_save.clone());
@@ -3046,6 +3135,7 @@ pub enum LastActiveArea {
 }
 
 // Global state to track the last active area
+// Used for focus/selection edge cases (e.g. file list vs editor) — all updates run on the GTK main thread.
 thread_local! {
     // RefCell::new creates a container that checks borrowing rules at runtime.
     pub static LAST_ACTIVE_AREA: RefCell<LastActiveArea> = const { RefCell::new(LastActiveArea::TextEditor) };
@@ -3053,6 +3143,7 @@ thread_local! {
 
 /// Adds interaction tracking to a text view to detect when user actively uses it
 pub fn setup_text_editor_interaction_tracking(text_view: &gtk4::TextView) {
+    // Click sets `LAST_ACTIVE_AREA::TextEditor` — shortcuts and focus routing compare against `FileManager` / other areas.
     // Add click gesture to detect when user clicks in the text editor
     let click_gesture = GestureClick::new();
     click_gesture.set_button(1); // Left mouse button
@@ -3091,6 +3182,7 @@ fn setup_file_selection_handler(
     path_box: Option<&gtk4::Box>, // Optional path box for status bar with clickable segments
     current_selection_source: &Rc<RefCell<utils::FileSelectionSource>>, // Track selection source for click-outside detection
 ) {
+    // Sidebar file list: `row-activated` opens paths; attached key controller handles Ctrl+C/X/V and Delete when this `ListBox` has focus; gestures update `LAST_ACTIVE_AREA` + `FileSelectionSource`.
     let editor_notebook_clone = editor_notebook.clone(); // Renamed for clarity
     let active_tab_path_ref_clone = active_tab_path_ref.clone();
     let file_path_manager_clone = file_path_manager.clone();
@@ -3658,6 +3750,7 @@ fn setup_up_button_handler(
     let path_box = path_box.cloned(); // Clone the optional Box widget
 
     up_button.connect_clicked(move |_| {
+        // Explorer “up one directory” — updates sidebar cwd only; highlight mode `TabSwitch` matches programmatic navigation (vs clicking a file row).
         let mut path = current_dir.borrow().clone();
         if path.pop() {
             *current_dir.borrow_mut() = path.clone();
@@ -3693,6 +3786,7 @@ pub fn close_empty_untitled_tabs(
     notebook: &Notebook,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
 ) {
+    // Callers (Open, etc.) use this to recycle the blank starter tab; session restore also runs it so N restored files don’t sit next to an extra empty “Untitled”.
     // Only proceed if there are pages to check
     if notebook.n_pages() == 0 {
         return;
@@ -3737,10 +3831,12 @@ pub fn close_empty_untitled_tabs(
     }
 
     // Remove the tabs in reverse order to avoid index shifting problems
+    // `remove_page` compacts indices — closing high page numbers first keeps remaining `page_num` values aligned with `file_path_manager` keys.
     tabs_to_remove.sort_unstable();
     tabs_to_remove.reverse();
 
     for page_num in tabs_to_remove {
+        // Skips `actually_close_tab` (no path hooks / prompts) — OK when recycling the single blank starter tab; if blank tabs could sit beside path-backed tabs, you’d need `remove_page` + `file_path_manager` reindex like `actually_close_tab` does.
         notebook.remove_page(Some(page_num));
     }
 }
@@ -3759,6 +3855,7 @@ pub fn handle_file_deletion(
     editor_notebook: &Notebook,
     file_path_manager: &Rc<RefCell<HashMap<u32, PathBuf>>>,
 ) {
+    // Pipeline: close/save-prompt any tab holding this path, then confirm + `std::fs::remove_file` / refresh list — abort if user cancels save dialog.
     let file_name = file_path
         .file_name()
         .map(|name| name.to_string_lossy().to_string())
@@ -3866,6 +3963,7 @@ fn close_tab_if_file_open_with_save_prompt(
     _file_list_box: &ListBox,
     callback: impl Fn(bool) + 'static, // Callback to indicate success/cancellation
 ) {
+    // Outer callers (e.g. delete file) depend on `callback(false)` when the user cancels save/close — must not run destructive work afterward.
     let manager = file_path_manager.borrow();
 
     // Find if the file is open in any tab
@@ -4028,6 +4126,7 @@ fn close_tab_if_file_open_with_save_prompt(
         }
         None => {
             // File is not open in any tab, proceed directly
+            // No tab holds this path — skip save/close preamble; callers like delete proceed to the next step.
             callback(true);
         }
     }
@@ -4434,6 +4533,7 @@ pub static OPEN_FILE_CALLBACK: Lazy<OpenFileCallbackType> = Lazy::new(|| StdMute
 ///
 /// See FEATURES.md: Feature #64 — Jump to Line and Column
 pub fn open_file_and_jump_to_location(file_path: PathBuf, line: usize, column: usize) {
+    // Dispatches through `OPEN_FILE_CALLBACK` — implementor lives in `main.rs` and runs file open + jump on the GTK thread.
     println!(
         "open_file_and_jump_to_location: {} at {}:{}",
         file_path.display(),
@@ -4441,11 +4541,12 @@ pub fn open_file_and_jump_to_location(file_path: PathBuf, line: usize, column: u
         column
     );
 
-    // Call the global callback if it's set
     if let Ok(guard) = OPEN_FILE_CALLBACK.lock() {
+        // Mutex guard (`guard`) unlocks automatically when this block ends — keep work inside short.
         if let Some(callback) = guard.as_ref() {
             callback(file_path, line, column);
         } else {
+            // Usually startup ordering: a diagnostic click before `main` assigns `OPEN_FILE_CALLBACK` — click again after load.
             eprintln!("OPEN_FILE_CALLBACK not set!");
         }
     }
@@ -4459,6 +4560,7 @@ pub fn open_file_and_jump_to_location(file_path: PathBuf, line: usize, column: u
 ///
 /// See FEATURES.md: Feature #64 — Jump to Line and Column
 pub fn jump_to_line_and_column(source_view: &sourceview5::View, line: usize, column: usize) {
+    // Column advances by `char` (Unicode scalar) — matches on-screen columns for BMP text; astral planes still count as one step each.
     let buffer = source_view.buffer();
 
     // Convert 1-based line to 0-based
@@ -4485,6 +4587,7 @@ pub fn jump_to_line_and_column(source_view: &sourceview5::View, line: usize, col
 
     // Scroll to the cursor position with a slight delay to ensure view is ready
     // This is especially important for the first click on each file
+    // Scroll after a short tick so layout/line height are valid — immediate `scroll_to_iter` often mis-scrolls on freshly shown tabs (first open in particular).
     let source_view_clone = source_view.clone();
     let iter_for_scroll = iter;
     glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
@@ -4503,6 +4606,8 @@ pub fn setup_extension_editor_context_menu(
 ) {
     // Register ALL extensions' context menu actions (enabled and disabled),
     // and control activation via set_enabled(). For dynamic toggle support.
+    // Script extensions only (`manager::get_extensions`) — each row runs `runner` with path/selection from `hooks::ACTIVE_*`.
+    // Register every extension’s actions up front so labels stay stable; toggling `set_enabled` is cheaper than rebuilding the menu model when someone enables an extension mid-session.
     let mgr = crate::extensions::manager::get_manager();
     let menu = gtk4::gio::Menu::new();
     let mut has_entries = false;

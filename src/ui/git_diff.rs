@@ -18,8 +18,10 @@
 //! ## Debounced Refresh
 //!
 //! `trigger_git_status_update()` uses `glib::timeout_add_local_once` with a
-//! 500 ms delay to coalesce rapid filesystem changes into a single refresh.
-//! The callback is stored in a `thread_local! CallbackCell`.
+//! ~300 ms delay to coalesce rapid filesystem changes into a single refresh.
+//! The debounced handler lives in `GIT_STATUS_UPDATE_CALLBACK` (`thread_local!`).
+//! The `CallbackCell` type alias is separate: the Git panel uses it to stash
+//! `update_git_status` once built, avoiding a cyclic `Rc` while wiring refresh.
 //!
 //! ## Key Types (private)
 //!
@@ -42,25 +44,25 @@ use std::rc::Rc;
 
 use super::git_diff_panel_template::GitDiffPanel;
 
-// Type aliases for complex types
+// Tuple returned by diff alignment: (left text, right text, per-row maps back to original line numbers, …).
 type DiffAlignResult = (
     String,
     String,
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // One entry per aligned visual row — `None` marks a blank padding line on that side of the diff.
     Vec<Option<usize>>,
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     Vec<Option<usize>>,
     usize,
     usize,
 );
-// Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+// Panel-local slot for the heavy `update_git_status` closure — starts `None`, then `Some` after the `Rc` cycle is resolved.
 type CallbackCell = Rc<RefCell<Option<Rc<dyn Fn()>>>>;
 
 // Global git status update callback with debouncing
+// GTK runs handlers on the main thread — thread_local keeps debounce state without cross-thread locks.
 thread_local! {
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Sidebar Git panel refresh — registered once from `build_ui`.
     static GIT_STATUS_UPDATE_CALLBACK: RefCell<Option<Rc<dyn Fn()>>> = RefCell::new(None);
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Debounce handle — coalesce many `git status` notifications into one UI refresh.
     static PENDING_UPDATE_TIMEOUT: RefCell<Option<glib::SourceId>> = const { RefCell::new(None) };
 }
 
@@ -77,15 +79,17 @@ pub fn set_git_status_update_callback(callback: Rc<dyn Fn()>) {
     });
 }
 
-/// Requests a Git status refresh with 500 ms debouncing.
+/// Requests a Git status refresh with ~300 ms debouncing.
 ///
-/// If called multiple times within 500 ms (e.g., during rapid file saves),
+/// If called multiple times within that window (e.g., during rapid file saves),
 /// only the last call actually triggers a refresh. Uses
 /// `glib::timeout_add_local_once` to schedule the callback on the GTK main
 /// loop, and cancels any previously pending timeout.
 pub fn trigger_git_status_update() {
+    // 300ms debounce (`Duration` below) — rapid saves / watcher noise collapse to one `git` subprocess refresh instead of thrashing the panel.
     PENDING_UPDATE_TIMEOUT.with(|timeout_cell| {
         // Cancel any pending update
+        // Resetting the timer lets rapid callers collapse into one refresh after the quiet window.
         if let Some(id) = timeout_cell.borrow_mut().take() {
             id.remove();
         }
@@ -135,6 +139,7 @@ enum GitStatus {
 // "impl" blocks define methods and behavior for a struct or enum.
 impl GitStatus {
     fn from_git_code(staged_char: char, unstaged_char: char) -> Option<Self> {
+        // First two chars of each `git status --porcelain` line — staged column (X) then unstaged (Y).
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match (staged_char, unstaged_char) {
             // Staged changes (first character non-space)
@@ -160,6 +165,7 @@ fn is_git_repository(path: &Path) -> bool {
         return false;
     }
 
+    // Worktrees use a **file** named `.git` pointing at the real metadata — `exists()` still returns true.
     let git_dir = path.join(".git");
     git_dir.exists()
 }
@@ -168,6 +174,7 @@ fn is_git_repository(path: &Path) -> bool {
 fn find_git_root(path: &Path) -> Option<PathBuf> {
     let mut current = path.to_path_buf();
 
+    // Walk toward `/` until `.git` appears — opening `src/foo.rs` still resolves to the repo root.
     loop {
         if is_git_repository(&current) {
             return Some(current);
@@ -183,6 +190,7 @@ fn find_git_root(path: &Path) -> Option<PathBuf> {
 
 /// Get git status for the repository
 fn get_git_status(repo_path: &Path) -> Vec<GitFileChange> {
+    // Porcelain = stable machine-readable XY codes (staged column, unstaged column) — easier than parsing English `git status`.
     let output = Command::new("git")
         .arg("status")
         .arg("--porcelain")
@@ -228,6 +236,7 @@ fn get_git_status(repo_path: &Path) -> Vec<GitFileChange> {
 fn get_old_file_content(repo_path: &Path, file_path: &Path) -> Option<String> {
     let rel_path = file_path.strip_prefix(repo_path).ok()?;
 
+    // `HEAD:<path>` streams the committed blob without touching the working tree or staging area.
     let output = Command::new("git")
         .arg("show")
         .arg(format!("HEAD:{}", rel_path.display()))
@@ -245,6 +254,7 @@ fn get_old_file_content(repo_path: &Path, file_path: &Path) -> Option<String> {
 
 /// Get the new version of a file (working directory)
 fn get_new_file_content(file_path: &Path) -> Option<String> {
+    // On-disk bytes — may differ from an unsaved editor buffer; inline diff compares committed/staged snapshots to what Git would commit from the tree.
     std::fs::read_to_string(file_path).ok()
 }
 
@@ -252,6 +262,7 @@ fn get_new_file_content(file_path: &Path) -> Option<String> {
 fn get_staged_file_content(repo_path: &Path, file_path: &Path) -> Option<String> {
     let rel_path = file_path.strip_prefix(repo_path).ok()?;
 
+    // Leading `:` addresses the index (what would commit if you ran `git commit` now).
     let output = Command::new("git")
         .arg("show")
         .arg(format!(":{}", rel_path.display()))
@@ -276,6 +287,7 @@ fn align_diff_content(
     let old_lines: Vec<&str> = old_content.lines().collect();
     let new_lines: Vec<&str> = new_content.lines().collect();
 
+    // LCS-based pairing drives side-by-side rows + tag coloring (insert/delete padding rows below).
     let diff_ops = compute_diff_operations(&old_lines, &new_lines);
 
     let mut aligned_old = Vec::new();
@@ -371,6 +383,7 @@ fn compute_diff_operations(
     let m = old_lines.len();
     let n = new_lines.len();
 
+    // Whole-line LCS: each cell is longest common subsequence length for prefixes `old[0..i)` vs `new[0..j)` — O(m*n) in line count, fine for tab-sized buffers.
     // Build LCS table
     let mut lcs = vec![vec![0; n + 1]; m + 1];
     for i in 0..m {
@@ -404,6 +417,7 @@ fn compute_diff_operations(
         }
     }
 
+    // Backtracking walks from the file end toward the top — reverse so consumers visit lines in order.
     operations.reverse();
     operations
 }
@@ -419,6 +433,7 @@ fn make_line_numbers_invisible(buffer: &sourceview5::Buffer, line_map: &[Option<
     tag_table.add(&invisible_tag);
 
     // Apply the tag to line number portions (start of each line until content)
+    // Prefix looks like `"  42  foo"` — hiding through the double space keeps copy/paste as code-only.
     for (line_idx, _) in line_map.iter().enumerate() {
         if let Some(line_start) = buffer.iter_at_line(line_idx as i32) {
             let mut line_end = line_start;
@@ -474,6 +489,7 @@ fn apply_diff_highlighting(
         .collect();
 
     // If the old file is empty (new file), don't highlight anything
+    // All-new / all-delete bodies are obvious without tinting whole panes yellow/red.
     if old_lines_stripped.is_empty()
         || (old_lines_stripped.len() == 1 && old_lines_stripped[0].is_empty())
     {
@@ -481,6 +497,7 @@ fn apply_diff_highlighting(
     }
 
     // If the new file is empty (deleted file), don't highlight anything
+    // Same rationale — avoid painting every aligned row when one side is entirely blank padding.
     if new_lines_stripped.is_empty()
         || (new_lines_stripped.len() == 1 && new_lines_stripped[0].is_empty())
     {
@@ -515,6 +532,7 @@ fn apply_diff_highlighting(
     // Since content is already aligned, compare line by line using stripped content
     let max_lines = old_lines_stripped.len().max(new_lines_stripped.len());
 
+    // Row `i` matches `align_diff_content` output — blank padding rows participate here too.
     for i in 0..max_lines {
         let old_line = old_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
         let new_line = new_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
@@ -553,6 +571,7 @@ fn apply_diff_highlighting(
 
 /// Get the current branch name
 fn get_current_branch(repo_path: &Path) -> Option<String> {
+    // Prints symbolic ref name, or `HEAD` when detached — both are fine for the branch chip label.
     let output = Command::new("git")
         .arg("rev-parse")
         .arg("--abbrev-ref")
@@ -576,6 +595,7 @@ fn stage_file(repo_path: &Path, file_path: &Path) -> Result<(), String> {
         .strip_prefix(repo_path)
         .map_err(|e| format!("Invalid path: {}", e))?;
 
+    // Paths relative to repo root match `status --porcelain` and behave consistently across platforms.
     let output = Command::new("git")
         .arg("add")
         .arg(rel_path)
@@ -596,6 +616,7 @@ fn unstage_file(repo_path: &Path, file_path: &Path) -> Result<(), String> {
         .strip_prefix(repo_path)
         .map_err(|e| format!("Invalid path: {}", e))?;
 
+    // Removes blob from index — working tree file stays as-is unless user checks out or discards.
     let output = Command::new("git")
         .arg("reset")
         .arg("HEAD")
@@ -617,6 +638,7 @@ fn discard_changes(repo_path: &Path, file_path: &Path) -> Result<(), String> {
         .strip_prefix(repo_path)
         .map_err(|e| format!("Invalid path: {}", e))?;
 
+    // Restore working tree from staged snapshot for tracked paths (`git checkout -- path`).
     let output = Command::new("git")
         .arg("checkout")
         .arg("--")
@@ -638,6 +660,7 @@ fn revert_to_head(repo_path: &Path, file_path: &Path) -> Result<(), String> {
         .strip_prefix(repo_path)
         .map_err(|e| format!("Invalid path: {}", e))?;
 
+    // Explicit `HEAD` resets index + working tree to the committed tree for this path.
     let output = Command::new("git")
         .arg("checkout")
         .arg("HEAD")
@@ -656,6 +679,7 @@ fn revert_to_head(repo_path: &Path, file_path: &Path) -> Result<(), String> {
 
 /// Revert all unstaged changes (like git checkout -- .)
 fn revert_all_unstaged(repo_path: &Path) -> Result<(), String> {
+    // Bulk checkout from index — touches tracked files only; leaves untracked files alone.
     let output = Command::new("git")
         .arg("checkout")
         .arg("--")
@@ -672,6 +696,7 @@ fn revert_all_unstaged(repo_path: &Path) -> Result<(), String> {
 }
 
 /// Reload open files that were reverted (if they don't have unsaved changes)
+// GTK main thread: replaces buffer text from disk — skips `*` tabs so local edits always win.
 fn reload_reverted_files(
     notebook: &gtk4::Notebook,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
@@ -736,6 +761,7 @@ fn reload_file_in_editor(
     file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
     file_path: &Path,
 ) {
+    // Single-path refresh (e.g. user reverted one file) — stops at first notebook page matching `file_path`.
     let num_pages = notebook.n_pages();
     
     for page_num in 0..num_pages {
@@ -766,6 +792,7 @@ fn reload_file_in_editor(
                     if let Ok(contents) = std::fs::read_to_string(file_path) {
                         let buffer = view.buffer();
                         if let Some(source_buffer) = buffer.downcast_ref::<sourceview5::Buffer>() {
+                            // Whole-buffer replace from disk after Git rewrote the file — acceptable here because we already skipped `*` dirty tabs above.
                             source_buffer.set_text(&contents);
                             // Reset modified flag
                             source_buffer.set_modified(false);
@@ -786,7 +813,9 @@ fn reload_file_in_editor(
                 }
             }
             
+            // Normal case: one tab per path — exit outer scan once disk contents were applied.
             break; // Found and processed the file, no need to continue
+            // Paths map 1:1 with tabs — duplicate open paths are not expected; bail early either way.
         }
     }
 }
@@ -797,6 +826,7 @@ fn commit_changes(repo_path: &Path, message: &str) -> Result<(), String> {
         return Err("Commit message cannot be empty".to_string());
     }
 
+    // Pass `-m` and message as separate argv entries — avoids shell interpolation; handles quotes/newlines safely.
     let output = Command::new("git")
         .arg("commit")
         .arg("-m")
@@ -814,6 +844,7 @@ fn commit_changes(repo_path: &Path, message: &str) -> Result<(), String> {
 
 /// Push commits to remote
 fn push_changes(repo_path: &Path) -> Result<(), String> {
+    // Uses configured upstream (`branch.*.merge`) — same defaults as running `git push` in a terminal.
     let output = Command::new("git")
         .arg("push")
         .current_dir(repo_path)
@@ -829,6 +860,7 @@ fn push_changes(repo_path: &Path) -> Result<(), String> {
 
 /// Count the number of unpushed commits
 fn count_unpushed_commits(repo_path: &Path) -> usize {
+    // Commits reachable from HEAD but not upstream (`@{u}`) — “ahead” count for badge UI.
     let output = Command::new("git")
         .arg("rev-list")
         .arg("--count")
@@ -852,6 +884,7 @@ fn count_unpushed_commits(repo_path: &Path) -> usize {
 fn count_incoming_commits(repo_path: &Path) -> usize {
     // Check for incoming commits based on last fetch
     // Do NOT fetch here as it can hang the UI on network issues
+    // `..@{u}` — commits on upstream not in HEAD (“behind”), relative to last `fetch`/`pull` snapshot.
     let output = Command::new("git")
         .arg("rev-list")
         .arg("--count")
@@ -871,6 +904,7 @@ fn count_incoming_commits(repo_path: &Path) -> usize {
 
 /// Pull commits from remote
 fn pull_changes(repo_path: &Path) -> Result<(), String> {
+    // Network + merge/rebase per repo settings — potentially slow; keep callers aware if wiring UI spinners.
     let output = Command::new("git")
         .arg("pull")
         .current_dir(repo_path)
@@ -897,6 +931,7 @@ fn get_all_branches(repo_path: &Path) -> Vec<BranchInfo> {
     let mut branches = Vec::new();
 
     // Get local branches
+    // Leading `*` marks `HEAD`; strip it so `BranchInfo::name` is just `main`, `feature/foo`, etc.
     let output = Command::new("git")
         .arg("branch")
         .arg("--list")
@@ -921,6 +956,7 @@ fn get_all_branches(repo_path: &Path) -> Vec<BranchInfo> {
     }
 
     // Get remote branches
+    // Lines look like `origin/main`; omit symbolic `HEAD ->` aliases — they are not checkout targets.
     let output = Command::new("git")
         .arg("branch")
         .arg("-r")
@@ -949,6 +985,7 @@ fn get_all_branches(repo_path: &Path) -> Vec<BranchInfo> {
 
 /// Switch to a branch
 fn switch_branch(repo_path: &Path, branch_name: &str, is_remote: bool) -> Result<(), String> {
+    // Remote rows (`origin/topic`) become local `topic` tracking branches when needed — recursion hits the local branch path.
     if is_remote {
         // For remote branches, create a local tracking branch
         // Extract the branch name without the remote prefix (e.g., "origin/feature" -> "feature")
@@ -969,6 +1006,7 @@ fn switch_branch(repo_path: &Path, branch_name: &str, is_remote: bool) -> Result
 
         if check_output.status.success() {
             // Local branch exists, just switch to it
+            // Tail-call style recursion — second invocation always takes the `else` (local-only checkout) branch.
             switch_branch(repo_path, local_name, false)
         } else {
             // Local branch doesn't exist, create and switch to a new local branch tracking the remote
@@ -1009,6 +1047,7 @@ fn setup_copy_handler(view: &sourceview5::View, buffer: &sourceview5::Buffer) {
     let buffer_clone = buffer.clone();
 
     // Use key event controller to intercept copy operations
+    // Diff buffers embed padded line numbers in plain text — strip gutter before clipboard matches normal editor behavior.
     let key_controller = gtk4::EventControllerKey::new();
 
     // The "move" keyword forces the closure to take ownership of the variables it uses.
@@ -1109,6 +1148,7 @@ fn compute_line_changes(
     let mut changes = Vec::new();
     let max_lines = old_lines_stripped.len().max(new_lines_stripped.len());
 
+    // One minimap stripe per aligned row — classification mirrors side-by-side tag painting (`apply_diff_highlighting`).
     for i in 0..max_lines {
         let old_line = old_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
         let new_line = new_lines_stripped.get(i).map(|s| s.as_str()).unwrap_or("");
@@ -1133,6 +1173,7 @@ fn setup_minimap_drawing(
     scrolled: &gtk4::ScrolledWindow,
     buffer: &sourceview5::Buffer,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // LCS line classification (add/modify/delete) — minimap draw callback reads this shared vec.
     line_changes: &Rc<RefCell<Vec<LineChangeType>>>,
     _is_left: bool,
 ) {
@@ -1141,6 +1182,7 @@ fn setup_minimap_drawing(
     let line_changes_clone = line_changes.clone();
 
     // Draw the minimap
+    // Cairo callback runs on redraw — cheap bars scaled to buffer line count give a birds-eye diff heatmap.
     minimap.set_draw_func(move |widget, cr, width, height| {
         let Some(scrolled) = scrolled_weak.upgrade() else {
             return;
@@ -1549,6 +1591,7 @@ fn setup_diff_tab_right_click(tab_box: &gtk4::Box, notebook: &gtk4::Notebook) {
             }
             
             // Close saved tabs from end to beginning to maintain indices
+            // Descending page indices — removing high tabs first keeps lower `page_num` values valid during the loop.
             saved_tabs.reverse();
             let count = saved_tabs.len();
             for page_num in saved_tabs {
@@ -1608,6 +1651,7 @@ fn create_diff_tab(
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
 ) {
+    // Final UI is two read-only SourceViews — expensive `align_diff_content` runs off-thread below before buffers are filled.
     // Create a horizontal paned widget for side-by-side view
     let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
     paned.set_wide_handle(true);
@@ -1615,6 +1659,7 @@ fn create_diff_tab(
     paned.set_shrink_end_child(false);
     
     // Create a loading placeholder
+    // Immediate feedback — LCS + padding on multi‑MB files can take non-trivial time even on fast CPUs.
     let loading_box = gtk4::Box::new(gtk4::Orientation::Vertical, 10);
     loading_box.set_vexpand(true);
     loading_box.set_hexpand(true);
@@ -1706,6 +1751,7 @@ fn create_diff_tab(
     crate::status_log::log_info(&format!("Computing diff for {}...", tab_title));
     
     // async move creates an asynchronous block that takes ownership of its captured variables.
+    // `spawn_blocking` keeps heavy string work off the GTK thread; `spawn_future_local` resumes UI mutation on main.
     glib::spawn_future_local(async move {
         let result = gtk4::gio::spawn_blocking(move || {
             // This runs in a background thread
@@ -1765,6 +1811,7 @@ fn create_diff_tab(
     });
 
     // Reset active tab path for diff tabs
+    // Synthetic viewer — avoid treating diff tab as “current save target”; real path opens via toolbar button / main branch above.
     *active_tab_path.borrow_mut() = None;
 }
 
@@ -1784,6 +1831,7 @@ fn create_diff_view_content(
     let line_changes = Rc::new(RefCell::new(Vec::new()));
 
     // Create left side (old version)
+    // Gutter digits live inside buffer text — GtkSource line numbers stay off to avoid duplicate columns.
     let (left_view, left_buffer) = crate::syntax::create_source_view();
     left_buffer.set_text(&aligned_old);
     left_view.set_editable(false);
@@ -1895,6 +1943,7 @@ fn create_diff_view_content(
     make_line_numbers_invisible(&right_buffer, &right_line_map);
 
     // Set up scroll synchronization
+    // Tie vertical adjustments — padded rows stay aligned so highlights/minimap stripes line up visually.
     let left_vadj = left_scrolled.vadjustment();
     let right_vadj = right_scrolled.vadjustment();
 
@@ -1947,6 +1996,7 @@ fn create_diff_view_content(
     content_paned.set_shrink_end_child(false);
 
     // Set initial position to middle after the paned is realized
+    // `width()` is zero until realized — splitting 50/50 needs the first valid allocation callback.
     content_paned.connect_realize(|p| {
         let width = p.width();
         if width > 0 {
@@ -1971,6 +2021,7 @@ pub fn create_git_diff_panel(
     main_file_list_box: Option<&gtk4::ListBox>,
 ) -> GtkBox {
     // Create the template-based panel
+    // Widget tree + CSS classes live in `git_diff_panel_template` — this file wires behavior only.
     let panel = GitDiffPanel::new();
 
     // Get references to widgets
@@ -1987,6 +2038,7 @@ pub fn create_git_diff_panel(
     let staged_revealer = panel.staged_revealer();
 
     // Set up placeholder text behavior for commit message
+    // Fake placeholder via tag — Gtk TextView has no native placeholder property like GtkEntry.
     let buffer = commit_message_view.buffer();
 
     // Create placeholder styling
@@ -2027,6 +2079,7 @@ pub fn create_git_diff_panel(
     show_placeholder();
 
     // Restore saved commit message from settings
+    // Draft survives restarts — overwrites the gray placeholder when non-empty (user may resume mid-commit).
     {
         let settings = crate::settings::get_settings();
         let saved_message = settings.get_git_commit_message();
@@ -2074,6 +2127,7 @@ pub fn create_git_diff_panel(
     commit_message_view.add_controller(focus_controller);
 
     // State for the panel
+    // `repo_path_rc` / `changes_rc` mirror last successful scan — closures compare paths without re-running `git` until refresh.
     let repo_path_rc: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
     // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
     let changes_rc: Rc<RefCell<Vec<GitFileChange>>> = Rc::new(RefCell::new(Vec::new()));
@@ -2091,6 +2145,7 @@ pub fn create_git_diff_panel(
     let commit_button_for_actions = commit_button.clone();
 
     // Function to update the git status
+    // Rebuilds branch menu + file rows from `git status --porcelain` — tuned for manual refresh / post-stage hooks, not hot FS loops.
     let update_git_status = {
         let current_dir = current_dir.clone();
         let repo_path_rc = repo_path_rc.clone();
@@ -2107,6 +2162,7 @@ pub fn create_git_diff_panel(
         // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(move || {
             // Clear previous content
+            // Gtk ListBox: remove rows one-by-one — ensures signal handlers from old rows detach cleanly.
             while let Some(child) = staged_files_list.first_child() {
                 staged_files_list.remove(&child);
             }
@@ -2326,6 +2382,7 @@ pub fn create_git_diff_panel(
                 *changes_rc.borrow_mut() = changes.clone();
 
                 // Separate staged and unstaged changes
+                // `ModifiedStaged` (`MM`) surfaces on both sides — user can stage remainder or unstage/commit partial work.
                 let mut staged_changes = Vec::new();
                 let mut unstaged_changes = Vec::new();
 
@@ -2350,6 +2407,7 @@ pub fn create_git_diff_panel(
 
                 // Update commit button text based on state
                 // Priority: incoming commits > staged changes > unpushed commits
+                // When behind remote, promote Pull — avoids committing on top of stale history without pulling first.
                 let incoming_count = count_incoming_commits(&repo);
 
                 if incoming_count > 0 {
@@ -2501,6 +2559,7 @@ pub fn create_git_diff_panel(
                     files_list.append(&row);
                 }
             } else {
+                // `current_dir` is not inside any `.git` parent — disable branch UX instead of shelling out blindly.
                 *repo_path_rc.borrow_mut() = None;
                 branch_button.set_label("Not a git repository");
                 branch_button.set_menu_model(Option::<&gtk4::gio::Menu>::None);
@@ -2514,12 +2573,14 @@ pub fn create_git_diff_panel(
     *update_git_status_rc.borrow_mut() = Some(update_git_status.clone());
 
     // Register the update function globally for debounced updates on file save
+    // `trigger_git_status_update()` (save/fs hooks) funnels here — coalesces bursts into one porcelain parse.
     set_git_status_update_callback(update_git_status.clone());
 
     // Initial update
     update_git_status();
 
     // Set up git menu button with advanced commands
+    // Hamburger holds destructive / infrequent ops (undo commit, stash, fetch) — keeps primary toolbar uncluttered.
     let git_menu_popover = {
         let menu_box = gtk4::Box::new(gtk4::Orientation::Vertical, 6);
         menu_box.add_css_class("menu");
@@ -2588,6 +2649,7 @@ pub fn create_git_diff_panel(
                 if response == gtk4::ResponseType::Yes {
                     crate::status_log::log_info("Undoing last commit...");
                     
+                    // `--soft` rolls HEAD back one commit but keeps index + working tree — changes stay staged for recommit.
                     let output = std::process::Command::new("git")
                         .arg("reset")
                         .arg("--soft")
@@ -2689,6 +2751,7 @@ pub fn create_git_diff_panel(
 
                     crate::status_log::log_info("Stashing changes...");
                     
+                    // `stash push` snapshots tracked + staged work — message helps identify entries in `stash list`.
                     let output = std::process::Command::new("git")
                         .arg("stash")
                         .arg("push")
@@ -2740,6 +2803,7 @@ pub fn create_git_diff_panel(
 
             crate::status_log::log_info("Popping stash...");
             
+            // Applies `stash@{0}` (most recent push) and drops it from the stash list on success.
             let output = std::process::Command::new("git")
                 .arg("stash")
                 .arg("pop")
@@ -2942,6 +3006,7 @@ pub fn create_git_diff_panel(
             
             // async move creates an asynchronous block that takes ownership of its captured variables.
             glib::spawn_future_local(async move {
+                // Remote round-trip can take seconds — keep GTK responsive; re-enable button in continuation.
                 let result = gtk4::gio::spawn_blocking(move || {
                     std::process::Command::new("git")
                         .arg("fetch")
@@ -3007,6 +3072,7 @@ pub fn create_git_diff_panel(
 
             crate::status_log::log_info("Amending last commit...");
             
+            // Rewrites tip commit in-place with the buffer text — requires clean-ish index state (`git` may refuse if conflicts).
             let output = std::process::Command::new("git")
                 .arg("commit")
                 .arg("--amend")
@@ -3050,6 +3116,7 @@ pub fn create_git_diff_panel(
     // Refresh button handler
     let update_git_status_for_refresh = update_git_status.clone();
     refresh_button.connect_clicked(move |_| {
+        // Explicit porcelain rescan — same closure as startup / debounced save hook.
         update_git_status_for_refresh();
         crate::status_log::log_info("Git status refreshed");
     });
@@ -3061,6 +3128,7 @@ pub fn create_git_diff_panel(
     let editor_notebook_for_revert_all = editor_notebook.clone();
     let file_path_manager_for_revert_all = file_path_manager.clone();
     revert_all_button.connect_clicked(move |_| {
+        // Sync lists before dialog — user sees current unstaged set before confirming destructive checkout.
         // Update git status first
         update_git_status_for_revert_all();
         
@@ -3099,6 +3167,7 @@ pub fn create_git_diff_panel(
                         crate::status_log::log_success("All unstaged changes reverted");
                         
                         // Reload all open files that don't have unsaved changes
+                        // Disk content changed via `git checkout -- .` — refresh editors unless tab shows `*` dirty state.
                         reload_reverted_files(&notebook_clone, &file_manager_clone, &repo_clone);
                         
                         let update = update_clone.clone();
@@ -3131,6 +3200,7 @@ pub fn create_git_diff_panel(
         let changes_to_stage = changes_for_stage_all.borrow().clone();
         let mut staged_count = 0;
 
+        // Snapshot paths then `git add` each — stage_file is idempotent for already-staged paths.
         for change in changes_to_stage.iter() {
             if let Ok(()) = stage_file(&repo, &change.path) {
                 staged_count += 1;
@@ -3167,6 +3237,7 @@ pub fn create_git_diff_panel(
         let mut unstaged_count = 0;
 
         // Unstage only files that are currently staged
+        // Filter required — `changes_rc` also lists purely unstaged rows we must not `reset` blindly.
         for change in changes_to_unstage.iter() {
             if matches!(
                 change.status,
@@ -3201,6 +3272,7 @@ pub fn create_git_diff_panel(
     let path_box_for_staged = path_box.cloned();
     let current_dir_for_staged = current_dir.clone();
     let main_file_list_for_staged = main_file_list_box.cloned();
+    // Struct requires save buttons for other call sites — diff-from-sidebar only uses notebook/window/path fields below.
     let new_tab_deps_for_staged = Some(crate::handlers::NewTabDependencies {
         editor_notebook: editor_notebook.clone(),
         window: parent_window.clone().upcast(),
@@ -3255,6 +3327,7 @@ pub fn create_git_diff_panel(
                     editor_notebook_for_staged.set_current_page(Some(page_num));
                 } else {
                     // For staged changes: compare HEAD vs staged (index)
+                    // Left = last commit blob; right = index blob — shows what would commit without working-tree noise.
                     let old_content = get_old_file_content(repo, &file_path).unwrap_or_default();
                     let new_content = get_staged_file_content(repo, &file_path).unwrap_or_default();
 
@@ -3287,6 +3360,7 @@ pub fn create_git_diff_panel(
     let current_dir_for_selection = current_dir.clone();
     let main_file_list_for_selection = main_file_list_box.cloned();
     let files_list_for_selection = files_list.clone();
+    // Same placeholder pattern as staged handler — only path/notebook wiring is relevant for `create_diff_tab`.
     let new_tab_deps_for_selection = Some(crate::handlers::NewTabDependencies {
         editor_notebook: editor_notebook.clone(),
         window: parent_window.clone().upcast(),
@@ -3342,6 +3416,7 @@ pub fn create_git_diff_panel(
                 } else {
                     // For unstaged changes: compare staged (index) vs working directory
                     // If there's no staged version, compare HEAD vs working directory
+                    // Prefer index as “old” when present — diff shows only unstaged edits atop what is staged.
                     let old_content = get_staged_file_content(repo, &file_path)
                         .or_else(|| get_old_file_content(repo, &file_path))
                         .unwrap_or_default();
@@ -3366,6 +3441,7 @@ pub fn create_git_diff_panel(
     });
 
     // Context menu for unstaged files list (right-click)
+    // Per-row `Popover` — same git/file ops as the main notebook tab menu, reachable without hunting the tab strip.
     let files_list_for_menu = files_list.clone();
     let repo_path_for_menu = repo_path_rc.clone();
     let update_git_status_for_menu = update_git_status.clone();
@@ -3377,6 +3453,7 @@ pub fn create_git_diff_panel(
     gesture.set_button(3); // Right click
     gesture.connect_pressed(move |_, _, x, y| {
         // Find which row was clicked
+        // Coordinates are relative to `files_list` — maps press Y to the nearest `ListBoxRow`.
         if let Some(row) = files_list_for_menu.row_at_y(y as i32) {
             if let Some(tooltip) = row.tooltip_text() {
                 let file_path_str = tooltip.strip_prefix("unstaged:").unwrap_or(&tooltip);
@@ -3466,6 +3543,7 @@ pub fn create_git_diff_panel(
                 });
 
                 // Discard changes button
+                // `discard_changes` = checkout from index (drops unstaged only). Use Revert to HEAD for index+worktree reset.
                 let discard_btn = Button::with_label("Discard Changes");
                 discard_btn.add_css_class("flat");
                 discard_btn.add_css_class("destructive-action");
@@ -3716,6 +3794,7 @@ pub fn create_git_diff_panel(
                     if let Some(keep_page) = clicked_page_num {
                         for _ in 0..keep_page {
                             if notebook_for_close_left.n_pages() > 1 {
+                                // Removing page 0 repeatedly shifts later tabs down — same index stays “first” until target page is front.
                                 // borrow_mut() gets mutable access to the data inside a RefCell. Panics if already borrowed.
                                 file_manager_for_close_left.borrow_mut().remove(&0);
                                 notebook_for_close_left.remove_page(Some(0));
@@ -3815,6 +3894,7 @@ pub fn create_git_diff_panel(
                     }
                     
                     // Close saved tabs from end to beginning to maintain indices
+                    // Descending removal avoids skipping indices — same pattern as notebook tab-menu close-saved.
                     saved_tabs.reverse();
                     let count = saved_tabs.len();
                     for page_num in saved_tabs {
@@ -3851,6 +3931,7 @@ pub fn create_git_diff_panel(
     files_list.add_controller(gesture);
 
     // Context menu for staged files list (right-click)
+    // Slimmer menu than unstaged — primary workflow here is unstage or hard-reset; staging from staged list is redundant.
     let staged_files_list_for_menu = staged_files_list.clone();
     let repo_path_for_staged_menu = repo_path_rc.clone();
     let update_git_status_for_staged_menu = update_git_status.clone();
@@ -4190,6 +4271,7 @@ pub fn create_git_diff_panel(
                     }
                     
                     // Close saved tabs from end to beginning to maintain indices
+                    // Descending removal avoids skipping indices — mirrors unstaged context-menu handler above.
                     saved_tabs.reverse();
                     let count = saved_tabs.len();
                     for page_num in saved_tabs {
@@ -4224,6 +4306,7 @@ pub fn create_git_diff_panel(
     staged_files_list.add_controller(staged_gesture);
 
     // Smart commit/push/pull button handler
+    // Label text from `update_git_status` drives behavior — one button slot for pull vs commit vs push to save toolbar space.
     let repo_path_for_commit = repo_path_rc.clone();
     let update_git_status_for_commit = update_git_status.clone();
     let commit_message_view_for_commit = commit_message_view.clone();
@@ -4253,6 +4336,7 @@ pub fn create_git_diff_panel(
             )
         });
 
+        // `Modified` alone is unstaged — user must stage before `commit_changes` path runs (unless label is Pull/Push).
         // Check button label to determine action
         let button_label = button.label();
         let label_str = button_label.as_ref().map(|s| s.as_str()).unwrap_or("");
@@ -4262,6 +4346,7 @@ pub fn create_git_diff_panel(
 
         if label_str.starts_with("Pull") {
             // Button says "Pull" - perform pull
+            // Runs synchronously on GTK thread — acceptable for small pulls; large merges may hitch the UI briefly.
             crate::status_log::log_info("Pulling from remote...");
 
             match pull_changes(&repo) {
@@ -4316,6 +4401,7 @@ pub fn create_git_diff_panel(
             button.set_sensitive(true);
         } else if label_str.starts_with("Push") {
             // No staged changes but button says "Push" - perform push
+            // Same synchronous caveat as pull — network + credential helpers may delay the frame.
             crate::status_log::log_info("Pushing to remote...");
 
             match push_changes(&repo) {
@@ -4341,6 +4427,7 @@ pub fn create_git_diff_panel(
     });
 
     // Update when current directory changes (periodic check)
+    // File browser can change `current_dir` without always emitting a dedicated signal — poll every 2s to catch drift.
     let current_dir_for_check = current_dir.clone();
     // RefCell::new creates a container that checks borrowing rules at runtime.
     let last_checked_dir: Rc<RefCell<Option<PathBuf>>> = Rc::new(RefCell::new(None));
@@ -4369,6 +4456,7 @@ pub fn create_git_diff_panel(
         let active_tab_path_for_switch = active_tab_path.clone();
         
         editor_notebook.connect_switch_page(move |notebook, page, _page_num| {
+            // Diff tabs stash the full file path on the tab label tooltip (`create_diff_tab`) — drive sidebar chrome from that.
             // Get the tab label for this page
             if let Some(tab_label) = notebook.tab_label(page) {
                 if let Some(tab_box) = tab_label.downcast_ref::<gtk4::Box>() {

@@ -24,6 +24,7 @@ use gtk4;
 /// This function creates and applies CSS styles to improve the tab appearance,
 /// making them look less flat and more visually distinct.
 pub fn apply_custom_css() {
+    // Builds one big string (base + enabled extension files) and registers at APPLICATION priority — safe to call again after extension enable/disable reloads fragments.
     let provider = gtk4::CssProvider::new();
 
     let css = build_complete_css();
@@ -31,6 +32,7 @@ pub fn apply_custom_css() {
     // Load and apply the CSS
     provider.load_from_data(&css);
 
+    // Application priority overrides theme defaults but stays below user `gtk.css` if any.
     gtk4::style_context_add_provider_for_display(
         &gtk4::gdk::Display::default().expect("Could not get default display"),
         &provider,
@@ -56,6 +58,8 @@ fn build_complete_css() -> String {
     );
 
     // Append CSS from enabled extensions (loaded from their CSS files)
+    // Extension fragments are concatenated after our base theme — equal-specificity rules later in the string win.
+    // `mgr` stays alive for this loop — only tiny manifest-driven files are read; long blocking I/O here would stall other `get_manager()` users.
     let mgr = crate::extensions::manager::get_manager();
     for css_path in mgr.get_extension_css_paths() {
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).

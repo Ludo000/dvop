@@ -50,6 +50,7 @@ use vte4::TerminalExtManual;
 /// See FEATURES.md: Feature #44 — Integrated Terminal
 pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
     let terminal = VteTerminal::new();
+    // One VTE widget owns one PTY/shell pair — multi-tab terminals allocate multiple widgets via the notebook helpers in this module.
 
     // Set terminal colors to match the editor's theme
     setup_terminal_theme(&terminal);
@@ -68,14 +69,14 @@ pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
         if let Some(dir_str) = dir.to_str() {
             // Spawn the shell asynchronously in the terminal
             terminal.spawn_async(
-                vte4::PtyFlags::DEFAULT,   // Default pseudo-terminal flags
-                Some(dir_str),             // Working directory
-                &[&shell],                 // Command (user's shell)
-                &[],                       // Environment variables (none added)
-                glib::SpawnFlags::DEFAULT, // Default spawn flags
-                || {},                     // Setup function (none)
-                -1,                        // Default timeout
-                None::<&Cancellable>,      // No cancellation
+                vte4::PtyFlags::DEFAULT,
+                Some(dir_str),
+                &[&shell], // argv: interactive shell as single command
+                &[],       // inherit environment from parent process
+                glib::SpawnFlags::DEFAULT,
+                || {},                // child setup hook (unused)
+                -1,                   // no spawn timeout
+                None::<&Cancellable>, // user cannot cancel from our UI
                 // The "move" keyword forces the closure to take ownership of the variables it uses.
                 move |res| {
                     // Handle spawn errors
@@ -105,6 +106,7 @@ pub fn create_terminal(working_dir: Option<PathBuf>) -> VteTerminal {
 /// See FEATURES.md: Feature #45 — Terminal Theming
 pub fn setup_terminal_theme(terminal: &VteTerminal) {
     // Check if we're in dark mode to choose appropriate colors
+    // Palettes are fixed RGBA tables (not scraped from GtkSource scheme XML) so the shell stays readable when editor themes change.
     let is_dark_mode = crate::syntax::is_dark_mode_enabled();
 
     if is_dark_mode {
@@ -225,7 +227,6 @@ pub fn create_terminal_box(terminal: &VteTerminal) -> ScrolledWindow {
 /// See FEATURES.md: Feature #46 — Multiple Terminal Tabs
 pub fn add_terminal_tab_with_toggle(
     terminal_notebook: &Notebook,
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
     working_dir: Option<PathBuf>,
     editor_paned: &gtk4::Paned,
 ) -> u32 {
@@ -235,12 +236,13 @@ pub fn add_terminal_tab_with_toggle(
 /// Internal function to add a terminal tab with optional paned reference and auto-hide control
 fn add_terminal_tab_with_paned(
     terminal_notebook: &Notebook,
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Shell `cwd` for the new tab — `None` uses a generic home-style title/default cwd.
     working_dir: Option<PathBuf>,
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // When `Some`, closing the last terminal tab can shrink the bottom pane; `None` for embed paths that skip auto-hide.
     editor_paned: Option<&gtk4::Paned>,
     auto_hide: bool,
 ) -> u32 {
+    // Terminal lives in its own `Notebook` below the editor split — not mixed with text-editor tabs.
     // Use the last folder name from the path for the tab title, or "Home" for default tabs
     let tab_title = if let Some(dir_path) = &working_dir {
         // Get the last component of the path (the folder name)
@@ -282,6 +284,7 @@ fn add_terminal_tab_with_paned(
             notebook_clone.remove_page(Some(current_page_num));
 
             // If this was the last terminal and auto-hide is enabled, hide the terminal view completely
+            // `main.rs` normally keeps a non-shell tab (Diagnostics) at index 0 — `n_pages() == 0` is a rare “empty notebook” edge case; when it happens, tuck the bottom `Paned` strip away.
             if auto_hide && notebook_clone.n_pages() == 0 {
                 if let Some(paned) = &editor_paned_clone {
                     if let Some(end_child) = paned.end_child() {
@@ -343,6 +346,7 @@ pub fn update_all_terminal_themes(terminal_notebook: &Notebook) {
 ///
 /// Reads the terminal font size from settings and applies it to the given terminal
 pub fn apply_terminal_font_size(terminal: &VteTerminal) {
+    // Reads `terminal_font_size` from persisted settings — pair with `update_all_terminal_font_sizes` after prefs change.
     let settings = crate::settings::get_settings();
     let font_size = settings.get_terminal_font_size();
 
@@ -358,6 +362,7 @@ pub fn apply_terminal_font_size(terminal: &VteTerminal) {
 ///
 /// This should be called when the terminal font size setting changes
 pub fn update_all_terminal_font_sizes(terminal_notebook: &Notebook) {
+    // Walks terminal notebook pages — each tab wraps `ScrolledWindow` → `VteTerminal` like `add_terminal_tab_with_paned` creates.
     println!("Updating font sizes for all terminal tabs...");
 
     // Go through all tabs in the terminal notebook

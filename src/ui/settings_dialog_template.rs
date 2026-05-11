@@ -15,7 +15,8 @@ use gtk4::{gio, glib, CompositeTemplate, Dialog, DropDown, Label, SpinButton};
 mod imp {
     use super::*;
 
-    // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
+    // Dialog widget tree from `resources/settings_dialog.ui`; spun up via `SettingsDialog::new` in `ui/settings.rs`.
+    // #[template_child] ids must match `resources/settings_dialog.ui` — identical binding rules as other composite templates.
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/example/Dvop/settings_dialog.ui")]
     pub struct SettingsDialog {
@@ -66,6 +67,7 @@ glib::wrapper! {
 impl SettingsDialog {
     // pub makes this function public, allowing it to be used from outside this module.
     pub fn new<P: IsA<gtk4::ApplicationWindow>>(parent: &P) -> Self {
+        // `transient-for` keeps the dialog stacked above the main window and ties modality/focus to that shell.
         glib::Object::builder()
             .property(
                 "transient-for",

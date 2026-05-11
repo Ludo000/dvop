@@ -41,6 +41,8 @@ pub fn convert_lsp_diagnostic(lsp_diag: &LspDiagnostic) -> crate::linter::Diagno
     use crate::linter::{Diagnostic, DiagnosticSeverity};
 
     // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
+    // Single choke point for index bases + severity mapping — keeps rust-analyzer callbacks agnostic of GtkSource conventions.
+    // `lsp_types` mirrors the JSON spec; we collapse HINT into Info for our simpler three-level UI.
     let severity = match lsp_diag.severity {
         Some(LspSeverity::ERROR) => DiagnosticSeverity::Error,
         Some(LspSeverity::WARNING) => DiagnosticSeverity::Warning,
@@ -49,6 +51,8 @@ pub fn convert_lsp_diagnostic(lsp_diag: &LspDiagnostic) -> crate::linter::Diagno
         _ => DiagnosticSeverity::Info,
     };
 
+    // LSP range is UTF-16 code units on the wire; we cast to usize for our 1-based line/col display.
+    // GtkSourceView navigation uses byte indices in places — extreme Unicode edge cases may diverge slightly from strict LSP columns.
     let line = lsp_diag.range.start.line as usize;
     let column = lsp_diag.range.start.character as usize;
     let end_line = lsp_diag.range.end.line as usize;
@@ -88,6 +92,7 @@ pub struct LanguageServerConfig {
 impl LanguageServerConfig {
     // pub makes this function public, allowing it to be used from outside this module.
     pub fn rust_analyzer() -> Self {
+        // Spawn bare `rust-analyzer` from PATH — `build.rs` tries to rustup-install the component; extend `args` if you need unstable flags.
         Self {
             name: "rust-analyzer".to_string(),
             command: "rust-analyzer".to_string(),

@@ -11,13 +11,25 @@
 //!    `Diagnostic` structs consumed by the diagnostics panel.
 //!
 //! The enable/disable state is persisted in `~/.config/dvop/rust_diagnostics.conf`.
+//! The enable/disable state is persisted in `~/.config/dvop/native_extensions.json` (key `rust-diagnostics`),
+//! alongside other built-in native extensions.
 //!
 //! See FEATURES.md: Feature #41 — Rust-Analyzer Integration
 //! See FEATURES.md: Feature #47 — Real-Time Diagnostics
-
+//!
 // Rust Diagnostics Extension — native extension providing Rust language diagnostics
 // via rust-analyzer LSP. This was previously hardcoded in linter/ui.rs and is now
 // exposed as a toggleable extension through the extension system.
+//! ## Threads: LSP worker vs GTK main thread
+//!
+//! rust-analyzer I/O runs on a **background thread** (`std::thread::spawn` in this module). When
+//! diagnostics arrive, we **`glib::MainContext::default().invoke(...)`** to jump back to the GTK main
+//! thread before refreshing widgets — same rule as `linter/ui.rs`.
+//!
+//! ## Session restore and `DEFER_RUST_LSP_OPENS`
+//!
+//! Restoring dozens of tabs would start dozens of LSP sessions at once. While bulk restore is active,
+//! `didOpen` may be **queued** and flushed later so the UI stays responsive.
 
 use super::native::NativeExtension;
 use crate::linter::Diagnostic;
@@ -30,6 +42,7 @@ use std::sync::{Arc, Mutex};
 /// When true, Rust `didOpen` / LSP setup is queued instead of running (session bulk-restore).
 static DEFER_RUST_LSP_OPENS: AtomicBool = AtomicBool::new(false);
 
+/// Queue of Rust paths that still need `didOpen` while startup deferral is active — drained by [`flush_deferred_rust_lsp_opens`].
 static PENDING_RUST_LSP_OPENS: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
 
 // ── State ────────────────────────────────────────────────────────
@@ -39,6 +52,7 @@ lazy_static::lazy_static! {
     /// (e.g. session restore already opened all files in [`flush_deferred_rust_lsp_opens`]).
     static ref LSP_DID_OPEN_PATHS: Mutex<HashSet<PathBuf>> = Mutex::new(HashSet::new());
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // `None` until the first rust-analyzer client is constructed; `Some` holds the shared manager for all Rust tabs.
     static ref RUST_ANALYZER: Arc<Mutex<Option<crate::lsp::rust_analyzer::RustAnalyzerManager>>> =
         // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         Arc::new(Mutex::new(None));
@@ -48,6 +62,7 @@ lazy_static::lazy_static! {
         // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         Arc::new(Mutex::new(HashMap::new()));
 
+    // Per-URI document version sent with each full-buffer `didChange` after save — kept for LSP protocol correctness (see `notify_file_saved`).
     // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
     static ref DOCUMENT_VERSIONS: Arc<Mutex<HashMap<String, i32>>> =
         // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
@@ -157,18 +172,20 @@ impl NativeExtension for RustDiagnosticsExtension {
         if !ENABLED.load(Ordering::SeqCst) {
             return;
         }
+        // Non-Rust files never talk to rust-analyzer.
         if file_path.extension().and_then(|e| e.to_str()) != Some("rs") {
             return;
         }
         if DEFER_RUST_LSP_OPENS.load(Ordering::SeqCst) {
             if let Ok(mut q) = PENDING_RUST_LSP_OPENS.lock() {
+                // Deduplicate: session restore may mention the same path more than once.
                 if !q.iter().any(|p| p == file_path) {
                     q.push(file_path.to_path_buf());
                 }
             }
             return;
         }
-        initialize_rust_analyzer();
+        initialize_rust_analyzer(); // no-op if already started
         setup_lsp_for_file(file_path);
     }
 
@@ -199,11 +216,13 @@ pub fn is_enabled() -> bool {
 
 /// Defer rust-analyzer `didOpen` until [`flush_deferred_rust_lsp_opens`] runs (e.g. session restore).
 pub fn set_defer_rust_lsp_opens(defer: bool) {
+    // Turn on/off alongside `handlers::set_bulk_session_restore` while opening many tabs — both reduce startup storms.
     DEFER_RUST_LSP_OPENS.store(defer, Ordering::SeqCst);
 }
 
 /// Run queued LSP opens on the GTK main thread after the window has had a chance to load.
 pub fn flush_deferred_rust_lsp_opens() {
+    // Pairs with session restore: paths queued while `DEFER_RUST_LSP_OPENS` was true — drains here so rust-analyzer sees tabs before spamming `didOpen`.
     if !ENABLED.load(Ordering::SeqCst) {
         if let Ok(mut q) = PENDING_RUST_LSP_OPENS.lock() {
             q.clear();
@@ -215,6 +234,7 @@ pub fn flush_deferred_rust_lsp_opens() {
         let Ok(mut q) = PENDING_RUST_LSP_OPENS.lock() else {
             return;
         };
+        // `take` empties the queue and gives us ownership of the vec — avoids cloning `PathBuf`s.
         std::mem::take(&mut *q)
     };
 
@@ -236,6 +256,7 @@ pub fn flush_deferred_rust_lsp_opens() {
 
 /// Detect if the current directory contains Rust files or is a Rust project
 pub fn is_rust_project(dir: &Path) -> bool {
+    // Lightweight scan for sidebar/status chrome — not a substitute for `cargo metadata` or workspace detection.
     if dir.join("Cargo.toml").exists() {
         return true;
     }
@@ -263,6 +284,7 @@ pub fn is_rust_project(dir: &Path) -> bool {
 
 /// Check if a directory contains Rust files and update UI accordingly
 pub fn check_and_update_rust_ui(dir: &Path) {
+    // Explorer `current_dir` changes call this — toggles Rust-specific status/linter affordances when the folder looks like a project.
     if !ENABLED.load(Ordering::SeqCst) {
         return;
     }
@@ -272,6 +294,7 @@ pub fn check_and_update_rust_ui(dir: &Path) {
     glib::idle_add_once({
         // The "move" keyword forces the closure to take ownership of the variables it uses.
         move || {
+            // Status strip stays visible if **either** Rust tooling applies or another linter already produced hits.
             let has_diagnostics = crate::linter::ui::has_any_diagnostics();
 
             let should_show_status = has_rust || has_diagnostics;
@@ -340,6 +363,7 @@ fn shutdown_rust_analyzer() {
 
 /// Find the workspace root by looking for Cargo.toml
 fn find_workspace_root(file_path: &Path) -> PathBuf {
+    // Ascend parents until `Cargo.toml` — if none (single stray `.rs`), fall back to immediate parent directory below.
     let mut current = file_path.parent();
 
     while let Some(dir) = current {
@@ -381,6 +405,7 @@ fn setup_lsp_for_file(file_path: &Path) {
     let dedupe_key = canonical_path.clone();
 
     // The "move" keyword forces the closure to take ownership of the variables it uses.
+    // Blocking RA handshake + file slurp happens here — GTK thread only receives `glib::MainContext::invoke` callbacks afterward.
     std::thread::spawn(move || {
         println!("LSP thread started");
         // lock() acquires the Mutex lock. It blocks until the lock is available.
@@ -400,6 +425,7 @@ fn setup_lsp_for_file(file_path: &Path) {
                     let initial_received = INITIAL_DIAGNOSTICS_RECEIVED.clone();
                     println!("Setting diagnostic callback...");
                     // The "move" keyword forces the closure to take ownership of the variables it uses.
+                    // `move` so this closure can be stored and called later from the LSP thread (owns `initial_received`).
                     client.set_diagnostic_callback(move |uri, lsp_diagnostics| {
                         // Ignore diagnostics if the extension was disabled
                         if !ENABLED.load(Ordering::SeqCst) {
@@ -422,6 +448,7 @@ fn setup_lsp_for_file(file_path: &Path) {
                         crate::linter::ui::store_diagnostics_for_uri(&uri_str, diagnostics.clone());
 
                         // Also update FILE_DIAGNOSTICS for underline rendering
+                        // Strip `file://` so the path matches what GtkSourceView / `PathBuf::display` use for tags.
                         let file_path = uri_str.strip_prefix("file://").unwrap_or(&uri_str);
                         crate::linter::store_file_diagnostics(file_path, diagnostics.clone());
 
@@ -434,6 +461,7 @@ fn setup_lsp_for_file(file_path: &Path) {
                         let uri_for_underlines = uri_str.clone();
                         // Must marshal to the UI thread without acquiring the main context from this
                         // worker thread (`idle_add` / `idle_add_local` panic cross-thread).
+                        // `invoke` hops to the GTK main thread — required before touching widgets / Gtk buffers.
                         glib::MainContext::default().invoke(move || {
                             crate::linter::ui::refresh_diagnostics_panel();
                             crate::linter::ui::update_diagnostics_count();
@@ -456,6 +484,7 @@ fn setup_lsp_for_file(file_path: &Path) {
                             println!("Parsed URI: {:?}", uri);
                             if let Ok(content) = std::fs::read_to_string(&file_path_buf) {
                                 println!("Read file content: {} bytes", content.len());
+                                // Initial `TextDocumentItem.version` — first save path increments `DOCUMENT_VERSIONS` before emitting `didChange`.
                                 if let Err(e) = client.did_open(uri, "rust".to_string(), 1, content)
                                 {
                                     println!("❌ Failed to send didOpen: {}", e);
@@ -491,6 +520,7 @@ fn setup_lsp_for_file(file_path: &Path) {
 
 /// Notify LSP that a file was saved — sends didChange + didSave
 fn notify_file_saved(file_path: &Path) {
+    // Implements save pipeline as full-buffer `didChange` (version bump per URI) followed by `didSave` with disk snapshot.
     if !ENABLED.load(Ordering::SeqCst) {
         return;
     }
@@ -525,6 +555,7 @@ fn notify_file_saved(file_path: &Path) {
                                 *v += 1;
                                 *v
                             };
+                            // Per-URI monotonic counter for `VersionedTextDocumentIdentifier` on full-buffer `didChange` after save.
 
                             if let Err(e) = client.did_change(uri.clone(), version, content.clone())
                             {
@@ -536,6 +567,7 @@ fn notify_file_saved(file_path: &Path) {
                                 );
                             }
 
+                            // Tiny delay before `didSave` — gives rust-analyzer time to reconcile incremental state (heuristic, not spec-required).
                             std::thread::sleep(std::time::Duration::from_millis(100));
 
                             if let Err(e) = client.did_save(uri, Some(content)) {
@@ -553,6 +585,7 @@ fn notify_file_saved(file_path: &Path) {
 
 // ── Persistence helpers ──────────────────────────────────────────
 
+// Same `native_extensions.json` map other native extensions use — boolean flag keyed by extension id (see also rust-completion).
 fn config_path() -> PathBuf {
     if let Some(home) = home::home_dir() {
         home.join(".config").join("dvop").join("native_extensions.json")
@@ -573,6 +606,7 @@ fn load_enabled_state() -> bool {
 
 fn persist_enabled_state(enabled: bool) {
     let path = config_path();
+    // Same merge strategy as `code_completion::persist_enabled_state` — keeps sibling extension flags in `native_extensions.json`.
     let mut map: HashMap<String, bool> = if let Ok(data) = std::fs::read_to_string(&path) {
         serde_json::from_str(&data).unwrap_or_default()
     } else {

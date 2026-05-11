@@ -18,4 +18,6 @@
 /// - extensions/hello-world.tar.gz
 pub fn ensure_sample_archives() {
     // No-op: sample archives are pre-built in the source tree (extensions/*.tar.gz).
+    // Intentionally empty: archives ship beside the repo under `extensions/*.tar.gz`; nothing to generate at runtime.
+    // Call site in `main` documents the feature — this hook exists so a future build step could materialize zips without changing startup wiring.
 }

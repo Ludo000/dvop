@@ -41,6 +41,8 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+// Cut/copy state lives in thread-local clipboard structs below — GTK main thread only.
+
 /// The type of clipboard operation — determines visual styling and behavior.
 ///
 /// `Copy` duplicates the file on paste; `Cut` moves it (deleting the original).
@@ -60,7 +62,7 @@ pub struct FileClipboard {
 
 // Global file clipboard state - using thread-local storage for safety
 thread_local! {
-    // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Internal cut/copy buffer for file-manager actions — `None` until the user copies or cuts a path.
     static FILE_CLIPBOARD: RefCell<Option<FileClipboard>> = const { RefCell::new(None) };
 }
 
@@ -132,6 +134,7 @@ pub fn has_clipboard_content() -> bool {
 
         // Non-blocking check - just see if there's any text content
         // We'll do proper parsing only when actually getting the content
+        // `x-special/gnome-copied-files` is GNOME’s file clipboard marker (Nautilus uses the same family) — see `sync_to_os_clipboard` for the paired write path.
         return clipboard.formats().contain_mime_type("text/plain")
             || clipboard.formats().contain_mime_type("text/uri-list")
             || clipboard
@@ -177,10 +180,12 @@ pub fn paste_file_from_clipboard(
     window: &gtk4::ApplicationWindow,
     file_list_box: &ListBox,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // Sidebar cwd + active tab — same handles as main window for `update_file_list` / tab path updates after paste.
     current_dir: &Rc<RefCell<PathBuf>>,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
+    // Reads internal clipboard first, then OS formats (`try_get_os_clipboard_file`) — supports cross-app paste from Nautilus.
     let clipboard_content = get_clipboard_content();
 
     if let Some(clipboard) = clipboard_content {
@@ -201,6 +206,7 @@ pub fn paste_file_from_clipboard(
         let mut target_path = target_dir.clone();
         target_path.push(&filename);
 
+        // Copy duplicates with uniquify on clash; Cut uses `rename` (same volume) and `trigger_tab_path_update` — see `Cut` arm below for cross-device limits.
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         match clipboard.operation {
             ClipboardOperation::Copy => {
@@ -270,7 +276,7 @@ pub fn paste_file_from_clipboard(
                     target_path
                 };
 
-                // Move the file
+                // Prefer kernel `rename` on one volume — cross-device cut/paste returns `Err` here (no automatic copy+delete fallback).
                 match std::fs::rename(&source_path, &final_target_path) {
                     Ok(_) => {
                         let final_filename = final_target_path
@@ -312,6 +318,7 @@ pub fn paste_file_from_clipboard(
 }
 
 /// Generate a unique filename by appending a number if the file already exists
+// Windows/macOS/Linux friendly pattern: `report.pdf`, `report (1).pdf`, … — caps at 1000 tries then falls back to `stem-{unix_secs}.ext`.
 fn generate_unique_filename(original_path: &PathBuf) -> PathBuf {
     let parent_dir = original_path
         .parent()
@@ -356,6 +363,7 @@ fn generate_unique_filename(original_path: &PathBuf) -> PathBuf {
 
 /// Synchronize file clipboard operation to OS clipboard
 fn sync_to_os_clipboard(file_path: &PathBuf, operation: ClipboardOperation) {
+    // Writes both plain URI lists and GNOME’s cut/copy lines so Nautilus/Dolphin agree with our internal `FileClipboard`.
     if let Some(display) = gdk::Display::default() {
         let clipboard = display.clipboard();
 
@@ -386,7 +394,7 @@ fn sync_to_os_clipboard(file_path: &PathBuf, operation: ClipboardOperation) {
                         &glib::Bytes::from(gnome_content.as_bytes()),
                     );
 
-                    // Simple text fallback
+                    // Simple text fallback — our own `DVOP_*:` prefix so paste/drag code can recover a path when only `text/plain` survives (e.g. thin remote clipboards without URI-list).
                     let text_content = match operation {
                         ClipboardOperation::Copy => {
                             format!("DVOP_COPY:{}", absolute_path.to_string_lossy())
@@ -426,6 +434,7 @@ fn sync_to_os_clipboard(file_path: &PathBuf, operation: ClipboardOperation) {
 }
 
 /// Try to get file clipboard content from OS clipboard
+// Try MIME types in reliability order: GNOME meta knows cut vs copy; URI-list / plain text lose that and get conservative defaults in the parsers below.
 fn try_get_os_clipboard_file() -> Option<FileClipboard> {
     if let Some(display) = gdk::Display::default() {
         let clipboard = display.clipboard();
@@ -493,6 +502,7 @@ fn parse_gnome_clipboard_format(content: &str) -> Option<FileClipboard> {
 }
 
 /// Parse URI list format (text/uri-list)
+// External apps usually publish URI lists as implicit copies — we match that (see `ClipboardOperation::Copy` below).
 fn parse_uri_list_format(content: &str) -> Option<FileClipboard> {
     for line in content.lines() {
         let line = line.trim();
@@ -559,6 +569,7 @@ fn parse_text_format(text: &str) -> Option<FileClipboard> {
 }
 
 /// Convert file URI to PathBuf
+// Hand-rolled `file://` decode for spaces/% — enough for local paths; exotic percent-encoding may need a dedicated URL parser.
 fn uri_to_path(uri: &str) -> Option<PathBuf> {
     if let Some(path_str) = uri.strip_prefix("file://") {
         // Simple URL decoding for basic cases (spaces, etc.)
@@ -636,6 +647,7 @@ pub fn setup_drag_drop_for_row(
     file_path: &std::path::Path,
     is_directory: bool,
 ) {
+    // Drag payload is plain path text (`STRING`) — must match what `DropTarget` expects on folder rows below.
     let file_path_clone = file_path.to_path_buf();
     let _file_name = file_path
         .file_name()
@@ -742,6 +754,7 @@ pub fn cleanup_drag_drop_styles(file_list_box: &ListBox) {
 pub fn show_move_confirmation_modal(source_path: &std::path::Path, target_dir: &std::path::Path) {
     use gtk4::{ButtonsType, DialogFlags, MessageDialog, MessageType, ResponseType};
 
+    // Confirms DnD drop — `perform_file_move` uses `rename` (replaces if `final_target` already exists; see warning string below).
     let source_name = source_path
         .file_name()
         .and_then(|n| n.to_str())
@@ -818,6 +831,7 @@ pub fn show_move_confirmation_modal(source_path: &std::path::Path, target_dir: &
 fn perform_file_move(source: &std::path::Path, target: &std::path::Path, window: &gtk4::Window) {
     use gtk4::{ButtonsType, DialogFlags, MessageDialog, MessageType};
 
+    // Fast path: same-volume `rename`. Cross-device or permission issues surface in `Err` — no silent copy fallback.
     let source_name = source
         .file_name()
         .and_then(|n| n.to_str())
@@ -865,6 +879,7 @@ fn perform_file_move(source: &std::path::Path, target: &std::path::Path, window:
 /// Triggers a refresh of the file list after a file move operation
 /// This uses the callback system to refresh the file list
 fn refresh_file_list_after_move() {
+    // Brief pause so directory enumeration sees the post-rename tree (some FS/event order edge cases).
     // Trigger the refresh callback with a small delay to ensure the filesystem operation is complete
     glib::timeout_add_local_once(std::time::Duration::from_millis(50), || {
         crate::utils::trigger_file_list_refresh();
@@ -874,6 +889,7 @@ fn refresh_file_list_after_move() {
 /// Recursively finds and cleans up all drag-drop styles from a widget hierarchy
 ///
 /// This function walks through the widget tree and removes any lingering drag-drop CSS classes
+// After a successful drop/move, GTK doesn’t always emit `leave` on every hovered row — walk the tree so highlights cannot stick.
 fn cleanup_all_drag_drop_styles(widget: &gtk4::Widget) {
     // Remove classes from this widget
     widget.remove_css_class("drop-target");

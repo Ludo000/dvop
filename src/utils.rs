@@ -60,8 +60,10 @@ type TabPathUpdateCallback = RefCell<Option<Box<dyn Fn(&PathBuf, &PathBuf)>>>;
 // Global storage for file list refresh callback
 thread_local! {
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Set from UI init; drag/drop and similar call through here so the sidebar rescans without threading a closure everywhere.
     static FILE_LIST_REFRESH_CALLBACK: RefCell<Option<Box<dyn Fn()>>> = RefCell::new(None);
 }
+// Callbacks are registered from UI setup and invoked from the same GTK main thread (e.g. drag-drop), matching `thread_local!` semantics.
 
 // Global storage for tab path update callback (for when files are moved)
 thread_local! {
@@ -95,6 +97,7 @@ where
 pub fn trigger_file_list_refresh() {
     FILE_LIST_REFRESH_CALLBACK.with(|cb| {
         // borrow() gets read-only access to the data inside a RefCell.
+        // Registered once from `main.rs` / UI setup — drag-drop calls this without holding widget pointers.
         if let Some(ref callback) = *cb.borrow() {
             callback();
         }
@@ -104,6 +107,7 @@ pub fn trigger_file_list_refresh() {
 /// Trigger the tab path update callback with old and new paths
 /// This should be called when a file is moved to update open tab references
 pub fn trigger_tab_path_update(old_path: &PathBuf, new_path: &PathBuf) {
+    // Paste/cut/rename/DnD notify here so tabs pointing at `old_path` retarget to `new_path` without reopening files.
     TAB_PATH_UPDATE_CALLBACK.with(|cb| {
         // borrow() gets read-only access to the data inside a RefCell.
         if let Some(ref callback) = *cb.borrow() {
@@ -136,6 +140,7 @@ pub enum FileSelectionSource {
 /// See FEATURES.md: Feature #33 — File Type Filtering
 /// See FEATURES.md: Feature #183 — MIME Type Detection
 pub fn is_allowed_mime_type(mime_type: &Mime) -> bool {
+    // Single place that defines “open/edit as text” vs treat-as-binary — keep aligned with global search and tab save paths that consult this helper.
     // Allow all text formats
     mime_type.type_() == "text" ||
     
@@ -160,10 +165,12 @@ pub fn is_allowed_mime_type(mime_type: &Mime) -> bool {
 /// false if it's a text file that can be edited and saved.
 fn is_current_file_non_editable(
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // `active_tab_path` / `editor_notebook` — when both present, MIME guess can fall back to inspecting the tab widget tree.
     active_tab_path: Option<&Rc<RefCell<Option<PathBuf>>>>,
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
     editor_notebook: Option<&gtk4::Notebook>,
 ) -> bool {
+    // MIME + path gate first; if that’s inconclusive, inspect the tab page for `Picture`/audio chrome — image/video/audio tabs aren’t plain text saves.
     // Check if we have an active file path
     if let Some(tab_path_ref) = active_tab_path {
         // borrow() gets read-only access to the data inside a RefCell.
@@ -251,6 +258,9 @@ fn has_audio_controls(box_widget: &gtk4::Box) -> bool {
 /// Handles `.gitignore`-style filtering when enabled and respects the
 /// user's "show hidden files" setting.
 ///
+/// Entries whose names start with `.` are omitted (typical “hidden” files). There is no
+/// `.gitignore` parsing in this path — that logic lives in global search / other tools.
+///
 /// See FEATURES.md: Feature #18 — File Navigation Panel
 /// See FEATURES.md: Feature #20 — Alphabetical File Sorting
 /// See FEATURES.md: Feature #21 — Folders First
@@ -258,9 +268,11 @@ pub fn update_file_list(
     file_list_box: &ListBox,
     current_dir: &PathBuf,
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Open file to highlight in the list (`None` = no row pre-selected beyond directory scan).
     file_path: &Option<PathBuf>,
     selection_source: FileSelectionSource,
 ) {
+    // Full rebuild of sidebar rows — tuned for normal-sized directories; exotic huge folders may want future virtualization.
     // Clear the existing list contents
     while let Some(child) = file_list_box.first_child() {
         file_list_box.remove(&child);
@@ -281,7 +293,7 @@ pub fn update_file_list(
                 let file_name = entry.file_name();
                 let file_name_str = file_name.to_string_lossy();
 
-                // Skip hidden files (starting with .)
+                // Skip dotfiles — keeps the default explorer uncluttered (not a full “show hidden” toggle yet).
                 if file_name_str.starts_with('.') {
                     continue;
                 }
@@ -372,7 +384,7 @@ pub fn update_file_list(
         file_list_box.select_row(Some(&row));
 
         // Scroll to make the selected row visible (preferably centered)
-        // Use timeout to ensure the row is properly laid out before scrolling
+        // Use timeout to ensure the row is properly laid out before scrolling — same-tick `append`+scroll can see height 0.
         let row_clone = row.clone();
         // The "move" keyword forces the closure to take ownership of the variables it uses.
         glib::timeout_add_local_once(std::time::Duration::from_millis(10), move || {
@@ -415,10 +427,12 @@ pub fn update_file_list(
 ///
 /// Disables save functionality for content types that can't be edited,
 /// such as images and audio files which are display/playback-only in this editor.
+/// Uses MIME **top-level** type only (`image/*`, `audio/*`) — text/svg/markdown stay writable even when MIME is quirky.
 pub fn update_save_buttons_visibility(
     save_button: &Button,
     save_as_button: &Button,
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // `None` means MIME unknown — keep save visible so text paths are not accidentally hidden.
     mime_type: Option<mime_guess::Mime>,
 ) {
     // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
@@ -439,6 +453,7 @@ pub fn update_save_buttons_visibility(
 /// Updates the visibility of the save menu button based on content type
 ///
 /// Similar to update_save_buttons_visibility, but for the split button menu component
+/// Hides the whole split-button container so the header bar doesn’t show a dead primary half for non-text tabs.
 pub fn update_save_menu_button_visibility(
     save_menu_button: &MenuButton,
     mime_type: Option<mime_guess::Mime>,
@@ -473,6 +488,7 @@ pub fn update_save_menu_button_visibility(
 /// Each tuple contains the segment name and the full path to that segment
 /// Optimized to reduce string allocations
 pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
+    // Each tuple is one breadcrumb segment — used by `update_path_buttons` for clickable path navigation.
     let mut components = Vec::new();
     let mut current = PathBuf::new();
 
@@ -507,6 +523,7 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
         components.push(("Root".to_owned(), current.clone()));
     }
 
+    // After the home early-return: other paths are either absolute (we may have just seeded `/` + "Root") or relative (`current` is still empty until the loop fills it).
     // Add each path component with its full path
     for component in path.components() {
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
@@ -528,7 +545,7 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
             std::path::Component::ParentDir => {
                 if !current.as_os_str().is_empty() {
                     current.pop();
-                    // Parent directory component (..) - not adding to components list
+                    // Parent directory component (..) — no extra breadcrumb row; keeps `current` consistent if `..` appears in raw paths.
                 }
             }
             _ => {} // Skip other component types
@@ -545,6 +562,7 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
 pub fn update_path_buttons(
     path_box: &gtk4::Box,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // Breadcrumb source + which open file to mark in the list after navigation clicks.
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
@@ -645,6 +663,7 @@ pub fn update_path_buttons(
 ///
 /// This function configures a path button to accept dropped files and folders,
 /// allowing users to drag items from the file list onto any path segment to move them there.
+// Drop payload matches file-row drags (`glib::Type::STRING` path) → same confirmation + `rename` flow as the sidebar list.
 fn setup_path_button_drop_target(button: &gtk4::Button, target_path: &std::path::PathBuf) {
     use gtk4::{gdk, glib, DropTarget};
 
@@ -698,10 +717,12 @@ fn setup_path_button_drop_target(button: &gtk4::Button, target_path: &std::path:
 pub fn toggle_path_input_mode(
     path_box: &gtk4::Box,
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // Same `current_dir` / list / tab path bundle as `update_path_buttons` — Ctrl+L reuses this for Enter-to-navigate.
     current_dir: &Rc<RefCell<PathBuf>>,
     file_list_box: &gtk4::ListBox,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
+    // Ctrl+L toggles breadcrumb buttons ↔ manual path `Entry` — probe existing children so we don't duplicate widgets.
     // Check if we're already in input mode by looking for an Entry widget or input container
     let mut has_entry = false;
     let mut child = path_box.first_child();
@@ -745,6 +766,7 @@ fn show_path_input(
     file_list_box: &gtk4::ListBox,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
+    // Ctrl+L path: swap breadcrumbs for an `Entry`; valid Enter navigates then `restore_path_buttons`, Esc/close cancels without `cd`.
     // Clear existing buttons
     while let Some(child) = path_box.first_child() {
         path_box.remove(&child);
@@ -923,6 +945,7 @@ fn restore_path_buttons(
     file_list_box: &gtk4::ListBox,
     active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
 ) {
+    // Tear down the Entry row and redraw crumbs via `update_path_buttons` (directory unchanged unless Enter succeeded in `show_path_input`).
     // Clear the input widget
     while let Some(child) = path_box.first_child() {
         path_box.remove(&child);
@@ -969,6 +992,7 @@ pub fn setup_keyboard_shortcuts(
     editor_paned: Option<&gtk4::Paned>,
     terminal_notebook: Option<&gtk4::Notebook>,
 ) {
+    // Window-level controller runs in capture phase — shortcuts fire before child widgets unless we Proceed.
     // Create a key event controller
     let key_controller = EventControllerKey::new();
 
@@ -1129,7 +1153,7 @@ pub fn setup_keyboard_shortcuts(
                     }
                     return glib::Propagation::Proceed;
                 },
-                // Ctrl+Q or Ctrl+W: Quit/Close
+                // Ctrl+Q vs Ctrl+W — quit is handled here; tab close is not (see note on `w` below).
                 Some("q") | Some("w") => {
                     // For Ctrl+Q, close the entire application
                     if keyval.name().as_deref() == Some("q") {
@@ -1140,6 +1164,7 @@ pub fn setup_keyboard_shortcuts(
                         return glib::Propagation::Stop;
                     }
                     // For Ctrl+W, we could close the current tab (not implemented here)
+                    // Ctrl+W: this global shortcut table has no access to `handle_close_tab_request` / `NewTabDependencies` (dirty save, `file_path_manager` reindex). Command palette / menu may still hit GIO `win.close-tab` in `main.rs` (a separate, “fast” path).
                     if keyval.name().as_deref() == Some("w") {
                         println!("Keyboard shortcut: Ctrl+W (Close Tab) - Not implemented yet");
                         // Future implementation could close the current tab
@@ -1451,6 +1476,7 @@ pub fn setup_keyboard_shortcuts(
         glib::Propagation::Proceed
     });
 
+    // Register on window so shortcuts work from any focused descendant widget inside it.
     // Add the controller to the window
     window.add_controller(key_controller);
 

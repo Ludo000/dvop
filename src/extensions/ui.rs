@@ -21,6 +21,7 @@ use super::Extension;
 /// Populates the extensions panel (the GtkBox from the sidebar stack) with extension cards.
 pub fn populate_extensions_panel(panel: &gtk4::Box) {
     // Clear existing children
+    // GTK keeps widgets until removed — always clear before rebuild after install/toggle.
     while let Some(child) = panel.first_child() {
         panel.remove(&child);
     }
@@ -96,6 +97,7 @@ pub fn populate_extensions_panel(panel: &gtk4::Box) {
     // Get extensions from manager (includes both script and native extensions)
     let mgr = super::manager::get_manager();
     let extensions: Vec<_> = mgr.get_all_extensions();
+    // `get_manager()` holds `EXTENSION_MANAGER`’s mutex — drop before building cards (toggle handlers call `manager` again; a held guard would deadlock).
     drop(mgr);
 
     if extensions.is_empty() {
@@ -137,6 +139,7 @@ pub fn populate_extensions_panel(panel: &gtk4::Box) {
 /// Disable all extensions (both script-based and native)
 fn disable_all_extensions() {
     let mut mgr = super::manager::get_manager();
+    // `get_all_extensions` merges natives — same ids `set_enabled` already routes to JSON vs `manifest.json` persistence.
     let all_ids: Vec<String> = mgr.get_all_extensions().iter().map(|e| e.manifest.id.clone()).collect();
     for id in &all_ids {
         mgr.set_enabled(id, false);
@@ -173,6 +176,8 @@ fn show_install_dialog(
     filter.set_name(Some("Extension archives (*.tar.gz)"));
     filter.add_pattern("*.tar.gz");
     dialog.add_filter(&filter);
+
+    // Install path shells out to `tar xzf` (see `install_from_archive`) — host must ship a POSIX `tar`; exotic layouts need manual unpack into `~/.config/dvop/extensions/`.
 
     // The "move" keyword forces the closure to take ownership of the variables it uses.
     dialog.connect_response(move |dialog, response| {
@@ -637,6 +642,7 @@ fn build_overview_tab(ext: &Extension, panel: &gtk4::Box) -> gtk4::ScrolledWindo
             "Extension {}",
             if enabled { "enabled" } else { "disabled" }
         ));
+        // `refresh_extension` re-applies CSS, keybindings, menus — must run after `set_enabled` wrote manifest/disk so hooks see the new state.
         super::hooks::refresh_extension(&ext_id, enabled);
         glib::Propagation::Proceed
     });

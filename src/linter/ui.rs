@@ -20,6 +20,21 @@
 // UI integration for the linter
 // This module handles displaying lint diagnostics in the editor.
 // Language-specific linting (e.g. Rust via rust-analyzer) is handled by
+//!
+//! ## GTK rule of thumb
+//!
+//! Never touch widgets from a background thread. Worker threads should finish their work and then
+//! schedule UI updates with `glib::idle_add_once`, `glib::MainContext::default().invoke`, or similar,
+//! so code runs again on the **main thread** where GTK is safe.
+//!
+//! ## Same data, two keys
+//!
+//! `store_diagnostics_for_uri` uses **`file://` URIs** to match LSP and the panel. Underlines in
+//! `linter::apply_diagnostic_underlines` use **plain paths**. Incoming Rust diagnostics typically call
+//! both `store_diagnostics_for_uri` and `linter::store_file_diagnostics` with the same payload.
+
+// UI integration for the linter — panel, status bar, buffer registration, debounced lint runs.
+// Rust/rust-analyzer specifics live in `extensions/rust_diagnostics.rs`; this file stays mostly generic.
 // native extensions in extensions/rust_diagnostics.rs.
 use gtk4::{glib, Box as GtkBox, Label, Image};
 use sourceview5::{prelude::*, View};
@@ -33,6 +48,7 @@ use std::sync::{Arc, Mutex};
 use super::{lint_by_language, Diagnostic, DiagnosticSeverity};
 
 /// Coalesce many refresh requests (session restore, tab churn) into one idle repaint.
+// Flag flipped inside `refresh_diagnostics_panel` — paired with `compare_exchange` + `idle_add_local_once` so bursts become one Gtk rebuild.
 static DIAGNOSTICS_PANEL_REFRESH_QUEUED: AtomicBool = AtomicBool::new(false);
 
 fn diagnostics_panel_debug(msg: impl AsRef<str>) {
@@ -47,6 +63,7 @@ type VisibilityCallback = RefCell<Option<Rc<dyn Fn(bool)>>>;
 // Global diagnostics store — used by both local linters and native extensions
 lazy_static::lazy_static! {
     // Arc<Mutex<T>> provides thread-safe shared mutable state. Arc for multiple owners across threads, Mutex for locking.
+    // Keys are **LSP-style** strings like `file:///home/me/proj/src/main.rs` (not OS paths).
     static ref DIAGNOSTICS_STORE: Arc<Mutex<HashMap<String, Vec<Diagnostic>>>> =
         // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
         Arc::new(Mutex::new(HashMap::new()));
@@ -55,24 +72,27 @@ lazy_static::lazy_static! {
 // Thread-local callback for diagnostics panel visibility
 thread_local! {
     // RefCell::new creates a container that checks borrowing rules at runtime.
+    // Each OS thread has its own copy — GTK runs on one thread, so this is cheap global state without locking.
     static DIAGNOSTICS_PANEL_CALLBACK: VisibilityCallback = RefCell::new(None);
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
     static LINTER_STATUS_BOX: RefCell<Option<GtkBox>> = const { RefCell::new(None) };
     // RefCell::new creates a container that checks borrowing rules at runtime.
     static LINTER_STATUS_VISIBILITY_CALLBACK: VisibilityCallback = RefCell::new(None);
-    
+
     // Track open buffers by file URI for reapplying diagnostics (thread-local since GTK is single-threaded)
-    static BUFFER_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::Buffer>>> = 
+    // `WeakRef` avoids cycles: if the buffer is destroyed when a tab closes, `upgrade()` returns None.
+    // Canonical path string → weak buffer/view — lets diagnostics refresh underlines without `Rc` cycles buffer↔linter.
+    static BUFFER_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::Buffer>>> =
         // RefCell::new creates a container that checks borrowing rules at runtime.
         RefCell::new(HashMap::new());
-    
+
     // Track source views by file URI for forcing redraw after diagnostic updates
-    static VIEW_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::View>>> = 
+    static VIEW_REGISTRY: RefCell<HashMap<String, glib::WeakRef<sourceview5::View>>> =
         // RefCell::new creates a container that checks borrowing rules at runtime.
         RefCell::new(HashMap::new());
-    
+
     // Track the currently active view and its file path for refresh button
-    static ACTIVE_VIEW_INFO: RefCell<Option<(glib::WeakRef<sourceview5::View>, std::path::PathBuf)>> = 
+    static ACTIVE_VIEW_INFO: RefCell<Option<(glib::WeakRef<sourceview5::View>, std::path::PathBuf)>> =
         RefCell::new(None);
 }
 
@@ -98,6 +118,7 @@ pub fn set_linter_status_visibility_callback<F>(callback: F)
 where
     F: Fn(bool) + 'static,
 {
+    // `main.rs` wires this to show/hide the icon strip beside the primary status when Rust diagnostics UI should appear.
     LINTER_STATUS_VISIBILITY_CALLBACK.with(|cell| {
         *cell.borrow_mut() = Some(Rc::new(callback));
     });
@@ -105,9 +126,10 @@ where
 
 /// Update the linter status label
 pub fn update_linter_status(status: &str) {
+    // Schedule on the next main-loop tick — safe even if something called us from a weird re-entrancy context.
     glib::idle_add_once({
         let status = status.to_string();
-        // The "move" keyword forces the closure to take ownership of the variables it uses.
+        // `move` captures `status` by value into the closure so the closure can live past this function return.
         move || {
             LINTER_STATUS_BOX.with(|cell| {
                 // borrow() gets read-only access to the data inside a RefCell.
@@ -208,6 +230,7 @@ pub fn show_diagnostics_panel_on_main_thread() {
 #[allow(dead_code)]
 // pub makes this function public, allowing it to be used from outside this module.
 pub fn hide_diagnostics_panel() {
+    // Always marshal to the main thread — callers may include LSP/background paths that are not GTK-safe.
     glib::idle_add_once(|| {
         DIAGNOSTICS_PANEL_CALLBACK.with(|cell| {
             if let Some(ref callback) = *cell.borrow() {
@@ -239,6 +262,7 @@ pub fn show_linter_status_visibility(show: bool) {
 /// Store diagnostics for a file URI (used by native extensions and local linters).
 /// Pass an empty vec to clear diagnostics for the URI.
 pub fn store_diagnostics_for_uri(file_uri: &str, diagnostics: Vec<Diagnostic>) {
+    // `file_uri` must match other producers character-for-character (`file://` + `Path::display`) — mismatched slashes or encoding means duplicate map entries and a split panel vs underlines.
     // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
         if diagnostics.is_empty() {
@@ -284,6 +308,7 @@ pub fn update_diagnostics_count() {
 /// Language-specific setup (e.g. Rust LSP) is handled by native extensions
 /// via on_file_open hooks.
 pub fn setup_linting(source_view: &View, file_path: Option<&Path>) {
+    // Per-tab wiring: `register_buffer_for_diagnostics` must run for the same path so URI/path stores stay aligned with this buffer.
     diagnostics_panel_debug(format!(
         "🔧 setup_linting called with file_path: {:?}",
         file_path
@@ -360,6 +385,7 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
     } else {
         let start = buffer.start_iter();
         let end = buffer.end_iter();
+        // `true` includes Gtk embedded control segments — linters see the buffer as GtkSource holds it; disk saves elsewhere use `false` to strip those for plain files.
         buffer.text(&start, &end, true).to_string()
     };
 
@@ -394,6 +420,7 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
 
         // The "move" keyword forces the closure to take ownership of the variables it uses.
         std::thread::spawn(move || {
+            // Merge extension JSON diagnostics into the same URI/path stores as LSP — must hop back to GTK before touching buffers/tags.
             let ext_diags = crate::extensions::hooks::run_extension_linters(&path_buf);
             if ext_diags.is_empty() {
                 return;
@@ -420,6 +447,7 @@ fn run_linter(_source_view: &View, buffer: &impl IsA<gtk4::TextBuffer>, file_pat
 }
 
 fn flush_diagnostics_panel_from_store() {
+    // Full panel refresh after `clear_diagnostics`: repopulate every file section from `DIAGNOSTICS_STORE` (already merged LSP + extension JSON).
     diagnostics_panel_debug("🔄 Refreshing diagnostics panel (flush)…");
 
     crate::linter::diagnostics_panel::clear_diagnostics();
@@ -459,6 +487,8 @@ fn apply_diagnostics_to_ui(
 
     // Built-in linter intentionally returns nothing for `.rs`; rust-analyzer owns the store.
     // Do not clear LSP diagnostics when the built-in pass is empty.
+    // Built-in pass skips Rust source content (`run_linter` passes empty `content` for `.rs`), so `diagnostics`
+    // is often empty here — **must not** wipe LSP results that already live in the stores.
     if diagnostics.is_empty()
         && path
             .extension()
@@ -491,6 +521,7 @@ fn apply_diagnostics_to_ui(
     }
 
     // Store in DIAGNOSTICS_STORE
+    // URI-keyed copy for the side panel + counts (see module docs: path-keyed copy follows).
     let has_any_diagnostics = if let Ok(mut store) = DIAGNOSTICS_STORE.lock() {
         if diagnostics.is_empty() {
             store.remove(&file_uri);
@@ -503,11 +534,13 @@ fn apply_diagnostics_to_ui(
     };
 
     // Also store in the global file diagnostics (for underlines)
+    // Plain-path copy for `apply_diagnostic_underlines` / Gtk text tags (same diagnostics, different key type).
     crate::linter::store_file_diagnostics(&path.to_string_lossy(), diagnostics.to_vec());
 
     // Apply underlines if we have a source buffer (skip no-op when empty and never applied tags).
     if let Some(source_buffer) = buffer.dynamic_cast_ref::<sourceview5::Buffer>() {
         let path_str = path.to_string_lossy();
+        // Skip redundant full-buffer tag clears when there were never any underlines for this file.
         let empty_no_prior_underlines = diagnostics.is_empty()
             && !crate::linter::has_applied_diagnostic_underlines_for_path(path_str.as_ref());
         if !empty_no_prior_underlines {
@@ -531,12 +564,14 @@ fn apply_diagnostics_to_ui(
 /// Rebuild the diagnostics panel from `DIAGNOSTICS_STORE`. Requests are **coalesced**: many calls
 /// before the next GTK idle result in a single UI update (important during session restore).
 pub fn refresh_diagnostics_panel() {
+    // Only the first caller wins and queues work; others bail — prevents dozens of repaints during tab storms.
     if DIAGNOSTICS_PANEL_REFRESH_QUEUED
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         .is_err()
     {
         return;
     }
+    // One `flush` per burst — the atomic gate + idle deferral collapses many LSP/save callbacks into a single panel rebuild on the next main-loop tick.
     glib::idle_add_local_once(|| {
         DIAGNOSTICS_PANEL_REFRESH_QUEUED.store(false, Ordering::SeqCst);
         flush_diagnostics_panel_from_store();
@@ -546,6 +581,7 @@ pub fn refresh_diagnostics_panel() {
 /// Notify native extensions that a file was saved.
 /// This replaces the old direct rust-analyzer notification.
 pub fn notify_file_saved(file_path: &Path) {
+    // Central entry so save handlers don’t list extension IDs — script hooks still go through `hooks::fire_on_file_save` separately.
     crate::extensions::native::fire_on_file_save(file_path);
 }
 
@@ -596,6 +632,8 @@ pub fn reapply_diagnostic_underlines(file_uri: &str) {
 
 /// Register a buffer and view for diagnostic underline updates
 pub fn register_buffer_for_diagnostics(file_path: &Path, buffer: &sourceview5::Buffer, view: &sourceview5::View) {
+    // Same URI overwrites a prior registration — reopening a path in a new tab should point diagnostics at the live buffer.
+    // `from_file_path` fails on non-absolute paths on some platforms — then we simply skip registration.
     if let Ok(url) = url::Url::from_file_path(file_path) {
         let uri = url.to_string();
         diagnostics_panel_debug(format!(
@@ -642,6 +680,8 @@ pub fn set_active_view_for_refresh(file_path: Option<&Path>, view: Option<&sourc
 /// Trigger a refresh of diagnostics for the currently active file
 /// This is called by the refresh button in the diagnostics panel
 pub fn trigger_lint_refresh() {
+    // Diagnostics panel "Refresh" — uses whichever view/path `set_active_view_for_refresh` last recorded as the focused editor.
+    // If the tab was closed, `Weak` fails to upgrade and nothing runs — focus a source tab again to repopulate `ACTIVE_VIEW_INFO`.
     ACTIVE_VIEW_INFO.with(|cell| {
         if let Some((weak_view, file_path)) = &*cell.borrow() {
             if let Some(view) = weak_view.upgrade() {

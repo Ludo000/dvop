@@ -17,6 +17,18 @@
 //! See FEATURES.md: Feature #47 — Real-Time Diagnostics
 //! See FEATURES.md: Feature #48 — Inline Error Highlighting
 //! See FEATURES.md: Feature #49 — Diagnostics Panel
+//!
+//! ## Two places diagnostics are stored (important)
+//!
+//! This module owns **`FILE_DIAGNOSTICS`** (`store_file_diagnostics` / `get_file_diagnostics`):
+//! a map from **filesystem path string** → diagnostics. That map feeds `apply_diagnostic_underlines`,
+//! which paints squiggles in the `GtkSourceView` buffer.
+//!
+//! The **`linter::ui`** submodule also keeps **`DIAGNOSTICS_STORE`**, keyed by **LSP-style URI**
+//! (`file:///...`). That copy drives the diagnostics side panel and status-bar counts. Producers such
+//! as the Rust LSP callback update **both** stores so the panel and the editor agree. If you add a
+//! new diagnostic source, follow the same pattern: update URI store for UI, path store for underlines
+//! (or call the helpers in `ui.rs` that already do both).
 
 pub mod diagnostics_panel;
 pub mod gtk_ui_linter;
@@ -79,6 +91,7 @@ impl Diagnostic {
 
     // pub makes this function public, allowing it to be used from outside this module.
     pub fn with_end_position(mut self, end_line: usize, end_column: usize) -> Self {
+        // Builder-style setter — LSP ranges fill this; omit for point diagnostics (single underline cell).
         self.end_line = Some(end_line);
         self.end_column = Some(end_column);
         self
@@ -93,6 +106,8 @@ pub fn lint_file(file_path: &Path, content: &str) -> Vec<Diagnostic> {
     let mut diagnostics = lint_file_builtin(file_path, content);
 
     // Append diagnostics from extension linters
+    // Extension linters may spawn subprocesses — prefer calling `lint_file_builtin` from latency-sensitive GTK callbacks instead.
+    // Script extensions may contribute JSON diagnostics — merged into same vec as built-ins.
     let ext_diags = crate::extensions::hooks::run_extension_linters(file_path);
     diagnostics.extend(ext_diags);
 
@@ -116,6 +131,7 @@ pub fn lint_file_builtin(file_path: &Path, content: &str) -> Vec<Diagnostic> {
 
 /// Run linter for a specific language
 pub fn lint_by_language(language: &str, _content: &str) -> Vec<Diagnostic> {
+    // `run_linter` calls this when there is no file path (Untitled tabs, etc.) — only GtkSource’s language id is known, unlike `lint_file_builtin` which keys off `Path::extension`.
     // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
     match language.to_lowercase().as_str() {
         // Rust diagnostics are handled by the rust-diagnostics extension (via rust-analyzer LSP)
@@ -140,6 +156,7 @@ fn underline_debug(msg: impl AsRef<str>) {
 
 /// Call when a tab/file is closed so underline fast-path tracking does not leak.
 pub fn forget_diagnostic_underline_tracking_for_path(file_path: &str) {
+    // Without this, `apply_diagnostic_underlines` may skip clearing tags on the next empty-diagnostic update for a reused path.
     if let Ok(mut s) = FILES_WITH_APPLIED_UNDERLINE_TAGS.lock() {
         s.remove(file_path);
     }
@@ -158,6 +175,7 @@ pub fn has_applied_diagnostic_underlines_for_path(file_path: &str) -> bool {
 type DiagnosticsMap = Arc<Mutex<HashMap<String, Vec<Diagnostic>>>>;
 
 // Global storage for file diagnostics
+// Keys are display-style path strings (see `store_file_diagnostics`) — not `file://` URIs; LSP strips URI prefix before inserting here.
 static FILE_DIAGNOSTICS: Lazy<DiagnosticsMap> =
     // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
@@ -165,9 +183,10 @@ static FILE_DIAGNOSTICS: Lazy<DiagnosticsMap> =
 /// Store diagnostics for a file
 pub fn store_file_diagnostics(file_path: &str, diagnostics: Vec<Diagnostic>) {
     // lock() acquires the Mutex lock. It blocks until the lock is available.
+    // Keys match `Path::display`-style strings (forward slashes on Unix); keep consistent when calling.
     if let Ok(mut map) = FILE_DIAGNOSTICS.lock() {
         if diagnostics.is_empty() {
-            map.remove(file_path);
+            map.remove(file_path); // remove key entirely so `get_file_diagnostics` returns no stale items
         } else {
             map.insert(file_path.to_string(), diagnostics);
         }
@@ -176,6 +195,7 @@ pub fn store_file_diagnostics(file_path: &str, diagnostics: Vec<Diagnostic>) {
 
 /// Get diagnostics for a file
 pub fn get_file_diagnostics(file_path: &str) -> Vec<Diagnostic> {
+    // Returns a clone — safe to mutate/discard; authoritative store stays in `FILE_DIAGNOSTICS`.
     FILE_DIAGNOSTICS
         // lock() acquires the Mutex lock. It blocks until the lock is available.
         .lock()
@@ -186,6 +206,8 @@ pub fn get_file_diagnostics(file_path: &str) -> Vec<Diagnostic> {
 
 /// Apply diagnostic underlines to a source buffer
 pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str) {
+    // `file_path` must match the key used in `store_file_diagnostics` (plain path string — not `file://` URIs used by the panel store).
+    // --- Load & short-circuit -------------------------------------------------
     let mut diagnostics = get_file_diagnostics(file_path);
 
     underline_debug(format!(
@@ -198,6 +220,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
     let start_iter = buffer.start_iter();
     let end_iter = buffer.end_iter();
 
+    // --- Empty diagnostics: fast path (avoid O(n) tag removal when nothing was ever drawn) ----------
     if diagnostics.is_empty() {
         let had_underlines = FILES_WITH_APPLIED_UNDERLINE_TAGS
             .lock()
@@ -225,6 +248,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
     }
 
     // Clear stale diagnostic tags before applying a new non-empty set
+    // --- Full clear + re-apply (non-empty set) ----------------------------------------------------
     if let Some(tag) = tag_table.lookup("diagnostic-info-underline") {
         buffer.remove_tag(&tag, &start_iter, &end_iter);
     }
@@ -236,6 +260,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
     }
 
     // Sort diagnostics by severity (Info > Warning > Error) so more severe ones are applied last and take precedence
+    // Later `apply_tag` calls win over earlier overlaps — sort ascending severity so error wins.
     diagnostics.sort_by(|a, b| {
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
         let severity_value = |s: &DiagnosticSeverity| match s {
@@ -247,6 +272,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
     });
 
     // Create or get tags for each severity level with proper priorities
+    // Gtk `TextTag` objects are created once per process and reused (lookup-or-insert).
     let info_tag = if let Some(tag) = tag_table.lookup("diagnostic-info-underline") {
         tag
     } else {
@@ -288,6 +314,7 @@ pub fn apply_diagnostic_underlines(buffer: &sourceview5::Buffer, file_path: &str
     // Apply tags for each diagnostic (sorted by severity, so errors override warnings/info)
     for diag in diagnostics {
         // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
+        // One GtkTextTag application per diagnostic — overlapping ranges use last-applied tag color.
         let tag = match diag.severity {
             DiagnosticSeverity::Error => &error_tag,
             DiagnosticSeverity::Warning => &warning_tag,

@@ -29,10 +29,10 @@ use super::settings_dialog_template::SettingsDialog;
 ///
 /// Returns the dialog for display
 pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
-    // Create the template-based dialog
+    // `SettingsDialog` is the glib wrapper from `settings_dialog_template`; `.theme_info()` etc. are accessors.
     let dialog = SettingsDialog::new(parent);
 
-    // Get references to widgets
+    // TemplateChild getters — each returns the typed widget declared in `settings_dialog.ui`.
     let theme_info = dialog.theme_info();
     let light_theme_dropdown = dialog.light_theme_dropdown();
     let dark_theme_dropdown = dialog.dark_theme_dropdown();
@@ -64,6 +64,7 @@ pub fn create_settings_dialog(parent: &impl IsA<ApplicationWindow>) -> Dialog {
 
     // Make sure we have the latest settings
     settings::refresh_settings();
+    // Pulls from disk through `file_cache` — picks up manual edits to `settings.conf` made outside the app.
 
     // Get current settings
     let settings_instance = settings::get_settings();
@@ -237,6 +238,7 @@ fn setup_theme_dropdown(
 ///
 /// Should be called after changing theme settings.
 pub fn apply_theme_changes_globally(parent_window: &ApplicationWindow) {
+    // Runs after user confirms theme prefs — refreshes GtkSource schemes + terminal ANSI colors; relies on `update_all_buffer_themes` for editor tabs.
     println!("Applying global theme changes...");
 
     // Get fresh settings to ensure we have the latest values
@@ -288,7 +290,7 @@ fn find_terminal_notebook(window: &ApplicationWindow) -> Option<Notebook> {
     let all_notebooks = find_all_notebooks(window.upcast_ref::<gtk4::Widget>());
     println!("Found {} notebooks total", all_notebooks.len());
 
-    // Find the notebook that contains terminal widgets
+    // Scan every notebook in the window — return the first page-0 subtree that contains a `VteTerminal` (matches how the shell panel is embedded today).
     for (idx, notebook) in all_notebooks.iter().enumerate() {
         println!("Checking notebook {}", idx);
         if notebook.n_pages() > 0 {

@@ -48,6 +48,7 @@ use gstreamer::prelude::*;
 use gstreamer::{Pipeline, State};
 
 /// Progress tracking for spectrogram generation
+/// Heavy FFT work runs off the UI thread; this enum reports async progress back to Gtk widgets.
 #[derive(Debug, Clone)]
 enum SpectrogramProgress {
     NotStarted,
@@ -100,6 +101,7 @@ impl GlobalVolumeManager {
         *self.current_volume.lock().unwrap() = clamped_volume;
 
         // Save to settings
+        // Immediate disk write — keeps the slider coherent across tabs and survives restart (`settings::set_audio_volume`).
         {
             let mut settings = settings::get_settings_mut();
             settings.set_audio_volume(clamped_volume);
@@ -109,6 +111,7 @@ impl GlobalVolumeManager {
         }
 
         // Refresh settings to trigger any global updates
+        // Re-read the JSON file into the global `EditorSettings` so `get_settings()` matches what we just saved (see `settings::refresh_settings` — cheap and consistent across tabs).
         settings::refresh_settings();
     }
 }
@@ -182,6 +185,7 @@ impl GlobalAudioManager {
 
     /// Stop all other audio players except the one that's starting to play
     fn stop_other_players(&self, current_pipeline: &gstreamer::Pipeline, current_player_id: &str) {
+        // Same “one active decode” policy as video — avoids overlapping GStreamer outputs when the user opens another track.
         // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
         let mut players = self.active_players.lock().unwrap();
         // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
@@ -348,12 +352,14 @@ pub fn is_music_file(path: &std::path::Path) -> bool {
 /// Public function to stop all audio players associated with a specific file path
 /// This should be called when a music file tab is closed
 pub fn stop_audio_for_file(file_path: &std::path::Path) {
+    // Tab close — same idea as `video::stop_video_for_file`: release GStreamer state before Gtk destroys the tab.
     GLOBAL_AUDIO_MANAGER.stop_players_for_file(file_path);
 }
 
 /// Public function to stop all currently playing audio players
 /// This should be called when a video starts playing
 pub fn stop_all_audio_players() {
+    // Video widgets call this on play — pairs with `video::stop_all_video_players` when audio wins the shared output.
     // lock() acquires the Mutex lock. It blocks until the lock is available.
     let players = GLOBAL_AUDIO_MANAGER.active_players.lock().unwrap();
     let mut notifications = GLOBAL_AUDIO_MANAGER.stopped_notifications.lock().unwrap();
@@ -481,6 +487,7 @@ pub struct AudioPlayer {
     play_button: Button,
     #[allow(dead_code)]
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // Playback + viz state: `Rc<RefCell>` so GStreamer bus callbacks and GTK handlers share cells (main thread only — no `Arc`).
     current_position: Rc<RefCell<u64>>,
     #[allow(dead_code)]
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
@@ -495,6 +502,7 @@ pub struct AudioPlayer {
     spectrum_area: DrawingArea,
     #[allow(dead_code)]
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Populated after async decode — `None` until the waveform drawer has samples to paint.
     waveform_data: Rc<RefCell<Option<WaveformData>>>,
 }
 

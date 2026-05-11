@@ -108,6 +108,7 @@ impl FileCache {
                 .unwrap_or(Duration::from_secs(u64::MAX));
 
             // Return cached content if it's still valid and file hasn't been modified
+            // `>=` allows identical mtimes; any external save that advances mtime misses here and we re-read below.
             if cache_age < self.cache_duration && cached_file.last_modified >= file_modified_time {
                 // We use .clone() because the cache "owns" the string. 
                 // We're giving the caller their own copy to play with.
@@ -171,11 +172,13 @@ impl FileCache {
 // In Rust, global variables are tricky. lazy_static makes sure GLOBAL_FILE_CACHE
 // is only created the very first time someone tries to use it.
 lazy_static::lazy_static! {
+    // Process-wide singleton — every `get_cached_file_content` / invalidation shares one TTL clock and map.
     static ref GLOBAL_FILE_CACHE: FileCache = FileCache::with_default_duration();
 }
 
 /// Get cached file content using the global cache
 pub fn get_cached_file_content(path: &std::path::Path) -> std::io::Result<String> {
+    // Delegates to `GLOBAL_FILE_CACHE` so every caller shares one TTL map — don’t construct ad-hoc `FileCache` in feature code.
     GLOBAL_FILE_CACHE.get_file_content(path)
 }
 
@@ -183,11 +186,13 @@ pub fn get_cached_file_content(path: &std::path::Path) -> std::io::Result<String
 #[allow(dead_code)]
 // pub makes this function public, allowing it to be used from outside this module.
 pub fn invalidate_file_cache<P: AsRef<Path>>(path: P) {
+    // After save or an out-of-process edit: drop the entry so the next read sees fresh bytes + mtime.
     GLOBAL_FILE_CACHE.invalidate(path);
 }
 
 /// Clean up expired entries in the global cache
 pub fn cleanup_file_cache() {
+    // Purges entries past TTL without waiting for a touch — hook from an idle timer if long sessions should shrink RAM use.
     GLOBAL_FILE_CACHE.cleanup_expired();
 }
 

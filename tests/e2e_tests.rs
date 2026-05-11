@@ -1,5 +1,6 @@
-// Deep End-to-End Tests for Dvop Features
-// Each test thoroughly validates feature functionality, not just initialization
+// Broader scenarios (temp dirs, sample projects, multi-step UI flows). Slower than `quick_tests`.
+// Uses `dvop::...` for the same reasons as other integration tests — full crate API, no `main.rs` binary.
+// Run: `cargo test --test e2e_tests`
 
 use gtk4::prelude::*;
 use gtk4::{Notebook, Label, Box as GtkBox, Orientation, ListBox, Entry};
@@ -26,7 +27,8 @@ fn ensure_completion_loaded() {
 // Helper to create test workspace
 fn create_test_workspace() -> TempDir {
     let dir = TempDir::new().unwrap();
-    
+
+    // One tree exercises Rust/Python/JS plus a nested path — many features assume a non-empty `src`-like layout.
     // Create sample files
     fs::write(dir.path().join("test.rs"), r#"
 fn main() {

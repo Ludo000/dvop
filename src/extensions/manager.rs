@@ -44,6 +44,7 @@ impl ExtensionManager {
 
     /// Load all extensions from the extensions directory
     pub fn load_extensions(&mut self) {
+        // Full rescan: extension UI may call this after install/remove so stale manifests disappear from memory.
         self.extensions.clear();
 
         if !self.extensions_dir.exists() {
@@ -62,6 +63,7 @@ impl ExtensionManager {
             }
         };
 
+        // Flat scan of immediate children — nested dirs are not walked (each extension is one top-level folder).
         for entry in entries.flatten() {
             let path = entry.path();
             if !path.is_dir() {
@@ -107,6 +109,7 @@ impl ExtensionManager {
     pub fn get_all_extensions(&self) -> Vec<Extension> {
         let mut all: Vec<Extension> = self.extensions.clone();
         for manifest in super::native::get_native_manifests() {
+            // Empty path — native extensions have no on-disk folder (they’re compiled in).
             all.push(Extension::new(manifest, std::path::PathBuf::new()));
         }
         all
@@ -147,6 +150,7 @@ impl ExtensionManager {
 
     /// Remove an extension by ID (deletes from disk)
     pub fn remove_extension(&mut self, id: &str) -> Result<String, String> {
+        // Script extensions only — native IDs live in `native::` and aren’t stored as removable folders here.
         if let Some(pos) = self.extensions.iter().position(|e| e.manifest.id == id) {
             let ext = self.extensions.remove(pos);
             let name = ext.manifest.name.clone();
@@ -162,6 +166,8 @@ impl ExtensionManager {
     /// Run all enabled extensions' status_bar scripts for the given file.
     /// Returns concatenated output.
     pub fn run_status_bar_scripts(&self, file_path: &Path) -> String {
+        // Each script is `bash path/to/script $1` — mirrors extension runner semantics; outputs joined with ` | ` for the status strip.
+        // Runs synchronously on the caller thread (often GTK) — unlike `runner::run_script`, there is no built-in timeout here.
         let mut parts = Vec::new();
 
         for ext in &self.extensions {
@@ -204,6 +210,7 @@ impl ExtensionManager {
 
     /// Get all CSS file paths from enabled extensions (absolute paths).
     pub fn get_extension_css_paths(&self) -> Vec<std::path::PathBuf> {
+        // Order is deterministic (scan order of `self.extensions`) — `ui/css::build_complete_css` appends in this sequence for cascade tie-breaking.
         let mut paths = Vec::new();
         for ext in &self.extensions {
             if !ext.manifest.enabled {
@@ -252,6 +259,7 @@ impl ExtensionManager {
     /// Get all sidebar panel contributions from ALL extensions (not just enabled).
     /// Returns (ext_id, panel, enabled) tuples.
     pub fn get_extension_sidebar_panels(&self) -> Vec<(String, super::SidebarPanelContribution, bool)> {
+        // Includes disabled extensions so startup can build stack pages + activity toggles once — UI hides inactive rows via the `enabled` flag without a full `load_extensions` rescan.
         let mut panels = Vec::new();
         for ext in &self.extensions {
             for p in &ext.manifest.contributions.sidebar_panels {
@@ -288,6 +296,7 @@ pub fn install_from_archive(archive_path: &Path) -> Result<String, String> {
         return Err(format!("Failed to create extensions directory: {}", e));
     }
 
+    // Expect archive root to contain one folder with `manifest.json` — same layout as manual `~/.config/dvop/extensions/<id>/`.
     // Extract tar.gz using system tar command
     let output = std::process::Command::new("tar")
         .arg("xzf")
@@ -308,6 +317,7 @@ pub fn install_from_archive(archive_path: &Path) -> Result<String, String> {
     mgr.load_extensions();
     let new_count = mgr.get_extensions().len();
 
+    // If count stayed flat, the archive probably didn’t lay down a new `…/manifest.json` tree (bad layout) — extraction may still have littered files under `extensions_dir`.
     if new_count > old_count {
         // Find the newly added extension
         if let Some(ext) = mgr.get_extensions().last() {
@@ -315,6 +325,7 @@ pub fn install_from_archive(archive_path: &Path) -> Result<String, String> {
         }
     }
 
+    // Archive extracted but no new `manifest.json` appeared — user may have a flat tar or wrong root folder; UI still shows “installed” without a fresh name.
     Ok("Extension".to_string())
 }
 
@@ -340,6 +351,7 @@ pub fn get_status_bar_text() -> String {
 
 /// Get the extensions directory path (~/.config/dvop/extensions/)
 pub fn get_extensions_dir() -> PathBuf {
+    // One top-level folder per installed extension (`manifest.json` inside) — not the repo’s sample `.tar.gz` archives; those copy here via “Install from file”.
     if let Some(home) = home::home_dir() {
         home.join(".config").join("dvop").join("extensions")
     } else {
@@ -349,12 +361,14 @@ pub fn get_extensions_dir() -> PathBuf {
 
 /// Access the global extension manager (locked)
 pub fn get_manager() -> std::sync::MutexGuard<'static, ExtensionManager> {
+    // Hold this guard only while mutating or cloning — long-running script work should drop the lock first so UI threads don’t stall.
     // unwrap() extracts the value, but will crash (panic) if the value is an Error or None.
     EXTENSION_MANAGER.lock().unwrap()
 }
 
 /// Initialize the extension system: load all extensions from disk
 pub fn init() {
+    // Early startup: populate `EXTENSION_MANAGER` before panels/commands query manifests — native extensions merge in via `get_all_extensions`.
     let mut mgr = get_manager();
     mgr.load_extensions();
 }

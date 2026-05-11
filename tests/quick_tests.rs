@@ -1,5 +1,6 @@
-// Quick integration tests for Dvop
-// Run with: cargo test --test quick_tests
+// Integration tests — import the library crate (`dvop`) so we exercise real modules without launching `main`.
+// GTK is not thread-safe: `serial_test::serial` runs these tests one at a time; `gtk4::test_synced` wraps GTK init.
+// Run: `cargo test --test quick_tests`
 
 use gtk4::prelude::*;
 use gtk4::Notebook;
@@ -13,6 +14,7 @@ use std::rc::Rc;
 #[serial]
 #[test]
 fn test_all_features() {
+    // Single test bundles many assertions to pay GTK init once; use `e2e_tests` for scenario-sized cases and temp dirs.
     gtk4::test_synced(|| {
     
     // Test 1: New file creation
@@ -84,6 +86,7 @@ fn test_all_features() {
     }
     
     // Test 5: File path tracking
+    // Same shape as `handlers`’ `file_path_manager`: notebook page index → absolute path (production code rewrites keys after closes).
     {
         let manager: Rc<RefCell<HashMap<u32, PathBuf>>> = Rc::new(RefCell::new(HashMap::new()));
         
@@ -121,6 +124,7 @@ fn test_all_features() {
     }
     
     // Test 8: Git diff panel close menu items
+    // Simulates close order only — omits `file_path_manager` reindexing; see `handlers::actually_close_tab` for the full invariant.
     {
         let notebook = Notebook::new();
         let file_manager: Rc<RefCell<HashMap<u32, PathBuf>>> = Rc::new(RefCell::new(HashMap::new()));
@@ -176,6 +180,7 @@ fn test_all_features() {
     
     // Test 9: Git diff panel open related file button
     {
+        // `OPEN_FILE_CALLBACK` is wired in `main.rs` / `build_ui`; here we only assert the global hook invokes with the expected path.
         // Test that the open file callback can be set and called
         use std::sync::{Arc, Mutex};
         

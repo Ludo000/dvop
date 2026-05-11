@@ -10,6 +10,9 @@
 //! - `DIAGNOSTICS_SENDER` is the global send end (behind `Arc<Mutex<>>`).
 //! - The panel’s `create_diagnostics_panel()` spawns a `glib::timeout_add_local`
 //!   poller that drains the channel every 100 ms and updates the GTK widgets.
+//! - `create_diagnostics_panel()` registers a `glib::idle_add_local` closure that
+//!   returns `ControlFlow::Continue`, so GTK re-dispatches it when idle; each run
+//!   drains pending `mpsc` messages with `try_recv` (non-blocking) and updates widgets.
 //!
 //! This design decouples the LSP/linter thread (which produces diagnostics)
 //! from the GTK main thread (which updates the UI).
@@ -37,6 +40,7 @@ use std::collections::HashMap;
 type RowIndexMap = Rc<RefCell<HashMap<String, Vec<(usize, glib::WeakRef<ListBoxRow>)>>>>;
 
 // Channel for sending messages to the diagnostics panel
+// Producer (any thread) pushes `DiagnosticMessage` here; GTK side drains via `idle_add_local` + `try_recv` (see `create_diagnostics_panel`).
 static DIAGNOSTICS_SENDER: Lazy<Arc<Mutex<Option<Sender<DiagnosticMessage>>>>> =
     // Mutex ensures only one thread can access the inner data at a time to prevent race conditions.
     Lazy::new(|| Arc::new(Mutex::new(None)));
@@ -52,6 +56,7 @@ type RefreshCallback = Box<dyn Fn() + Send + 'static>;
 // Thread-local callback for refresh button
 thread_local! {
     // Option<T> is an enum that represents an optional value: either Some(T) or None.
+    // Wired when the panel is built — diagnostics “refresh” toolbar invokes this on the UI thread.
     static REFRESH_CALLBACK: RefCell<Option<Arc<RefreshCallback>>> = RefCell::new(None);
 }
 
@@ -61,7 +66,7 @@ thread_local! {
 // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
 #[derive(Debug, Clone)]
 enum DiagnosticMessage {
-    Clear,
+    Clear, // wipe panel — used when project changes or extension shuts down
     FileSection {
         file_path: String,
         diagnostics: Vec<DiagnosticItem>,
@@ -89,6 +94,7 @@ struct DiagnosticItem {
 
 /// Create a diagnostics panel that looks like a terminal
 pub fn create_diagnostics_panel() -> GtkBox {
+    // Installs `DIAGNOSTICS_SENDER` + GTK idle drain — `display_file_diagnostics` / `clear_diagnostics` no-op until this runs once per session.
     let outer_container = GtkBox::new(Orientation::Vertical, 0);
     
     // Create a ListBox for clickable diagnostic items
@@ -111,12 +117,14 @@ pub fn create_diagnostics_panel() -> GtkBox {
     
     // Store the sender globally
     if let Ok(mut guard) = DIAGNOSTICS_SENDER.lock() {
+        // Until this assignment, `display_file_diagnostics` / `clear_diagnostics` skip sends — avoids wiring errors before the panel exists.
         *guard = Some(tx);
     }
     
     // Per-panel indices for focusing
     let row_index: RowIndexMap = Rc::new(RefCell::new(HashMap::new()));
     // Rc<RefCell<T>> is a common Rust pattern for single-threaded shared mutable state. Rc allows multiple owners, and RefCell allows runtime mutation.
+    // Per-file `Expander` weak refs — panel refresh reuses widgets without strong cycles keyed by URI.
     let file_expanders: Rc<RefCell<HashMap<String, glib::WeakRef<Expander>>>> =
         // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(RefCell::new(HashMap::new()));
@@ -127,8 +135,9 @@ pub fn create_diagnostics_panel() -> GtkBox {
     let row_index_for_rx = row_index.clone();
     let file_expanders_for_rx = file_expanders.clone();
     // The "move" keyword forces the closure to take ownership of the variables it uses.
+    // `Continue` at the end keeps this source registered — each dispatch spins `try_recv` until empty so producers never block on Gtk.
     glib::idle_add_local(move || {
-        // Process all pending messages
+        // Process all pending messages (non-blocking; a blocking `recv` here would freeze the UI).
         while let Ok(msg) = rx.try_recv() {
             // match statements evaluate different cases and MUST be exhaustive (cover all possibilities).
             match msg {
@@ -425,7 +434,9 @@ pub fn create_diagnostics_panel() -> GtkBox {
                         });
                         row.add_controller(right_click);
                         
+                        // Enter / accessibility activation — same jump target as the row’s primary click handler above.
                         row.connect_activate(move |_| {
+                            // Always use `handlers::open_file_and_jump_to_location` so LSP/worker threads never touch GTK; it funnels through `OPEN_FILE_CALLBACK` on the main loop.
                             let path = if file_path_clone.starts_with("file://") {
                                 if let Ok(url) = url::Url::parse(&file_path_clone) {
                                     if let Ok(path) = url.to_file_path() {
@@ -468,7 +479,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
                     list_box_for_rx.append(&expander_row);
                 }
                 DiagnosticMessage::FocusDiagnostic { file_path, line } => {
-                    // Expand the file section if we can
+                    // In-panel navigation only — expand the file and select the row for `line` (does not call `open_file_and_jump` like a row activate).
                     if let Some(weak_expander) = file_expanders_for_rx.borrow().get(&file_path) {
                         if let Some(expander) = weak_expander.upgrade() {
                             expander.set_expanded(true);
@@ -522,6 +533,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
     refresh_button.set_halign(gtk4::Align::End);
     
     refresh_button.connect_clicked(|_| {
+        // Installed from `main.rs` via `set_refresh_callback` → typically `linter::ui::trigger_lint_refresh` (re-run on the active buffer only).
         REFRESH_CALLBACK.with(|cell| {
             // borrow() gets read-only access to the data inside a RefCell.
             if let Some(ref callback) = *cell.borrow() {
@@ -540,6 +552,7 @@ pub fn create_diagnostics_panel() -> GtkBox {
 
 /// Clear all diagnostics from the panel
 pub fn clear_diagnostics() {
+    // Harmless before UI startup — mutex guard is empty until `create_diagnostics_panel` wires the sender.
     // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(guard) = DIAGNOSTICS_SENDER.lock() {
         if let Some(sender) = guard.as_ref() {
@@ -550,6 +563,7 @@ pub fn clear_diagnostics() {
 
 /// Format and display diagnostics for a file
 pub fn display_file_diagnostics(file_uri: &str, diagnostics: &[crate::linter::Diagnostic]) {
+    // LSP/URI in → `store_file_diagnostics` for editor squiggles + `FileSection` down the channel for this GTK panel (two consumers, same payload).
     if diagnostics.is_empty() {
         return;
     }
@@ -583,6 +597,7 @@ pub fn display_file_diagnostics(file_uri: &str, diagnostics: &[crate::linter::Di
 
 /// Update the summary header with total diagnostic counts
 pub fn update_summary(total_errors: usize, total_warnings: usize, total_infos: usize) {
+    // Icons/counts at top of panel — producers aggregate workspace totals before calling (often from `linter::ui` after merging stores).
     // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(guard) = DIAGNOSTICS_SENDER.lock() {
         if let Some(sender) = guard.as_ref() {
@@ -598,6 +613,7 @@ pub fn update_summary(total_errors: usize, total_warnings: usize, total_infos: u
 
 /// Focus a specific diagnostic line within the panel for a given file
 pub fn focus_diagnostic(file_path: &str, line: usize) {
+    // Keyboard/status “next error” flows use this to expand the right `Expander` + select the row without opening the file again.
     if let Ok(guard) = DIAGNOSTICS_SENDER.lock() {
         if let Some(sender) = guard.as_ref() {
             let _ = sender.send(DiagnosticMessage::FocusDiagnostic { file_path: file_path.to_string(), line });
@@ -617,6 +633,7 @@ where
 
 /// Trigger the refresh callback (useful for manual refresh from other parts of the code)
 pub fn trigger_refresh() {
+    // Panel toolbar → `main` registers this to call `linter::ui::trigger_lint_refresh` (re-run linters on the active file).
     REFRESH_CALLBACK.with(|cell| {
         // borrow() gets read-only access to the data inside a RefCell.
         if let Some(ref callback) = *cell.borrow() {
