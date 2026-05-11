@@ -351,6 +351,10 @@ fn get_status_bar_styles() -> &'static str {
     .dvop-path-bar {
         background-color: shade(@theme_bg_color, 0.98);
     }
+    
+    .path-bar-toolbar {
+        min-height: 32px;
+    }
     "
 }
 
@@ -402,6 +406,13 @@ fn get_path_navigation_styles() -> &'static str {
         opacity: 0.7;
         margin: 0 1px;
         font-family: monospace;
+    }
+    
+    button.path-ellipsis-button {
+        min-width: 22px;
+        padding-left: 4px;
+        padding-right: 4px;
+        font-weight: 600;
     }
     
     /* === PATH INPUT ENTRY STYLES === */

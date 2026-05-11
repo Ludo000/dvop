@@ -555,6 +555,91 @@ pub fn parse_path_components(path: &PathBuf) -> Vec<(String, PathBuf)> {
     components
 }
 
+/// How many trailing path segments stay visible when the breadcrumb row is long; earlier
+/// segments collapse behind a leading "…" control (see `update_path_buttons`).
+const PATH_BREADCRUMB_VISIBLE_TAIL: usize = 3;
+
+fn path_box_append_separator(path_box: &gtk4::Box) {
+    let separator = gtk4::Label::new(Some("/"));
+    separator.add_css_class("path-separator");
+    path_box.append(&separator);
+}
+
+/// One clickable breadcrumb segment (or the "…" jump control) with shared navigation/drag behavior.
+fn path_box_append_path_segment(
+    path_box: &gtk4::Box,
+    display_name: &str,
+    path: &PathBuf,
+    leading_anchor: bool,
+    tooltip_override: Option<&str>,
+    current_dir: &Rc<RefCell<PathBuf>>,
+    file_list_box: &gtk4::ListBox,
+    active_tab_path: &Rc<RefCell<Option<PathBuf>>>,
+) {
+    let button = Button::new();
+
+    if leading_anchor {
+        if display_name == "Home" {
+            let icon = gtk4::Image::from_icon_name("user-home-symbolic");
+            button.set_child(Some(&icon));
+            button.set_tooltip_text(Some("Home Directory"));
+        } else if display_name == "Root" {
+            let icon = gtk4::Image::from_icon_name("drive-harddisk-symbolic");
+            button.set_child(Some(&icon));
+            button.set_tooltip_text(Some("Root Directory"));
+        } else {
+            button.set_label(display_name);
+        }
+    } else {
+        button.set_label(display_name);
+        if let Some(tt) = tooltip_override {
+            button.set_tooltip_text(Some(tt));
+        }
+    }
+
+    button.add_css_class("path-segment-button");
+    if display_name == "…" {
+        button.add_css_class("path-ellipsis-button");
+    }
+    button.set_has_frame(false);
+
+    setup_path_button_drop_target(&button, path);
+
+    let path_clone = path.clone();
+    let file_list_box_clone = file_list_box.clone();
+    let active_tab_path_clone = active_tab_path.clone();
+    let current_dir_clone = current_dir.clone();
+
+    let path_box_weak = glib::object::WeakRef::new();
+    path_box_weak.set(Some(path_box));
+
+    button.connect_clicked(move |_| {
+        *current_dir_clone.borrow_mut() = path_clone.clone();
+
+        update_file_list(
+            &file_list_box_clone,
+            &current_dir_clone.borrow(),
+            &active_tab_path_clone.borrow(),
+            FileSelectionSource::TabSwitch,
+        );
+
+        if let Some(pb) = path_box_weak.upgrade() {
+            if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
+                update_path_buttons(
+                    box_widget,
+                    &current_dir_clone,
+                    &file_list_box_clone,
+                    &active_tab_path_clone,
+                );
+            }
+        }
+
+        crate::extensions::native::fire_on_directory_open(&path_clone);
+    });
+
+    path_box.append(&button);
+}
+
 /// Updates the status bar path box with clickable buttons for each path segment
 ///
 /// This creates a series of buttons, one for each directory in the path,
@@ -577,85 +662,66 @@ pub fn update_path_buttons(
 
     // Get path components
     let components = parse_path_components(&current_path);
+    let n = components.len();
+    if n == 0 {
+        return;
+    }
 
-    // Create a button for each path component
-    for (i, (display_name, path)) in components.iter().enumerate() {
-        // Create a button for this path segment
-        let button = gtk4::Button::new();
+    // Long paths: leading "…" (navigates to the parent of the first visible tail segment), then
+    // only the last `PATH_BREADCRUMB_VISIBLE_TAIL` segments — no separate home/root button.
+    let use_leading_ellipsis = n > 1 + PATH_BREADCRUMB_VISIBLE_TAIL;
 
-        // Special handling for home and root directories
-        if i == 0 {
-            if display_name == "Home" {
-                // Use home icon for user's home directory
-                let icon = gtk4::Image::from_icon_name("user-home-symbolic");
-                button.set_child(Some(&icon));
-                button.set_tooltip_text(Some("Home Directory"));
-            } else if display_name == "Root" {
-                // Use drive icon for root directory
-                let icon = gtk4::Image::from_icon_name("drive-harddisk-symbolic");
-                button.set_child(Some(&icon));
-                button.set_tooltip_text(Some("Root Directory"));
-            } else {
-                button.set_label(display_name);
-            }
-        } else {
-            button.set_label(display_name);
-        }
-
-        // Add styling
-        button.add_css_class("path-segment-button");
-        button.set_has_frame(false); // Make it look like a link
-
-        // Set up drop target for this path button to allow dragging files/folders onto it
-        setup_path_button_drop_target(&button, path);
-
-        // Clone needed variables for the closure
-        let path_clone = path.clone();
-        let file_list_box_clone = file_list_box.clone();
-        let active_tab_path_clone = active_tab_path.clone();
-        let current_dir_clone = current_dir.clone();
-
-        // We need weak references to the path_box to avoid ownership issues
-        let path_box_weak = glib::object::WeakRef::new();
-        path_box_weak.set(Some(path_box));
-
-        // Connect clicked signal
-        button.connect_clicked(move |_| {
-            // Navigate to this path segment by updating the current_dir
-            *current_dir_clone.borrow_mut() = path_clone.clone();
-
-            // Update the file list to show this directory
-            update_file_list(
-                &file_list_box_clone,
-                &current_dir_clone.borrow(),
-                &active_tab_path_clone.borrow(),
-                FileSelectionSource::TabSwitch,
+    if !use_leading_ellipsis {
+        for (i, (display_name, path)) in components.iter().enumerate() {
+            path_box_append_path_segment(
+                path_box,
+                display_name,
+                path,
+                i == 0,
+                None,
+                current_dir,
+                file_list_box,
+                active_tab_path,
             );
-
-            // Update path buttons to reflect the new current directory
-            // Get the path_box from the weak reference
-            if let Some(pb) = path_box_weak.upgrade() {
-                if let Some(box_widget) = pb.downcast_ref::<gtk4::Box>() {
-                    update_path_buttons(
-                        box_widget,
-                        &current_dir_clone,
-                        &file_list_box_clone,
-                        &active_tab_path_clone,
-                    );
-                }
+            if i < n - 1 {
+                path_box_append_separator(path_box);
             }
-
-            // Let native extensions know directory changed (e.g. Rust linter UI visibility)
-            crate::extensions::native::fire_on_directory_open(&path_clone);
-        });
-
-        // Add a separator after all but the last component
-        path_box.append(&button);
-        if i < components.len() - 1 {
-            let separator = gtk4::Label::new(Some("/"));
-            separator.add_css_class("path-separator");
-            path_box.append(&separator);
         }
+        return;
+    }
+
+    let tail_start = n - PATH_BREADCRUMB_VISIBLE_TAIL;
+    let ellipsis_nav_path = components[tail_start - 1].1.clone();
+    let hidden_tooltip = components[0..tail_start]
+        .iter()
+        .map(|(d, _)| d.as_str())
+        .collect::<Vec<_>>()
+        .join(" / ");
+
+    path_box_append_path_segment(
+        path_box,
+        "…",
+        &ellipsis_nav_path,
+        false,
+        Some(hidden_tooltip.as_str()),
+        current_dir,
+        file_list_box,
+        active_tab_path,
+    );
+
+    for i in tail_start..n {
+        path_box_append_separator(path_box);
+        let (display_name, path) = &components[i];
+        path_box_append_path_segment(
+            path_box,
+            display_name,
+            path,
+            false,
+            None,
+            current_dir,
+            file_list_box,
+            active_tab_path,
+        );
     }
 }
 

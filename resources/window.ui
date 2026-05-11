@@ -95,103 +95,6 @@
       <object class="GtkBox" id="main_container">
         <property name="orientation">vertical</property>
         
-        <!-- PATH BAR (Below Header) -->
-        <child>
-          <object class="GtkBox" id="path_bar">
-            <property name="css-classes">dvop-path-bar</property>
-            <property name="margin-start">10</property>
-            <property name="margin-end">10</property>
-            <property name="margin-top">0</property>
-            <property name="margin-bottom">2</property>
-            <property name="spacing">5</property>
-            <property name="vexpand">false</property>
-            <property name="valign">center</property>
-            <property name="height-request">44</property>
-            <child>
-              <object class="GtkButton" id="up_button">
-                <property name="icon-name">go-up-symbolic</property>
-                <property name="tooltip-text">Go to parent directory</property>
-                <property name="margin-end">2</property>
-                <property name="valign">center</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkBox" id="path_box">
-                <property name="css-classes">path-box</property>
-                <property name="spacing">2</property>
-                <property name="halign">start</property>
-                <property name="hexpand">true</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkBox" id="volume_control_box">
-                <property name="spacing">4</property>
-                <property name="halign">end</property>
-                <property name="valign">center</property>
-                <property name="margin-start">12</property>
-                <property name="margin-end">8</property>
-                <property name="height-request">24</property>
-                <property name="vexpand">false</property>
-                <property name="visible">false</property>
-                <child>
-                  <object class="GtkImage" id="volume_icon">
-                    <property name="icon-name">audio-volume-medium-symbolic</property>
-                    <property name="pixel-size">14</property>
-                    <property name="tooltip-text">Global Volume</property>
-                    <property name="valign">center</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkScale" id="global_volume_scale">
-                    <property name="orientation">horizontal</property>
-                    <property name="width-request">100</property>
-                    <property name="height-request">20</property>
-                    <property name="hexpand">false</property>
-                    <property name="vexpand">false</property>
-                    <property name="valign">center</property>
-                    <property name="tooltip-text">Global Audio Volume</property>
-                    <property name="css-classes">global-volume-scale</property>
-                    <property name="draw-value">false</property>
-                    <property name="adjustment">
-                      <object class="GtkAdjustment">
-                        <property name="lower">0</property>
-                        <property name="upper">1</property>
-                        <property name="step-increment">0.01</property>
-                      </object>
-                    </property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkLabel" id="volume_label">
-                    <property name="label">100%</property>
-                    <property name="width-request">28</property>
-                    <property name="height-request">20</property>
-                    <property name="valign">center</property>
-                    <property name="css-classes">volume-percent</property>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkButton" id="refresh_button">
-                <property name="icon-name">view-refresh-symbolic</property>
-                <property name="tooltip-text">Refresh file list</property>
-                <property name="margin-start">2</property>
-                <property name="margin-end">2</property>
-                <property name="valign">center</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkButton" id="terminal_button">
-                <property name="icon-name">utilities-terminal-symbolic</property>
-                <property name="tooltip-text">Open current folder in a new terminal</property>
-                <property name="margin-start">2</property>
-                <property name="valign">center</property>
-              </object>
-            </child>
-          </object>
-        </child>
-        
         <!-- CONTENT AREA (Horizontal Layout) -->
         <child>
           <object class="GtkBox" id="paned_content">
@@ -275,6 +178,126 @@
                                 <property name="vexpand">true</property>
                                 <property name="width-request">0</property>
                                 <property name="hexpand">true</property>
+                                <child>
+                                  <object class="GtkBox" id="path_bar">
+                                    <property name="css-classes">dvop-path-bar</property>
+                                    <property name="orientation">vertical</property>
+                                    <property name="margin-start">6</property>
+                                    <property name="margin-end">6</property>
+                                    <property name="margin-top">4</property>
+                                    <property name="margin-bottom">2</property>
+                                    <property name="spacing">6</property>
+                                    <property name="vexpand">false</property>
+                                    <child>
+                                      <object class="GtkScrolledWindow">
+                                        <property name="hscrollbar-policy">automatic</property>
+                                        <property name="vscrollbar-policy">never</property>
+                                        <property name="vexpand">false</property>
+                                        <property name="hexpand">true</property>
+                                        <property name="propagate-natural-height">true</property>
+                                        <property name="min-content-height">28</property>
+                                        <child>
+                                          <object class="GtkBox" id="path_box">
+                                            <property name="css-classes">path-box</property>
+                                            <property name="orientation">horizontal</property>
+                                            <property name="spacing">2</property>
+                                            <property name="halign">start</property>
+                                            <property name="valign">center</property>
+                                            <property name="hexpand">false</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkBox">
+                                        <property name="css-classes">path-bar-toolbar</property>
+                                        <property name="orientation">horizontal</property>
+                                        <property name="spacing">4</property>
+                                        <property name="valign">center</property>
+                                        <child>
+                                          <object class="GtkButton" id="up_button">
+                                            <property name="icon-name">go-up-symbolic</property>
+                                            <property name="tooltip-text">Go to parent directory</property>
+                                            <property name="margin-end">2</property>
+                                            <property name="valign">center</property>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkBox">
+                                            <property name="hexpand">true</property>
+                                            <property name="vexpand">false</property>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkBox" id="volume_control_box">
+                                            <property name="spacing">4</property>
+                                            <property name="halign">end</property>
+                                            <property name="valign">center</property>
+                                            <property name="margin-start">4</property>
+                                            <property name="margin-end">2</property>
+                                            <property name="height-request">24</property>
+                                            <property name="vexpand">false</property>
+                                            <property name="visible">false</property>
+                                            <child>
+                                              <object class="GtkImage" id="volume_icon">
+                                                <property name="icon-name">audio-volume-medium-symbolic</property>
+                                                <property name="pixel-size">14</property>
+                                                <property name="tooltip-text">Global Volume</property>
+                                                <property name="valign">center</property>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkScale" id="global_volume_scale">
+                                                <property name="orientation">horizontal</property>
+                                                <property name="width-request">80</property>
+                                                <property name="height-request">20</property>
+                                                <property name="hexpand">false</property>
+                                                <property name="vexpand">false</property>
+                                                <property name="valign">center</property>
+                                                <property name="tooltip-text">Global Audio Volume</property>
+                                                <property name="css-classes">global-volume-scale</property>
+                                                <property name="draw-value">false</property>
+                                                <property name="adjustment">
+                                                  <object class="GtkAdjustment">
+                                                    <property name="lower">0</property>
+                                                    <property name="upper">1</property>
+                                                    <property name="step-increment">0.01</property>
+                                                  </object>
+                                                </property>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkLabel" id="volume_label">
+                                                <property name="label">100%</property>
+                                                <property name="width-request">28</property>
+                                                <property name="height-request">20</property>
+                                                <property name="valign">center</property>
+                                                <property name="css-classes">volume-percent</property>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkButton" id="refresh_button">
+                                            <property name="icon-name">view-refresh-symbolic</property>
+                                            <property name="tooltip-text">Refresh file list</property>
+                                            <property name="margin-start">2</property>
+                                            <property name="margin-end">2</property>
+                                            <property name="valign">center</property>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkButton" id="terminal_button">
+                                            <property name="icon-name">utilities-terminal-symbolic</property>
+                                            <property name="tooltip-text">Open current folder in a new terminal</property>
+                                            <property name="margin-start">2</property>
+                                            <property name="valign">center</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
                                 <child>
                                   <object class="GtkScrolledWindow">
                                     <property name="hscrollbar-policy">automatic</property>
