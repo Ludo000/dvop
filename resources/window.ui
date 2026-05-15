@@ -209,11 +209,20 @@
                                       </object>
                                     </child>
                                     <child>
-                                      <object class="GtkBox">
-                                        <property name="css-classes">path-bar-toolbar</property>
-                                        <property name="orientation">horizontal</property>
-                                        <property name="spacing">4</property>
-                                        <property name="valign">center</property>
+                                      <object class="GtkScrolledWindow">
+                                        <property name="hscrollbar-policy">automatic</property>
+                                        <property name="vscrollbar-policy">never</property>
+                                        <property name="vexpand">false</property>
+                                        <property name="hexpand">true</property>
+                                        <property name="propagate-natural-height">true</property>
+                                        <property name="min-content-height">32</property>
+                                        <child>
+                                          <object class="GtkBox">
+                                            <property name="css-classes">path-bar-toolbar</property>
+                                            <property name="orientation">horizontal</property>
+                                            <property name="spacing">4</property>
+                                            <property name="valign">center</property>
+                                            <property name="halign">start</property>
                                         <child>
                                           <object class="GtkButton" id="up_button">
                                             <property name="icon-name">go-up-symbolic</property>
@@ -223,17 +232,11 @@
                                           </object>
                                         </child>
                                         <child>
-                                          <object class="GtkBox">
-                                            <property name="hexpand">true</property>
-                                            <property name="vexpand">false</property>
-                                          </object>
-                                        </child>
-                                        <child>
                                           <object class="GtkBox" id="volume_control_box">
                                             <property name="spacing">4</property>
-                                            <property name="halign">end</property>
+                                            <property name="halign">start</property>
                                             <property name="valign">center</property>
-                                            <property name="margin-start">4</property>
+                                            <property name="margin-start">8</property>
                                             <property name="margin-end">2</property>
                                             <property name="height-request">24</property>
                                             <property name="vexpand">false</property>
@@ -292,6 +295,8 @@
                                             <property name="tooltip-text">Open current folder in a new terminal</property>
                                             <property name="margin-start">2</property>
                                             <property name="valign">center</property>
+                                          </object>
+                                        </child>
                                           </object>
                                         </child>
                                       </object>

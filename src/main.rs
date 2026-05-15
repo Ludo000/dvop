@@ -1551,7 +1551,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         let was_visible = *drag_was_visible_clone2.borrow();
         
         // Determine what to do based on final position
-        // Snap shut threshold — matches `position_notify` monitor below for consistent UX.
+        // Snap shut threshold — releasing a drag under this width fully hides the sidebar strip.
         if final_width < 50 {
             // If dragged to less than 50px, hide it
             if let Some(start_child) = paned_for_drag_end.start_child() {
@@ -1606,24 +1606,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     });
     
     activity_bar.add_controller(drag_gesture);
-
-    // Monitor paned position and auto-hide when width goes below 50px
-    // Programmatic resize (e.g. window shrink) can collapse sidebar — sync toggle buttons when crossing threshold.
-    let explorer_button_for_monitor = explorer_button.clone();
-    let search_button_for_monitor = search_button.clone();
-    let git_diff_button_for_monitor = git_diff_button.clone();
-    paned.connect_position_notify(move |p| {
-        let position = p.position();
-        // Only act if the sidebar is currently visible and position is being reduced
-        if let Some(start_child) = p.start_child() {
-            if start_child.is_visible() && position < 50 && position > 0 {
-                // Auto-hide the panel by deactivating all sidebar buttons
-                explorer_button_for_monitor.set_active(false);
-                search_button_for_monitor.set_active(false);
-                git_diff_button_for_monitor.set_active(false);
-            }
-        }
-    });
 
     // Monitor editor_paned position and auto-hide terminal when height goes below 50px
     // Vertical split: `position` pixels go to start_child (editor stack); remainder is terminal/diagnostics stack.
