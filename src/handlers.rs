@@ -3498,11 +3498,14 @@ fn setup_file_selection_handler(
 
     file_list_box.add_controller(left_click_gesture);
 
-    // Ensure focus is grabbed when selection changes (for keyboard navigation)
+    // Ensure focus is grabbed when the user changes selection in the file manager.
+    // Programmatic tab-switch highlighting should not steal focus from the editor.
     let file_list_box_for_selection = file_list_box.clone();
+    let current_selection_source_for_selection = current_selection_source_clone.clone();
     file_list_box.connect_selected_rows_changed(move |_| {
-        println!("DEBUG: Selection changed - grabbing focus");
-        file_list_box_for_selection.grab_focus();
+        if *current_selection_source_for_selection.borrow() == utils::FileSelectionSource::DirectClick {
+            file_list_box_for_selection.grab_focus();
+        }
     });
 
     file_list_box.connect_row_activated(move |list_box, row| {

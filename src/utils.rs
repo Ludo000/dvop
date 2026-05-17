@@ -382,45 +382,105 @@ pub fn update_file_list(
     // If we found the currently open file in the list, select it
     if let Some(row) = selected_row {
         file_list_box.select_row(Some(&row));
-
-        // Scroll to make the selected row visible (preferably centered)
-        // Use timeout to ensure the row is properly laid out before scrolling — same-tick `append`+scroll can see height 0.
-        let row_clone = row.clone();
-        // The "move" keyword forces the closure to take ownership of the variables it uses.
-        glib::timeout_add_local_once(std::time::Duration::from_millis(10), move || {
-            // Get the parent ScrolledWindow to control scrolling
-            let mut parent = row_clone.parent();
-            while let Some(widget) = parent {
-                if let Ok(scrolled_window) = widget.clone().downcast::<gtk4::ScrolledWindow>() {
-                    // Get the vertical adjustment (scroll position control)
-                    let vadj = scrolled_window.vadjustment();
-
-                    // Get row allocation (position and size)
-                    let allocation = row_clone.allocation();
-                    let row_y = allocation.y() as f64;
-                    let row_height = allocation.height() as f64;
-
-                    // Get viewport height
-                    let viewport_height = vadj.page_size();
-
-                    // Calculate target scroll position to center the row
-                    let target_scroll = row_y - (viewport_height / 2.0) + (row_height / 2.0);
-
-                    // Clamp to valid range
-                    let min_scroll = vadj.lower();
-                    let max_scroll = vadj.upper() - vadj.page_size();
-                    let final_scroll = target_scroll.max(min_scroll).min(max_scroll);
-
-                    // Set the scroll position
-                    vadj.set_value(final_scroll);
-                    break;
-                }
-                parent = widget.parent();
-            }
-        });
+        schedule_scroll_to_row(&row);
     } else {
         file_list_box.unselect_all();
     }
+}
+
+/// Update only the selected/highlighted file in an already-populated file list.
+///
+/// This is used during tab switches where the directory did not change. Rebuilding the
+/// whole sidebar recreates rows, drag/drop controllers, selection signals, and scroll
+/// timeouts; changing the existing row state keeps tab switching responsive.
+pub fn update_file_list_selection(
+    file_list_box: &ListBox,
+    current_dir: &PathBuf,
+    file_path: &Option<PathBuf>,
+    selection_source: FileSelectionSource,
+) {
+    let Some(open_file_full_path) = file_path.as_ref() else {
+        file_list_box.unselect_all();
+        return;
+    };
+
+    if open_file_full_path.parent() != Some(current_dir.as_path()) {
+        file_list_box.unselect_all();
+        return;
+    }
+
+    let Some(target_name) = open_file_full_path.file_name().and_then(|name| name.to_str()) else {
+        file_list_box.unselect_all();
+        return;
+    };
+
+    let mut selected_row = None;
+    let mut child = file_list_box.first_child();
+    while let Some(widget) = child {
+        child = widget.next_sibling();
+
+        let Ok(row) = widget.downcast::<gtk4::ListBoxRow>() else {
+            continue;
+        };
+        let Some(label) = row.child().and_then(|child| child.downcast::<gtk4::Label>().ok()) else {
+            continue;
+        };
+
+        let was_selected = row.has_css_class("file-selected-by-tab")
+            || row.has_css_class("file-selected-by-click");
+        row.remove_css_class("file-selected-by-tab");
+        row.remove_css_class("file-selected-by-click");
+        let row_name = label.text().to_string();
+        if was_selected {
+            label.set_text(&row_name);
+        }
+
+        if row_name == target_name {
+            match selection_source {
+                FileSelectionSource::TabSwitch => {
+                    row.add_css_class("file-selected-by-tab");
+                }
+                FileSelectionSource::DirectClick => {
+                    row.add_css_class("file-selected-by-click");
+                    let escaped = glib::markup_escape_text(&row_name);
+                    label.set_markup(&format!("<u>{}</u>", escaped));
+                }
+            }
+            selected_row = Some(row);
+        }
+    }
+
+    if let Some(row) = selected_row {
+        file_list_box.select_row(Some(&row));
+        schedule_scroll_to_row(&row);
+    } else {
+        file_list_box.unselect_all();
+    }
+}
+
+fn schedule_scroll_to_row(row: &gtk4::ListBoxRow) {
+    // Use timeout to ensure the row is laid out before scrolling; same-tick
+    // append/select can still report a zero-height allocation.
+    let row_clone = row.clone();
+    glib::timeout_add_local_once(std::time::Duration::from_millis(10), move || {
+        let mut parent = row_clone.parent();
+        while let Some(widget) = parent {
+            if let Ok(scrolled_window) = widget.clone().downcast::<gtk4::ScrolledWindow>() {
+                let vadj = scrolled_window.vadjustment();
+                let allocation = row_clone.allocation();
+                let row_y = allocation.y() as f64;
+                let row_height = allocation.height() as f64;
+                let viewport_height = vadj.page_size();
+                let target_scroll = row_y - (viewport_height / 2.0) + (row_height / 2.0);
+                let min_scroll = vadj.lower();
+                let max_scroll = vadj.upper() - vadj.page_size();
+
+                vadj.set_value(target_scroll.max(min_scroll).min(max_scroll));
+                break;
+            }
+            parent = widget.parent();
+        }
+    });
 }
 
 /// Updates the visibility of save buttons based on content type

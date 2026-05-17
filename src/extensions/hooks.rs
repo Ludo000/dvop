@@ -19,8 +19,9 @@
 //! See FEATURES.md: Feature #91–#109 — Extension Contributions
 
 use super::runner;
+use gtk4::glib;
 use gtk4::prelude::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 // ── Lifecycle hooks ──────────────────────────────────────────────
 
@@ -544,6 +545,10 @@ pub fn set_active_file_path(path: Option<std::path::PathBuf>) {
     });
 }
 
+pub(crate) fn active_file_path_is(path: &Path) -> bool {
+    ACTIVE_FILE_PATH.with(|fp| fp.borrow().as_deref() == Some(path))
+}
+
 /// Set the status label reference for live refresh. Call once during init.
 pub fn set_status_label(label: &gtk4::Label) {
     STATUS_LABEL.with(|sl| {
@@ -563,19 +568,75 @@ pub fn register_sidebar_panel_view(ext_id: &str, panel_id: &str, text_view: &gtk
     });
 }
 
-/// Refresh all registered sidebar panels with current file. Call on tab switch.
-pub fn refresh_sidebar_panels() {
+/// Refresh extension sidebar panels without blocking tab switching.
+pub fn refresh_sidebar_panels_async() {
+    let active_file = ACTIVE_FILE_PATH.with(|fp| {
+        fp.borrow()
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default()
+    });
+
+    let jobs: Vec<(String, String, PathBuf)> = SIDEBAR_PANEL_VIEWS.with(|views| {
+        let views = views.borrow();
+        let mgr = super::manager::get_manager();
+        let mut jobs = Vec::new();
+
+        for (ext_id, panel_id, _) in views.iter() {
+            for ext in mgr.get_extensions() {
+                if ext.manifest.id != *ext_id || !ext.manifest.enabled {
+                    continue;
+                }
+
+                for panel in &ext.manifest.contributions.sidebar_panels {
+                    if panel.id == *panel_id {
+                        let script_path = ext.path.join(&panel.script);
+                        if script_path.exists() {
+                            jobs.push((ext_id.clone(), panel_id.clone(), script_path));
+                        }
+                    }
+                }
+            }
+        }
+
+        jobs
+    });
+
+    std::thread::spawn(move || {
+        for (ext_id, panel_id, script_path) in jobs {
+            let content = runner::run_script(&script_path, &["refresh", &active_file], None)
+                .unwrap_or_else(|e| format!("Error: {}", e));
+            let active_file_for_check = active_file.clone();
+
+            glib::MainContext::default().invoke(move || {
+                let still_current = ACTIVE_FILE_PATH.with(|fp| {
+                    fp.borrow()
+                        .as_ref()
+                        .map(|p| p.to_string_lossy() == active_file_for_check)
+                        .unwrap_or(active_file_for_check.is_empty())
+                });
+                if !still_current {
+                    return;
+                }
+                set_sidebar_panel_content(&ext_id, &panel_id, &content);
+            });
+        }
+    });
+}
+
+fn set_sidebar_panel_content(ext_id: &str, panel_id: &str, content: &str) {
     SIDEBAR_PANEL_VIEWS.with(|views| {
         let views = views.borrow();
-        for (ext_id, panel_id, text_view) in views.iter() {
-            let content = get_sidebar_panel_content(ext_id, panel_id, "refresh");
-            text_view.buffer().set_text(&content);
+        for (view_ext_id, view_panel_id, text_view) in views.iter() {
+            if view_ext_id == ext_id && view_panel_id == panel_id {
+                text_view.buffer().set_text(content);
+            }
         }
     });
 }
 
 /// Force the status label to re-render with current cached data.
-fn force_status_label_refresh() {
+pub(crate) fn force_status_label_refresh() {
     STATUS_LABEL.with(|sl_cell| {
         let sl_opt = sl_cell.borrow();
         let Some(ref status_label) = *sl_opt else { return };

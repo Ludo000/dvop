@@ -62,8 +62,6 @@ use gtk4::{
     Label,
     // Menu components for split button functionality
     MenuButton,
-    PopoverMenuBar,
-    Revealer,
     Notebook,
 
     // Layout orientation for containers
@@ -254,27 +252,23 @@ mod imp {
             const RESPONSIVE_HEADER_BREAKPOINT: i32 = 950;
 
             self.parent_size_allocate(width, height, baseline);
-            eprintln!("Window size_allocate called with width: {}", width);
-            if width < RESPONSIVE_HEADER_BREAKPOINT {
-                eprintln!("Showing hamburger, hiding menu_bar");
+
+            let compact = width < RESPONSIVE_HEADER_BREAKPOINT;
+            let currently_compact = self.hamburger_menu_button.is_visible();
+            if compact == currently_compact {
+                return;
+            }
+
+            if compact {
                 self.menu_revealer.set_visible(false);
                 self.menu_revealer.set_reveal_child(false);
                 self.hamburger_menu_button.set_visible(true);
-            } else {
-                eprintln!("Showing menu_bar, hiding hamburger");
-                self.menu_revealer.set_visible(true);
-                self.menu_revealer.set_reveal_child(true);
-                self.hamburger_menu_button.set_visible(false);
-            }
-            // Queue resize to ensure layout updates
-            self.header_bar.queue_resize();
-            self.obj().queue_resize();
-
-            // Hide/show button labels based on width
-            if width < RESPONSIVE_HEADER_BREAKPOINT {
                 self.save_label.set_visible(false);
                 self.open_label.set_visible(false);
             } else {
+                self.menu_revealer.set_visible(true);
+                self.menu_revealer.set_reveal_child(true);
+                self.hamburger_menu_button.set_visible(false);
                 self.save_label.set_visible(true);
                 self.open_label.set_visible(true);
             }
@@ -344,7 +338,13 @@ impl DvopWindow {
             return;
         }
 
-        if width < RESPONSIVE_HEADER_BREAKPOINT {
+        let compact = width < RESPONSIVE_HEADER_BREAKPOINT;
+        let currently_compact = imp.hamburger_menu_button.is_visible();
+        if compact == currently_compact {
+            return;
+        }
+
+        if compact {
             imp.menu_revealer.set_visible(false);
             imp.menu_revealer.set_reveal_child(false);
             imp.hamburger_menu_button.set_visible(true);
@@ -357,9 +357,6 @@ impl DvopWindow {
             imp.save_label.set_visible(true);
             imp.open_label.set_visible(true);
         }
-
-        imp.header_bar.queue_resize();
-        self.queue_resize();
     }
 
     fn setup_icon(&self) {

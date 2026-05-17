@@ -14,6 +14,7 @@
 //! See FEATURES.md: Feature #88 — Extension Install from Archive
 
 use super::{Extension, ExtensionManifest};
+use gtk4::glib;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -338,6 +339,56 @@ pub fn update_status_bar_text(file_path: &Path) {
     if let Ok(mut cached) = EXTENSION_STATUS_TEXT.lock() {
         *cached = text;
     }
+}
+
+/// Run status bar extension scripts off the GTK thread and refresh the visible label later.
+pub fn update_status_bar_text_async(file_path: PathBuf) {
+    let extensions = {
+        let mgr = get_manager();
+        mgr.extensions.clone()
+    };
+
+    std::thread::spawn(move || {
+        let mut parts = Vec::new();
+
+        for ext in extensions {
+            if !ext.manifest.enabled {
+                continue;
+            }
+            if let Some(ref contrib) = ext.manifest.contributions.status_bar {
+                let script_path = ext.path.join(&contrib.script);
+                if !script_path.exists() {
+                    continue;
+                }
+
+                match super::runner::run_script(
+                    &script_path,
+                    &[file_path.to_string_lossy().as_ref()],
+                    None,
+                ) {
+                    Ok(text) if !text.is_empty() => parts.push(text),
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!(
+                            "Failed to run status script for '{}': {}",
+                            ext.manifest.name, e
+                        );
+                    }
+                }
+            }
+        }
+
+        let text = parts.join(" | ");
+        glib::MainContext::default().invoke(move || {
+            if !crate::extensions::hooks::active_file_path_is(&file_path) {
+                return;
+            }
+            if let Ok(mut cached) = EXTENSION_STATUS_TEXT.lock() {
+                *cached = text;
+            }
+            crate::extensions::hooks::force_status_label_refresh();
+        });
+    });
 }
 
 /// Get the cached extension status bar text

@@ -2302,13 +2302,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         *current_selection_source_clone_for_switch.borrow_mut() =
             utils::FileSelectionSource::TabSwitch;
 
-        handlers::ensure_tab_heavy_setup_if_pending(
-            notebook,
-            page_num,
-            &file_path_manager_clone_for_switch,
-        );
-        // Session restore may have skipped LSP/completion until tab is visited — above completes deferred setup.
-
         // Retrieve the file path associated with the newly selected tab
         let new_active_path = {
             // Use a separate scope to limit the borrow duration
@@ -2321,16 +2314,37 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         // Update the active tab path reference
         *active_tab_path_clone_for_switch.borrow_mut() = new_active_path.clone();
 
-        // Update extension status bar text for the new file (synchronous — scripts are fast)
-        if let Some(file_path) = &new_active_path {
-            extensions::manager::update_status_bar_text(file_path);
-        }
-
         // Update active file path for extension hooks
         extensions::hooks::set_active_file_path(new_active_path.clone());
 
-        // Refresh extension sidebar panels with the new file
-        extensions::hooks::refresh_sidebar_panels();
+        // Session restore may have skipped LSP/completion until tab is visited. Run that
+        // after the page has had a chance to paint so switching tabs stays instant.
+        {
+            let notebook_for_deferred_setup = notebook.clone();
+            let file_path_manager_for_deferred_setup = file_path_manager_clone_for_switch.clone();
+            glib::idle_add_local_once(move || {
+                if notebook_for_deferred_setup.current_page() == Some(page_num) {
+                    handlers::ensure_tab_heavy_setup_if_pending(
+                        &notebook_for_deferred_setup,
+                        page_num,
+                        &file_path_manager_for_deferred_setup,
+                    );
+                }
+            });
+        }
+
+        if let Some(file_path) = &new_active_path {
+            extensions::manager::update_status_bar_text_async(file_path.to_path_buf());
+        }
+
+        {
+            let notebook_for_extension_refresh = notebook.clone();
+            glib::idle_add_local_once(move || {
+                if notebook_for_extension_refresh.current_page() == Some(page_num) {
+                    extensions::hooks::refresh_sidebar_panels_async();
+                }
+            });
+        }
 
         // Update the secondary status label with file information
         if let Some(file_path) = &new_active_path {
@@ -2351,38 +2365,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                         Some(file_path),
                     );
 
-                    // Set up cursor position tracking for this tab
-                    // Per-tab handlers: each switch reconnects so status bar tracks the visible buffer only.
-                    let secondary_status_clone = secondary_status_label_clone.clone();
-                    let filename_clone = filename.clone();
-                    let file_path_clone = file_path.clone();
-                    let source_view_clone = source_view.clone();
-
-                    let buffer = source_view.buffer();
-                    buffer.connect_notify_local(Some("cursor-position"), move |_, _| {
-                        update_cursor_position_status(
-                            &source_view_clone,
-                            &secondary_status_clone,
-                            &filename_clone,
-                            Some(&file_path_clone),
-                        );
-                    });
-
-                    // Also connect to mark-set signal for more reliable cursor tracking
-                    let secondary_status_clone_2 = secondary_status_label_clone.clone();
-                    let filename_clone_2 = filename.clone();
-                    let file_path_clone_2 = file_path.clone();
-                    let source_view_clone_2 = source_view.clone();
-                    buffer.connect_mark_set(move |_, _, mark| {
-                        if mark.name().as_deref() == Some("insert") {
-                            update_cursor_position_status(
-                                &source_view_clone_2,
-                                &secondary_status_clone_2,
-                                &filename_clone_2,
-                                Some(&file_path_clone_2),
-                            );
-                        }
-                    });
                 } else {
                     // Fallback for non-source views
                     secondary_status_label_clone.set_text(&filename);
@@ -2391,8 +2373,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 // No text view (e.g., image file)
                 secondary_status_label_clone.set_text(&filename);
             }
-
-            crate::status_log::log_info(&format!("Switched to {}", filename));
         } else {
             // Handle untitled tab
             if let Some((text_view, _)) =
@@ -2406,33 +2386,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                         None,
                     );
 
-                    // Set up cursor position tracking for this tab
-                    let secondary_status_clone = secondary_status_label_clone.clone();
-                    let source_view_clone = source_view.clone();
-
-                    let buffer = source_view.buffer();
-                    buffer.connect_notify_local(Some("cursor-position"), move |_, _| {
-                        update_cursor_position_status(
-                            &source_view_clone,
-                            &secondary_status_clone,
-                            "Untitled",
-                            None,
-                        );
-                    });
-
-                    // Also connect to mark-set signal for more reliable cursor tracking
-                    let secondary_status_clone_2 = secondary_status_label_clone.clone();
-                    let source_view_clone_2 = source_view.clone();
-                    buffer.connect_mark_set(move |_, _, mark| {
-                        if mark.name().as_deref() == Some("insert") {
-                            update_cursor_position_status(
-                                &source_view_clone_2,
-                                &secondary_status_clone_2,
-                                "Untitled",
-                                None,
-                            );
-                        }
-                    });
                 } else {
                     // For non-source views, just show empty status
                     secondary_status_label_clone.set_text("");
@@ -2441,8 +2394,6 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 // For non-source views, just show empty status
                 secondary_status_label_clone.set_text("");
             }
-
-            crate::status_log::log_info("Switched to Untitled");
         }
 
         // If the focused tab has a file, update current directory to match the file's directory
@@ -2496,9 +2447,9 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             }
         }
 
-        // Update file list highlighting to show the current file (only if directory didn't change)
+        // Update only file list highlighting to show the current file (only if directory didn't change)
         let current_dir_path_clone = current_dir_clone_for_switch.borrow().clone();
-        utils::update_file_list(
+        utils::update_file_list_selection(
             &file_list_box_clone_for_switch,
             &current_dir_path_clone,
             &new_active_path,
