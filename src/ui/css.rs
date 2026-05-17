@@ -946,3 +946,7 @@ fn get_extension_styles() -> &'static str {
     }
     "
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/ui/css_tests.rs"]
+mod tests;

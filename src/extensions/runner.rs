@@ -172,3 +172,7 @@ pub fn run_script_fire_and_forget(script_path: &Path, args: &[&str]) {
         }
     });
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/extensions/runner_tests.rs"]
+mod tests;

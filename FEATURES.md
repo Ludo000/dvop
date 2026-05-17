@@ -1,8 +1,11 @@
 # Dvop - Comprehensive Functional Features Documentation
-**Version 0.1.0 | Last Updated: November 17, 2025**
+**Version 0.1.0 | Last Updated: May 17, 2026**
 
 **Total Features: 201+ functional features documented**
-**Total Tests: 292 tests (94 unit + 198 E2E)**
+**Verified Test Suite: 339 tests passing (131 library/unit + 4 quick integration + 204 E2E)**
+**Coverage Snapshot: 18.93% application source line coverage, 27.19% total measured line coverage including tests**
+
+Latest verification used `./run_all_tests.sh` plus Rust LLVM source-based coverage instrumentation. All functional tests passed; the lower source-level coverage score reflects large GTK UI/event-handler modules that are validated through high-level feature tests but are not fully exercised line-by-line in headless coverage runs.
 
 ## Quick Index
 - **Text Editor**: Features #1-17 (Multi-tab editing, syntax highlighting, file operations)

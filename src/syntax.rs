@@ -720,13 +720,5 @@ fn apply_font_size_to_view(source_view: &View, font_size: u32) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_preferred_style_scheme() {
-        let scheme = get_preferred_style_scheme();
-        // Should return a valid scheme name
-        assert!(!scheme.is_empty());
-    }
-}
+#[path = "../tests/unit/syntax_tests.rs"]
+mod tests;
