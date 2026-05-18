@@ -1,5 +1,13 @@
     use super::*;
+    use std::collections::HashMap;
     use tempfile::TempDir;
+
+    fn settings_with_temp_path(temp_dir: &TempDir) -> EditorSettings {
+        EditorSettings {
+            values: HashMap::new(),
+            config_path: temp_dir.path().join("settings.conf"),
+        }
+    }
 
     #[test]
     fn test_settings_creation() {
@@ -124,6 +132,110 @@
         assert_eq!(opened.len(), 1);
         assert!(!opened.contains(&file1));
         assert!(opened.contains(&file2));
+    }
+
+    #[test]
+    fn test_empty_opened_files_returns_empty_list() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut settings = settings_with_temp_path(&temp_dir);
+
+        settings.set_opened_files(&[]);
+        assert!(settings.get_opened_files().is_empty());
+    }
+
+    #[test]
+    fn test_boolean_sidebar_and_search_settings() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut settings = settings_with_temp_path(&temp_dir);
+
+        assert!(settings.get_sidebar_visible());
+        assert!(!settings.get_terminal_visible());
+        assert!(!settings.get_search_case_sensitive());
+        assert!(!settings.get_search_whole_word());
+
+        settings.set_active_sidebar_tab("search");
+        settings.set_sidebar_visible(false);
+        settings.set_terminal_visible(true);
+        settings.set_search_case_sensitive(true);
+        settings.set_search_whole_word(true);
+        settings.set_search_query("needle");
+
+        assert_eq!(settings.get_active_sidebar_tab(), "search");
+        assert!(!settings.get_sidebar_visible());
+        assert!(settings.get_terminal_visible());
+        assert!(settings.get_search_case_sensitive());
+        assert!(settings.get_search_whole_word());
+        assert_eq!(settings.get_search_query(), "needle");
+    }
+
+    #[test]
+    fn test_dimension_getters_clamp_invalid_values() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut settings = settings_with_temp_path(&temp_dir);
+
+        settings.set("window_width", "10");
+        settings.set("window_height", "20");
+        settings.set("file_panel_width", "30");
+        settings.set("terminal_height", "40");
+
+        assert_eq!(settings.get_window_width(), 400);
+        assert_eq!(settings.get_window_height(), 300);
+        assert_eq!(settings.get_file_panel_width(), 100);
+        assert_eq!(settings.get_terminal_height(), 100);
+    }
+
+    #[test]
+    fn test_invalid_numeric_values_fall_back_to_defaults() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut settings = settings_with_temp_path(&temp_dir);
+
+        settings.set("font_size", "large");
+        settings.set("terminal_font_size", "huge");
+        settings.set("audio_volume", "loud");
+
+        assert_eq!(settings.get_font_size(), DEFAULT_FONT_SIZE);
+        assert_eq!(settings.get_terminal_font_size(), DEFAULT_TERMINAL_FONT_SIZE);
+        assert_eq!(settings.get_audio_volume(), DEFAULT_AUDIO_VOLUME);
+    }
+
+    #[test]
+    fn test_save_and_load_from_file_roundtrip() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut settings = settings_with_temp_path(&temp_dir);
+
+        settings.set_font_size(18);
+        settings.set_dark_theme("test-dark");
+        settings.set_git_commit_message("coverage tests");
+        settings.save().unwrap();
+
+        let saved = std::fs::read_to_string(&settings.config_path).unwrap();
+        assert!(saved.contains("# Text Editor Settings"));
+        assert!(saved.contains("font_size=18"));
+
+        let mut loaded = settings_with_temp_path(&temp_dir);
+        loaded.load_from_file().unwrap();
+
+        assert_eq!(loaded.get_font_size(), 18);
+        assert_eq!(loaded.get_dark_theme(), "test-dark");
+        assert_eq!(loaded.get_git_commit_message(), "coverage tests");
+    }
+
+    #[test]
+    fn test_load_from_file_ignores_lines_without_separator() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut settings = settings_with_temp_path(&temp_dir);
+
+        std::fs::write(
+            &settings.config_path,
+            "invalid line\nfont_size=16\nkey = trimmed value\n",
+        )
+        .unwrap();
+
+        settings.load_from_file().unwrap();
+
+        assert_eq!(settings.get_font_size(), 16);
+        assert_eq!(settings.get("key"), Some(&"trimmed value".to_string()));
+        assert!(settings.get("invalid line").is_none());
     }
 
     #[test]

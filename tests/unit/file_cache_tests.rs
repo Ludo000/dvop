@@ -50,3 +50,42 @@
         let content2 = cache.get_file_content(&file_path).unwrap();
         assert_eq!(content2, "Updated content\n");
     }
+
+    #[test]
+    fn test_cache_expiration_reloads_file() {
+        let cache = FileCache::new(std::time::Duration::from_secs(0));
+        let temp_dir = tempfile::tempdir().unwrap();
+        let file_path = temp_dir.path().join("expires.txt");
+
+        std::fs::write(&file_path, "first").unwrap();
+        assert_eq!(cache.get_file_content(&file_path).unwrap(), "first");
+
+        std::fs::write(&file_path, "second").unwrap();
+        assert_eq!(cache.get_file_content(&file_path).unwrap(), "second");
+        assert_eq!(cache.len(), 1);
+    }
+
+    #[test]
+    fn test_cleanup_expired_removes_stale_entries() {
+        let cache = FileCache::new(std::time::Duration::from_secs(0));
+        let temp_dir = tempfile::tempdir().unwrap();
+        let file_path = temp_dir.path().join("cleanup.txt");
+
+        std::fs::write(&file_path, "cached").unwrap();
+        assert_eq!(cache.get_file_content(&file_path).unwrap(), "cached");
+        assert_eq!(cache.len(), 1);
+
+        cache.cleanup_expired();
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn test_missing_file_returns_error_without_cache_entry() {
+        let cache = FileCache::with_default_duration();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let missing_path = temp_dir.path().join("missing.txt");
+
+        let err = cache.get_file_content(&missing_path).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::NotFound);
+        assert_eq!(cache.len(), 0);
+    }

@@ -423,3 +423,7 @@ pub fn init() {
     let mut mgr = get_manager();
     mgr.load_extensions();
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/extensions/manager_tests.rs"]
+mod tests;

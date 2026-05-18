@@ -411,8 +411,10 @@ impl LspClient {
         loop {
             // Read Content-Length header
             let mut header_line = String::new();
-            if reader.read_line(&mut header_line).is_err() {
-                break; // EOF or pipe broken — server exited
+            match reader.read_line(&mut header_line) {
+                Ok(0) => break, // EOF — server exited
+                Ok(_) => {}
+                Err(_) => break, // pipe broken or invalid stream
             }
 
             if header_line.trim().is_empty() {

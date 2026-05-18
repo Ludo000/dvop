@@ -15,6 +15,24 @@
     }
 
     #[test]
+    fn test_is_video_file_supports_all_extensions_case_insensitive() {
+        for file_name in [
+            "movie.MP4",
+            "clip.m4v",
+            "archive.wmv",
+            "camera.mpg",
+            "camera.mpeg",
+            "phone.3gp",
+            "open.ogv",
+        ] {
+            assert!(is_video_file(Path::new(file_name)), "{} should be video", file_name);
+        }
+
+        assert!(!is_video_file(Path::new("video")));
+        assert!(!is_video_file(Path::new("video.mp4.backup")));
+    }
+
+    #[test]
     fn test_format_duration_short() {
         assert_eq!(format_duration(0), "0:00");
         assert_eq!(format_duration(30), "0:30");
@@ -53,6 +71,35 @@
         
         // Should be cleared now
         assert!(!manager.check_and_clear_stop_notification("player_1"));
+    }
+
+    #[test]
+    fn test_video_manager_registers_and_cleans_null_players() {
+        gstreamer::init().ok();
+        let manager = GlobalVideoManager::new();
+        let pipeline = gstreamer::Pipeline::new();
+
+        manager.register_player(&pipeline, "player_null".to_string());
+        assert_eq!(manager.active_players.lock().unwrap().len(), 1);
+
+        manager.cleanup_dead_players();
+        assert_eq!(manager.active_players.lock().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_video_manager_stop_players_for_file_removes_matching_player() {
+        gstreamer::init().ok();
+        let manager = GlobalVideoManager::new();
+        let pipeline = gstreamer::Pipeline::new();
+        let _ = pipeline.set_state(gstreamer::State::Ready);
+
+        manager.register_player(&pipeline, "player_123_movie.mp4".to_string());
+        manager.stop_players_for_file(Path::new("/tmp/movie.mp4"));
+
+        assert_eq!(manager.active_players.lock().unwrap().len(), 0);
+        assert!(manager.check_and_clear_stop_notification("player_123_movie.mp4"));
+
+        let _ = pipeline.set_state(gstreamer::State::Null);
     }
 
     #[test]

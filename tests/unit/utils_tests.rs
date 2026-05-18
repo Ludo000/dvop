@@ -1,5 +1,7 @@
     use super::*;
     use std::fs;
+    use std::cell::RefCell;
+    use std::rc::Rc;
     use tempfile::TempDir;
 
     #[test]
@@ -91,4 +93,36 @@
         assert_eq!(tab_switch, FileSelectionSource::TabSwitch);
         assert_eq!(direct_click, FileSelectionSource::DirectClick);
         assert_ne!(tab_switch, direct_click);
+    }
+
+    #[test]
+    fn test_is_current_file_non_editable_detects_media_paths() {
+        for path in ["image.png", "clip.mp4", "song.mp3"] {
+            let active_path = Rc::new(RefCell::new(Some(PathBuf::from(path))));
+            assert!(
+                is_current_file_non_editable(Some(&active_path), None),
+                "{} should be non-editable",
+                path
+            );
+        }
+    }
+
+    #[test]
+    fn test_is_current_file_non_editable_allows_typescript_override_and_text() {
+        for path in ["component.ts", "component.tsx", "notes.txt", "data.json"] {
+            let active_path = Rc::new(RefCell::new(Some(PathBuf::from(path))));
+            assert!(
+                !is_current_file_non_editable(Some(&active_path), None),
+                "{} should be editable",
+                path
+            );
+        }
+    }
+
+    #[test]
+    fn test_is_current_file_non_editable_without_active_file_is_false() {
+        let empty_path = Rc::new(RefCell::new(None));
+
+        assert!(!is_current_file_non_editable(None, None));
+        assert!(!is_current_file_non_editable(Some(&empty_path), None));
     }

@@ -518,3 +518,6 @@ pub fn initialize_completion_data() -> Result<Vec<String>, Box<dyn std::error::E
 }
 
 
+#[cfg(test)]
+#[path = "../../tests/unit/completion/json_provider_tests.rs"]
+mod tests;

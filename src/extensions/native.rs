@@ -161,3 +161,7 @@ pub fn shutdown_all() {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/extensions/native_tests.rs"]
+mod tests;

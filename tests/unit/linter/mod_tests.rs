@@ -102,6 +102,30 @@
     }
 
     #[test]
+    fn test_lint_file_builtin_ui_dispatches_to_gtk_ui_linter() {
+        let path = Path::new("broken.ui");
+        let diagnostics = lint_file_builtin(path, "<object class=\"GtkWindow\" />");
+
+        assert!(diagnostics
+            .iter()
+            .any(|d| d.rule == "missing-interface" && d.severity == DiagnosticSeverity::Error));
+    }
+
+    #[test]
+    fn test_lint_file_builtin_handles_paths_without_extension() {
+        let diagnostics = lint_file_builtin(Path::new("Makefile"), "content");
+        assert!(diagnostics.is_empty());
+    }
+
+    #[test]
+    fn test_diagnostic_underline_tracking_for_unknown_path_is_false() {
+        let path = "/tmp/dvop/no-underlines.rs";
+
+        forget_diagnostic_underline_tracking_for_path(path);
+        assert!(!has_applied_diagnostic_underlines_for_path(path));
+    }
+
+    #[test]
     fn test_diagnostic_with_end_position() {
         let diag = Diagnostic::new(
             DiagnosticSeverity::Warning,

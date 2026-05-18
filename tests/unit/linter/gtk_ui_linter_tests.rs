@@ -60,6 +60,61 @@
     }
 
     #[test]
+    fn test_lint_gtk_ui_missing_object_class() {
+        let invalid_ui = r#"<interface>
+  <object id="window1">
+    <property name="title">Test</property>
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(invalid_ui);
+        assert!(diagnostics
+            .iter()
+            .any(|d| d.rule == "missing-class" && d.severity == DiagnosticSeverity::Error));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_template_requires_class_and_parent() {
+        let invalid_ui = r#"<interface>
+  <template>
+    <property name="title">Test</property>
+  </template>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(invalid_ui);
+        assert!(diagnostics.iter().any(|d| d.rule == "missing-class"));
+        assert!(diagnostics.iter().any(|d| d.rule == "missing-parent"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_unknown_property() {
+        let invalid_ui = r#"<interface>
+  <object class="GtkButton" id="button1">
+    <property name="definitely-not-a-button-property">Test</property>
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(invalid_ui);
+        assert!(diagnostics
+            .iter()
+            .any(|d| d.rule == "unknown-property" && d.message.contains("GtkButton")));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_deprecated_gtk3_property() {
+        let invalid_ui = r#"<interface>
+  <object class="GtkButton" id="button1">
+    <property name="stock">gtk-open</property>
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(invalid_ui);
+        assert!(diagnostics
+            .iter()
+            .any(|d| d.rule == "deprecated-property" && d.message.contains("icon-name")));
+    }
+
+    #[test]
     fn test_lint_gtk_ui_empty() {
         let empty_ui = "";
         let diagnostics = lint_gtk_ui(empty_ui);

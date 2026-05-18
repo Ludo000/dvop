@@ -43,6 +43,34 @@
     }
 
     #[test]
+    fn test_log_message_deserialization_preserves_pipe_in_message() {
+        let msg = LogMessage::from_string("1700000000|ERROR|path=a|reason=bad").unwrap();
+
+        assert_eq!(msg.level, LogLevel::Error);
+        assert_eq!(msg.message, "path=a|reason=bad");
+    }
+
+    #[test]
+    fn test_all_log_levels_serialize_to_expected_tokens() {
+        let levels = [
+            (LogLevel::Info, "INFO"),
+            (LogLevel::Warning, "WARNING"),
+            (LogLevel::Error, "ERROR"),
+            (LogLevel::Success, "SUCCESS"),
+        ];
+
+        for (level, token) in levels {
+            let msg = LogMessage {
+                timestamp: std::time::UNIX_EPOCH,
+                message: "message".to_string(),
+                level,
+            };
+
+            assert_eq!(msg.to_string(), format!("0|{}|message", token));
+        }
+    }
+
+    #[test]
     fn test_log_levels() {
         let info = LogMessage {
             timestamp: std::time::SystemTime::now(),

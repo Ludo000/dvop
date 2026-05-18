@@ -732,3 +732,7 @@ pub fn get_sidebar_panel_content(ext_id: &str, panel_id: &str, action: &str) -> 
     }
     String::new()
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/extensions/hooks_tests.rs"]
+mod tests;
