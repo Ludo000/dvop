@@ -717,3 +717,7 @@ pub fn hide_search() {
     let search_state = get_search_state();
     search_state.hide_search();
 }
+
+#[cfg(test)]
+#[path = "../tests/unit/search_tests.rs"]
+mod tests;
