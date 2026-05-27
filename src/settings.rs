@@ -34,6 +34,7 @@
 // User settings and preferences for the text editor
 // Handles loading, saving, and accessing user configuration options
 
+use crate::window_bounds::{MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH};
 use home::home_dir;
 use std::collections::HashMap;
 use std::fs;
@@ -277,12 +278,12 @@ impl EditorSettings {
         self.get("window_width")
             .and_then(|s| s.parse::<i32>().ok())
             .unwrap_or(DEFAULT_WINDOW_WIDTH)
-            .max(400) // Minimum width
+            .max(MIN_WINDOW_WIDTH)
     }
 
     /// Sets the window width
     pub fn set_window_width(&mut self, width: i32) {
-        let clamped_width = width.max(400); // Minimum width
+        let clamped_width = width.max(MIN_WINDOW_WIDTH);
         self.set("window_width", &clamped_width.to_string());
     }
 
@@ -291,12 +292,12 @@ impl EditorSettings {
         self.get("window_height")
             .and_then(|s| s.parse::<i32>().ok())
             .unwrap_or(DEFAULT_WINDOW_HEIGHT)
-            .max(300) // Minimum height
+            .max(MIN_WINDOW_HEIGHT)
     }
 
     /// Sets the window height
     pub fn set_window_height(&mut self, height: i32) {
-        let clamped_height = height.max(300); // Minimum height
+        let clamped_height = height.max(MIN_WINDOW_HEIGHT);
         self.set("window_height", &clamped_height.to_string());
     }
 

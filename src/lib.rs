@@ -41,6 +41,7 @@ pub mod handlers;    // Tab management, file operations, event handling
 pub mod syntax;      // Syntax highlighting and dark mode detection
 pub mod utils;       // File browser, path navigation, MIME detection, keyboard shortcuts
 pub mod settings;    // User preferences persistence
+pub mod window_bounds; // Window size clamping against monitor geometry
 pub mod search;      // In-file find and replace
 pub mod status_log;  // Status bar logging with severity levels
 pub mod file_cache;  // File content caching with TTL expiration

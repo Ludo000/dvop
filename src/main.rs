@@ -54,6 +54,7 @@ mod linter;     // Code diagnostics: underlines, diagnostics panel, GTK UI linte
 mod lsp;        // Language Server Protocol client (rust-analyzer integration)
 mod search;     // In-file find and replace functionality
 mod settings;   // Persistent user preferences (theme, font size, window size, etc.)
+mod window_bounds; // Clamp window size to monitor geometry at launch
 mod status_log; // Status bar message logging with severity levels
 mod syntax;     // Syntax highlighting via GtkSourceView5, dark mode detection
 mod ui;         // GTK4 UI components: window template, CSS, terminal, git diff, settings dialog
@@ -1177,9 +1178,18 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         }
     });
 
+    // Clamp to the monitor and apply compact header chrome before the first frame is mapped.
+    window.ensure_fits_screen_and_update_layout();
+
     // Allow the first main-loop iteration to paint before the rest of build_ui finishes wiring.
     // Early `show()` lets GTK measure allocations (paned positions, terminal height) before we attach more handlers.
     window.show();
+
+    let fit_window = window.clone();
+    glib::idle_add_local_once(move || {
+        // Re-check after the compositor assigns the real surface/monitor geometry.
+        fit_window.ensure_fits_screen_and_update_layout();
+    });
 
     // Register native extension objects (lightweight). Lifecycle hooks and script extensions run from an idle callback later.
     // Only registers structs + reads JSON flags — heavy work (rustup parse, LSP) defers to idle callbacks inside each extension.
@@ -2293,6 +2303,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
     let secondary_status_label_clone = secondary_status_label.clone();
     let current_selection_source_clone_for_switch = current_selection_source.clone();
     let volume_control_clone_for_switch = volume_control_box.clone();
+    let window_clone_for_switch = window.clone();
 
     // Connect to the notebook's switch-page signal
     // Fires after GTK selects the page — `page_num` is the new index (not old).
@@ -2343,6 +2354,16 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
                 if notebook_for_extension_refresh.current_page() == Some(page_num) {
                     extensions::hooks::refresh_sidebar_panels_async();
                 }
+            });
+        }
+
+        let is_preview_tab = notebook
+            .nth_page(Some(page_num))
+            .is_some_and(|page| page.downcast_ref::<gtk4::Paned>().is_some());
+        if is_preview_tab {
+            let window_for_preview = window_clone_for_switch.clone();
+            glib::idle_add_local_once(move || {
+                ui::DvopWindow::ensure_application_window_fits(&window_for_preview);
             });
         }
 
@@ -3233,6 +3254,7 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
             }
 
             handlers::set_bulk_session_restore(false);
+            ui::DvopWindow::ensure_application_window_fits(&window_def);
             // Visible tab after restore gets full lint/completion hooks immediately — others on first switch.
             if let Some(cp) = editor_nb.current_page() {
                 handlers::ensure_tab_heavy_setup_if_pending(
@@ -3270,8 +3292,8 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
 
     let responsive_window = window.clone();
     glib::idle_add_local_once(move || {
-        // DvopWindow template — recomputes breakpoints once real allocation is known post-show.
-        responsive_window.update_responsive_layout();
+        // Clamp to monitor (e.g. 720×720) then apply compact/wide header breakpoints.
+        responsive_window.ensure_fits_screen_and_update_layout();
     });
 
     {
@@ -3406,9 +3428,12 @@ fn build_ui(app: &Application, file_to_open: Option<PathBuf>) {
         // Writes the same keys startup reads (`set_window_size`, `set_pane_dimensions`, `set_opened_files`).
         println!("No unsaved changes, saving session...");
 
-        // Get the current window size - use width() and height() for actual size
-        let width = window.width();
-        let height = window.height();
+        // Get the current window size, capped so we never persist dimensions larger than the screen.
+        let (width, height) = window_bounds::clamp_size_to_screen_for_window(
+            window.width(),
+            window.height(),
+            Some(window.upcast_ref::<gtk4::Window>()),
+        );
 
         // Get the current pane positions
         let file_panel_width = paned_for_close.position();

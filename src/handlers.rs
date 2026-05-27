@@ -1244,23 +1244,22 @@ fn create_svg_split_view(
     paned
 }
 
-/// Creates a split view for Markdown files with code on the left and rendered preview on the right
+/// Markdown tab with GtkSource editor and WebKit HTML preview in a paned layout.
 ///
-/// This function creates a horizontal paned widget with:
-/// - Left side: Source code editor with Markdown syntax highlighting
-/// - Right side: Rendered markdown preview with basic styling
+/// Uses a horizontal split on wide windows and a vertical split (editor above preview) on narrow screens.
 fn create_markdown_split_view(
     content: &str,
     file_path: &std::path::Path,
     tab_actual_label: &Label,
     file_name: &str,
+    orientation: gtk4::Orientation,
+    split_position: i32,
 ) -> gtk4::Paned {
     // GtkSource Markdown editor + WebKit HTML preview (`pulldown-cmark`) — same split-tab idea as SVG but renders to HTML.
-    // Create the paned widget for split view
-    let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
+    let paned = gtk4::Paned::new(orientation);
     paned.set_wide_handle(true);
-    paned.set_shrink_start_child(false);
-    paned.set_shrink_end_child(false);
+    paned.set_shrink_start_child(true);
+    paned.set_shrink_end_child(true);
     paned.set_resize_start_child(true);
     paned.set_resize_end_child(true);
 
@@ -1309,6 +1308,7 @@ fn create_markdown_split_view(
     let webview = WebView::new();
     webview.set_vexpand(true);
     webview.set_hexpand(true);
+    webview.set_size_request(-1, -1);
 
     // Helper function to convert markdown to HTML
     let markdown_to_html = |markdown_text: &str| -> String {
@@ -1367,8 +1367,10 @@ fn create_markdown_split_view(
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
             padding: 20px;
-            max-width: 900px;
+            max-width: 100%;
+            box-sizing: border-box;
             margin: 0 auto;
+            overflow-x: auto;
             color: var(--text-color);
             background-color: var(--bg-color);
         }}
@@ -1445,8 +1447,14 @@ fn create_markdown_split_view(
     
     webview.load_html(&initial_html, base_uri.as_deref());
 
-    // WebView handles its own scrolling, add it directly
-    right_box.append(&webview);
+    let preview_scrolled = ScrolledWindow::builder()
+        .hscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vscrollbar_policy(gtk4::PolicyType::Automatic)
+        .vexpand(true)
+        .hexpand(true)
+        .build();
+    preview_scrolled.set_child(Some(&webview));
+    right_box.append(&preview_scrolled);
 
     // Track changes for dirty state and update preview
     let tab_label_weak = tab_actual_label.downgrade();
@@ -1490,9 +1498,7 @@ fn create_markdown_split_view(
     // Add both sides to the paned widget
     paned.set_start_child(Some(&left_scrolled));
     paned.set_end_child(Some(&right_box));
-
-    // Set initial position to 50/50 split
-    paned.set_position(400); // Default split position (will adjust based on window width)
+    paned.set_position(split_position);
 
     paned
 }
@@ -1703,12 +1709,37 @@ pub fn open_or_focus_tab(
             .unwrap_or(false);
 
         if is_markdown {
-            // Create split view for Markdown (code on left, preview on right)
-            let markdown_paned =
-                create_markdown_split_view(content, file_to_open, &tab_actual_label, &file_name);
+            let (window_w, window_h) =
+                crate::window_bounds::clamped_window_size_for(window.upcast_ref());
+            let file_panel = crate::settings::get_settings().get_file_panel_width();
+            let editor_w =
+                crate::window_bounds::estimate_editor_area_width(window_w, file_panel);
+            let editor_h = crate::window_bounds::estimate_editor_area_height(window_h);
 
-            // Add the paned widget directly to the notebook (no scrolled window wrapper)
-            let new_page_num = notebook.append_page(&markdown_paned, Some(&tab_widget));
+            let (orientation, split) = match crate::window_bounds::markdown_preview_layout(
+                window.upcast_ref(),
+            ) {
+                crate::window_bounds::MarkdownPreviewLayout::SideBySide => (
+                    gtk4::Orientation::Horizontal,
+                    crate::window_bounds::initial_preview_pane_split(editor_w),
+                ),
+                crate::window_bounds::MarkdownPreviewLayout::Stacked => (
+                    gtk4::Orientation::Vertical,
+                    crate::window_bounds::initial_stacked_preview_split(editor_h),
+                ),
+            };
+
+            let markdown_page = create_markdown_split_view(
+                content,
+                file_to_open,
+                &tab_actual_label,
+                &file_name,
+                orientation,
+                split,
+            )
+            .upcast::<gtk4::Widget>();
+
+            let new_page_num = notebook.append_page(&markdown_page, Some(&tab_widget));
 
             // Update state BEFORE set_current_page so switch-page sees the path
             println!("Adding Markdown file to HashMap: page {} = {:?}", new_page_num, file_to_open.file_name());
@@ -1722,6 +1753,12 @@ pub fn open_or_focus_tab(
 
             // Log successful opening
             crate::status_log::log_success(&format!("Opened {}", filename));
+
+            crate::ui::DvopWindow::ensure_application_window_fits(window);
+            let window_for_preview_fit = window.clone();
+            glib::idle_add_local_once(move || {
+                crate::ui::DvopWindow::ensure_application_window_fits(&window_for_preview_fit);
+            });
 
             // Connect close button
             let notebook_clone = notebook.clone();
@@ -1741,10 +1778,10 @@ pub fn open_or_focus_tab(
                 _save_menu_button: _save_menu_button.cloned(),
             };
 
-            let markdown_paned_for_close = markdown_paned.clone();
+            let markdown_page_for_close = markdown_page.clone();
             tab_close_button.connect_clicked(move |_| {
                 if let Some(current_idx_for_this_tab) =
-                    notebook_clone.page_num(&markdown_paned_for_close)
+                    notebook_clone.page_num(&markdown_page_for_close)
                 {
                     handle_close_tab_request(
                         &notebook_clone,

@@ -248,30 +248,38 @@ mod imp {
     impl ObjectImpl for DvopWindow {}
     // "impl" blocks define methods and behavior for a struct or enum.
     impl WidgetImpl for DvopWindow {
+        fn measure(&self, orientation: gtk4::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
+            let (min, nat, min_baseline, nat_baseline) =
+                self.parent_measure(orientation, for_size);
+            let obj = self.obj();
+            let gtk_window = obj.upcast_ref::<gtk4::Window>();
+            let Some((max_w, max_h)) =
+                crate::window_bounds::screen_bounds_for_window(gtk_window)
+            else {
+                return (min, nat, min_baseline, nat_baseline);
+            };
+
+            match orientation {
+                gtk4::Orientation::Horizontal => (
+                    min.min(max_w),
+                    nat.min(max_w),
+                    min_baseline.min(max_w),
+                    nat_baseline.min(max_w),
+                ),
+                gtk4::Orientation::Vertical => (
+                    min.min(max_h),
+                    nat.min(max_h),
+                    min_baseline.min(max_h),
+                    nat_baseline.min(max_h),
+                ),
+                _ => (min, nat, min_baseline, nat_baseline),
+            }
+        }
+
         fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
-            const RESPONSIVE_HEADER_BREAKPOINT: i32 = 950;
-
+            // Apply compact chrome before measuring children so narrow screens can shrink below the wide-header minimum.
+            self.obj().apply_responsive_layout_for_width(width);
             self.parent_size_allocate(width, height, baseline);
-
-            let compact = width < RESPONSIVE_HEADER_BREAKPOINT;
-            let currently_compact = self.hamburger_menu_button.is_visible();
-            if compact == currently_compact {
-                return;
-            }
-
-            if compact {
-                self.menu_revealer.set_visible(false);
-                self.menu_revealer.set_reveal_child(false);
-                self.hamburger_menu_button.set_visible(true);
-                self.save_label.set_visible(false);
-                self.open_label.set_visible(false);
-            } else {
-                self.menu_revealer.set_visible(true);
-                self.menu_revealer.set_reveal_child(true);
-                self.hamburger_menu_button.set_visible(false);
-                self.save_label.set_visible(true);
-                self.open_label.set_visible(true);
-            }
         }
     }
     // "impl" blocks define methods and behavior for a struct or enum.
@@ -298,11 +306,15 @@ impl DvopWindow {
                 .expect("Could not load resources");
         gio::resources_register(&resources);
 
-        // Get saved window dimensions from settings
+        // Get saved window dimensions from settings, capped to the current monitor.
         let settings = crate::settings::get_settings();
-        let window_width = settings.get_window_width();
-        let window_height = settings.get_window_height();
-        let file_panel_width = settings.get_file_panel_width();
+        let (window_width, window_height) = crate::window_bounds::clamp_size_to_screen(
+            settings.get_window_width(),
+            settings.get_window_height(),
+        );
+        let file_panel_width = settings
+            .get_file_panel_width()
+            .min((window_width - crate::window_bounds::MIN_EDITOR_WIDTH).max(100));
         let terminal_height = settings.get_terminal_height();
 
         let window: Self = glib::Object::builder()
@@ -325,37 +337,121 @@ impl DvopWindow {
         let volume_percent = (initial_volume * 100.0) as i32;
         imp.volume_label.set_text(&format!("{}%", volume_percent));
 
+        window.apply_responsive_layout_for_width(window_width);
+
         window
     }
 
-    // pub makes this function public, allowing it to be used from outside this module.
-    pub fn update_responsive_layout(&self) {
-        // Collapse header to hamburger below `RESPONSIVE_HEADER_BREAKPOINT`; first real call is deferred in `main` until after initial allocation.
-        let imp = self.imp();
-        let width = self.width();
-        // `width` is 0 until the window has a real allocation — skipping avoids toggling chrome off mid-configure.
+    /// Clamps the window to the monitor if needed and refreshes responsive header chrome.
+    pub fn ensure_fits_screen_and_update_layout(&self) -> bool {
+        let gtk_window = self.upcast_ref::<gtk4::Window>();
+        let current_w = if self.width() > 0 {
+            self.width()
+        } else {
+            gtk_window.default_width()
+        };
+        let current_h = if self.height() > 0 {
+            self.height()
+        } else {
+            gtk_window.default_height()
+        };
+
+        let (target_w, target_h) = crate::window_bounds::clamp_size_to_screen_for_window(
+            current_w,
+            current_h,
+            Some(gtk_window),
+        );
+
+        self.apply_responsive_layout_for_width(target_w);
+
+        let needs_resize = current_w > target_w
+            || current_h > target_h
+            || gtk_window.default_width() > target_w
+            || gtk_window.default_height() > target_h;
+
+        let fitted = if needs_resize {
+            crate::window_bounds::force_gtk_window_size(gtk_window, target_w, target_h);
+            crate::window_bounds::clamp_file_panel_position(&self.imp().paned.get(), target_w);
+            let mut settings = crate::settings::get_settings_mut();
+            settings.set_window_size(target_w, target_h);
+            Some((target_w, target_h))
+        } else {
+            None
+        };
+
+        self.clamp_preview_paneds_for_window(target_w, target_h);
+
+        let layout_width = if self.width() > 0 {
+            self.width()
+        } else {
+            target_w
+        };
+        self.apply_responsive_layout_for_width(layout_width);
+        fitted.is_some()
+    }
+
+    /// Applies compact/wide header chrome for a planned window width (including before first allocation).
+    pub fn apply_responsive_layout_for_width(&self, width: i32) {
         if width <= 0 {
             return;
         }
 
+        let imp = self.imp();
         let compact = width < RESPONSIVE_HEADER_BREAKPOINT;
-        let currently_compact = imp.hamburger_menu_button.is_visible();
-        if compact == currently_compact {
-            return;
-        }
 
         if compact {
+            imp.menu_search_entry.set_width_request(140);
             imp.menu_revealer.set_visible(false);
             imp.menu_revealer.set_reveal_child(false);
             imp.hamburger_menu_button.set_visible(true);
             imp.save_label.set_visible(false);
             imp.open_label.set_visible(false);
         } else {
+            imp.menu_search_entry.set_width_request(300);
             imp.menu_revealer.set_visible(true);
             imp.menu_revealer.set_reveal_child(true);
             imp.hamburger_menu_button.set_visible(false);
             imp.save_label.set_visible(true);
             imp.open_label.set_visible(true);
+        }
+    }
+
+    /// Clamps Markdown/SVG split panes so preview tabs cannot widen the window.
+    pub fn clamp_preview_paneds_for_window(&self, window_width: i32, window_height: i32) {
+        let imp = self.imp();
+        let file_panel_width = imp.paned.get().position();
+        let editor_area_width =
+            crate::window_bounds::estimate_editor_area_width(window_width, file_panel_width);
+        let editor_area_height =
+            crate::window_bounds::estimate_editor_area_height(window_height);
+        let notebook = imp.editor_notebook.get();
+        for page_num in 0..notebook.n_pages() {
+            if let Some(page) = notebook.nth_page(Some(page_num)) {
+                if let Some(paned) = page.downcast_ref::<gtk4::Paned>() {
+                    crate::window_bounds::clamp_preview_paned_position(
+                        paned,
+                        editor_area_width,
+                        editor_area_height,
+                    );
+                }
+            }
+        }
+    }
+
+    // pub makes this function public, allowing it to be used from outside this module.
+    pub fn update_responsive_layout(&self) {
+        let width = if self.width() > 0 {
+            self.width()
+        } else {
+            self.upcast_ref::<gtk4::Window>().default_width()
+        };
+        self.apply_responsive_layout_for_width(width);
+    }
+
+    /// Re-clamps the main window when tab content (e.g. Markdown preview) changes minimum size.
+    pub fn ensure_application_window_fits(window: &impl IsA<ApplicationWindow>) {
+        if let Some(dvop) = window.upcast_ref::<ApplicationWindow>().downcast_ref::<DvopWindow>() {
+            dvop.ensure_fits_screen_and_update_layout();
         }
     }
 
