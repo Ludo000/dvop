@@ -1,4 +1,5 @@
     use super::*;
+    use serial_test::serial;
     use std::collections::HashMap;
     use tempfile::TempDir;
 
@@ -242,6 +243,10 @@
     fn test_config_dir_creation() {
         let config_dir = get_config_dir_public();
         assert!(config_dir.is_absolute());
+        assert!(
+            config_dir.to_string_lossy().contains("dvop"),
+            "config dir should live under dvop: {config_dir:?}"
+        );
     }
 
     #[test]
@@ -249,4 +254,91 @@
         let (light, dark) = detect_os_default_themes();
         assert!(!light.is_empty());
         assert!(!dark.is_empty());
+    }
+
+    #[test]
+    fn test_git_commit_message_defaults_to_empty_string() {
+        let settings = EditorSettings::new();
+        assert!(settings.get_git_commit_message().is_empty());
+    }
+
+    #[test]
+    fn test_set_opened_files_serializes_multiple_paths() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut settings = settings_with_temp_path(&temp_dir);
+        let files = vec![
+            temp_dir.path().join("one.rs"),
+            temp_dir.path().join("two.py"),
+        ];
+
+        settings.set_opened_files(&files);
+        assert_eq!(settings.get_opened_files(), files);
+    }
+
+    #[test]
+    fn test_terminal_visible_defaults_to_false() {
+        let settings = EditorSettings::new();
+        assert!(!settings.get_terminal_visible());
+    }
+
+    #[test]
+    fn test_set_window_size_updates_both_dimensions() {
+        let mut settings = EditorSettings::new();
+        settings.set_window_size(1440, 900);
+        assert_eq!(settings.get_window_width(), 1440);
+        assert_eq!(settings.get_window_height(), 900);
+    }
+
+    #[test]
+    fn test_sidebar_visible_defaults_to_true() {
+        let settings = EditorSettings::new();
+        assert!(settings.get_sidebar_visible());
+    }
+
+    #[test]
+    fn test_search_query_defaults_to_empty_string() {
+        let temp_dir = TempDir::new().unwrap();
+        let settings = settings_with_temp_path(&temp_dir);
+        assert!(settings.get_search_query().is_empty());
+    }
+
+    #[test]
+    fn test_generic_get_and_set_round_trip_custom_key() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut settings = settings_with_temp_path(&temp_dir);
+
+        settings.set("custom_feature_flag", "enabled");
+        assert_eq!(
+            settings.get("custom_feature_flag").map(String::as_str),
+            Some("enabled")
+        );
+        assert!(settings.get("missing_custom_key").is_none());
+    }
+
+    #[test]
+    #[serial]
+    fn get_config_dir_public_honors_xdg_config_home() {
+        let temp = tempfile::tempdir().unwrap();
+        let previous = std::env::var("XDG_CONFIG_HOME").ok();
+        std::env::set_var("XDG_CONFIG_HOME", temp.path());
+
+        let config_dir = get_config_dir_public();
+        assert_eq!(config_dir, temp.path().join("dvop"));
+
+        match previous {
+            Some(value) => std::env::set_var("XDG_CONFIG_HOME", value),
+            None => std::env::remove_var("XDG_CONFIG_HOME"),
+        }
+    }
+
+    #[test]
+    fn test_git_commit_message_round_trips_through_settings() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut settings = settings_with_temp_path(&temp_dir);
+
+        settings.set_git_commit_message("fix: handle edge case");
+        assert_eq!(
+            settings.get_git_commit_message(),
+            "fix: handle edge case"
+        );
     }

@@ -73,6 +73,10 @@ fn search_in_content(
     case_sensitive: bool,
     whole_word: bool,
 ) -> Vec<SearchResult> {
+    if query.is_empty() {
+        return Vec::new();
+    }
+
     let mut results = Vec::new();
     let lines: Vec<&str> = content.lines().collect();
     let query_lower = query.to_lowercase();
@@ -2662,3 +2666,7 @@ pub fn create_global_search_panel(
     // Return the panel as a GtkBox
     panel.upcast::<GtkBox>()
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/ui/global_search_tests.rs"]
+mod tests;

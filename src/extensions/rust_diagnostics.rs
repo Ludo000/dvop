@@ -621,3 +621,7 @@ fn persist_enabled_state(enabled: bool) {
         let _ = std::fs::write(&path, json);
     }
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/extensions/rust_diagnostics_tests.rs"]
+mod tests;

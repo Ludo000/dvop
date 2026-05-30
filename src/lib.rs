@@ -75,3 +75,18 @@ pub fn update_all_buffer_themes(window: &impl IsA<gtk4::Widget>) {
 // Common imports that tests might need
 pub use gtk4;
 pub use sourceview5;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    #[test]
+    #[serial]
+    fn update_all_buffer_themes_stub_accepts_widget_without_panicking() {
+        gtk4::test_synced(|| {
+            let label = gtk4::Label::new(None);
+            update_all_buffer_themes(&label);
+        });
+    }
+}

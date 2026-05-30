@@ -126,6 +126,15 @@ pub fn trigger_git_status_update() {
     });
 }
 
+#[cfg(test)]
+pub(crate) fn invoke_git_status_update_callback_for_tests() {
+    GIT_STATUS_UPDATE_CALLBACK.with(|callback_cell| {
+        if let Some(callback) = callback_cell.borrow().as_ref() {
+            callback();
+        }
+    });
+}
+
 // #[derive(...)] asks the compiler to automatically generate basic trait implementations.
 #[derive(Clone, Debug)]
 struct GitFileChange {
@@ -4520,3 +4529,7 @@ pub fn create_git_diff_panel(
     // Return the panel as a GtkBox
     panel.upcast::<GtkBox>()
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/ui/git_diff_tests.rs"]
+mod tests;

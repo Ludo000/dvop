@@ -237,3 +237,7 @@ impl Extension {
         Self { manifest, path }
     }
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/extensions/mod_tests.rs"]
+mod tests;

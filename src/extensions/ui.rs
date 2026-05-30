@@ -1055,3 +1055,7 @@ fn append_detail_row(vbox: &gtk4::Box, key: &str, value: &str) {
 
     vbox.append(&row);
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/extensions/ui_tests.rs"]
+mod tests;

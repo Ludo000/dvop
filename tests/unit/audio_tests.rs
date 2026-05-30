@@ -29,6 +29,12 @@
     }
 
     #[test]
+    fn test_is_music_file_is_case_insensitive() {
+        assert!(is_music_file(Path::new("TRACK.MP3")));
+        assert!(is_music_file(Path::new("Song.WAV")));
+    }
+
+    #[test]
     fn test_is_music_content_without_extension_uses_path_heuristics() {
         assert!(is_music_content(Path::new("/home/user/Music/Artist - Title")));
         assert!(is_music_content(Path::new("/home/user/library/1 - Intro")));
@@ -262,4 +268,14 @@
             *progress.lock().unwrap(),
             SpectrogramProgress::InProgress(100)
         ));
+    }
+
+    #[test]
+    fn test_stop_audio_for_file_without_registered_players() {
+        stop_audio_for_file(Path::new("/tmp/not-playing.mp3"));
+    }
+
+    #[test]
+    fn test_stop_all_audio_players_without_registered_players() {
+        stop_all_audio_players();
     }

@@ -4695,3 +4695,7 @@ pub fn setup_extension_editor_context_menu(
         source_view.set_extra_menu(None::<&gtk4::gio::MenuModel>);
     }
 }
+
+#[cfg(test)]
+#[path = "../tests/unit/handlers_tests.rs"]
+mod tests;

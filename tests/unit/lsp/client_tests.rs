@@ -41,6 +41,45 @@
     }
 
     #[test]
+    fn test_json_rpc_message_deserializes_error_response() {
+        let json = r#"{"jsonrpc":"2.0","id":2,"error":{"code":-32601,"message":"Method not found"}}"#;
+        let msg: JsonRpcMessage = serde_json::from_str(json).unwrap();
+
+        assert_eq!(msg.id, Some(serde_json::json!(2)));
+        assert!(msg.error.is_some());
+        assert!(msg.result.is_none());
+    }
+
+    #[test]
+    fn test_json_rpc_message_serializes_result_response() {
+        let msg = JsonRpcMessage {
+            jsonrpc: "2.0".to_string(),
+            id: Some(serde_json::json!(3)),
+            method: None,
+            params: None,
+            result: Some(serde_json::json!({"capabilities": {}})),
+            error: None,
+        };
+
+        let json = serde_json::to_string(&msg).unwrap();
+        assert!(json.contains("capabilities"));
+        assert!(!json.contains("error"));
+    }
+
+    #[test]
+    fn test_lsp_client_next_id_starts_at_one() {
+        let client = client_without_process();
+        assert_eq!(*client.next_id.lock().unwrap(), 1);
+    }
+
+    #[test]
+    fn test_lsp_client_shutdown_without_process_succeeds() {
+        let client = client_without_process();
+        assert!(client.shutdown().is_ok());
+        assert_eq!(*client.next_id.lock().unwrap(), 2);
+    }
+
+    #[test]
     fn test_lsp_client_creation_invalid_command() {
         let workspace = PathBuf::from("/tmp");
         let result = LspClient::new("nonexistent_command_xyz", &[], workspace);
@@ -233,4 +272,38 @@
         LspClient::read_messages(reader, callback);
 
         assert_eq!(callback_count.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn test_read_messages_parses_two_framed_messages_in_one_buffer() {
+        let callback_count = Arc::new(AtomicUsize::new(0));
+        let seen = callback_count.clone();
+        let callback: DiagnosticCallback = Arc::new(Mutex::new(Some(Box::new(move |_, _| {
+            seen.fetch_add(1, Ordering::SeqCst);
+        }))));
+
+        let body1 = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": PublishDiagnostics::METHOD,
+            "params": { "uri": "file:///tmp/a.rs", "diagnostics": [] }
+        })
+        .to_string();
+        let body2 = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": PublishDiagnostics::METHOD,
+            "params": { "uri": "file:///tmp/b.rs", "diagnostics": [] }
+        })
+        .to_string();
+        let framed = format!(
+            "Content-Length: {}\r\n\r\n{}Content-Length: {}\r\n\r\n{}",
+            body1.len(),
+            body1,
+            body2.len(),
+            body2
+        );
+        let reader = std::io::Cursor::new(framed.into_bytes());
+
+        LspClient::read_messages(reader, callback);
+
+        assert_eq!(callback_count.load(Ordering::SeqCst), 2);
     }

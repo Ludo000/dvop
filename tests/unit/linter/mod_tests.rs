@@ -1,4 +1,5 @@
     use super::*;
+    use serial_test::serial;
 
     #[test]
     fn test_diagnostic_creation() {
@@ -152,4 +153,205 @@
         assert_eq!(diag.end_line, None);
         assert_eq!(diag.end_column, None);
         assert_eq!(diag.rule, "I001");
+    }
+
+    #[test]
+    fn test_store_diagnostics_for_multiple_files() {
+        let path_a = "/tmp/dvop/lint-a.rs";
+        let path_b = "/tmp/dvop/lint-b.rs";
+
+        store_file_diagnostics(
+            path_a,
+            vec![Diagnostic::new(
+                DiagnosticSeverity::Error,
+                "error a".to_string(),
+                1,
+                1,
+                "E001".to_string(),
+            )],
+        );
+        store_file_diagnostics(
+            path_b,
+            vec![Diagnostic::new(
+                DiagnosticSeverity::Warning,
+                "warning b".to_string(),
+                2,
+                3,
+                "W001".to_string(),
+            )],
+        );
+
+        assert_eq!(get_file_diagnostics(path_a).len(), 1);
+        assert_eq!(get_file_diagnostics(path_b).len(), 1);
+        assert_eq!(get_file_diagnostics(path_a)[0].message, "error a");
+        assert_eq!(get_file_diagnostics(path_b)[0].message, "warning b");
+    }
+
+    #[test]
+    fn test_forget_diagnostic_underline_tracking_removes_path() {
+        let path = "/tmp/dvop/underline-tracking.rs";
+        forget_diagnostic_underline_tracking_for_path(path);
+        assert!(!has_applied_diagnostic_underlines_for_path(path));
+    }
+
+    #[test]
+    fn test_lint_file_builtin_returns_empty_for_valid_minimal_ui() {
+        let diagnostics = lint_file_builtin(
+            Path::new("valid.ui"),
+            r#"<interface><object class="GtkWindow" id="window1"><property name="title">Ok</property></object></interface>"#,
+        );
+        assert!(diagnostics.is_empty());
+    }
+
+    #[test]
+    fn test_lint_file_reports_ui_errors_from_builtin_linter() {
+        let diagnostics = lint_file(
+            Path::new("panel.ui"),
+            r#"<interface><object id="window1"><property name="title">Missing class</property></object></interface>"#,
+        );
+        assert!(diagnostics
+            .iter()
+            .any(|d| d.rule == "missing-class" && d.severity == DiagnosticSeverity::Error));
+    }
+
+    #[test]
+    fn test_lint_file_returns_duplicate_id_errors_for_ui_files() {
+        let diagnostics = lint_file(
+            Path::new("dup.ui"),
+            r#"<interface>
+  <object class="GtkLabel" id="dup" />
+  <object class="GtkButton" id="dup" />
+</interface>"#,
+        );
+        assert!(diagnostics.iter().any(|d| d.rule == "duplicate-id"));
+    }
+
+    #[test]
+    fn test_store_empty_diagnostics_removes_cached_path() {
+        let path = "/tmp/dvop/clear-diagnostics.rs";
+        store_file_diagnostics(
+            path,
+            vec![Diagnostic::new(
+                DiagnosticSeverity::Warning,
+                "temporary".to_string(),
+                1,
+                1,
+                "W001".to_string(),
+            )],
+        );
+        assert_eq!(get_file_diagnostics(path).len(), 1);
+
+        store_file_diagnostics(path, vec![]);
+        assert!(get_file_diagnostics(path).is_empty());
+    }
+
+    #[test]
+    fn test_get_file_diagnostics_returns_empty_for_unknown_path() {
+        assert!(get_file_diagnostics("/tmp/dvop/no-such-file.rs").is_empty());
+    }
+
+    #[test]
+    fn test_store_file_diagnostics_overwrites_previous_entry() {
+        let path = "/tmp/dvop/overwrite-diagnostics.rs";
+        store_file_diagnostics(
+            path,
+            vec![Diagnostic::new(
+                DiagnosticSeverity::Info,
+                "first".to_string(),
+                1,
+                1,
+                "I001".to_string(),
+            )],
+        );
+        store_file_diagnostics(
+            path,
+            vec![Diagnostic::new(
+                DiagnosticSeverity::Error,
+                "second".to_string(),
+                2,
+                3,
+                "E002".to_string(),
+            )],
+        );
+
+        let diagnostics = get_file_diagnostics(path);
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].message, "second");
+        assert_eq!(diagnostics[0].severity, DiagnosticSeverity::Error);
+    }
+
+    #[test]
+    fn test_diagnostic_partial_eq_compares_all_fields() {
+        let left = Diagnostic::new(
+            DiagnosticSeverity::Warning,
+            "unused".to_string(),
+            4,
+            2,
+            "W001".to_string(),
+        )
+        .with_end_position(4, 8);
+        let right = Diagnostic::new(
+            DiagnosticSeverity::Warning,
+            "unused".to_string(),
+            4,
+            2,
+            "W001".to_string(),
+        )
+        .with_end_position(4, 8);
+        assert_eq!(left.message, right.message);
+        assert_eq!(left.end_line, right.end_line);
+        assert_eq!(left.end_column, right.end_column);
+    }
+
+    #[test]
+    #[serial]
+    fn apply_diagnostic_underlines_marks_tracked_path_after_applying_tags() {
+        gtk4::test_synced(|| {
+            let path = "/tmp/dvop/underline-apply.rs";
+            forget_diagnostic_underline_tracking_for_path(path);
+
+            let buffer = sourceview5::Buffer::new(None::<&gtk4::TextTagTable>);
+            buffer.set_text("fn main() {}\n");
+            store_file_diagnostics(
+                path,
+                vec![Diagnostic::new(
+                    DiagnosticSeverity::Error,
+                    "syntax error".to_string(),
+                    1,
+                    1,
+                    "E001".to_string(),
+                )],
+            );
+
+            apply_diagnostic_underlines(&buffer, path);
+            assert!(has_applied_diagnostic_underlines_for_path(path));
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn apply_diagnostic_underlines_clears_tracking_when_diagnostics_removed() {
+        gtk4::test_synced(|| {
+            let path = "/tmp/dvop/underline-clear.rs";
+            forget_diagnostic_underline_tracking_for_path(path);
+
+            let buffer = sourceview5::Buffer::new(None::<&gtk4::TextTagTable>);
+            buffer.set_text("fn main() {}\n");
+            store_file_diagnostics(
+                path,
+                vec![Diagnostic::new(
+                    DiagnosticSeverity::Warning,
+                    "unused".to_string(),
+                    1,
+                    1,
+                    "W001".to_string(),
+                )],
+            );
+            apply_diagnostic_underlines(&buffer, path);
+            assert!(has_applied_diagnostic_underlines_for_path(path));
+
+            store_file_diagnostics(path, vec![]);
+            apply_diagnostic_underlines(&buffer, path);
+            assert!(!has_applied_diagnostic_underlines_for_path(path));
+        });
     }

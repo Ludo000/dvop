@@ -1,4 +1,6 @@
     use super::*;
+    use gtk4::prelude::*;
+    use serial_test::serial;
 
     // ── fuzzy_match_score tests ──────────────────────────────────
 
@@ -170,6 +172,18 @@
         assert!(bonus > 0, "buffer words should be boosted in expression position");
     }
 
+    #[test]
+    fn test_context_general_for_mid_expression_text() {
+        assert_eq!(analyse_cursor_context("foo bar "), CursorContext::General);
+    }
+
+    #[test]
+    fn test_general_context_bonus_is_neutral() {
+        let item = CompletionItem::Snippet("foo".to_string(), "foo()".to_string());
+        let bonus = context_bonus(&item, CursorContext::General, None, None);
+        assert_eq!(bonus, 0);
+    }
+
     // ── completion_item_name tests ───────────────────────────────
 
     #[test]
@@ -191,4 +205,175 @@
             completion_item_name(&CompletionItem::BufferWord("my_var".to_string())),
             "my_var"
         );
+    }
+
+    #[test]
+    fn expand_snippet_content_replaces_placeholder_defaults() {
+        assert_eq!(expand_snippet_content("fn ${1:name}() {}"), "fn name() {}");
+        assert_eq!(expand_snippet_content("let ${1} = ${2:value};"), "let placeholder = value;");
+    }
+
+    #[test]
+    fn expand_snippet_content_uses_generic_placeholder_for_numeric_only_markers() {
+        assert_eq!(expand_snippet_content("item ${2}"), "item placeholder");
+    }
+
+    #[test]
+    fn expand_snippet_content_preserves_literal_dollar_braces_without_placeholders() {
+        assert_eq!(expand_snippet_content("cost is $5"), "cost is $5");
+    }
+
+    #[test]
+    fn detect_import_context_recognizes_rust_and_script_imports() {
+        assert!(detect_import_context("use std::fmt::"));
+        assert!(detect_import_context("import foo from 'lodash';"));
+        assert!(detect_import_context("from pathlib import Path"));
+        assert!(!detect_import_context("let total = 0;"));
+    }
+
+    #[test]
+    fn detect_import_context_recognizes_commonjs_require_calls() {
+        assert!(detect_import_context("const fs = require('fs');"));
+    }
+
+    #[test]
+    fn detect_import_context_recognizes_python_bare_import_statement() {
+        assert!(detect_import_context("import os"));
+    }
+
+    #[test]
+    fn extract_import_path_parses_python_dotted_import() {
+        assert_eq!(
+            extract_import_path("import django.utils"),
+            Some("django".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_import_path_parses_rust_module_prefix() {
+        assert_eq!(
+            extract_import_path("use std::fmt::"),
+            Some("std::fmt".to_string())
+        );
+        assert_eq!(
+            extract_import_path("use std::"),
+            Some("std".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_import_path_parses_javascript_module_string() {
+        assert_eq!(
+            extract_import_path("import React from 'react';"),
+            Some("react".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_import_path_parses_python_from_import() {
+        assert_eq!(
+            extract_import_path("from collections import defaultdict"),
+            Some("collections".to_string())
+        );
+    }
+
+    #[test]
+    fn analyse_cursor_context_treats_return_keyword_as_expression_position() {
+        assert_eq!(analyse_cursor_context("return "), CursorContext::ExpressionPosition);
+    }
+
+    #[test]
+    fn expand_snippet_content_handles_nested_braces_in_placeholder() {
+        assert_eq!(
+            expand_snippet_content("wrap ${1:outer ${2:inner}} end"),
+            "wrap outer ${2:inner} end"
+        );
+    }
+
+    #[test]
+    fn extract_import_path_returns_none_for_non_import_context() {
+        assert_eq!(extract_import_path("let total = 0;"), None);
+    }
+
+    #[test]
+    fn context_bonus_boosts_import_functions_in_expression_position() {
+        let item = CompletionItem::ImportItem(ImportItem {
+            name: "read".to_string(),
+            item_type: "function".to_string(),
+            description: "Reads bytes".to_string(),
+        });
+        let bonus = context_bonus(&item, CursorContext::ExpressionPosition, None, None);
+        assert_eq!(bonus, 20);
+    }
+
+    #[test]
+    fn context_bonus_boosts_struct_import_in_type_position() {
+        let item = CompletionItem::ImportItem(ImportItem {
+            name: "HashMap".to_string(),
+            item_type: "struct".to_string(),
+            description: "Map type".to_string(),
+        });
+        let bonus = context_bonus(&item, CursorContext::TypePosition, None, None);
+        assert_eq!(bonus, 25);
+    }
+
+    #[test]
+    fn context_bonus_demotes_non_type_keywords_in_type_position() {
+        let item = CompletionItem::Keyword("let".to_string());
+        let bonus = context_bonus(&item, CursorContext::TypePosition, Some("keyword"), None);
+        assert_eq!(bonus, -10);
+    }
+
+    #[test]
+    fn context_bonus_boosts_snippets_at_statement_start() {
+        let item = CompletionItem::Snippet("fn".to_string(), "fn ${1:name}() {}".to_string());
+        let bonus = context_bonus(&item, CursorContext::StatementStart, None, None);
+        assert_eq!(bonus, 15);
+    }
+
+    #[test]
+    fn completion_item_name_returns_import_module_path() {
+        assert_eq!(
+            completion_item_name(&CompletionItem::ImportModule("std::fmt".to_string())),
+            "std::fmt"
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn get_buffer_language_maps_typescript_to_javascript_pack() {
+        gtk4::test_synced(|| {
+            let buffer = sourceview5::Buffer::new(None::<&gtk4::TextTagTable>);
+            let manager = sourceview5::LanguageManager::new();
+            if let Some(language) = manager.language("typescript") {
+                buffer.set_language(Some(&language));
+                assert_eq!(get_buffer_language(&buffer), "javascript");
+            }
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn get_buffer_language_defaults_to_supported_language_without_buffer_language() {
+        gtk4::test_synced(|| {
+            let buffer = sourceview5::Buffer::new(None::<&gtk4::TextTagTable>);
+            buffer.set_language(None::<&sourceview5::Language>);
+            let detected = get_buffer_language(&buffer);
+            assert!(crate::completion::get_supported_languages().contains(&detected));
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn get_buffer_language_maps_javascript_language_ids() {
+        gtk4::test_synced(|| {
+            let buffer = sourceview5::Buffer::new(None::<&gtk4::TextTagTable>);
+            let manager = sourceview5::LanguageManager::new();
+            for lang_id in ["javascript", "js"] {
+                if let Some(language) = manager.language(lang_id) {
+                    buffer.set_language(Some(&language));
+                    assert_eq!(get_buffer_language(&buffer), "javascript");
+                }
+            }
+        });
     }

@@ -90,6 +90,20 @@
     }
 
     #[test]
+    fn test_category_mappings_use_keyword_fallback_for_unknown_sections() {
+        assert_eq!(category_to_type("custom_section"), "keyword");
+        assert_eq!(category_to_keyword_category("custom_section"), "other");
+    }
+
+    #[test]
+    fn test_fallback_data_includes_rust_snippet_triggers() {
+        let data = fallback_data();
+        let triggers: Vec<&str> = data.snippets.iter().map(|s| s.trigger.as_str()).collect();
+        assert!(triggers.contains(&"fn"));
+        assert!(triggers.contains(&"match"));
+    }
+
+    #[test]
     fn test_load_rust_completions_returns_data() {
         let data = load_rust_completions();
         assert_eq!(data.language, "rust");
@@ -113,4 +127,50 @@
         assert_eq!(loaded.keywords.len(), data.keywords.len());
         assert!(load_cache(toolchain, "rustc 99.1.0").is_none());
         let _ = fs::remove_file(cache_file_path());
+    }
+
+    #[test]
+    fn parse_module_hierarchy_reads_sidebar_items_from_directory() {
+        let tmp_dir = std::env::temp_dir().join("rust_completion_ext_test_hierarchy");
+        let _ = fs::remove_dir_all(&tmp_dir);
+        fs::create_dir_all(&tmp_dir).unwrap();
+        fs::write(
+            tmp_dir.join("sidebar-items1.91.1.js"),
+            r#"window.SIDEBAR_ITEMS = {"struct":["HashMap"],"mod":["hash_map"]};"#,
+        )
+        .unwrap();
+
+        let hierarchy = parse_module_hierarchy(&tmp_dir);
+        let _ = fs::remove_dir_all(&tmp_dir);
+
+        assert!(!hierarchy.modules.is_empty());
+        assert!(hierarchy
+            .modules
+            .iter()
+            .any(|module| module.items.iter().any(|item| item.name == "HashMap")));
+    }
+
+    #[test]
+    fn parse_module_hierarchy_collects_function_items() {
+        let tmp_dir = std::env::temp_dir().join("rust_completion_ext_test_hierarchy_fn");
+        let _ = fs::remove_dir_all(&tmp_dir);
+        fs::create_dir_all(&tmp_dir).unwrap();
+        fs::write(
+            tmp_dir.join("sidebar-items1.91.1.js"),
+            r#"window.SIDEBAR_ITEMS = {"fn":["drop","clone"]};"#,
+        )
+        .unwrap();
+
+        let hierarchy = parse_module_hierarchy(&tmp_dir);
+        let _ = fs::remove_dir_all(&tmp_dir);
+
+        let functions: Vec<_> = hierarchy
+            .modules
+            .iter()
+            .flat_map(|module| module.items.iter())
+            .filter(|item| item.item_type == "function")
+            .map(|item| item.name.as_str())
+            .collect();
+        assert!(functions.contains(&"drop"));
+        assert!(functions.contains(&"clone"));
     }

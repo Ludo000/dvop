@@ -149,3 +149,10 @@
 
         clear_registry();
     }
+
+    #[test]
+    #[serial]
+    fn get_native_manifests_returns_empty_after_registry_clear() {
+        clear_registry();
+        assert!(get_native_manifests().is_empty());
+    }

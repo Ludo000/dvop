@@ -122,3 +122,100 @@
         assert_eq!(MAX_LOG_HISTORY, 100);
         assert!(MAX_LOG_HISTORY > 0);
     }
+
+    #[test]
+    fn log_functions_append_to_history_without_registered_labels() {
+        clear_log_history();
+        let before = get_log_history().len();
+
+        log_info("info message");
+        log_error("error message");
+        log_success("success message");
+
+        let history = get_log_history();
+        assert_eq!(history.len(), before + 3);
+        assert!(history.iter().any(|m| m.message == "info message"));
+        assert!(history.iter().any(|m| m.message == "error message"));
+        assert!(history.iter().any(|m| m.message == "success message"));
+
+        clear_log_history();
+    }
+
+    #[test]
+    fn log_message_deserialization_supports_warning_level() {
+        let msg = LogMessage::from_string("1700000000|WARNING|disk almost full").unwrap();
+        assert_eq!(msg.level, LogLevel::Warning);
+        assert_eq!(msg.message, "disk almost full");
+    }
+
+    #[test]
+    fn log_message_deserialization_supports_success_level() {
+        let msg = LogMessage::from_string("1700000000|SUCCESS|saved file").unwrap();
+        assert_eq!(msg.level, LogLevel::Success);
+        assert_eq!(msg.message, "saved file");
+    }
+
+    #[test]
+    fn clear_log_history_resets_to_ready_message() {
+        clear_log_history();
+        log_info("temporary entry");
+
+        clear_log_history();
+        let history = get_log_history();
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].message, "Ready");
+    }
+
+    #[test]
+    fn log_error_appends_to_history() {
+        clear_log_history();
+        let before = get_log_history().len();
+        log_error("something failed");
+        assert!(get_log_history().len() > before);
+        assert!(get_log_history().iter().any(|m| m.message == "something failed"));
+    }
+
+    #[test]
+    fn log_message_round_trips_pipe_in_message_body() {
+        let original = LogMessage {
+            timestamp: std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000),
+            level: LogLevel::Info,
+            message: "part|with|pipes".to_string(),
+        };
+
+        let serialized = original.to_string();
+        let restored = LogMessage::from_string(&serialized).unwrap();
+        assert_eq!(restored.message, "part|with|pipes");
+        assert_eq!(restored.level, LogLevel::Info);
+    }
+
+    #[test]
+    fn log_message_to_string_and_from_string_round_trip() {
+        let original = LogMessage {
+            timestamp: std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_123),
+            level: LogLevel::Warning,
+            message: "disk almost full".to_string(),
+        };
+
+        let restored = LogMessage::from_string(&original.to_string()).unwrap();
+        assert_eq!(restored.level, LogLevel::Warning);
+        assert_eq!(restored.message, "disk almost full");
+    }
+
+    #[test]
+    fn log_message_to_string_uses_expected_level_labels() {
+        let cases = [
+            (LogLevel::Info, "INFO"),
+            (LogLevel::Warning, "WARNING"),
+            (LogLevel::Error, "ERROR"),
+            (LogLevel::Success, "SUCCESS"),
+        ];
+        for (level, label) in cases {
+            let msg = LogMessage {
+                timestamp: std::time::UNIX_EPOCH,
+                message: "sample".to_string(),
+                level,
+            };
+            assert!(msg.to_string().contains(label));
+        }
+    }

@@ -82,6 +82,30 @@
     }
 
     #[test]
+    fn json_provider_import_suggestions_return_items_for_nested_module() {
+        let dir = tempfile::tempdir().unwrap();
+        write_language_file(&dir, "testlang", &sample_language());
+        let provider = JsonCompletionProvider::from_file(&dir.path().join("testlang.json")).unwrap();
+
+        let suggestions = provider.get_import_suggestions("std::fs");
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].name, "read_to_string");
+    }
+
+    #[test]
+    fn json_provider_find_matching_modules_filters_by_prefix() {
+        let dir = tempfile::tempdir().unwrap();
+        write_language_file(&dir, "testlang", &sample_language());
+        let provider = JsonCompletionProvider::from_file(&dir.path().join("testlang.json")).unwrap();
+
+        assert_eq!(
+            provider.find_matching_modules("std::"),
+            vec!["std::fs".to_string()]
+        );
+        assert!(provider.find_matching_modules("missing").is_empty());
+    }
+
+    #[test]
     fn json_provider_returns_fallback_documentation_for_unknown_items() {
         let dir = tempfile::tempdir().unwrap();
         write_language_file(&dir, "testlang", &sample_language());
@@ -197,4 +221,73 @@
         assert_eq!(provider.keywords(), vec!["fn", "let", "struct"]);
         assert_eq!(provider.snippets().len(), 2);
         assert_eq!(provider.get_submodules("std"), vec!["fs", "io"]);
+    }
+
+    #[test]
+    fn json_provider_get_submodules_returns_empty_for_leaf_module() {
+        let dir = tempfile::tempdir().unwrap();
+        write_language_file(&dir, "testlang", &sample_language());
+        let provider = JsonCompletionProvider::from_file(&dir.path().join("testlang.json")).unwrap();
+
+        assert!(provider.get_submodules("std::fs").is_empty());
+    }
+
+    #[test]
+    fn json_provider_from_file_rejects_invalid_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("broken.json");
+        std::fs::write(&path, "{ not valid json").unwrap();
+
+        assert!(JsonCompletionProvider::from_file(&path).is_err());
+    }
+
+    #[test]
+    fn json_provider_from_file_rejects_missing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("missing.json");
+        assert!(JsonCompletionProvider::from_file(&path).is_err());
+    }
+
+    #[test]
+    fn json_provider_get_keyword_data_returns_loaded_entries() {
+        let dir = tempfile::tempdir().unwrap();
+        write_language_file(&dir, "testlang", &sample_language());
+        let provider = JsonCompletionProvider::from_file(&dir.path().join("testlang.json")).unwrap();
+
+        let keywords = provider.get_keyword_data();
+        assert_eq!(keywords.len(), 2);
+        assert_eq!(keywords[0].keyword, "fn");
+        assert_eq!(keywords[1].keyword, "let");
+    }
+
+    #[test]
+    fn json_provider_find_matching_modules_empty_prefix_returns_all_modules() {
+        let dir = tempfile::tempdir().unwrap();
+        write_language_file(&dir, "testlang", &sample_language());
+        let provider = JsonCompletionProvider::from_file(&dir.path().join("testlang.json")).unwrap();
+
+        let matches = provider.find_matching_modules("");
+        assert_eq!(matches.len(), 2);
+        assert!(matches.contains(&"std".to_string()));
+        assert!(matches.contains(&"std::fs".to_string()));
+    }
+
+    #[test]
+    fn json_provider_get_import_suggestions_returns_empty_for_unknown_module() {
+        let dir = tempfile::tempdir().unwrap();
+        write_language_file(&dir, "testlang", &sample_language());
+        let provider = JsonCompletionProvider::from_file(&dir.path().join("testlang.json")).unwrap();
+
+        assert!(provider.get_import_suggestions("unknown::module").is_empty());
+    }
+
+    #[test]
+    fn json_provider_get_snippet_data_returns_loaded_entries() {
+        let dir = tempfile::tempdir().unwrap();
+        write_language_file(&dir, "testlang", &sample_language());
+        let provider = JsonCompletionProvider::from_file(&dir.path().join("testlang.json")).unwrap();
+
+        let snippets = provider.get_snippet_data();
+        assert_eq!(snippets.len(), 1);
+        assert_eq!(snippets[0].trigger, "main");
     }

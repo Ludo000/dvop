@@ -304,8 +304,13 @@ fn validate_child_element(
     line_number: usize,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    // Check if child is inside a valid parent
-    if element_stack.len() < 2 {
+    // Stack already includes the current <child>; parent is the element before it.
+    let parent_is_valid = element_stack
+        .len()
+        .checked_sub(2)
+        .and_then(|idx| element_stack.get(idx))
+        .is_some_and(|parent| parent.tag_name == "object" || parent.tag_name == "template");
+    if !parent_is_valid {
         diagnostics.push(Diagnostic::new(
             DiagnosticSeverity::Error,
             "Child element must be inside an object or template".to_string(),

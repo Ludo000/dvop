@@ -907,3 +907,7 @@ fn cleanup_all_drag_drop_styles(widget: &gtk4::Widget) {
         child = current_child.next_sibling();
     }
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/ui/file_manager_tests.rs"]
+mod tests;

@@ -123,6 +123,44 @@
     }
 
     #[test]
+    fn test_lint_gtk_ui_malformed_xml_reports_parse_error() {
+        let broken_ui = r#"<interface>
+  <object class="GtkWindow" id="window1">
+    <property name="title">Missing close tag
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(broken_ui);
+        assert!(diagnostics.iter().any(|d| d.rule == "xml-parse-error"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_invalid_child_outside_object_reports_error() {
+        let invalid_ui = r#"<interface>
+  <child>
+    <object class="GtkLabel" id="label1" />
+  </child>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(invalid_ui);
+        assert!(diagnostics.iter().any(|d| d.rule == "invalid-child"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_valid_child_inside_object_is_allowed() {
+        let valid_ui = r#"<interface>
+  <object class="GtkBox" id="box1">
+    <child>
+      <object class="GtkLabel" id="label1" />
+    </child>
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(valid_ui);
+        assert!(!diagnostics.iter().any(|d| d.rule == "invalid-child"));
+    }
+
+    #[test]
     fn test_get_known_gtk4_widgets() {
         let widgets = get_known_gtk4_widgets();
         assert!(widgets.contains("GtkWindow"));
@@ -148,4 +186,140 @@
         }
         
         assert!(!properties.is_empty());
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_reports_duplicate_object_ids() {
+        let duplicate_ui = r#"<interface>
+  <object class="GtkLabel" id="label1" />
+  <object class="GtkButton" id="label1" />
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(duplicate_ui);
+        assert!(diagnostics.iter().any(|d| d.rule == "duplicate-id"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_reports_duplicate_id_only_once_per_id() {
+        let duplicate_ui = r#"<interface>
+  <object class="GtkLabel" id="dup" />
+  <object class="GtkButton" id="dup" />
+  <object class="GtkEntry" id="dup" />
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(duplicate_ui);
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "duplicate-id")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_warns_on_unknown_widget_class() {
+        let unknown_ui = r#"<interface>
+  <object class="GtkNotARealWidget" id="widget1" />
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(unknown_ui);
+        assert!(diagnostics.iter().any(|d| d.rule == "unknown-widget"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_reports_unknown_property_on_widget() {
+        let bad_property_ui = r#"<interface>
+  <object class="GtkWindow" id="window1">
+    <property name="not-a-real-property">value</property>
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(bad_property_ui);
+        assert!(diagnostics.iter().any(|d| d.rule == "unknown-property"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_object_missing_class_reports_error() {
+        let missing_class_ui = r#"<interface>
+  <object id="window1">
+    <property name="title">No class</property>
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(missing_class_ui);
+        assert!(diagnostics.iter().any(|d| d.rule == "missing-class"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_template_missing_parent_reports_error() {
+        let template_ui = r#"<interface>
+  <template class="TemplateWidget" />
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(template_ui);
+        assert!(diagnostics.iter().any(|d| d.rule == "missing-parent"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_allows_dvop_prefixed_custom_widgets() {
+        let custom_ui = r#"<interface>
+  <object class="DvopCustomPanel" id="panel1" />
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(custom_ui);
+        assert!(!diagnostics.iter().any(|d| d.rule == "unknown-widget"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_warns_on_deprecated_stock_property_values() {
+        let deprecated_ui = r#"<interface>
+  <object class="GtkButton" id="button1">
+    <property name="stock-id">gtk-open</property>
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(deprecated_ui);
+        assert!(diagnostics.iter().any(|d| d.rule == "deprecated-property"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_valid_template_with_class_and_parent_passes() {
+        let template_ui = r#"<interface>
+  <template class="TemplateWidget" parent="GtkBox">
+    <property name="label">Template</property>
+  </template>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(template_ui);
+        assert!(!diagnostics.iter().any(|d| d.rule == "missing-class"));
+        assert!(!diagnostics.iter().any(|d| d.rule == "missing-parent"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_ignores_non_deprecated_name_property_values() {
+        let ui = r#"<interface>
+  <object class="GtkButton">
+    <property name="label">Click me</property>
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(ui);
+        assert!(!diagnostics.iter().any(|d| d.rule == "deprecated-property"));
+    }
+
+    #[test]
+    fn test_lint_gtk_ui_allows_child_with_placeholder_type() {
+        let ui = r#"<interface>
+  <object class="GtkStack" id="stack1">
+    <child type="placeholder">
+      <object class="GtkLabel" id="placeholder_label">
+        <property name="label">Placeholder</property>
+      </object>
+    </child>
+  </object>
+</interface>"#;
+
+        let diagnostics = lint_gtk_ui(ui);
+        assert!(!diagnostics.iter().any(|d| d.rule == "invalid-child"));
     }

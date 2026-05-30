@@ -276,3 +276,79 @@
         assert_eq!(panels[1].0, "disabled");
         assert!(!panels[1].2);
     }
+
+    #[test]
+    fn get_extensions_dir_lives_under_config_dvop() {
+        let dir = get_extensions_dir();
+        let path = dir.to_string_lossy();
+        assert!(path.contains("dvop"));
+        assert!(path.contains("extensions"));
+    }
+
+    #[test]
+    fn get_all_extensions_includes_manager_extensions() {
+        let enabled = manifest("enabled", true);
+        let manager = manager_with_extensions(vec![Extension::new(
+            enabled.clone(),
+            PathBuf::from("/tmp/enabled"),
+        )]);
+
+        assert_eq!(manager.get_extensions().len(), 1);
+        let all = manager.get_all_extensions();
+        assert!(all.len() >= 1);
+        assert!(all.iter().any(|e| e.manifest.id == "enabled"));
+    }
+
+    #[test]
+    fn set_enabled_on_missing_extension_is_noop() {
+        let mut manager = manager_with_extensions(Vec::new());
+        manager.set_enabled("missing-extension", true);
+    }
+
+    #[test]
+    fn install_from_archive_rejects_missing_archive() {
+        let missing = PathBuf::from("/tmp/dvop-missing-extension-archive.tar.gz");
+        assert!(install_from_archive(&missing).is_err());
+    }
+
+    #[test]
+    fn run_status_bar_scripts_ignores_blank_script_output() {
+        let dir = tempfile::tempdir().unwrap();
+        let ext_dir = dir.path().join("blank-status");
+        std::fs::create_dir_all(&ext_dir).unwrap();
+        std::fs::write(ext_dir.join("status.sh"), "printf '   \\n'").unwrap();
+
+        let mut enabled = manifest("blank-status", true);
+        enabled.contributions.status_bar = Some(StatusBarContribution {
+            script: "status.sh".to_string(),
+        });
+
+        let manager = manager_with_extensions(vec![Extension::new(enabled, ext_dir)]);
+        assert!(manager.run_status_bar_scripts(Path::new("/tmp/file.rs")).is_empty());
+    }
+
+    #[test]
+    fn get_extension_css_paths_returns_enabled_stylesheets() {
+        let dir = tempfile::tempdir().unwrap();
+        let ext_dir = dir.path().join("styled");
+        std::fs::create_dir_all(&ext_dir).unwrap();
+        std::fs::write(ext_dir.join("theme.css"), ".tab { color: red; }").unwrap();
+
+        let mut enabled = manifest("styled", true);
+        enabled.contributions.css = Some(CssContribution {
+            file: "theme.css".to_string(),
+        });
+        let mut disabled = manifest("hidden", false);
+        disabled.contributions.css = Some(CssContribution {
+            file: "hidden.css".to_string(),
+        });
+
+        let manager = manager_with_extensions(vec![
+            Extension::new(enabled, ext_dir.clone()),
+            Extension::new(disabled, dir.path().join("hidden")),
+        ]);
+
+        let paths = manager.get_extension_css_paths();
+        assert_eq!(paths.len(), 1);
+        assert_eq!(paths[0], ext_dir.join("theme.css"));
+    }

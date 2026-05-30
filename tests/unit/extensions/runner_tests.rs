@@ -119,3 +119,12 @@ exit 7
 
         run_script_fire_and_forget(&missing, &["ignored"]);
     }
+
+    #[test]
+    fn run_script_with_no_arguments_returns_trimmed_stdout() {
+        let dir = tempfile::tempdir().unwrap();
+        let script = write_script(&dir, "hello.sh", "printf 'hello world'");
+
+        let output = run_script(&script, &[], None).unwrap();
+        assert_eq!(output, "hello world");
+    }

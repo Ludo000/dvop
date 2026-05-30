@@ -21,3 +21,7 @@ pub fn ensure_sample_archives() {
     // Intentionally empty: archives ship beside the repo under `extensions/*.tar.gz`; nothing to generate at runtime.
     // Call site in `main` documents the feature — this hook exists so a future build step could materialize zips without changing startup wiring.
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/extensions/sample_tests.rs"]
+mod tests;
