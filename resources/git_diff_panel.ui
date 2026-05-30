@@ -9,6 +9,7 @@
     <property name="margin-bottom">12</property>
     <property name="width-request">0</property>
     <property name="hexpand">true</property>
+    <property name="css-classes">git-diff-panel-content</property>
     
     <!-- Header section -->
     <child>
@@ -16,20 +17,30 @@
         <property name="orientation">horizontal</property>
         <property name="spacing">8</property>
         <property name="margin-bottom">8</property>
+        <property name="hexpand">true</property>
         <child>
           <object class="GtkMenuButton" id="git_menu_button">
             <property name="icon-name">open-menu-symbolic</property>
             <property name="tooltip-text">Advanced Git Commands</property>
             <property name="valign">center</property>
             <property name="halign">start</property>
+            <property name="hexpand">false</property>
           </object>
         </child>
         <child>
           <object class="GtkMenuButton" id="branch_button">
-            <property name="label">No repository</property>
             <property name="tooltip-text">Switch branch</property>
             <property name="hexpand">true</property>
-            <property name="halign">start</property>
+            <property name="halign">fill</property>
+            <property name="css-classes">git-branch-button</property>
+            <child>
+              <object class="GtkLabel" id="branch_label">
+                <property name="label">No repository</property>
+                <property name="xalign">0.0</property>
+                <property name="hexpand">true</property>
+                <property name="ellipsize">middle</property>
+              </object>
+            </child>
           </object>
         </child>
         <child>
@@ -38,6 +49,7 @@
             <property name="tooltip-text">Refresh git status</property>
             <property name="valign">center</property>
             <property name="halign">end</property>
+            <property name="hexpand">false</property>
           </object>
         </child>
       </object>
@@ -101,23 +113,33 @@
             <property name="orientation">vertical</property>
             <property name="spacing">0</property>
             <child>
-              <object class="GtkBox">
+              <object class="GtkBox" id="staged_header_box">
                 <property name="orientation">horizontal</property>
                 <property name="spacing">8</property>
                 <property name="margin-bottom">4</property>
+                <property name="hexpand">true</property>
                 <child>
                   <object class="GtkLabel" id="staged_label">
                     <property name="label">Staged Changes</property>
                     <property name="xalign">0.0</property>
                     <property name="hexpand">true</property>
+                    <property name="ellipsize">end</property>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkButton" id="unstage_all_button">
-                    <property name="icon-name">list-remove-symbolic</property>
-                    <property name="tooltip-text">Unstage all changes</property>
-                    <property name="valign">center</property>
+                  <object class="GtkBox" id="staged_actions_box">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">4</property>
                     <property name="halign">end</property>
+                    <property name="hexpand">false</property>
+                    <child>
+                      <object class="GtkButton" id="unstage_all_button">
+                        <property name="icon-name">list-remove-symbolic</property>
+                        <property name="tooltip-text">Unstage all changes</property>
+                        <property name="valign">center</property>
+                        <property name="halign">end</property>
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>
@@ -134,7 +156,7 @@
                 <child>
                   <object class="GtkListBox" id="staged_files_list">
                     <property name="selection-mode">single</property>
-                    <property name="css-classes">boxed-list</property>
+                    <property name="css-classes">boxed-list git-file-list</property>
                   </object>
                 </child>
               </object>
@@ -156,32 +178,42 @@
     <!-- Unstaged changes section -->
     
     <child>
-      <object class="GtkBox">
+      <object class="GtkBox" id="unstaged_header_box">
         <property name="orientation">horizontal</property>
         <property name="spacing">8</property>
         <property name="margin-bottom">4</property>
+        <property name="hexpand">true</property>
         <child>
           <object class="GtkLabel" id="unstaged_label">
             <property name="label">Unstaged Changes</property>
             <property name="xalign">0.0</property>
             <property name="hexpand">true</property>
+            <property name="ellipsize">end</property>
           </object>
         </child>
         <child>
-          <object class="GtkButton" id="revert_all_button">
-            <property name="icon-name">edit-undo-symbolic</property>
-            <property name="tooltip-text">Revert all unstaged changes</property>
-            <property name="valign">center</property>
+          <object class="GtkBox" id="unstaged_actions_box">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">4</property>
             <property name="halign">end</property>
-            <property name="css-classes">destructive-action</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkButton" id="stage_all_button">
-            <property name="icon-name">list-add-symbolic</property>
-            <property name="tooltip-text">Stage all changes</property>
-            <property name="valign">center</property>
-            <property name="halign">end</property>
+            <property name="hexpand">false</property>
+            <child>
+              <object class="GtkButton" id="revert_all_button">
+                <property name="icon-name">edit-undo-symbolic</property>
+                <property name="tooltip-text">Revert all unstaged changes</property>
+                <property name="valign">center</property>
+                <property name="halign">end</property>
+                <property name="css-classes">destructive-action</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="stage_all_button">
+                <property name="icon-name">list-add-symbolic</property>
+                <property name="tooltip-text">Stage all changes</property>
+                <property name="valign">center</property>
+                <property name="halign">end</property>
+              </object>
+            </child>
           </object>
         </child>
       </object>
@@ -196,7 +228,7 @@
         <child>
           <object class="GtkListBox" id="files_list">
             <property name="selection-mode">single</property>
-            <property name="css-classes">boxed-list</property>
+            <property name="css-classes">boxed-list git-file-list</property>
           </object>
         </child>
       </object>

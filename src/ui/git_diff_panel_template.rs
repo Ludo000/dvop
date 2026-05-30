@@ -17,10 +17,14 @@
 //! See FEATURES.md: Feature #60 — Git Status Panel
 
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, ListBox, MenuButton, ScrolledWindow, Revealer};
+use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, Label, ListBox, MenuButton, Orientation, ScrolledWindow, Revealer};
+
+/// Sidebar width below this stacks section headers vertically instead of clipping controls.
+const GIT_PANEL_COMPACT_WIDTH: i32 = 240;
 
 mod imp {
     use super::*;
+    use gtk4::prelude::*;
 
     // `CompositeTemplate` expands `init_template()` wiring — fields must match `id`s in the `.ui` XML.
     #[derive(Debug, Default, CompositeTemplate)]
@@ -28,6 +32,12 @@ mod imp {
     pub struct GitDiffPanel {
         #[template_child]
         pub branch_button: TemplateChild<MenuButton>,
+        #[template_child]
+        pub branch_label: TemplateChild<Label>,
+        #[template_child]
+        pub staged_header_box: TemplateChild<GtkBox>,
+        #[template_child]
+        pub unstaged_header_box: TemplateChild<GtkBox>,
         #[template_child]
         pub git_menu_button: TemplateChild<MenuButton>,
         #[template_child]
@@ -73,7 +83,33 @@ mod imp {
     // "impl" blocks define methods and behavior for a struct or enum.
     impl ObjectImpl for GitDiffPanel {}
     // "impl" blocks define methods and behavior for a struct or enum.
-    impl WidgetImpl for GitDiffPanel {}
+    impl WidgetImpl for GitDiffPanel {
+        fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+            if width > 0 {
+                let compact = width < GIT_PANEL_COMPACT_WIDTH;
+                let target_orientation = if compact {
+                    Orientation::Vertical
+                } else {
+                    Orientation::Horizontal
+                };
+                let staged_header = self.staged_header_box.get();
+                let unstaged_header = self.unstaged_header_box.get();
+
+                if staged_header.orientation() != target_orientation {
+                    let panel = self.obj();
+                    if compact {
+                        panel.add_css_class("compact");
+                    } else {
+                        panel.remove_css_class("compact");
+                    }
+                    staged_header.set_orientation(target_orientation);
+                    unstaged_header.set_orientation(target_orientation);
+                }
+            }
+
+            self.parent_size_allocate(width, height, baseline);
+        }
+    }
     // "impl" blocks define methods and behavior for a struct or enum.
     impl BoxImpl for GitDiffPanel {}
 }
@@ -100,6 +136,18 @@ impl GitDiffPanel {
     // pub makes this function public, allowing it to be used from outside this module.
     pub fn branch_button(&self) -> MenuButton {
         self.imp().branch_button.get()
+    }
+
+    pub fn branch_label(&self) -> Label {
+        self.imp().branch_label.get()
+    }
+
+    pub fn staged_header_box(&self) -> GtkBox {
+        self.imp().staged_header_box.get()
+    }
+
+    pub fn unstaged_header_box(&self) -> GtkBox {
+        self.imp().unstaged_header_box.get()
     }
 
     // pub makes this function public, allowing it to be used from outside this module.

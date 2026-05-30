@@ -43,7 +43,7 @@ pub fn apply_custom_css() {
 /// Builds the complete CSS string by combining all component styles
 fn build_complete_css() -> String {
     let mut css = format!(
-        "{}{}{}{}{}{}{}{}{}{}{}",
+        "{}{}{}{}{}{}{}{}{}{}{}{}",
         get_notebook_tab_styles(),
         get_button_styles(),
         get_status_bar_styles(),
@@ -53,6 +53,7 @@ fn build_complete_css() -> String {
         get_list_styles(),
         get_activity_bar_styles(),
         get_search_styles(),
+        get_git_panel_styles(),
         get_diagnostics_styles(),
         get_extension_styles()
     );
@@ -740,6 +741,47 @@ fn get_search_styles() -> &'static str {
         background-image: none;
         text-decoration: underline;
         color: @theme_selected_bg_color;
+    }
+    "
+}
+
+/// Returns CSS styles for the source control (git) panel
+fn get_git_panel_styles() -> &'static str {
+    "
+    /* === SOURCE CONTROL PANEL STYLES === */
+
+    .git-diff-panel,
+    .git-diff-panel-content {
+        min-width: 0;
+    }
+
+    .git-diff-panel.compact .git-diff-panel-content,
+    .git-diff-panel-content.compact {
+        margin-left: 8px;
+        margin-right: 8px;
+    }
+
+    .git-diff-panel label,
+    .git-diff-panel-content label {
+        min-width: 0;
+    }
+
+    .git-diff-panel menubutton,
+    .git-diff-panel-content menubutton,
+    .git-branch-button {
+        min-width: 0;
+    }
+
+    .git-branch-button > label {
+        min-width: 0;
+    }
+
+    .git-file-list row {
+        min-width: 0;
+    }
+
+    .git-file-list row > box {
+        min-width: 0;
     }
     "
 }

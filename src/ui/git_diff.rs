@@ -57,6 +57,15 @@ type DiffAlignResult = (
 // Panel-local slot for the heavy `update_git_status` closure — starts `None`, then `Some` after the `Rc` cycle is resolved.
 type CallbackCell = Rc<RefCell<Option<Rc<dyn Fn()>>>>;
 
+fn configure_git_file_row_label(label: &Label) {
+    label.set_xalign(0.0);
+    label.set_ellipsize(pango::EllipsizeMode::Middle);
+    label.set_hexpand(true);
+    label.set_halign(gtk4::Align::Fill);
+    // Allow the label to shrink below its natural width so ellipsize can take effect.
+    label.set_width_chars(1);
+}
+
 // Global git status update callback with debouncing
 // GTK runs handlers on the main thread — thread_local keeps debounce state without cross-thread locks.
 thread_local! {
@@ -2026,6 +2035,7 @@ pub fn create_git_diff_panel(
 
     // Get references to widgets
     let branch_button = panel.branch_button();
+    let branch_label = panel.branch_label();
     let git_menu_button = panel.git_menu_button();
     let revert_all_button = panel.revert_all_button();
     let refresh_button = panel.refresh_button();
@@ -2151,6 +2161,7 @@ pub fn create_git_diff_panel(
         let repo_path_rc = repo_path_rc.clone();
         let changes_rc = changes_rc.clone();
         let branch_button = branch_button.clone();
+        let branch_label = branch_label.clone();
         let staged_files_list = staged_files_list.clone();
         let staged_revealer = staged_revealer.clone();
         let files_list = files_list.clone();
@@ -2180,9 +2191,9 @@ pub fn create_git_diff_panel(
 
                 // Get branch name and update button
                 if let Some(branch) = get_current_branch(&repo) {
-                    branch_button.set_label(&format!("⎇ {}", branch));
+                    branch_label.set_label(&format!("⎇ {}", branch));
                 } else {
-                    branch_button.set_label("⎇ (unknown)");
+                    branch_label.set_label("⎇ (unknown)");
                 }
 
                 // Populate branch menu
@@ -2447,13 +2458,13 @@ pub fn create_git_diff_panel(
                     file_box.set_margin_bottom(4);
                     file_box.set_margin_start(8);
                     file_box.set_margin_end(8);
+                    file_box.set_hexpand(true);
+                    file_box.set_halign(gtk4::Align::Fill);
 
                     // File path (relative to repo)
                     let rel_path = change.path.strip_prefix(&repo).unwrap_or(&change.path);
                     let path_label = Label::new(Some(&rel_path.to_string_lossy()));
-                    path_label.set_xalign(0.0);
-                    path_label.set_ellipsize(pango::EllipsizeMode::Middle);
-                    path_label.set_hexpand(true);
+                    configure_git_file_row_label(&path_label);
                     file_box.append(&path_label);
 
                     // Unstage button
@@ -2461,6 +2472,7 @@ pub fn create_git_diff_panel(
                     unstage_btn.set_icon_name("list-remove-symbolic");
                     unstage_btn.set_tooltip_text(Some("Unstage this file"));
                     unstage_btn.set_valign(gtk4::Align::Center);
+                    unstage_btn.set_hexpand(false);
 
                     let file_path_for_unstage = change.path.clone();
                     let repo_for_unstage = repo.clone();
@@ -2509,13 +2521,13 @@ pub fn create_git_diff_panel(
                     file_box.set_margin_bottom(4);
                     file_box.set_margin_start(8);
                     file_box.set_margin_end(8);
+                    file_box.set_hexpand(true);
+                    file_box.set_halign(gtk4::Align::Fill);
 
                     // File path (relative to repo)
                     let rel_path = change.path.strip_prefix(&repo).unwrap_or(&change.path);
                     let path_label = Label::new(Some(&rel_path.to_string_lossy()));
-                    path_label.set_xalign(0.0);
-                    path_label.set_ellipsize(pango::EllipsizeMode::Middle);
-                    path_label.set_hexpand(true);
+                    configure_git_file_row_label(&path_label);
                     file_box.append(&path_label);
 
                     // Stage button
@@ -2523,6 +2535,7 @@ pub fn create_git_diff_panel(
                     stage_btn.set_icon_name("list-add-symbolic");
                     stage_btn.set_tooltip_text(Some("Stage this file"));
                     stage_btn.set_valign(gtk4::Align::Center);
+                    stage_btn.set_hexpand(false);
 
                     let file_path_for_stage = change.path.clone();
                     let repo_for_stage = repo.clone();
@@ -2561,7 +2574,7 @@ pub fn create_git_diff_panel(
             } else {
                 // `current_dir` is not inside any `.git` parent — disable branch UX instead of shelling out blindly.
                 *repo_path_rc.borrow_mut() = None;
-                branch_button.set_label("Not a git repository");
+                branch_label.set_label("Not a git repository");
                 branch_button.set_menu_model(Option::<&gtk4::gio::Menu>::None);
                 // Hide staged revealer when not in a git repository
                 staged_revealer.set_reveal_child(false);
