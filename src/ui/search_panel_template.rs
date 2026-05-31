@@ -14,8 +14,8 @@
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
 use gtk4::{
-    glib, Box as GtkBox, Button, CompositeTemplate, Label, ListBox, ScrolledWindow, TextBuffer,
-    TextView,
+    glib, Box as GtkBox, Button, CompositeTemplate, Label, ListBox, ScrolledWindow, Switch,
+    TextBuffer, TextView,
 };
 
 mod imp {
@@ -32,6 +32,12 @@ mod imp {
         pub case_toggle: TemplateChild<gtk4::ToggleButton>,
         #[template_child]
         pub whole_word_toggle: TemplateChild<gtk4::ToggleButton>,
+        #[template_child]
+        pub search_btn: TemplateChild<Button>,
+        #[template_child]
+        pub replace_mode_switch: TemplateChild<Switch>,
+        #[template_child]
+        pub replace_box: TemplateChild<GtkBox>,
         #[template_child]
         pub replace_text_view: TemplateChild<TextView>,
         #[template_child]
@@ -99,6 +105,18 @@ impl SearchPanel {
     // pub makes this function public, allowing it to be used from outside this module.
     pub fn replace_buffer(&self) -> TextBuffer {
         self.imp().replace_text_view.buffer()
+    }
+
+    pub fn search_btn(&self) -> Button {
+        self.imp().search_btn.get()
+    }
+
+    pub fn replace_mode_switch(&self) -> Switch {
+        self.imp().replace_mode_switch.get()
+    }
+
+    pub fn replace_box(&self) -> GtkBox {
+        self.imp().replace_box.get()
     }
 
     // pub makes this function public, allowing it to be used from outside this module.

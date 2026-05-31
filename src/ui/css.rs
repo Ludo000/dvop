@@ -742,6 +742,11 @@ fn get_search_styles() -> &'static str {
         text-decoration: underline;
         color: @theme_selected_bg_color;
     }
+
+    /* Global search replace actions — cap width in wide sidebars */
+    .search-replace-button {
+        max-width: 140px;
+    }
     "
 }
 

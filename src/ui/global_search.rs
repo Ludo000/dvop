@@ -29,7 +29,7 @@ use gtk4::prelude::*;
 use gtk4::subclass::prelude::ObjectSubclassIsExt;
 use gtk4::{
     self as gtk, gdk, pango, Box as GtkBox, Button, EventControllerKey, Label, ListBox, ListBoxRow,
-    Orientation, ScrolledWindow, TextBuffer, TextView,
+    Orientation, ScrolledWindow, Switch, TextBuffer, TextView,
 };
 use std::cell::RefCell;
 use std::fs;
@@ -570,6 +570,223 @@ fn replace_in_buffer(
     Err("Widget is neither TextView nor SourceView".to_string())
 }
 
+fn find_page_for_path(
+    notebook: &gtk::Notebook,
+    file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    path: &Path,
+) -> Option<u32> {
+    let num_pages = notebook.n_pages();
+    for page_num in 0..num_pages {
+        if file_path_manager
+            .borrow()
+            .get(&page_num)
+            .map(|tab_path| tab_path.as_path() == path)
+            .unwrap_or(false)
+        {
+            return Some(page_num);
+        }
+    }
+    None
+}
+
+fn get_source_view_for_page(
+    notebook: &gtk::Notebook,
+    page_num: u32,
+) -> Option<sourceview5::View> {
+    notebook.nth_page(Some(page_num)).and_then(|page| {
+        if let Some(paned) = page.downcast_ref::<gtk4::Paned>() {
+            paned.start_child().and_then(|left| {
+                left.downcast_ref::<ScrolledWindow>()
+                    .and_then(|scrolled| {
+                        scrolled
+                            .child()
+                            .and_then(|child| child.downcast::<sourceview5::View>().ok())
+                    })
+            })
+        } else if let Some(scrolled) = page.downcast_ref::<ScrolledWindow>() {
+            scrolled
+                .child()
+                .and_then(|child| child.downcast::<sourceview5::View>().ok())
+        } else {
+            None
+        }
+    })
+}
+
+fn select_search_match(buffer: &TextBuffer, line: usize, col: usize, needle: &str) {
+    let line_index = line.saturating_sub(1) as i32;
+    let column_index = col.saturating_sub(1);
+
+    let mut start_iter = buffer
+        .iter_at_line(line_index)
+        .unwrap_or_else(|| buffer.start_iter());
+
+    for _ in 0..column_index {
+        if !start_iter.forward_char() {
+            break;
+        }
+    }
+
+    let mut end_iter = start_iter;
+    if needle.contains('\n') {
+        let lines_to_add = needle.matches('\n').count() as i32;
+        end_iter.forward_lines(lines_to_add);
+        if let Some(last_line) = needle.lines().last() {
+            end_iter.set_line_offset(last_line.chars().count() as i32);
+        }
+    } else {
+        end_iter.forward_chars(needle.chars().count() as i32);
+    }
+
+    buffer.select_range(&start_iter, &end_iter);
+}
+
+fn scroll_search_result_to_view(source_view: &sourceview5::View, line: usize, col: usize) {
+    let buffer = source_view.buffer();
+    let line_index = line.saturating_sub(1) as i32;
+    let column_index = col.saturating_sub(1);
+    let mut scroll_iter = buffer
+        .iter_at_line(line_index)
+        .unwrap_or_else(|| buffer.start_iter());
+    for _ in 0..column_index {
+        if !scroll_iter.forward_char() {
+            break;
+        }
+    }
+    source_view.scroll_to_iter(&mut scroll_iter, 0.0, true, 0.5, 0.5);
+}
+
+fn apply_search_result_focus(source_view: &sourceview5::View, line: usize, col: usize, needle: &str) {
+    select_search_match(&source_view.buffer(), line, col, needle);
+    scroll_search_result_to_view(source_view, line, col);
+    source_view.grab_focus();
+}
+
+fn try_focus_search_result(
+    editor_notebook: &gtk::Notebook,
+    file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    path: &Path,
+    line: usize,
+    col: usize,
+    needle: &str,
+) -> bool {
+    let Some(page_num) = find_page_for_path(editor_notebook, file_path_manager, path) else {
+        return false;
+    };
+
+    editor_notebook.set_current_page(Some(page_num));
+
+    let Some(source_view) = get_source_view_for_page(editor_notebook, page_num) else {
+        return false;
+    };
+
+    apply_search_result_focus(&source_view, line, col, needle);
+    true
+}
+
+/// Focus a search result in the editor tab for `path`.
+/// Already-open files jump immediately; newly opened tabs retry briefly until the view is ready.
+fn focus_search_result(
+    editor_notebook: &gtk::Notebook,
+    file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    path: &Path,
+    line: usize,
+    col: usize,
+    needle: &str,
+    newly_opened: bool,
+) {
+    if !newly_opened
+        && try_focus_search_result(
+            editor_notebook,
+            file_path_manager,
+            path,
+            line,
+            col,
+            needle,
+        )
+    {
+        return;
+    }
+
+    let path = path.to_path_buf();
+    let file_path_manager = file_path_manager.clone();
+    let editor_notebook = editor_notebook.clone();
+    let needle = needle.to_string();
+
+    glib::idle_add_local_once(move || {
+        if try_focus_search_result(
+            &editor_notebook,
+            &file_path_manager,
+            &path,
+            line,
+            col,
+            &needle,
+        ) {
+            if newly_opened {
+                if let Some(page_num) =
+                    find_page_for_path(&editor_notebook, &file_path_manager, &path)
+                {
+                    if let Some(source_view) =
+                        get_source_view_for_page(&editor_notebook, page_num)
+                    {
+                        let source_view = source_view.clone();
+                        glib::timeout_add_local_once(
+                            std::time::Duration::from_millis(50),
+                            move || scroll_search_result_to_view(&source_view, line, col),
+                        );
+                    }
+                }
+            }
+            return;
+        }
+
+        let attempts = Rc::new(RefCell::new(0u32));
+        glib::timeout_add_local(std::time::Duration::from_millis(16), move || {
+            *attempts.borrow_mut() += 1;
+
+            if try_focus_search_result(
+                &editor_notebook,
+                &file_path_manager,
+                &path,
+                line,
+                col,
+                &needle,
+            ) {
+                if newly_opened {
+                    if let Some(page_num) =
+                        find_page_for_path(&editor_notebook, &file_path_manager, &path)
+                    {
+                        if let Some(source_view) =
+                            get_source_view_for_page(&editor_notebook, page_num)
+                        {
+                            let source_view = source_view.clone();
+                            glib::timeout_add_local_once(
+                                std::time::Duration::from_millis(50),
+                                move || scroll_search_result_to_view(&source_view, line, col),
+                            );
+                        }
+                    }
+                }
+                glib::ControlFlow::Break
+            } else if *attempts.borrow() >= 12 {
+                glib::ControlFlow::Break
+            } else {
+                glib::ControlFlow::Continue
+            }
+        });
+    });
+}
+
+fn is_search_result_file_open(
+    file_path_manager: &Rc<RefCell<std::collections::HashMap<u32, PathBuf>>>,
+    path: &Path,
+) -> bool {
+    file_path_manager
+        .borrow()
+        .values()
+        .any(|tab_path| tab_path.as_path() == path)
+}
+
 // pub makes this function public, allowing it to be used from outside this module.
 pub fn show_global_search_dialog(
     parent_window: &impl IsA<gtk::ApplicationWindow>,
@@ -677,27 +894,52 @@ pub fn show_global_search_dialog(
         .height_request(80)
         .hexpand(true)
         .build();
-    replace_scroller.set_margin_bottom(8);
+    replace_scroller.set_margin_bottom(0);
+
+    // Replace mode toggle
+    let replace_mode_row = GtkBox::new(Orientation::Horizontal, 8);
+    replace_mode_row.set_margin_bottom(8);
+    let replace_mode_label = Label::new(Some("Replace mode"));
+    replace_mode_label.set_xalign(0.0);
+    replace_mode_label.set_hexpand(true);
+    let replace_mode_switch = Switch::new();
+    replace_mode_switch.set_valign(gtk::Align::Center);
+    replace_mode_switch.set_active(false);
+    replace_mode_row.append(&replace_mode_label);
+    replace_mode_row.append(&replace_mode_switch);
 
     // Controls row
     let controls = GtkBox::new(Orientation::Horizontal, 8);
     controls.set_margin_bottom(8);
     controls.append(&overlay);
 
-    // Replace controls row
-    let replace_controls = GtkBox::new(Orientation::Horizontal, 8);
-    replace_controls.set_margin_bottom(8);
-    replace_controls.append(&replace_scroller);
+    let search_btn = Button::with_label("Search");
+    search_btn.set_tooltip_text(Some("Search (Enter)"));
+    controls.append(&search_btn);
+
+    // Replace controls (hidden until replace mode is enabled)
+    let replace_box = GtkBox::new(Orientation::Vertical, 8);
+    replace_box.set_margin_bottom(8);
+    replace_box.set_visible(false);
+    replace_box.append(&replace_scroller);
 
     let replace_controls_right = GtkBox::new(Orientation::Horizontal, 4);
+    replace_controls_right.set_halign(gtk::Align::Start);
     let replace_btn = Button::with_label("Replace");
     replace_btn.set_tooltip_text(Some("Replace selected match"));
+    replace_btn.add_css_class("search-replace-button");
     let replace_all_btn = Button::with_label("Replace All");
     replace_all_btn.set_tooltip_text(Some("Replace all matches in all files"));
     replace_all_btn.add_css_class("destructive-action");
+    replace_all_btn.add_css_class("search-replace-button");
     replace_controls_right.append(&replace_btn);
     replace_controls_right.append(&replace_all_btn);
-    replace_controls.append(&replace_controls_right);
+    replace_box.append(&replace_controls_right);
+
+    let replace_box_for_switch = replace_box.clone();
+    replace_mode_switch.connect_active_notify(move |switch| {
+        replace_box_for_switch.set_visible(switch.is_active());
+    });
 
     // Status label
     let status = Label::new(Some(""));
@@ -720,7 +962,8 @@ pub fn show_global_search_dialog(
         .build();
 
     vbox.append(&controls);
-    vbox.append(&replace_controls);
+    vbox.append(&replace_mode_row);
+    vbox.append(&replace_box);
     vbox.append(&status);
     vbox.append(&scroller);
     content.append(&vbox);
@@ -766,19 +1009,35 @@ pub fn show_global_search_dialog(
 
                                 // Open (or focus) the file
                                 let mime = mime_guess::from_path(&path).first_or_octet_stream();
-                                let content_opt = if crate::utils::is_allowed_mime_type(&mime) {
-                                    // Read file asynchronously to avoid blocking UI
-                                    // `join` waits on GTK thread — acceptable here because only one path opens per double-click.
+                                let file_already_open =
+                                    is_search_result_file_open(&file_path_manager_c, &path);
+                                let opened = if file_already_open {
+                                    crate::handlers::open_or_focus_tab(
+                                        &editor_notebook_c,
+                                        &path,
+                                        "",
+                                        &active_tab_path_c,
+                                        &file_path_manager_c,
+                                        &save_button_c,
+                                        &save_as_button_c,
+                                        &mime,
+                                        &parent_window_c,
+                                        &file_list_box_c,
+                                        &current_dir_c,
+                                        None,
+                                    );
+                                    true
+                                } else if crate::utils::is_allowed_mime_type(&mime) {
                                     let path_clone = path.clone();
-                                    std::thread::spawn(move || {
+                                    let content_opt = std::thread::spawn(move || {
                                         let rt = tokio::runtime::Runtime::new().unwrap();
                                         rt.block_on(async {
                                             async_fs::read_to_string(&path_clone).await.ok()
                                         })
-                                    }).join().unwrap_or(None)
-                                } else { None };
+                                    })
+                                    .join()
+                                    .unwrap_or(None);
 
-                                if crate::utils::is_allowed_mime_type(&mime) {
                                     if let Some(content) = content_opt {
                                         crate::handlers::open_or_focus_tab(
                                             &editor_notebook_c,
@@ -794,68 +1053,45 @@ pub fn show_global_search_dialog(
                                             &current_dir_c,
                                             None,
                                         );
-
-                                        // Update global folder to the file's parent directory (after opening)
-                                        if let Some(parent) = path.parent() {
-                                            let parent_buf = parent.to_path_buf();
-                                            *current_dir_c.borrow_mut() = parent_buf.clone();
-                                            
-                                            // Update file manager to show the file's directory and select it
-                                            crate::utils::update_file_list(
-                                                &file_list_box_c,
-                                                &parent_buf,
-                                                // borrow() gets read-only access to the data inside a RefCell.
-                                                &active_tab_path_c.borrow(),
-                                                crate::utils::FileSelectionSource::TabSwitch
-                                            );
-                                            
-                                            // Save to settings
-                                            let mut settings = crate::settings::get_settings_mut();
-                                            settings.set_last_folder(&parent_buf);
-                                            let _ = settings.save();
-                                            drop(settings);
-                                        }
-
-                                        // After opening, jump to position and select matching text (delay to ensure buffer ready)
-                                        let editor_notebook_for_jump = editor_notebook_c.clone();
-                                        let needle_clone = needle.clone();
-                                        // The "move" keyword forces the closure to take ownership of the variables it uses.
-                                        glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
-                                            if let Some((text_view, buffer)) = crate::handlers::get_active_text_view_and_buffer(&editor_notebook_for_jump) {
-                                                // Get start position
-                                                let mut start_iter = buffer.start_iter();
-                                                let target_line = line.saturating_sub(1) as i32;
-                                                start_iter.set_line(target_line);
-                                                let target_col = col.saturating_sub(1) as i32;
-                                                start_iter.set_line_offset(target_col);
-                                                
-                                                // Calculate end position based on needle length
-                                                let mut end_iter = start_iter;
-                                                if needle_clone.contains('\n') {
-                                                    // Multi-line match: select from start to end of match
-                                                    let lines_to_add = needle_clone.matches('\n').count() as i32;
-                                                    end_iter.forward_lines(lines_to_add);
-                                                    // Find the position after last line
-                                                    if let Some(last_line) = needle_clone.lines().last() {
-                                                        end_iter.set_line_offset(last_line.len() as i32);
-                                                    }
-                                                } else {
-                                                    // Single-line match: select needle length
-                                                    end_iter.forward_chars(needle_clone.chars().count() as i32);
-                                                }
-                                                
-                                                // Select the text
-                                                buffer.select_range(&start_iter, &end_iter);
-                                                
-                                                // Ensure visible
-                                                if let Ok(view) = text_view.downcast::<sourceview5::View>() {
-                                                    let mut it2 = start_iter;
-                                                    view.scroll_to_iter(&mut it2, 0.25, false, 0.0, 0.0);
-                                                }
-                                            }
-                                        });
-                                        dialog_close.set_visible(false);
+                                        true
+                                    } else {
+                                        false
                                     }
+                                } else {
+                                    false
+                                };
+
+                                if opened {
+                                    if let Some(parent) = path.parent() {
+                                        let parent_buf = parent.to_path_buf();
+                                        *current_dir_c.borrow_mut() = parent_buf.clone();
+
+                                        crate::utils::update_file_list(
+                                            &file_list_box_c,
+                                            &parent_buf,
+                                            // borrow() gets read-only access to the data inside a RefCell.
+                                            &active_tab_path_c.borrow(),
+                                            crate::utils::FileSelectionSource::TabSwitch
+                                        );
+
+                                        let mut settings = crate::settings::get_settings_mut();
+                                        settings.set_last_folder(&parent_buf);
+                                        let _ = settings.save();
+                                        drop(settings);
+                                    }
+
+                                    focus_search_result(
+                                        &editor_notebook_c,
+                                        &file_path_manager_c,
+                                        &path,
+                                        line,
+                                        col,
+                                        &needle,
+                                        !file_already_open,
+                                    );
+                                    dialog_close.set_visible(false);
+                                } else if crate::utils::is_allowed_mime_type(&mime) {
+                                    eprintln!("Not a text file or couldn't open: {}", path.display());
                                 } else {
                                     // Non-text file: still open via handler with empty content
                                     crate::handlers::open_or_focus_tab(
@@ -906,6 +1142,8 @@ pub fn show_global_search_dialog(
 
     // Track result count
     let result_count = Rc::new(RefCell::new(0usize));
+    // After Replace, re-run search and focus the result at this index (if set).
+    let post_search_focus: Rc<RefCell<Option<usize>>> = Rc::new(RefCell::new(None));
 
     // Trigger search on button or Enter
     let start_search: Rc<dyn Fn(String, bool, bool)> = {
@@ -917,6 +1155,7 @@ pub fn show_global_search_dialog(
         let current_dir_clone = current_dir.clone();
         let editor_notebook_clone = editor_notebook.clone();
         let file_path_manager_clone = file_path_manager.clone();
+        let post_search_focus_c = post_search_focus.clone();
         // Rc::new(...) creates a new Reference Counted pointer for shared ownership.
         Rc::new(
             // The "move" keyword forces the closure to take ownership of the variables it uses.
@@ -1006,6 +1245,7 @@ pub fn show_global_search_dialog(
                 let receiver_rc_c = receiver_rc_clone.clone();
                 let result_count_c = result_count_clone.clone();
                 let max_results = 500usize; // Limit displayed results to prevent UI slowdown
+                let post_search_focus_poll = post_search_focus_c.clone();
                 // The "move" keyword forces the closure to take ownership of the variables it uses.
                 glib::timeout_add_local(std::time::Duration::from_millis(30), move || {
                     let mut finished = false;
@@ -1169,10 +1409,16 @@ pub fn show_global_search_dialog(
                                 if count == 1 { "" } else { "s" }
                             ));
                         }
-                        // Activate the first result to open the file at the matching position
+                        // Open the refreshed result — default first match, or same index after Replace
                         if count > 0 {
-                            if let Some(first_row) = results_list_c.row_at_index(0) {
-                                first_row.activate();
+                            let row_index = post_search_focus_poll
+                                .borrow_mut()
+                                .take()
+                                .map(|idx| idx.min(count - 1))
+                                .unwrap_or(0);
+                            if let Some(row) = results_list_c.row_at_index(row_index as i32) {
+                                results_list_c.select_row(Some(&row));
+                                row.activate();
                             }
                         }
                         glib::ControlFlow::Break
@@ -1184,114 +1430,33 @@ pub fn show_global_search_dialog(
         )
     };
 
-    // Debounced search on text change
-    // Monotonic counter invalidates older scheduled searches — last keystroke wins after quiet period.
-    let search_counter: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
-    let cb_clone_text_change = start_search.clone();
-    let case_toggle_weak = case_toggle.downgrade();
-    let whole_word_toggle_weak = whole_word_toggle.downgrade();
-    let counter_clone = search_counter.clone();
-
-    search_buffer.connect_changed(move |buffer| {
-        // Increment counter to invalidate previous timeouts
-        *counter_clone.borrow_mut() += 1;
-        let current_count = *counter_clone.borrow();
-
-        let text = buffer
-            .text(&buffer.start_iter(), &buffer.end_iter(), false)
-            .to_string();
-        if text.trim().is_empty() {
-            return;
-        }
-
-        let cb = cb_clone_text_change.clone();
-        let case_toggle_weak_inner = case_toggle_weak.clone();
-        let whole_word_toggle_weak_inner = whole_word_toggle_weak.clone();
-        let counter_check = counter_clone.clone();
-
-        // Set new timeout with 500ms delay
-        glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
-            // Only execute if counter hasn't changed (no new keystrokes)
-            if *counter_check.borrow() == current_count {
-                if let (Some(case_toggle), Some(whole_word_toggle)) = (
-                    case_toggle_weak_inner.upgrade(),
-                    whole_word_toggle_weak_inner.upgrade(),
-                ) {
-                    (cb)(
-                        text.clone(),
-                        case_toggle.is_active(),
-                        whole_word_toggle.is_active(),
-                    );
-                }
-            }
-            glib::ControlFlow::Break
-        });
-    });
-
-    // Trigger search when toggle buttons are clicked
-    let cb_clone_case = start_search.clone();
-    let buffer_weak_case = search_buffer.downgrade();
-    let case_toggle_weak_case = case_toggle.downgrade();
-    let whole_word_toggle_weak_case = whole_word_toggle.downgrade();
-    case_toggle.connect_clicked(move |_| {
-        if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (
-            buffer_weak_case.upgrade(),
-            case_toggle_weak_case.upgrade(),
-            whole_word_toggle_weak_case.upgrade(),
-        ) {
-            let text = buffer
-                .text(&buffer.start_iter(), &buffer.end_iter(), false)
+    // Trigger search on Search button click or Enter
+    let trigger_search = {
+        let start_search = start_search.clone();
+        let search_buffer = search_buffer.clone();
+        let case_toggle = case_toggle.clone();
+        let whole_word_toggle = whole_word_toggle.clone();
+        move || {
+            let text = search_buffer
+                .text(&search_buffer.start_iter(), &search_buffer.end_iter(), false)
                 .to_string();
-            if !text.trim().is_empty() {
-                (cb_clone_case)(text, case_toggle.is_active(), whole_word_toggle.is_active());
-            }
+            (start_search)(text, case_toggle.is_active(), whole_word_toggle.is_active());
         }
-    });
+    };
 
-    let cb_clone_word = start_search.clone();
-    let buffer_weak_word = search_buffer.downgrade();
-    let case_toggle_weak_word = case_toggle.downgrade();
-    let whole_word_toggle_weak_word = whole_word_toggle.downgrade();
-    whole_word_toggle.connect_clicked(move |_| {
-        if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (
-            buffer_weak_word.upgrade(),
-            case_toggle_weak_word.upgrade(),
-            whole_word_toggle_weak_word.upgrade(),
-        ) {
-            let text = buffer
-                .text(&buffer.start_iter(), &buffer.end_iter(), false)
-                .to_string();
-            if !text.trim().is_empty() {
-                (cb_clone_word)(text, case_toggle.is_active(), whole_word_toggle.is_active());
-            }
-        }
-    });
+    let trigger_search_btn = trigger_search.clone();
+    search_btn.connect_clicked(move |_| trigger_search_btn());
 
-    // Add keyboard handling to TextView: Enter to search immediately, Shift+Enter for line break
+    // Add keyboard handling to TextView: Enter to search, Shift+Enter for line break
     let key_controller = EventControllerKey::new();
-    let cb_clone_enter = start_search.clone();
-    let buffer_weak_key = search_buffer.downgrade();
-    let case_toggle_weak_key = case_toggle.downgrade();
-    let whole_word_toggle_weak_key = whole_word_toggle.downgrade();
-    let counter_for_enter = search_counter.clone();
+    let trigger_search_key = trigger_search.clone();
     key_controller.connect_key_pressed(move |_controller, key, _code, modifier| {
         if key == gdk::Key::Return || key == gdk::Key::KP_Enter {
             if modifier.contains(gdk::ModifierType::SHIFT_MASK) {
                 // Shift+Enter: allow default behavior (insert line break)
                 glib::Propagation::Proceed
             } else {
-                // Enter: increment counter to cancel pending timeouts and trigger search immediately
-                *counter_for_enter.borrow_mut() += 1;
-                if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (
-                    buffer_weak_key.upgrade(),
-                    case_toggle_weak_key.upgrade(),
-                    whole_word_toggle_weak_key.upgrade(),
-                ) {
-                    let text = buffer
-                        .text(&buffer.start_iter(), &buffer.end_iter(), false)
-                        .to_string();
-                    (cb_clone_enter)(text, case_toggle.is_active(), whole_word_toggle.is_active());
-                }
+                trigger_search_key();
                 glib::Propagation::Stop
             }
         } else {
@@ -1305,6 +1470,11 @@ pub fn show_global_search_dialog(
     let results_list_clone = results_list.clone();
     let editor_notebook_for_replace = editor_notebook.clone();
     let file_path_manager_for_replace = file_path_manager.clone();
+    let search_buffer_for_replace = search_buffer.clone();
+    let case_toggle_for_replace = case_toggle.clone();
+    let whole_word_toggle_for_replace = whole_word_toggle.clone();
+    let start_search_for_replace = start_search.clone();
+    let post_search_focus_for_replace = post_search_focus.clone();
     replace_btn.connect_clicked(move |_| {
         if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
             let replace_text = replace_buffer
@@ -1347,24 +1517,20 @@ pub fn show_global_search_dialog(
                                             case_sensitive,
                                         ) {
                                             Ok(_) => {
-                                                // Remove the result from the list after successful replacement
-                                                results_list_clone.remove(&row);
-
-                                                // Select the next row (which now has the same index as the removed row)
-                                                if let Some(next_row) =
-                                                    results_list_clone.row_at_index(current_index)
-                                                {
-                                                    results_list_clone.select_row(Some(&next_row));
-                                                    next_row.activate();
-                                                } else if current_index > 0 {
-                                                    // If we were at the end, select the last remaining row
-                                                    if let Some(prev_row) =
-                                                        results_list_clone.row_at_index(current_index - 1)
-                                                    {
-                                                        results_list_clone.select_row(Some(&prev_row));
-                                                        prev_row.activate();
-                                                    }
-                                                }
+                                                *post_search_focus_for_replace.borrow_mut() =
+                                                    Some(current_index.max(0) as usize);
+                                                let search_text = search_buffer_for_replace
+                                                    .text(
+                                                        &search_buffer_for_replace.start_iter(),
+                                                        &search_buffer_for_replace.end_iter(),
+                                                        false,
+                                                    )
+                                                    .to_string();
+                                                (start_search_for_replace)(
+                                                    search_text,
+                                                    case_toggle_for_replace.is_active(),
+                                                    whole_word_toggle_for_replace.is_active(),
+                                                );
                                             }
                                             Err(e) => {
                                                 eprintln!(
@@ -1678,11 +1844,19 @@ pub fn create_global_search_panel(
     let replace_buffer = panel.replace_buffer();
     let case_toggle = panel.case_toggle();
     let whole_word_toggle = panel.whole_word_toggle();
+    let search_btn = panel.search_btn();
+    let replace_mode_switch = panel.replace_mode_switch();
+    let replace_box = panel.replace_box();
     let buttons_box = panel.buttons_box();
     let replace_btn = panel.replace_btn();
     let replace_all_btn = panel.replace_all_btn();
     let status = panel.status_label();
     let results_list = panel.results_list();
+
+    let replace_box_for_switch = replace_box.clone();
+    replace_mode_switch.connect_active_notify(move |switch| {
+        replace_box_for_switch.set_visible(switch.is_active());
+    });
 
     // Add responsive behavior: walk up widget tree to find the resizable container
     let buttons_box_for_responsive = buttons_box.clone();
@@ -1814,19 +1988,35 @@ pub fn create_global_search_panel(
 
                                 // Open (or focus) the file
                                 let mime = mime_guess::from_path(&path).first_or_octet_stream();
-                                let content_opt = if crate::utils::is_allowed_mime_type(&mime) {
-                                    // Read file asynchronously to avoid blocking UI
-                                    // `join` waits on GTK thread — acceptable here because only one path opens per double-click.
+                                let file_already_open =
+                                    is_search_result_file_open(&file_path_manager_c, &path);
+                                let opened = if file_already_open {
+                                    crate::handlers::open_or_focus_tab(
+                                        &editor_notebook_c,
+                                        &path,
+                                        "",
+                                        &active_tab_path_c,
+                                        &file_path_manager_c,
+                                        &save_button_c,
+                                        &save_as_button_c,
+                                        &mime,
+                                        &parent_window_c,
+                                        &file_list_box_c,
+                                        &current_dir_c,
+                                        None,
+                                    );
+                                    true
+                                } else if crate::utils::is_allowed_mime_type(&mime) {
                                     let path_clone = path.clone();
-                                    std::thread::spawn(move || {
+                                    let content_opt = std::thread::spawn(move || {
                                         let rt = tokio::runtime::Runtime::new().unwrap();
                                         rt.block_on(async {
                                             async_fs::read_to_string(&path_clone).await.ok()
                                         })
-                                    }).join().unwrap_or(None)
-                                } else { None };
+                                    })
+                                    .join()
+                                    .unwrap_or(None);
 
-                                if crate::utils::is_allowed_mime_type(&mime) {
                                     if let Some(content) = content_opt {
                                         crate::handlers::open_or_focus_tab(
                                             &editor_notebook_c,
@@ -1842,66 +2032,42 @@ pub fn create_global_search_panel(
                                             &current_dir_c,
                                             None,
                                         );
-
-                                        // Update global folder to the file's parent directory (after opening)
-                                        if let Some(parent) = path.parent() {
-                                            let parent_buf = parent.to_path_buf();
-                                            *current_dir_c.borrow_mut() = parent_buf.clone();
-                                            
-                                            // Update file manager to show the file's directory and select it
-                                            crate::utils::update_file_list(
-                                                &file_list_box_c,
-                                                &parent_buf,
-                                                &active_tab_path_c.borrow(),
-                                                crate::utils::FileSelectionSource::TabSwitch
-                                            );
-                                            
-                                            // Save to settings
-                                            let mut settings = crate::settings::get_settings_mut();
-                                            settings.set_last_folder(&parent_buf);
-                                            let _ = settings.save();
-                                            drop(settings);
-                                        }
-
-                                        // After opening, jump to position and select matching text (delay to ensure buffer ready)
-                                        let editor_notebook_for_jump = editor_notebook_c.clone();
-                                        let needle_clone = needle.clone();
-                                        glib::timeout_add_local_once(std::time::Duration::from_millis(50), move || {
-                                            if let Some((text_view, buffer)) = crate::handlers::get_active_text_view_and_buffer(&editor_notebook_for_jump) {
-                                                // Get start position
-                                                let mut start_iter = buffer.start_iter();
-                                                let target_line = line.saturating_sub(1) as i32;
-                                                start_iter.set_line(target_line);
-                                                let target_col = col.saturating_sub(1) as i32;
-                                                start_iter.set_line_offset(target_col);
-                                                
-                                                // Calculate end position based on needle length
-                                                let mut end_iter = start_iter;
-                                                if needle_clone.contains('\n') {
-                                                    // Multi-line match: select from start to end of match
-                                                    let lines_to_add = needle_clone.matches('\n').count() as i32;
-                                                    end_iter.forward_lines(lines_to_add);
-                                                    // Find the position after last line
-                                                    if let Some(last_line) = needle_clone.lines().last() {
-                                                        end_iter.set_line_offset(last_line.len() as i32);
-                                                    }
-                                                } else {
-                                                    // Single-line match: select needle length
-                                                    end_iter.forward_chars(needle_clone.chars().count() as i32);
-                                                }
-                                                
-                                                // Select the text
-                                                buffer.select_range(&start_iter, &end_iter);
-                                                
-                                                // Ensure visible
-                                                if let Ok(view) = text_view.downcast::<sourceview5::View>() {
-                                                    let mut it2 = start_iter;
-                                                    view.scroll_to_iter(&mut it2, 0.25, false, 0.0, 0.0);
-                                                }
-                                            }
-                                        });
+                                        true
+                                    } else {
+                                        false
                                     }
                                 } else {
+                                    false
+                                };
+
+                                if opened {
+                                    if let Some(parent) = path.parent() {
+                                        let parent_buf = parent.to_path_buf();
+                                        *current_dir_c.borrow_mut() = parent_buf.clone();
+
+                                        crate::utils::update_file_list(
+                                            &file_list_box_c,
+                                            &parent_buf,
+                                            &active_tab_path_c.borrow(),
+                                            crate::utils::FileSelectionSource::TabSwitch
+                                        );
+
+                                        let mut settings = crate::settings::get_settings_mut();
+                                        settings.set_last_folder(&parent_buf);
+                                        let _ = settings.save();
+                                        drop(settings);
+                                    }
+
+                                    focus_search_result(
+                                        &editor_notebook_c,
+                                        &file_path_manager_c,
+                                        &path,
+                                        line,
+                                        col,
+                                        &needle,
+                                        !file_already_open,
+                                    );
+                                } else if !crate::utils::is_allowed_mime_type(&mime) {
                                     eprintln!("Not a text file or couldn't open: {}", path.display());
                                 }
                             }
@@ -1912,6 +2078,9 @@ pub fn create_global_search_panel(
         }
     });
 
+    // After Replace, re-run search and focus the result at this index (if set).
+    let post_search_focus: Rc<RefCell<Option<usize>>> = Rc::new(RefCell::new(None));
+
     // Search logic closure
     let start_search = {
         let status_c = status.clone();
@@ -1921,6 +2090,7 @@ pub fn create_global_search_panel(
         let current_dir_c = current_dir.clone();
         let editor_notebook_c = editor_notebook.clone();
         let file_path_manager_c = file_path_manager.clone();
+        let post_search_focus_c = post_search_focus.clone();
 
         move |needle: String, case_sensitive: bool, whole_word: bool| {
             // Clear previous results
@@ -2002,6 +2172,7 @@ pub fn create_global_search_panel(
             let receiver_rc_c = receiver_rc_clone.clone();
             let result_count_c = result_count_clone.clone();
             let max_results = 500usize; // Limit displayed results to prevent UI slowdown
+            let post_search_focus_poll = post_search_focus_c.clone();
             glib::timeout_add_local(std::time::Duration::from_millis(30), move || {
                 let mut finished = false;
                 let mut processed = 0usize;
@@ -2161,10 +2332,16 @@ pub fn create_global_search_panel(
                             if count == 1 { "" } else { "s" }
                         ));
                     }
-                    // Activate the first result to open the file at the matching position
+                    // Open the refreshed result — default first match, or same index after Replace
                     if count > 0 {
-                        if let Some(first_row) = results_list_c.row_at_index(0) {
-                            first_row.activate();
+                        let row_index = post_search_focus_poll
+                            .borrow_mut()
+                            .take()
+                            .map(|idx| idx.min(count - 1))
+                            .unwrap_or(0);
+                        if let Some(row) = results_list_c.row_at_index(row_index as i32) {
+                            results_list_c.select_row(Some(&row));
+                            row.activate();
                         }
                     }
                     glib::ControlFlow::Break
@@ -2175,114 +2352,33 @@ pub fn create_global_search_panel(
         }
     };
 
-    // Debounced search on text change
-    // Monotonic counter invalidates older scheduled searches — last keystroke wins after quiet period.
-    let search_counter: Rc<RefCell<u64>> = Rc::new(RefCell::new(0));
-    let cb_clone_text_change = start_search.clone();
-    let case_toggle_weak = case_toggle.downgrade();
-    let whole_word_toggle_weak = whole_word_toggle.downgrade();
-    let counter_clone = search_counter.clone();
-
-    search_buffer.connect_changed(move |buffer| {
-        // Increment counter to invalidate previous timeouts
-        *counter_clone.borrow_mut() += 1;
-        let current_count = *counter_clone.borrow();
-
-        let text = buffer
-            .text(&buffer.start_iter(), &buffer.end_iter(), false)
-            .to_string();
-        if text.trim().is_empty() {
-            return;
-        }
-
-        let cb = cb_clone_text_change.clone();
-        let case_toggle_weak_inner = case_toggle_weak.clone();
-        let whole_word_toggle_weak_inner = whole_word_toggle_weak.clone();
-        let counter_check = counter_clone.clone();
-
-        // Set new timeout with 500ms delay
-        glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
-            // Only execute if counter hasn't changed (no new keystrokes)
-            if *counter_check.borrow() == current_count {
-                if let (Some(case_toggle), Some(whole_word_toggle)) = (
-                    case_toggle_weak_inner.upgrade(),
-                    whole_word_toggle_weak_inner.upgrade(),
-                ) {
-                    (cb)(
-                        text.clone(),
-                        case_toggle.is_active(),
-                        whole_word_toggle.is_active(),
-                    );
-                }
-            }
-            glib::ControlFlow::Break
-        });
-    });
-
-    // Trigger search when toggle buttons are clicked
-    let cb_clone_case = start_search.clone();
-    let buffer_weak_case = search_buffer.downgrade();
-    let case_toggle_weak_case = case_toggle.downgrade();
-    let whole_word_toggle_weak_case = whole_word_toggle.downgrade();
-    case_toggle.connect_clicked(move |_| {
-        if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (
-            buffer_weak_case.upgrade(),
-            case_toggle_weak_case.upgrade(),
-            whole_word_toggle_weak_case.upgrade(),
-        ) {
-            let text = buffer
-                .text(&buffer.start_iter(), &buffer.end_iter(), false)
+    // Trigger search on Search button click or Enter
+    let trigger_search = {
+        let start_search = start_search.clone();
+        let search_buffer = search_buffer.clone();
+        let case_toggle = case_toggle.clone();
+        let whole_word_toggle = whole_word_toggle.clone();
+        move || {
+            let text = search_buffer
+                .text(&search_buffer.start_iter(), &search_buffer.end_iter(), false)
                 .to_string();
-            if !text.trim().is_empty() {
-                (cb_clone_case)(text, case_toggle.is_active(), whole_word_toggle.is_active());
-            }
+            (start_search)(text, case_toggle.is_active(), whole_word_toggle.is_active());
         }
-    });
+    };
 
-    let cb_clone_word = start_search.clone();
-    let buffer_weak_word = search_buffer.downgrade();
-    let case_toggle_weak_word = case_toggle.downgrade();
-    let whole_word_toggle_weak_word = whole_word_toggle.downgrade();
-    whole_word_toggle.connect_clicked(move |_| {
-        if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (
-            buffer_weak_word.upgrade(),
-            case_toggle_weak_word.upgrade(),
-            whole_word_toggle_weak_word.upgrade(),
-        ) {
-            let text = buffer
-                .text(&buffer.start_iter(), &buffer.end_iter(), false)
-                .to_string();
-            if !text.trim().is_empty() {
-                (cb_clone_word)(text, case_toggle.is_active(), whole_word_toggle.is_active());
-            }
-        }
-    });
+    let trigger_search_btn = trigger_search.clone();
+    search_btn.connect_clicked(move |_| trigger_search_btn());
 
-    // Add keyboard handling to TextView: Enter to search immediately, Shift+Enter for line break
+    // Add keyboard handling to TextView: Enter to search, Shift+Enter for line break
     let key_controller = EventControllerKey::new();
-    let cb_clone_enter = start_search.clone();
-    let buffer_weak_key = search_buffer.downgrade();
-    let case_toggle_weak_key = case_toggle.downgrade();
-    let whole_word_toggle_weak_key = whole_word_toggle.downgrade();
-    let counter_for_enter = search_counter.clone();
+    let trigger_search_key = trigger_search.clone();
     key_controller.connect_key_pressed(move |_controller, key, _code, modifier| {
         if key == gdk::Key::Return || key == gdk::Key::KP_Enter {
             if modifier.contains(gdk::ModifierType::SHIFT_MASK) {
                 // Shift+Enter: allow default behavior (insert line break)
                 glib::Propagation::Proceed
             } else {
-                // Enter: increment counter to cancel pending timeouts and trigger search immediately
-                *counter_for_enter.borrow_mut() += 1;
-                if let (Some(buffer), Some(case_toggle), Some(whole_word_toggle)) = (
-                    buffer_weak_key.upgrade(),
-                    case_toggle_weak_key.upgrade(),
-                    whole_word_toggle_weak_key.upgrade(),
-                ) {
-                    let text = buffer
-                        .text(&buffer.start_iter(), &buffer.end_iter(), false)
-                        .to_string();
-                    (cb_clone_enter)(text, case_toggle.is_active(), whole_word_toggle.is_active());
-                }
+                trigger_search_key();
                 glib::Propagation::Stop
             }
         } else {
@@ -2296,6 +2392,11 @@ pub fn create_global_search_panel(
     let results_list_clone = results_list.clone();
     let editor_notebook_for_replace = editor_notebook.clone();
     let file_path_manager_for_replace = file_path_manager.clone();
+    let search_buffer_for_replace = search_buffer.clone();
+    let case_toggle_for_replace = case_toggle.clone();
+    let whole_word_toggle_for_replace = whole_word_toggle.clone();
+    let start_search_for_replace = start_search.clone();
+    let post_search_focus_for_replace = post_search_focus.clone();
     replace_btn.connect_clicked(move |_| {
         if let Some(replace_buffer) = replace_buffer_weak.upgrade() {
             let replace_text = replace_buffer
@@ -2338,24 +2439,20 @@ pub fn create_global_search_panel(
                                             case_sensitive,
                                         ) {
                                             Ok(_) => {
-                                                // Remove the result from the list after successful replacement
-                                                results_list_clone.remove(&row);
-
-                                                // Select the next row (which now has the same index as the removed row)
-                                                if let Some(next_row) =
-                                                    results_list_clone.row_at_index(current_index)
-                                                {
-                                                    results_list_clone.select_row(Some(&next_row));
-                                                    next_row.activate();
-                                                } else if current_index > 0 {
-                                                    // If we were at the end, select the last remaining row
-                                                    if let Some(prev_row) =
-                                                        results_list_clone.row_at_index(current_index - 1)
-                                                    {
-                                                        results_list_clone.select_row(Some(&prev_row));
-                                                        prev_row.activate();
-                                                    }
-                                                }
+                                                *post_search_focus_for_replace.borrow_mut() =
+                                                    Some(current_index.max(0) as usize);
+                                                let search_text = search_buffer_for_replace
+                                                    .text(
+                                                        &search_buffer_for_replace.start_iter(),
+                                                        &search_buffer_for_replace.end_iter(),
+                                                        false,
+                                                    )
+                                                    .to_string();
+                                                (start_search_for_replace)(
+                                                    search_text,
+                                                    case_toggle_for_replace.is_active(),
+                                                    whole_word_toggle_for_replace.is_active(),
+                                                );
                                             }
                                             Err(e) => {
                                                 eprintln!(

@@ -50,41 +50,74 @@
         </child>
       </object>
     </child>
-    
-    <!-- Replace input -->
+
+    <!-- Search button -->
     <child>
-      <object class="GtkTextView" id="replace_text_view">
-        <property name="wrap-mode">word</property>
-        <property name="accepts-tab">false</property>
-        <property name="height-request">60</property>
-        <property name="width-request">0</property>
+      <object class="GtkButton" id="search_btn">
+        <property name="label">Search</property>
+        <property name="tooltip-text">Search (Enter)</property>
         <property name="margin-bottom">8</property>
-        <property name="hexpand">true</property>
+        <property name="halign">start</property>
+      </object>
+    </child>
+
+    <!-- Replace mode toggle -->
+    <child>
+      <object class="GtkBox" id="replace_mode_row">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">8</property>
+        <property name="margin-bottom">8</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="label">Replace mode</property>
+            <property name="hexpand">true</property>
+            <property name="xalign">0</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkSwitch" id="replace_mode_switch">
+            <property name="valign">center</property>
+            <property name="active">false</property>
+          </object>
+        </child>
       </object>
     </child>
     
-    <!-- Replace buttons container - wraps to column when narrow -->
+    <!-- Replace controls (hidden until replace mode is enabled) -->
     <child>
-      <object class="GtkBox" id="buttons_box">
-        <property name="orientation">horizontal</property>
-        <property name="spacing">4</property>
-        <property name="margin-bottom">8</property>
-        <property name="homogeneous">true</property>
+      <object class="GtkBox" id="replace_box">
+        <property name="orientation">vertical</property>
+        <property name="spacing">8</property>
+        <property name="visible">false</property>
         <child>
-          <object class="GtkButton" id="replace_btn">
-            <property name="label">Replace</property>
-            <property name="tooltip-text">Replace selected match</property>
+          <object class="GtkTextView" id="replace_text_view">
+            <property name="wrap-mode">word</property>
+            <property name="accepts-tab">false</property>
+            <property name="height-request">60</property>
             <property name="width-request">0</property>
             <property name="hexpand">true</property>
           </object>
         </child>
         <child>
-          <object class="GtkButton" id="replace_all_btn">
-            <property name="label">Replace All</property>
-            <property name="tooltip-text">Replace all matches in all files</property>
-            <property name="css-classes">destructive-action</property>
-            <property name="width-request">0</property>
-            <property name="hexpand">true</property>
+          <object class="GtkBox" id="buttons_box">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">4</property>
+            <property name="homogeneous">true</property>
+            <property name="halign">start</property>
+            <child>
+              <object class="GtkButton" id="replace_btn">
+                <property name="label">Replace</property>
+                <property name="tooltip-text">Replace selected match</property>
+                <property name="css-classes">search-replace-button</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="replace_all_btn">
+                <property name="label">Replace All</property>
+                <property name="tooltip-text">Replace all matches in all files</property>
+                <property name="css-classes">destructive-action search-replace-button</property>
+              </object>
+            </child>
           </object>
         </child>
       </object>
