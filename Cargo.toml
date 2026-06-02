@@ -83,6 +83,8 @@ chrono = "0.4"          # Date/time formatting for log timestamps
 # ──────────────────────────────────────────────────────────────────────────────
 [dev-dependencies]
 serial_test = "3.4"     # Ensures GTK tests run one at a time (GTK is not thread-safe)
+ctor = "0.2"            # Provides #[ctor] attribute for running code before each test
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build Script Dependencies (only used by build.rs at compile time)

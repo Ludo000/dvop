@@ -277,7 +277,9 @@
 
     #[test]
     fn test_terminal_visible_defaults_to_false() {
-        let settings = EditorSettings::new();
+        // Use a fresh settings instance with a temp path to avoid loading from disk
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let settings = settings_with_temp_path(&temp_dir);
         assert!(!settings.get_terminal_visible());
     }
 

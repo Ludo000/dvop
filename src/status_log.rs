@@ -369,7 +369,6 @@ pub fn get_log_history() -> Vec<LogMessage> {
         .unwrap_or_default()
 }
 
-/// Clear the log history
 pub fn clear_log_history() {
     // lock() acquires the Mutex lock. It blocks until the lock is available.
     if let Ok(mut history) = STATUS_HISTORY.lock() {
