@@ -29,12 +29,13 @@
 // Generic completion extension (shortcuts + JSON engine). `rust_completion` is a separate native that injects rustup doc data.
 pub mod code_completion;
 pub mod hooks;
+pub mod manifest; // Schema validation, path canonicalization, and security checks
 pub mod manager;
 pub mod native;
 pub mod runner;
 pub mod rust_completion;
 pub mod rust_diagnostics;
-pub mod sample; // Bundled demo archives + `ensure_sample_archives` placeholder — see `sample.rs`; loading real extensions is `manager`’s job.
+pub mod sample; // Bundled demo archives + `ensure_sample_archives` placeholder — see `sample.rs`; loading real extensions is `manager`'s job.
 pub mod ui;
 
 use serde::{Deserialize, Serialize};
