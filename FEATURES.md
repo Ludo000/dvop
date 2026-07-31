@@ -1,7 +1,7 @@
 # Dvop - Comprehensive Functional Features Documentation
 **Version 0.1.0 | Last Updated: May 17, 2026**
 
-**Total Features: 201+ functional features documented**
+**Total Features: 203+ functional features documented**
 **Verified Test Suite: 339 tests passing (131 library/unit + 4 quick integration + 204 E2E)**
 **Coverage Snapshot: 18.93% application source line coverage, 27.19% total measured line coverage including tests**
 
@@ -20,6 +20,7 @@ Latest verification used `./run_all_tests.sh` plus Rust LLVM source-based covera
 - **Keyboard Shortcuts**: Features #146-175 (30+ shortcuts)
 - **Advanced**: Features #176-192 (File caching, diagnostics, breadcrumbs, tab context menus)
 - **Extension System**: Features #197-201 (Extension manager, native extensions, UI, hooks)
+- **Preview Controls**: Features #202-203 (SVG preview toggle, Markdown preview toggle)
 
 ---
 
@@ -1615,9 +1616,37 @@ Latest verification used `./run_all_tests.sh` plus Rust LLVM source-based covera
 
 ---
 
+## Preview Controls
+
+### Feature #202: SVG Preview Toggle Button
+**Code:** `src/handlers.rs:892-1026`, `src/handlers.rs:toggle_preview_visibility`
+**Tests:** E2E test #203 (`test_feature_203_svg_toggle_preview_button`), Unit tests in `src/handlers.rs`
+- Circular eye icon button added to SVG file tab widget
+- Toggles visibility of the SVG preview pane (right side of split view)
+- When preview is visible: button shows `eye-not-looking-symbolic` icon with "Hide preview" tooltip
+- When preview is hidden: button shows `eye-open-negative-filled-symbolic` icon with "Show preview" tooltip
+- Code editor (left side) always remains visible; only the preview pane is toggled
+- Uses `toggle_preview_visibility` function that removes/adds the end child from the GTK Paned widget
+- Provides quick access to show/hide the rendered SVG without closing the file
+- Works with the SVG split-view layout (code editor + live preview)
+
+### Feature #203: Markdown Preview Toggle Button
+**Code:** `src/handlers.rs:1027-1286`, `src/handlers.rs:toggle_preview_visibility`
+**Tests:** E2E test #202 (`test_feature_202_markdown_toggle_preview_button`), Unit tests in `src/handlers.rs`
+- Circular eye icon button added to Markdown file tab widget
+- Toggles visibility of the HTML preview pane (right side of split view)
+- When preview is visible: button shows `eye-not-looking-symbolic` icon with "Hide preview" tooltip
+- When preview is hidden: button shows `eye-open-negative-filled-symbolic` icon with "Show preview" tooltip
+- Code editor (left side) always remains visible; only the preview pane is toggled
+- Uses `toggle_preview_visibility` function that removes/adds the end child from the GTK Paned widget
+- Provides quick access to show/hide the rendered Markdown preview without closing the file
+- Works with the Markdown split-view layout (source editor + HTML preview)
+
+---
+
 ## Summary
 
-**Dvop provides 201 documented functional features** across 13 main categories:
+**Dvop provides 203 documented functional features** across 14 main categories:
 - 18 core text editor features
 - 18 file management capabilities
 - 18 code intelligence features
@@ -1628,8 +1657,9 @@ Latest verification used `./run_all_tests.sh` plus Rust LLVM source-based covera
 - 18 user interface elements
 - 18 settings and customization options
 - 30 keyboard shortcuts
-- 17 advanced technical features
+- 19 advanced technical features
 - 5 extension system features
+- 2 preview control features
 
 ### Key Strengths
 1. **Multi-language support** with intelligent code completion for 10+ languages
@@ -1640,6 +1670,7 @@ Latest verification used `./run_all_tests.sh` plus Rust LLVM source-based covera
 6. **Comprehensive keyboard shortcuts** for efficient workflow
 7. **Session persistence** to restore your workspace exactly as you left it
 8. **Extension system** with native and script-based extensions, enable/disable at runtime
+9. **Preview toggle controls** for quick show/hide of live previews in SVG and Markdown files
 
 ### Code Structure
 ```

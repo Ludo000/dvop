@@ -1244,6 +1244,14 @@ fn create_svg_split_view(
     paned
 }
 
+/// Toggle the visibility of the preview (end child) in a split paned view.
+/// This is used for SVG and Markdown preview tabs.
+pub fn toggle_preview_visibility(paned: &gtk4::Paned) {
+    if let Some(end_child) = paned.end_child() {
+        end_child.set_visible(!end_child.is_visible());
+    }
+}
+
 /// Markdown tab with GtkSource editor and WebKit HTML preview in a paned layout.
 ///
 /// Uses a horizontal split on wide windows and a vertical split (editor above preview) on narrow screens.
@@ -1645,6 +1653,37 @@ pub fn open_or_focus_tab(
             // Log successful opening
             crate::status_log::log_success(&format!("Opened {}", filename));
 
+            // Add toggle preview button to the tab (single preview icon, state indicated by tooltip)
+            let toggle_preview_button = Button::from_icon_name("eye-not-looking-symbolic");
+            toggle_preview_button.set_tooltip_text(Some("Hide preview"));
+            toggle_preview_button.set_size_request(20, 20);
+            toggle_preview_button.add_css_class("circular");
+            toggle_preview_button.set_valign(gtk4::Align::Center);
+            toggle_preview_button.set_halign(gtk4::Align::Center);
+            toggle_preview_button.set_margin_start(2);
+            toggle_preview_button.set_margin_end(2);
+
+            let svg_paned_for_toggle = svg_paned.clone();
+            let toggle_preview_button_for_tooltip_icon = toggle_preview_button.clone();
+            toggle_preview_button.connect_clicked(move |_| {
+                toggle_preview_visibility(&svg_paned_for_toggle);
+                // Update tooltip based on preview visibility state
+                if let Some(end_child) = svg_paned_for_toggle.end_child() {
+                    if end_child.is_visible() {
+                        toggle_preview_button_for_tooltip_icon.set_icon_name("eye-not-looking-symbolic");
+                        toggle_preview_button_for_tooltip_icon.set_tooltip_text(Some("Hide preview"));
+                    } else {
+                        toggle_preview_button_for_tooltip_icon.set_icon_name("eye-open-negative-filled-symbolic");
+                        toggle_preview_button_for_tooltip_icon.set_tooltip_text(Some("Show preview"));
+                    }
+                }
+            });
+
+            // Insert toggle button before the close button by reordering
+            tab_widget.remove(&tab_close_button);
+            tab_widget.append(&toggle_preview_button);
+            tab_widget.append(&tab_close_button);
+
             // Connect close button
             let notebook_clone = notebook.clone();
             let window_clone = window.clone();
@@ -1759,6 +1798,44 @@ pub fn open_or_focus_tab(
             glib::idle_add_local_once(move || {
                 crate::ui::DvopWindow::ensure_application_window_fits(&window_for_preview_fit);
             });
+
+            // Add toggle preview button to the tab (single preview icon, state indicated by tooltip)
+            let toggle_preview_button = Button::from_icon_name("eye-not-looking-symbolic");
+            toggle_preview_button.set_tooltip_text(Some("Hide preview"));
+            toggle_preview_button.set_size_request(20, 20);
+            toggle_preview_button.add_css_class("circular");
+            toggle_preview_button.set_valign(gtk4::Align::Center);
+            toggle_preview_button.set_halign(gtk4::Align::Center);
+            toggle_preview_button.set_margin_start(2);
+            toggle_preview_button.set_margin_end(2);
+
+            // Store the paned widget reference for toggle
+            let paned_for_toggle = if let Some(paned) = markdown_page.downcast_ref::<gtk4::Paned>() {
+                Some(paned.clone())
+            } else {
+                None
+            };
+
+            if let Some(paned_ref) = paned_for_toggle {
+                let toggle_preview_button_for_tooltip_icon = toggle_preview_button.clone();
+                toggle_preview_button.connect_clicked(move |_| {
+                    toggle_preview_visibility(&paned_ref);
+                    // Update tooltip based on preview visibility state
+                    if let Some(end_child) = paned_ref.end_child() {
+                        if end_child.is_visible() {
+                            toggle_preview_button_for_tooltip_icon.set_icon_name("eye-not-looking-symbolic");
+                            toggle_preview_button_for_tooltip_icon.set_tooltip_text(Some("Hide preview"));
+                        } else {
+                            toggle_preview_button_for_tooltip_icon.set_icon_name("eye-open-negative-filled-symbolic");
+                            toggle_preview_button_for_tooltip_icon.set_tooltip_text(Some("Show preview"));
+                        }
+                    }
+                });
+                // Insert toggle button before the close button by reordering
+                tab_widget.remove(&tab_close_button);
+                tab_widget.append(&toggle_preview_button);
+                tab_widget.append(&tab_close_button);
+            }
 
             // Connect close button
             let notebook_clone = notebook.clone();

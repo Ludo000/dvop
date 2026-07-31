@@ -1,4 +1,4 @@
-    use super::*;
+use super::*;
     use gtk4::prelude::*;
     use serial_test::serial;
     use std::cell::RefCell;
@@ -245,5 +245,112 @@
             close_empty_untitled_tabs(&notebook, &file_path_manager);
 
             assert_eq!(notebook.n_pages(), 0);
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn toggle_preview_visibility_hides_end_child() {
+        gtk4::test_synced(|| {
+            // Create a paned widget with both children visible
+            let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
+            let start_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            let end_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            paned.set_start_child(Some(&start_box));
+            paned.set_end_child(Some(&end_box));
+            
+            // Both children should be visible by default
+            assert!(end_box.is_visible());
+            assert!(paned.end_child().is_some());
+            
+            // Store initial visibility
+            let initial_visibility = end_box.is_visible();
+            
+            // Toggle preview visibility - should hide the end child
+            toggle_preview_visibility(&paned);
+            
+            // Verify end child is now hidden
+            assert!(!end_box.is_visible());
+            assert_ne!(initial_visibility, end_box.is_visible());
+            
+            // Verify start child is still visible
+            assert!(start_box.is_visible());
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn toggle_preview_visibility_shows_end_child() {
+        gtk4::test_synced(|| {
+            // Create a paned widget with end child hidden
+            let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
+            let start_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            let end_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            paned.set_start_child(Some(&start_box));
+            paned.set_end_child(Some(&end_box));
+            
+            // Hide the end child first
+            end_box.set_visible(false);
+            assert!(!end_box.is_visible());
+            
+            // Store initial visibility
+            let initial_visibility = end_box.is_visible();
+            
+            // Toggle preview visibility - should show the end child
+            toggle_preview_visibility(&paned);
+            
+            // Verify end child is now visible
+            assert!(end_box.is_visible());
+            assert_ne!(initial_visibility, end_box.is_visible());
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn toggle_preview_visibility_toggles_multiple_times() {
+        gtk4::test_synced(|| {
+            let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
+            let start_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            let end_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            paned.set_start_child(Some(&start_box));
+            paned.set_end_child(Some(&end_box));
+            
+            // Toggle 1: hide
+            toggle_preview_visibility(&paned);
+            assert!(!end_box.is_visible());
+            
+            // Toggle 2: show
+            toggle_preview_visibility(&paned);
+            assert!(end_box.is_visible());
+            
+            // Toggle 3: hide again
+            toggle_preview_visibility(&paned);
+            assert!(!end_box.is_visible());
+            
+            // Toggle 4: show again
+            toggle_preview_visibility(&paned);
+            assert!(end_box.is_visible());
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn toggle_preview_visibility_start_child_always_visible() {
+        gtk4::test_synced(|| {
+            let paned = gtk4::Paned::new(gtk4::Orientation::Horizontal);
+            let start_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            let end_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            paned.set_start_child(Some(&start_box));
+            paned.set_end_child(Some(&end_box));
+            
+            let start_visible_initial = start_box.is_visible();
+            
+            // Toggle multiple times
+            toggle_preview_visibility(&paned);
+            toggle_preview_visibility(&paned);
+            toggle_preview_visibility(&paned);
+            
+            // Start child should never have changed
+            assert_eq!(start_visible_initial, start_box.is_visible());
         });
     }
