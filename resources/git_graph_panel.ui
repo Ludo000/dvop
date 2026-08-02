@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- Git Graph Panel — collapsible section showing the git commit graph -->
+  <template class="DvopGitGraphPanel" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <property name="spacing">0</property>
+
+    <!-- Header bar with title and controls -->
+    <child>
+      <object class="GtkBox" id="graph_header_box">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">8</property>
+        <property name="margin-start">6</property>
+        <property name="margin-end">6</property>
+        <property name="margin-top">6</property>
+        <property name="margin-bottom">4</property>
+        <property name="hexpand">true</property>
+        <property name="valign">center</property>
+
+        <!-- Collapse/expand toggle button -->
+        <child>
+          <object class="GtkButton" id="graph_toggle_button">
+            <property name="valign">center</property>
+            <property name="css-classes">flat</property>
+            <property name="focusable">false</property>
+            <child>
+              <object class="GtkImage" id="graph_toggle_icon">
+                <property name="icon-name">go-down-symbolic</property>
+                <property name="pixel-size">14</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Title label -->
+        <child>
+          <object class="GtkLabel" id="graph_title_label">
+            <property name="label">Git Graph</property>
+            <property name="css-classes">heading</property>
+            <property name="hexpand">true</property>
+            <property name="halign">start</property>
+          </object>
+        </child>
+
+        <!-- Refresh button -->
+        <child>
+          <object class="GtkButton" id="graph_refresh_button">
+            <property name="valign">center</property>
+            <property name="css-classes">flat</property>
+            <property name="tooltip-text">Refresh graph</property>
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">view-refresh-symbolic</property>
+                <property name="pixel-size">14</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Options button -->
+        <child>
+          <object class="GtkMenuButton" id="graph_options_button">
+            <property name="valign">center</property>
+            <property name="css-classes">flat</property>
+            <property name="tooltip-text">Graph options</property>
+            <child>
+              <object class="GtkImage">
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="pixel-size">14</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- Revealer controls visibility of the graph content -->
+    <child>
+      <object class="GtkRevealer" id="graph_revealer">
+        <property name="transition-type">slide-down</property>
+        <property name="transition-duration">200</property>
+        <property name="hexpand">true</property>
+        <property name="vexpand">true</property>
+
+        <!-- Scrolled window containing the graph -->
+        <child>
+          <object class="GtkScrolledWindow" id="graph_scrolled_window">
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="hexpand">true</property>
+            <property name="vexpand">true</property>
+            <property name="min-content-height">200</property>
+
+            <!-- Drawing area for custom graph rendering -->
+            <child>
+              <object class="GtkDrawingArea" id="graph_drawing_area">
+                <property name="hexpand">true</property>
+                <property name="vexpand">true</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- Commit detail panel (shown when a commit is selected) -->
+    <child>
+      <object class="GtkRevealer" id="detail_revealer">
+        <property name="transition-type">slide-down</property>
+        <property name="transition-duration">150</property>
+        <property name="visible">false</property>
+
+        <child>
+          <object class="GtkBox" id="detail_box">
+            <property name="orientation">vertical</property>
+            <property name="spacing">4</property>
+            <property name="margin-start">6</property>
+            <property name="margin-end">6</property>
+            <property name="margin-bottom">6</property>
+            <property name="css-classes">card</property>
+
+            <!-- Detail header with close button -->
+            <child>
+              <object class="GtkBox" id="detail_header_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <property name="hexpand">true</property>
+                <property name="valign">center</property>
+                <property name="margin-top">4</property>
+                <property name="margin-bottom">4</property>
+
+                <child>
+                  <object class="GtkLabel" id="detail_commit_hash">
+                    <property name="label">Select a commit</property>
+                    <property name="css-classes">heading</property>
+                    <property name="hexpand">true</property>
+                    <property name="halign">start</property>
+                    <property name="font">monospace</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkButton" id="detail_close_button">
+                    <property name="valign">center</property>
+                    <property name="css-classes">flat</property>
+                    <property name="icon-name">window-close-symbolic</property>
+                    <property name="tooltip-text">Close details</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- Detail content -->
+            <child>
+              <object class="GtkBox" id="detail_content_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">2</property>
+                <property name="hexpand">true</property>
+
+                <!-- Author and date -->
+                <child>
+                  <object class="GtkLabel" id="detail_author_label">
+                    <property name="label">Author: —</property>
+                    <property name="xalign">0.0</property>
+                    <property name="ellipsize">end</property>
+                    <property name="css-classes">caption</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkLabel" id="detail_date_label">
+                    <property name="label">Date: —</property>
+                    <property name="xalign">0.0</property>
+                    <property name="ellipsize">end</property>
+                    <property name="css-classes">caption</property>
+                  </object>
+                </child>
+
+                <!-- Commit message -->
+                <child>
+                  <object class="GtkScrolledWindow" id="detail_message_scrolled">
+                    <property name="hscrollbar-policy">never</property>
+                    <property name="vscrollbar-policy">automatic</property>
+                    <property name="min-content-height">60</property>
+                    <property name="max-content-height">150</property>
+                    <child>
+                      <object class="GtkTextView" id="detail_message_view">
+                        <property name="editable">false</property>
+                        <property name="cursor-visible">false</property>
+                        <property name="wrap-mode">word</property>
+                        <property name="left-margin">4</property>
+                        <property name="right-margin">4</property>
+                        <property name="top-margin">2</property>
+                        <property name="bottom-margin">2</property>
+                        <property name="css-classes">caption</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

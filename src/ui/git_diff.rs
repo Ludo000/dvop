@@ -43,6 +43,7 @@ use std::process::Command;
 use std::rc::Rc;
 
 use super::git_diff_panel_template::GitDiffPanel;
+use super::git_graph;
 
 // Tuple returned by diff alignment: (left text, right text, per-row maps back to original line numbers, …).
 type DiffAlignResult = (
@@ -588,7 +589,7 @@ fn apply_diff_highlighting(
 }
 
 /// Get the current branch name
-fn get_current_branch(repo_path: &Path) -> Option<String> {
+pub fn get_current_branch(repo_path: &Path) -> Option<String> {
     // Prints symbolic ref name, or `HEAD` when detached — both are fine for the branch chip label.
     let output = Command::new("git")
         .arg("rev-parse")
@@ -2056,6 +2057,71 @@ pub fn create_git_diff_panel(
     let commit_button = panel.commit_button();
     let staged_revealer = panel.staged_revealer();
 
+    // ── Git Graph wiring ─────────────────────────────────────────────────────
+    // Get git graph widgets from the template
+    let git_graph_toggle_button = panel.git_graph_toggle_button();
+    let git_graph_revealer = panel.git_graph_revealer();
+    let git_graph_drawing_area = panel.git_graph_drawing_area();
+
+
+    // Shared state for the graph so draw / refresh closures share the same data
+    let graph_state: Rc<RefCell<git_graph::GraphRenderState>> =
+        Rc::new(RefCell::new(git_graph::GraphRenderState::default()));
+
+    // Draw callback
+    {
+        let graph_state = graph_state.clone();
+        git_graph_drawing_area.set_draw_func(move |da, cr, _width, _height| {
+            let state = graph_state.borrow();
+            let width = da.width() as f64;
+            let height = da.height() as f64;
+            git_graph::render_graph(cr, width, height, &state, da);
+        });
+    }
+
+    // Set minimum size so the ScrolledWindow knows the content height and
+    // can enable vertical scrolling when the commit graph is taller than the
+    // allocated space.  Width=0 means "natural width", height=150 is the
+    // initial minimum (updated dynamically on refresh).
+    git_graph_drawing_area.set_size_request(0, 150);
+
+    // Click handler for selecting commits
+    {
+        let graph_state = graph_state.clone();
+        let drawing_area_for_click = git_graph_drawing_area.clone();
+        let click_gesture = gtk4::GestureClick::new();
+
+        click_gesture.connect_pressed(move |_, _n_press, x, y| {
+            let mut state = graph_state.borrow_mut();
+            let mut selected = false;
+
+            for node in state.nodes.iter() {
+                let dx = x as f64 - node.x;
+                let dy = y as f64 - node.y;
+                if dx.abs() < 10.0 && dy.abs() < 14.0 {
+                    state.selected_hash = Some(node.commit.short_hash.clone());
+                    selected = true;
+                    break;
+                }
+            }
+
+            if selected {
+                drawing_area_for_click.queue_draw();
+            }
+        });
+
+        git_graph_drawing_area.add_controller(click_gesture);
+    }
+
+    // Toggle expand / collapse of the git graph section
+    {
+        let revealer = git_graph_revealer.clone();
+        git_graph_toggle_button.connect_clicked(move |_| {
+            let revealed = revealer.reveals_child();
+            revealer.set_reveal_child(!revealed);
+        });
+    }
+
     // Set up placeholder text behavior for commit message
     // Fake placeholder via tag — Gtk TextView has no native placeholder property like GtkEntry.
     let buffer = commit_message_view.buffer();
@@ -2155,6 +2221,45 @@ pub fn create_git_diff_panel(
 
     // Create a RefCell to hold the update function (for self-reference)
     let update_git_status_rc: CallbackCell = Rc::new(RefCell::new(None));
+
+    // ── Auto-refresh the git graph when git status changes ────────────────────
+    // Wrap the update_git_status closure so the graph refreshes alongside the file list.
+    // We capture `repo_path_rc` and `graph_state` by cloning the Rc pointers.
+    {
+        let graph_state_for_refresh = graph_state.clone();
+        let drawing_area_for_refresh = git_graph_drawing_area.clone();
+
+        // Store a closure that refreshes both the file list AND the graph
+        let update_with_graph = {
+            let repo_path = repo_path_rc.clone();
+            let graph_state = graph_state_for_refresh.clone();
+            let da = drawing_area_for_refresh.clone();
+            move || {
+                // Refresh the graph using the same repo path
+                if let Some(ref r) = *repo_path.borrow() {
+                    if let Ok(nodes) = git_graph::fetch_git_log(r) {
+                        let node_count = nodes.len();
+                        *graph_state.borrow_mut() = git_graph::GraphRenderState {
+                            nodes,
+                            selected_hash: None,
+                        };
+                        // Update size request so the ScrolledWindow knows the
+                        // content height and can enable vertical scrolling.
+                        let total_height = 8.0 * 2.0 + (node_count as f64) * 28.0;
+                        let min_h = total_height.max(60.0); // "no commits" fallback
+                        da.set_size_request(0, min_h as i32);
+                        da.queue_draw();
+                    }
+                }
+            }
+        };
+
+        // Replace the stored callback with the wrapped version
+        *update_git_status_rc.borrow_mut() = Some(Rc::new(update_with_graph.clone()));
+
+        // Also replace the global callback
+        set_git_status_update_callback(Rc::new(update_with_graph));
+    }
 
     // Clone widgets early for use in branch actions
     let refresh_button_for_actions = refresh_button.clone();
@@ -4469,6 +4574,33 @@ pub fn create_git_diff_panel(
 
     // Trigger initial update
     update_git_status();
+
+    // ── Initial git graph refresh ─────────────────────────────────────────────
+    // The wrapped callback (update_with_graph) only fires via the global
+    // debounced path – the initial synchronous call above uses the original
+    // closure which does NOT refresh the graph.  Do it explicitly here.
+    {
+        let repo_path = repo_path_rc.clone();
+        let graph_state = graph_state.clone();
+        let da = git_graph_drawing_area.clone();
+        glib::idle_add_local_once(move || {
+            if let Some(ref r) = *repo_path.borrow() {
+                if let Ok(nodes) = git_graph::fetch_git_log(r) {
+                    let node_count = nodes.len();
+                    *graph_state.borrow_mut() = git_graph::GraphRenderState {
+                        nodes,
+                        selected_hash: None,
+                    };
+                    // Update size request so the ScrolledWindow knows the
+                    // content height and can enable vertical scrolling.
+                    let total_height = 8.0 * 2.0 + (node_count as f64) * 28.0;
+                    let min_h = total_height.max(60.0); // "no commits" fallback
+                    da.set_size_request(0, min_h as i32);
+                    da.queue_draw();
+                }
+            }
+        });
+    }
 
     // Set up editor notebook switch-page handler to update path bar when switching between diff tabs
     if let (Some(pb), Some(main_flb)) = (path_box, main_file_list_box) {

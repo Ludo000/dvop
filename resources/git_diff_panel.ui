@@ -175,64 +175,167 @@
       </object>
     </child>
     
-    <!-- Unstaged changes section -->
-    
+    <!-- Resizable paned container for unstaged changes + git graph -->
     <child>
-      <object class="GtkBox" id="unstaged_header_box">
-        <property name="orientation">horizontal</property>
-        <property name="spacing">8</property>
-        <property name="margin-bottom">4</property>
-        <property name="hexpand">true</property>
-        <child>
-          <object class="GtkLabel" id="unstaged_label">
-            <property name="label">Unstaged Changes</property>
-            <property name="xalign">0.0</property>
-            <property name="hexpand">true</property>
-            <property name="ellipsize">end</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkBox" id="unstaged_actions_box">
-            <property name="orientation">horizontal</property>
-            <property name="spacing">4</property>
-            <property name="halign">end</property>
-            <property name="hexpand">false</property>
-            <child>
-              <object class="GtkButton" id="revert_all_button">
-                <property name="icon-name">edit-undo-symbolic</property>
-                <property name="tooltip-text">Revert all unstaged changes</property>
-                <property name="valign">center</property>
-                <property name="halign">end</property>
-                <property name="css-classes">destructive-action</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkButton" id="stage_all_button">
-                <property name="icon-name">list-add-symbolic</property>
-                <property name="tooltip-text">Stage all changes</property>
-                <property name="valign">center</property>
-                <property name="halign">end</property>
-              </object>
-            </child>
-          </object>
-        </child>
-      </object>
-    </child>
-    
-    <child>
-      <object class="GtkScrolledWindow" id="files_scroller">
-        <property name="hscrollbar-policy">never</property>
-        <property name="vscrollbar-policy">automatic</property>
+      <object class="GtkPaned" id="git_graph_paned">
+        <property name="orientation">vertical</property>
         <property name="vexpand">true</property>
-        <property name="hexpand">true</property>
+        <property name="position">200</property>
+        <property name="min-position">100</property>
+        <property name="max-position">600</property>
+        
+        <!-- Top child: Unstaged changes section -->
         <child>
-          <object class="GtkListBox" id="files_list">
-            <property name="selection-mode">single</property>
-            <property name="css-classes">boxed-list git-file-list</property>
+          <object class="GtkBox" id="unstaged_top_box">
+            <property name="orientation">vertical</property>
+            <property name="spacing">0</property>
+            <property name="hexpand">true</property>
+            <property name="vexpand">true</property>
+            
+            <!-- Unstaged header -->
+            <child>
+              <object class="GtkBox" id="unstaged_header_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <property name="margin-bottom">4</property>
+                <property name="hexpand">true</property>
+                <property name="margin-start">8</property>
+                <property name="margin-end">8</property>
+                <property name="margin-top">8</property>
+                <child>
+                  <object class="GtkLabel" id="unstaged_label">
+                    <property name="label">Unstaged Changes</property>
+                    <property name="xalign">0.0</property>
+                    <property name="hexpand">true</property>
+                    <property name="ellipsize">end</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox" id="unstaged_actions_box">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">4</property>
+                    <property name="halign">end</property>
+                    <property name="hexpand">false</property>
+                    <child>
+                      <object class="GtkButton" id="revert_all_button">
+                        <property name="icon-name">edit-undo-symbolic</property>
+                        <property name="tooltip-text">Revert all unstaged changes</property>
+                        <property name="valign">center</property>
+                        <property name="halign">end</property>
+                        <property name="css-classes">destructive-action</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="stage_all_button">
+                        <property name="icon-name">list-add-symbolic</property>
+                        <property name="tooltip-text">Stage all changes</property>
+                        <property name="valign">center</property>
+                        <property name="halign">end</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            
+            <!-- Unstaged files list -->
+            <child>
+              <object class="GtkScrolledWindow" id="files_scroller">
+                <property name="hscrollbar-policy">never</property>
+                <property name="vscrollbar-policy">automatic</property>
+                <property name="vexpand">true</property>
+                <property name="hexpand">true</property>
+                <property name="min-content-height">50</property>
+                <child>
+                  <object class="GtkListBox" id="files_list">
+                    <property name="selection-mode">single</property>
+                    <property name="css-classes">boxed-list git-file-list</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        
+        <!-- Bottom child: Git Graph collapsible section -->
+        <child>
+          <object class="GtkBox" id="git_graph_bottom_box">
+            <property name="orientation">vertical</property>
+            <property name="spacing">0</property>
+            <property name="hexpand">true</property>
+            <property name="vexpand">true</property>
+            
+            <!-- Separator -->
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">horizontal</property>
+                <property name="margin-top">8</property>
+                <property name="margin-bottom">4</property>
+              </object>
+            </child>
+
+            <!-- Git Graph collapsible section -->
+            <child>
+              <object class="GtkBox" id="git_graph_header_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <property name="hexpand">true</property>
+                <property name="margin-start">8</property>
+                <property name="margin-end">8</property>
+                <property name="margin-top">4</property>
+                <property name="margin-bottom">4</property>
+                <child>
+                  <object class="GtkLabel" id="git_graph_label">
+                    <property name="label">Git Graph</property>
+                    <property name="xalign">0.0</property>
+                    <property name="hexpand">true</property>
+                    <property name="css-classes">heading</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="git_graph_toggle_button">
+                    <property name="icon-name">go-down-symbolic</property>
+                    <property name="tooltip-text">Collapse git graph</property>
+                    <property name="valign">center</property>
+                    <property name="halign">end</property>
+                    <property name="css-classes">flat</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkRevealer" id="git_graph_revealer">
+                <property name="reveal-child">true</property>
+                <property name="transition-type">slide-down</property>
+                <property name="transition-duration">200</property>
+                <property name="vexpand">true</property>
+                <child>
+                  <object class="GtkScrolledWindow" id="git_graph_scroller">
+                    <property name="hscrollbar-policy">automatic</property>
+                    <property name="vscrollbar-policy">automatic</property>
+                    <property name="vexpand">true</property>
+                    <property name="hexpand">true</property>
+                    <property name="min-content-width">200</property>
+                    <property name="min-content-height">100</property>
+                    <property name="max-content-height">0</property>
+                    <property name="margin-bottom">8</property>
+                    <child>
+                      <object class="GtkDrawingArea" id="git_graph_drawing_area">
+                        <property name="hexpand">true</property>
+                        <property name="vexpand">true</property>
+                        <property name="halign">fill</property>
+                        <property name="valign">fill</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
           </object>
         </child>
       </object>
     </child>
-    
+
   </template>
 </interface>

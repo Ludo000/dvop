@@ -38,6 +38,7 @@ gdk4 = "0.10"           # GDK4 bindings (display, input, clipboard, key events)
 vte4 = "0.9"            # VTE4 terminal emulator widget (embedded terminal panel)
 gdk-pixbuf = "0.21"     # Image loading/manipulation (PNG, JPEG, SVG rendering)
 sourceview5 = "0.10"    # GtkSourceView5 — syntax highlighting, line numbers, code completion
+cairo-rs = "0.20"       # Cairo graphics backend (DrawingArea draw callbacks for git graph)
 
 # ── Media Playback (GStreamer) ──
 # GStreamer is a multimedia framework used for audio and video playback.
@@ -77,9 +78,8 @@ once_cell = "1.21"      # Thread-safe lazy initialization (OnceLock for global s
 lazy_static = "1.5"     # Macro for defining lazily-initialized static variables (global managers)
 tempfile = "3.27"       # Temporary file/directory creation (used in testing and file operations)
 chrono = "0.4"          # Date/time formatting for log timestamps
+unicode-width = "0.2"   # Unicode character width calculation (for git graph rendering)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Development/Testing Dependencies (only compiled for `cargo test`)
 # ──────────────────────────────────────────────────────────────────────────────
 [dev-dependencies]
 serial_test = "3.4"     # Ensures GTK tests run one at a time (GTK is not thread-safe)

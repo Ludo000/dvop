@@ -35,6 +35,7 @@ pub mod css;
 pub mod file_manager;
 pub mod git_diff;
 pub mod git_diff_panel_template;
+pub mod git_graph;
 pub mod global_search;
 pub mod search_panel_template;
 pub mod settings;

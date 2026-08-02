@@ -17,7 +17,7 @@
 //! See FEATURES.md: Feature #60 — Git Status Panel
 
 use gtk4::subclass::prelude::*;
-use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, Label, ListBox, MenuButton, Orientation, ScrolledWindow, Revealer};
+use gtk4::{glib, Box as GtkBox, Button, CompositeTemplate, DrawingArea, Label, ListBox, MenuButton, Orientation, Paned, ScrolledWindow, Revealer};
 
 /// Sidebar width below this stacks section headers vertically instead of clipping controls.
 const GIT_PANEL_COMPACT_WIDTH: i32 = 240;
@@ -62,6 +62,14 @@ mod imp {
         pub commit_button: TemplateChild<Button>,
         #[template_child]
         pub staged_revealer: TemplateChild<Revealer>,
+        #[template_child]
+        pub git_graph_toggle_button: TemplateChild<Button>,
+        #[template_child]
+        pub git_graph_revealer: TemplateChild<Revealer>,
+        #[template_child]
+        pub git_graph_drawing_area: TemplateChild<DrawingArea>,
+        #[template_child]
+        pub git_graph_paned: TemplateChild<Paned>,
     }
 
     #[glib::object_subclass]
@@ -190,5 +198,21 @@ impl GitDiffPanel {
 
     pub fn staged_revealer(&self) -> Revealer {
         self.imp().staged_revealer.get()
+    }
+
+    pub fn git_graph_toggle_button(&self) -> Button {
+        self.imp().git_graph_toggle_button.get()
+    }
+
+    pub fn git_graph_revealer(&self) -> Revealer {
+        self.imp().git_graph_revealer.get()
+    }
+
+    pub fn git_graph_drawing_area(&self) -> DrawingArea {
+        self.imp().git_graph_drawing_area.get()
+    }
+
+    pub fn git_graph_paned(&self) -> Paned {
+        self.imp().git_graph_paned.get()
     }
 }
